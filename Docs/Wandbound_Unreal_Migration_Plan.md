@@ -69,6 +69,37 @@
   - start/end turn triggers
   - full response activations
 
+## Milestone: Turn-Start Resource Setup
+
+- MP model audit result:
+  - Godot uses player-level `state.mp_pool[player_id]`.
+  - Unreal movement has migrated to player `FWBPlayerStateData::RemainingMP` as rules truth.
+  - `FWBUnitState::MPRemaining` remains only as a legacy fixture mirror during migration.
+- Implemented deterministic resource setup:
+  - `WBEffectRunner::ApplyTurnStartResourceSetup(State, PlayerId, ExplicitMPRoll)`
+  - validates explicit MP roll through `WBRules::CanApplyTurnStartResourceSetup`
+  - normalizes `CurrentPlayer`, `PriorityPlayer`, and `Phase`
+  - records `LastMPRoll`
+  - applies player `RemainingMP`
+  - resets owned unit `AttacksLeft` from `MaxAttacksPerTurn`
+  - resets `WallsLeft` to `1`
+  - resets `WallRemovalsLeft` using the current Godot baseline unlock of `TurnNumber >= 30`
+- Added trace event:
+  - `turn_start_resource_setup`
+  - includes player id, turn number, MP roll, remaining MP, walls left, and wall removals left
+- Movement and legal action generation now use player `RemainingMP`.
+- Added GodotCanon fixtures:
+  - `turn_start_resource_setup_roll_4.json`
+  - `turn_start_resource_setup_invalid_roll_fails.json`
+  - `turn_start_resource_setup_resets_attacks_and_walls.json`
+- Intentionally not implemented yet:
+  - random dice roll generation
+  - draw
+  - status ticks
+  - start-of-turn triggers
+  - MP modifier hooks
+  - NPC phase
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

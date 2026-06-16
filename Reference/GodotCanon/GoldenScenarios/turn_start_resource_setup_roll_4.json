@@ -1,0 +1,102 @@
+{
+  "id": "turn_start_resource_setup_roll_4",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:mp_pool",
+    "scripts/sim/game_state.gd:reset_attack_budgets_for_player"
+  ],
+  "intent": "A deterministic turn-start resource setup applies an explicit MP roll to the active player's MP pool and normalizes priority.",
+  "initial_state": {
+    "current_player": 1,
+    "priority_player": 1,
+    "turn_number": 3,
+    "phase": "response",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 0,
+        "last_mp_roll": 0,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 5,
+        "last_mp_roll": 5,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 1
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "x": 5,
+        "y": 4,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 1
+      }
+    ]
+  },
+  "operation": {
+    "kind": "turn_start_resource_setup",
+    "player_id": 0,
+    "explicit_mp_roll": 4
+  },
+  "expect": {
+    "ok": true,
+    "reason": "",
+    "final_state": {
+      "current_player": 0,
+      "priority_player": 0,
+      "turn_number": 3,
+      "phase": "normal_turn",
+      "players": [
+        {
+          "player_id": 0,
+          "remaining_mp": 4,
+          "last_mp_roll": 4,
+          "walls_left": 1,
+          "wall_removals_left": 0
+        },
+        {
+          "player_id": 1,
+          "remaining_mp": 5,
+          "last_mp_roll": 5,
+          "walls_left": 0,
+          "wall_removals_left": 0
+        }
+      ],
+      "units": [
+        {
+          "id": 1,
+          "attacks_left": 1
+        },
+        {
+          "id": 2,
+          "attacks_left": 0
+        }
+      ]
+    },
+    "trace_events": [
+      {
+        "kind": "turn_start_resource_setup",
+        "player_id": 0,
+        "turn_number": 3,
+        "mp_roll": 4,
+        "remaining_mp": 4,
+        "walls_left": 1,
+        "wall_removals_left": 0
+      }
+    ]
+  }
+}

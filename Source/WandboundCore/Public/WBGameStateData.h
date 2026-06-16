@@ -17,6 +17,7 @@ struct WANDBOUNDCORE_API FWBUnitState
 	int32 RLTotal = 0;
 	int32 RLUsed = 0;
 	int32 AttacksLeft = 0;
+	int32 MaxAttacksPerTurn = 1;
 	int32 MPRemaining = 0;
 	TSet<FName> Statuses;
 	TSet<FName> Passives;
@@ -33,7 +34,9 @@ struct WANDBOUNDCORE_API FWBPlayerStateData
 	int32 PlayerId = -1;
 	int32 HeroUnitId = -1;
 	int32 WallsLeft = 0;
+	int32 WallRemovalsLeft = 0;
 	int32 RemainingMP = 0;
+	int32 LastMPRoll = 0;
 	TArray<FString> Deck;
 	TArray<FString> Hand;
 	TArray<FString> Discard;
@@ -57,9 +60,13 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	FWBPlayerStateData* GetMutablePlayerById(int32 PlayerId);
 	const FWBPlayerStateData* GetCurrentPlayer() const;
 	FWBPlayerStateData* GetMutableCurrentPlayer();
+	TArray<const FWBUnitState*> GetUnitsForPlayer(int32 PlayerId) const;
+	TArray<FWBUnitState*> GetMutableUnitsForPlayer(int32 PlayerId);
 	bool IsNormalTurnPhase() const;
 	bool IsResponsePhase() const;
 	void AdvanceTurnBasic();
+	bool ResetActionResourcesForPlayer(int32 PlayerId, FString& OutReason);
+	bool ApplyTurnStartResourceSetupForPlayer(int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);
 	const FWBUnitState* GetUnitById(int32 UnitId) const;
 	FWBUnitState* GetMutableUnitById(int32 UnitId);
 	int32 UnitIdAt(const FWBTile& Tile) const;

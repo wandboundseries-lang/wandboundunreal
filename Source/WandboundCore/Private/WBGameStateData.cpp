@@ -2,6 +2,30 @@
 
 #include "WBRules.h"
 
+namespace
+{
+FWBPlayerStateData* FindOrAddTestPlayerState(FWBGameStateData& State, const int32 PlayerId, const int32 InitialRemainingMP)
+{
+	if (!FWBGameStateData::IsValidPlayerId(PlayerId))
+	{
+		return nullptr;
+	}
+
+	FWBPlayerStateData* ExistingPlayer = State.GetMutablePlayerById(PlayerId);
+	if (ExistingPlayer != nullptr)
+	{
+		ExistingPlayer->RemainingMP += FMath::Max(InitialRemainingMP, 0);
+		return ExistingPlayer;
+	}
+
+	FWBPlayerStateData Player;
+	Player.PlayerId = PlayerId;
+	Player.RemainingMP = FMath::Max(InitialRemainingMP, 0);
+	State.Players.Add(Player);
+	return &State.Players.Last();
+}
+}
+
 bool FWBGameStateData::IsValidPlayerId(const int32 PlayerId)
 {
 	return PlayerId == 0 || PlayerId == 1;
@@ -53,6 +77,34 @@ FWBPlayerStateData* FWBGameStateData::GetMutableCurrentPlayer()
 	return GetMutablePlayerById(CurrentPlayer);
 }
 
+TArray<const FWBUnitState*> FWBGameStateData::GetUnitsForPlayer(const int32 PlayerId) const
+{
+	TArray<const FWBUnitState*> OwnedUnits;
+	for (const FWBUnitState& Unit : Units)
+	{
+		if (Unit.OwnerId == PlayerId)
+		{
+			OwnedUnits.Add(&Unit);
+		}
+	}
+
+	return OwnedUnits;
+}
+
+TArray<FWBUnitState*> FWBGameStateData::GetMutableUnitsForPlayer(const int32 PlayerId)
+{
+	TArray<FWBUnitState*> OwnedUnits;
+	for (FWBUnitState& Unit : Units)
+	{
+		if (Unit.OwnerId == PlayerId)
+		{
+			OwnedUnits.Add(&Unit);
+		}
+	}
+
+	return OwnedUnits;
+}
+
 bool FWBGameStateData::IsNormalTurnPhase() const
 {
 	return Phase == EWBGamePhase::NormalTurn;
@@ -71,6 +123,69 @@ void FWBGameStateData::AdvanceTurnBasic()
 	Phase = EWBGamePhase::NormalTurn;
 	TurnNumber += 1;
 	// TODO: MP dice rolls, card draw, and start-of-turn triggers are intentionally outside this deterministic baseline.
+}
+
+bool FWBGameStateData::ResetActionResourcesForPlayer(const int32 PlayerId, FString& OutReason)
+{
+	FWBPlayerStateData* Player = GetMutablePlayerById(PlayerId);
+	if (Player == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
+		return false;
+	}
+
+	Player->WallsLeft = 1;
+	Player->WallRemovalsLeft = TurnNumber >= 30 ? 1 : 0;
+
+	for (FWBUnitState* Unit : GetMutableUnitsForPlayer(PlayerId))
+	{
+		if (Unit != nullptr)
+		{
+			Unit->AttacksLeft = FMath::Max(Unit->MaxAttacksPerTurn, 0);
+		}
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool FWBGameStateData::ApplyTurnStartResourceSetupForPlayer(
+	const int32 PlayerId,
+	const int32 ExplicitMPRoll,
+	FString& OutReason)
+{
+	if (!IsValidPlayerId(PlayerId))
+	{
+		OutReason = TEXT("bad_player");
+		return false;
+	}
+
+	if (ExplicitMPRoll < 1 || ExplicitMPRoll > 6)
+	{
+		OutReason = TEXT("invalid_mp_roll");
+		return false;
+	}
+
+	FWBPlayerStateData* Player = GetMutablePlayerById(PlayerId);
+	if (Player == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
+		return false;
+	}
+
+	CurrentPlayer = PlayerId;
+	PriorityPlayer = PlayerId;
+	Phase = EWBGamePhase::NormalTurn;
+	Player->LastMPRoll = ExplicitMPRoll;
+	Player->RemainingMP = ExplicitMPRoll;
+
+	if (!ResetActionResourcesForPlayer(PlayerId, OutReason))
+	{
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
 }
 
 const FWBUnitState* FWBGameStateData::GetUnitById(const int32 UnitId) const
@@ -125,6 +240,7 @@ bool FWBGameStateData::AddUnitForTest(const FWBUnitState& Unit)
 		return false;
 	}
 
+	FindOrAddTestPlayerState(*this, Unit.OwnerId, Unit.MPRemaining);
 	Units.Add(Unit);
 	return true;
 }

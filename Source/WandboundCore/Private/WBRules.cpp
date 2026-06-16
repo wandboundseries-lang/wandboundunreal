@@ -164,6 +164,12 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 		return FWBMoveQueryResult::Deny(TEXT("wrong_player"));
 	}
 
+	const FWBPlayerStateData* Player = State.GetPlayerById(Action.PlayerId);
+	if (Player == nullptr)
+	{
+		return FWBMoveQueryResult::Deny(TEXT("missing_player_state"));
+	}
+
 	const FWBTile UnitTile(Unit->X, Unit->Y);
 	if (Action.FromTile != UnitTile)
 	{
@@ -190,7 +196,7 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 		return FWBMoveQueryResult::Deny(TEXT("blocked_by_wall"));
 	}
 
-	if (Unit->MPRemaining <= 0)
+	if (Player->RemainingMP <= 0)
 	{
 		return FWBMoveQueryResult::Deny(TEXT("insufficient_mp"));
 	}
@@ -301,6 +307,40 @@ FWBActionQueryResult WBRules::CanEndTurn(const FWBGameStateData& State, const FW
 FWBActionQueryResult WBRules::CanPassResponse(const FWBGameStateData& State, const FWBAction& Action)
 {
 	return QueryPassResponse(State, Action);
+}
+
+bool WBRules::CanApplyTurnStartResourceSetup(
+	const FWBGameStateData& State,
+	const int32 PlayerId,
+	const int32 ExplicitMPRoll,
+	FString& OutReason)
+{
+	if (State.bGameOver)
+	{
+		OutReason = TEXT("game_over");
+		return false;
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(PlayerId))
+	{
+		OutReason = TEXT("bad_player");
+		return false;
+	}
+
+	if (State.GetPlayerById(PlayerId) == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
+		return false;
+	}
+
+	if (ExplicitMPRoll < 1 || ExplicitMPRoll > 6)
+	{
+		OutReason = TEXT("invalid_mp_roll");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
 }
 
 TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& State, const int32 PlayerId, const int32 UnitId)

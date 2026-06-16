@@ -14,6 +14,10 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 FromPlayer = -1;
 	int32 ToPlayer = -1;
 	int32 TurnNumber = -1;
+	int32 MPRoll = -1;
+	int32 RemainingMP = -1;
+	int32 WallsLeft = -1;
+	int32 WallRemovalsLeft = -1;
 	FWBTile FromTile;
 	FWBTile ToTile;
 	bool bOk = false;

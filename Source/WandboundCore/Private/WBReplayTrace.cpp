@@ -55,6 +55,26 @@ TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("turn_number"), Event.TurnNumber);
 	}
 
+	if (Event.MPRoll != -1)
+	{
+		Object->SetNumberField(TEXT("mp_roll"), Event.MPRoll);
+	}
+
+	if (Event.RemainingMP != -1)
+	{
+		Object->SetNumberField(TEXT("remaining_mp"), Event.RemainingMP);
+	}
+
+	if (Event.WallsLeft != -1)
+	{
+		Object->SetNumberField(TEXT("walls_left"), Event.WallsLeft);
+	}
+
+	if (Event.WallRemovalsLeft != -1)
+	{
+		Object->SetNumberField(TEXT("wall_removals_left"), Event.WallRemovalsLeft);
+	}
+
 	if (IsSetTile(Event.FromTile))
 	{
 		Object->SetObjectField(TEXT("from_tile"), TileToJsonObject(Event.FromTile));

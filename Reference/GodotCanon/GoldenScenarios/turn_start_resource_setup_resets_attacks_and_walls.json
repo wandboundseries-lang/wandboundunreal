@@ -1,0 +1,113 @@
+{
+  "id": "turn_start_resource_setup_resets_attacks_and_walls",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:reset_attack_budgets_for_player"
+  ],
+  "intent": "Turn-start setup resets owned unit attacks and wall allowances without resetting opponent units.",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 30,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 1,
+        "last_mp_roll": 1,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 3,
+        "last_mp_roll": 3,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 2
+      },
+      {
+        "id": 2,
+        "owner_id": 0,
+        "x": 3,
+        "y": 4,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 1
+      },
+      {
+        "id": 3,
+        "owner_id": 1,
+        "x": 5,
+        "y": 4,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 3
+      }
+    ]
+  },
+  "operation": {
+    "kind": "turn_start_resource_setup",
+    "player_id": 0,
+    "explicit_mp_roll": 6
+  },
+  "expect": {
+    "ok": true,
+    "reason": "",
+    "final_state": {
+      "current_player": 0,
+      "priority_player": 0,
+      "turn_number": 30,
+      "phase": "normal_turn",
+      "players": [
+        {
+          "player_id": 0,
+          "remaining_mp": 6,
+          "last_mp_roll": 6,
+          "walls_left": 1,
+          "wall_removals_left": 1
+        },
+        {
+          "player_id": 1,
+          "remaining_mp": 3,
+          "last_mp_roll": 3,
+          "walls_left": 0,
+          "wall_removals_left": 0
+        }
+      ],
+      "units": [
+        {
+          "id": 1,
+          "attacks_left": 2
+        },
+        {
+          "id": 2,
+          "attacks_left": 1
+        },
+        {
+          "id": 3,
+          "attacks_left": 0
+        }
+      ]
+    },
+    "trace_events": [
+      {
+        "kind": "turn_start_resource_setup",
+        "player_id": 0,
+        "turn_number": 30,
+        "mp_roll": 6,
+        "remaining_mp": 6,
+        "walls_left": 1,
+        "wall_removals_left": 1
+      }
+    ]
+  }
+}

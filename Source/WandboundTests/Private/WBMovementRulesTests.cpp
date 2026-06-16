@@ -1140,7 +1140,13 @@ bool FWBValidAdjacentMoveSucceedsTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("Unit X unchanged"), Unit->X, 4);
 		TestEqual(TEXT("Unit Y updated"), Unit->Y, 3);
-		TestEqual(TEXT("MP decremented"), Unit->MPRemaining, 1);
+		TestEqual(TEXT("Legacy unit MP mirror decremented"), Unit->MPRemaining, 1);
+	}
+	const FWBPlayerStateData* Player = State.GetPlayerById(0);
+	TestTrue(TEXT("Player state exists"), Player != nullptr);
+	if (Player != nullptr)
+	{
+		TestEqual(TEXT("Player MP decremented"), Player->RemainingMP, 1);
 	}
 	TestEqual(TEXT("One trace event emitted"), Result.TraceEvents.Num(), 1);
 	if (Result.TraceEvents.Num() == 1)
@@ -1312,7 +1318,13 @@ bool FWBNoMPUnitCannotMoveTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("Unit X unchanged"), Unit->X, 4);
 		TestEqual(TEXT("Unit Y unchanged"), Unit->Y, 4);
-		TestEqual(TEXT("MP unchanged"), Unit->MPRemaining, 0);
+		TestEqual(TEXT("Legacy unit MP mirror unchanged"), Unit->MPRemaining, 0);
+	}
+	const FWBPlayerStateData* Player = State.GetPlayerById(0);
+	TestTrue(TEXT("Player state exists"), Player != nullptr);
+	if (Player != nullptr)
+	{
+		TestEqual(TEXT("Player MP unchanged"), Player->RemainingMP, 0);
 	}
 
 	return true;
@@ -1336,7 +1348,13 @@ bool FWBFailedMoveDoesNotMutateTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("Unit X unchanged"), Unit->X, 4);
 		TestEqual(TEXT("Unit Y unchanged"), Unit->Y, 4);
-		TestEqual(TEXT("MP unchanged"), Unit->MPRemaining, 3);
+		TestEqual(TEXT("Legacy unit MP mirror unchanged"), Unit->MPRemaining, 3);
+	}
+	const FWBPlayerStateData* Player = State.GetPlayerById(0);
+	TestTrue(TEXT("Player state exists"), Player != nullptr);
+	if (Player != nullptr)
+	{
+		TestEqual(TEXT("Player MP unchanged"), Player->RemainingMP, 3);
 	}
 
 	return true;

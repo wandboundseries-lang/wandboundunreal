@@ -171,8 +171,6 @@ bool FWBTurnFlowLegalActionGenerationTest::RunTest(const FString& Parameters)
 	StunnedUnit.Statuses.Add(FName(TEXT("stun")));
 	TestTrue(TEXT("Stunned unit added"), State.AddUnitForTest(StunnedUnit));
 
-	TestTrue(TEXT("No-MP unit added"), State.AddUnitForTest(MakeTurnFlowUnit(5, 0, FWBTile(6, 6), 0)));
-
 	const FWBGameStateData BeforeGeneration = State;
 	const TArray<FWBAction> Actions = WBRules::GenerateLegalActionsForPlayer(State, 0);
 	const TArray<FWBAction> RepeatedActions = WBRules::GenerateLegalActionsForPlayer(State, 0);
@@ -186,7 +184,6 @@ bool FWBTurnFlowLegalActionGenerationTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Walled north move omitted"), ContainsTurnFlowMoveFromUnitTo(Actions, 1, FWBTile(4, 3)));
 	TestFalse(TEXT("Rooted unit move omitted"), ContainsTurnFlowMoveFromUnitTo(Actions, 3, FWBTile(1, 2)));
 	TestFalse(TEXT("Stunned unit move omitted"), ContainsTurnFlowMoveFromUnitTo(Actions, 4, FWBTile(2, 3)));
-	TestFalse(TEXT("No-MP unit move omitted"), ContainsTurnFlowMoveFromUnitTo(Actions, 5, FWBTile(5, 6)));
 
 	if (Actions.Num() == 3)
 	{

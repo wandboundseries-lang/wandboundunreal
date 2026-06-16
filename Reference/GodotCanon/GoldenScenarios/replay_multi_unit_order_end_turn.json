@@ -108,6 +108,9 @@
         "legal_action_ids": [
           "move:p0:u10:4,4->3,4",
           "move:p0:u10:4,4->4,5",
+          "move:p0:u11:1,0->2,0",
+          "move:p0:u11:1,0->0,0",
+          "move:p0:u11:1,0->1,1",
           "end_turn:p0"
         ],
         "trace_events": [

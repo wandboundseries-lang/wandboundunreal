@@ -40,6 +40,7 @@ public:
 	static FWBActionQueryResult QueryPassResponse(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanEndTurn(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanPassResponse(const FWBGameStateData& State, const FWBAction& Action);
+	static bool CanApplyTurnStartResourceSetup(const FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);
 	static TArray<FWBAction> GenerateLegalMoveActions(const FWBGameStateData& State, int32 PlayerId, int32 UnitId);
 	static void GenerateLegalActions(const FWBGameStateData& State, int32 PlayerId, TArray<FWBAction>& OutActions);
 	static TArray<FWBAction> GenerateLegalActions(const FWBGameStateData& State);
