@@ -131,6 +131,10 @@ FWBActionDecodeResult DecodeActionObject(const TSharedPtr<FJsonObject>& Object, 
 	{
 		Action.Type = EWBActionType::Pass;
 	}
+	else if (Kind == TEXT("pass_response"))
+	{
+		Action.Type = EWBActionType::PassResponse;
+	}
 	else
 	{
 		return DecodeFailure(FString::Printf(TEXT("unsupported_action_kind:%s"), *Kind));
@@ -159,6 +163,8 @@ FString WBActionCodec::GetActionKind(const EWBActionType Type)
 		return TEXT("end_turn");
 	case EWBActionType::Pass:
 		return TEXT("pass");
+	case EWBActionType::PassResponse:
+		return TEXT("pass_response");
 	default:
 		return TEXT("none");
 	}
@@ -181,6 +187,8 @@ FString WBActionCodec::MakeActionId(const FWBAction& Action)
 		return FString::Printf(TEXT("end_turn:p%d"), Action.PlayerId);
 	case EWBActionType::Pass:
 		return FString::Printf(TEXT("pass:p%d"), Action.PlayerId);
+	case EWBActionType::PassResponse:
+		return FString::Printf(TEXT("pass_response:p%d"), Action.PlayerId);
 	default:
 		return FString::Printf(TEXT("none:p%d"), Action.PlayerId);
 	}

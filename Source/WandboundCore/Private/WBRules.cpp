@@ -21,6 +21,7 @@ bool HasMovementBlockingStatus(const FWBUnitState& Unit)
 		|| Unit.Statuses.Contains(LegacyRootedStatusName)
 		|| Unit.Statuses.Contains(LegacyStunnedStatusName);
 }
+
 }
 
 FWBMoveQueryResult FWBMoveQueryResult::Ok(const int32 InCostMP)
@@ -117,6 +118,16 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 		return FWBMoveQueryResult::Deny(TEXT("invalid_action"));
 	}
 
+	if (State.bGameOver)
+	{
+		return FWBMoveQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (!State.IsNormalTurnPhase())
+	{
+		return FWBMoveQueryResult::Deny(TEXT("not_normal_turn"));
+	}
+
 	const FWBUnitState* Unit = State.GetUnitById(Action.SourceUnitId);
 	if (Unit == nullptr)
 	{
@@ -131,6 +142,21 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 	if (Unit->OwnerId == -1)
 	{
 		return FWBMoveQueryResult::Deny(TEXT("bad_player"));
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+	{
+		return FWBMoveQueryResult::Deny(TEXT("bad_player"));
+	}
+
+	if (Action.PlayerId != State.CurrentPlayer)
+	{
+		return FWBMoveQueryResult::Deny(TEXT("not_active_player"));
+	}
+
+	if (Action.PlayerId != State.PriorityPlayer)
+	{
+		return FWBMoveQueryResult::Deny(TEXT("no_priority"));
 	}
 
 	if (Action.PlayerId != Unit->OwnerId)
@@ -179,6 +205,16 @@ FWBActionQueryResult WBRules::QueryEndTurn(const FWBGameStateData& State, const 
 		return FWBActionQueryResult::Deny(TEXT("invalid_action"));
 	}
 
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+	{
+		return FWBActionQueryResult::Deny(TEXT("bad_player"));
+	}
+
 	if (Action.PlayerId != State.CurrentPlayer)
 	{
 		return FWBActionQueryResult::Deny(TEXT("not_active_player"));
@@ -189,6 +225,11 @@ FWBActionQueryResult WBRules::QueryEndTurn(const FWBGameStateData& State, const 
 		return FWBActionQueryResult::Deny(TEXT("no_priority"));
 	}
 
+	if (!State.IsNormalTurnPhase())
+	{
+		return FWBActionQueryResult::Deny(TEXT("not_normal_turn"));
+	}
+
 	return FWBActionQueryResult::Ok();
 }
 
@@ -197,6 +238,16 @@ FWBActionQueryResult WBRules::QueryPass(const FWBGameStateData& State, const FWB
 	if (Action.Type != EWBActionType::Pass)
 	{
 		return FWBActionQueryResult::Deny(TEXT("invalid_action"));
+	}
+
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+	{
+		return FWBActionQueryResult::Deny(TEXT("bad_player"));
 	}
 
 	if (Action.PlayerId != State.PriorityPlayer)
@@ -210,6 +261,46 @@ FWBActionQueryResult WBRules::QueryPass(const FWBGameStateData& State, const FWB
 	}
 
 	return FWBActionQueryResult::Ok();
+}
+
+FWBActionQueryResult WBRules::QueryPassResponse(const FWBGameStateData& State, const FWBAction& Action)
+{
+	if (Action.Type != EWBActionType::PassResponse)
+	{
+		return FWBActionQueryResult::Deny(TEXT("invalid_action"));
+	}
+
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+	{
+		return FWBActionQueryResult::Deny(TEXT("bad_player"));
+	}
+
+	if (!State.IsResponsePhase())
+	{
+		return FWBActionQueryResult::Deny(TEXT("not_response_phase"));
+	}
+
+	if (Action.PlayerId != State.PriorityPlayer)
+	{
+		return FWBActionQueryResult::Deny(TEXT("not_priority_player"));
+	}
+
+	return FWBActionQueryResult::Ok();
+}
+
+FWBActionQueryResult WBRules::CanEndTurn(const FWBGameStateData& State, const FWBAction& Action)
+{
+	return QueryEndTurn(State, Action);
+}
+
+FWBActionQueryResult WBRules::CanPassResponse(const FWBGameStateData& State, const FWBAction& Action)
+{
+	return QueryPassResponse(State, Action);
 }
 
 TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& State, const int32 PlayerId, const int32 UnitId)
@@ -246,15 +337,26 @@ TArray<FWBAction> WBRules::GenerateLegalActions(const FWBGameStateData& State)
 	return GenerateLegalActionsForPlayer(State, State.PriorityPlayer);
 }
 
+void WBRules::GenerateLegalActions(const FWBGameStateData& State, const int32 PlayerId, TArray<FWBAction>& OutActions)
+{
+	OutActions = GenerateLegalActionsForPlayer(State, PlayerId);
+}
+
 TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(const FWBGameStateData& State, const int32 PlayerId)
 {
 	TArray<FWBAction> LegalActions;
 
+	if (State.bGameOver || !FWBGameStateData::IsValidPlayerId(PlayerId))
+	{
+		return LegalActions;
+	}
+
 	const bool bHasPriority = State.PriorityPlayer == PlayerId;
-	const bool bCanTakeMainPhaseActions = bHasPriority && State.CurrentPlayer == PlayerId;
+	const bool bCanTakeMainPhaseActions = State.IsNormalTurnPhase() && bHasPriority && State.CurrentPlayer == PlayerId;
 
 	if (bCanTakeMainPhaseActions)
 	{
+		// Deterministic ordering: units are traversed in stable state order; each unit emits east, west, south, north moves; EndTurn is appended last.
 		for (const FWBUnitState& Unit : State.Units)
 		{
 			if (Unit.OwnerId != PlayerId)
@@ -269,6 +371,13 @@ TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(const FWBGameStateData&
 		EndTurnAction.Type = EWBActionType::EndTurn;
 		EndTurnAction.PlayerId = PlayerId;
 		LegalActions.Add(EndTurnAction);
+	}
+	else if (State.IsResponsePhase() && bHasPriority)
+	{
+		FWBAction PassResponseAction;
+		PassResponseAction.Type = EWBActionType::PassResponse;
+		PassResponseAction.PlayerId = PlayerId;
+		LegalActions.Add(PassResponseAction);
 	}
 	else if (bHasPriority)
 	{

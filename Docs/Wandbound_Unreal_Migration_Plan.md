@@ -34,6 +34,41 @@
 - automation tests added
 - no Actor/Blueprint/UI dependency
 
+## Milestone: Turn Flow + Legal Action Generation
+
+- Implemented state fields:
+  - `CurrentPlayer`
+  - `PriorityPlayer`
+  - `TurnNumber`
+  - `Phase`
+  - `bGameOver`
+  - player `RemainingMP` storage for deterministic future turn setup
+- Added basic state helpers:
+  - player ID validation
+  - current-player lookup
+  - priority-player lookup
+  - normal/response phase checks
+  - `AdvanceTurnBasic`
+- Legal actions currently supported:
+  - `Move`
+  - `EndTurn`
+  - `Pass`
+  - `PassResponse`
+- Deterministic action ordering:
+  - units are traversed in stable state order
+  - movement destinations are evaluated east, west, south, north
+  - `EndTurn` is appended after movement
+  - explicit response phase generates `PassResponse` as the sole response action for the priority player
+- Intentionally not implemented yet:
+  - attack
+  - summon
+  - equip
+  - cast/effects
+  - card draw
+  - MP dice roll
+  - start/end turn triggers
+  - full response activations
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

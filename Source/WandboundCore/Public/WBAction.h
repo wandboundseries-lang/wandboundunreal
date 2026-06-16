@@ -8,7 +8,8 @@ enum class EWBActionType : uint8
 	None,
 	Move,
 	Pass,
-	EndTurn
+	EndTurn,
+	PassResponse
 };
 
 struct WANDBOUNDCORE_API FWBAction

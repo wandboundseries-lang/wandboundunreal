@@ -37,7 +37,11 @@ public:
 	static FWBMoveQueryResult QueryMove(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult QueryPass(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBActionQueryResult QueryPassResponse(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBActionQueryResult CanEndTurn(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBActionQueryResult CanPassResponse(const FWBGameStateData& State, const FWBAction& Action);
 	static TArray<FWBAction> GenerateLegalMoveActions(const FWBGameStateData& State, int32 PlayerId, int32 UnitId);
+	static void GenerateLegalActions(const FWBGameStateData& State, int32 PlayerId, TArray<FWBAction>& OutActions);
 	static TArray<FWBAction> GenerateLegalActions(const FWBGameStateData& State);
 	static TArray<FWBAction> GenerateLegalActionsForPlayer(const FWBGameStateData& State, int32 PlayerId);
 	static bool CanMoveUnit(const FWBGameStateData& State, const FWBAction& Action, FString& OutReason);

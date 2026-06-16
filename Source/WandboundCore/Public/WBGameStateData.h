@@ -22,11 +22,18 @@ struct WANDBOUNDCORE_API FWBUnitState
 	TSet<FName> Passives;
 };
 
+enum class EWBGamePhase : uint8
+{
+	NormalTurn,
+	Response
+};
+
 struct WANDBOUNDCORE_API FWBPlayerStateData
 {
 	int32 PlayerId = -1;
 	int32 HeroUnitId = -1;
 	int32 WallsLeft = 0;
+	int32 RemainingMP = 0;
 	TArray<FString> Deck;
 	TArray<FString> Hand;
 	TArray<FString> Discard;
@@ -37,10 +44,22 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	int32 CurrentPlayer = 0;
 	int32 PriorityPlayer = 0;
 	int32 TurnNumber = 1;
+	EWBGamePhase Phase = EWBGamePhase::NormalTurn;
+	bool bGameOver = false;
 	TArray<FWBUnitState> Units;
 	TArray<FWBWallEdge> Walls;
 	TArray<FWBPlayerStateData> Players;
 
+	static bool IsValidPlayerId(int32 PlayerId);
+	int32 GetCurrentPlayerId() const;
+	int32 GetActionPriorityPlayerId() const;
+	const FWBPlayerStateData* GetPlayerById(int32 PlayerId) const;
+	FWBPlayerStateData* GetMutablePlayerById(int32 PlayerId);
+	const FWBPlayerStateData* GetCurrentPlayer() const;
+	FWBPlayerStateData* GetMutableCurrentPlayer();
+	bool IsNormalTurnPhase() const;
+	bool IsResponsePhase() const;
+	void AdvanceTurnBasic();
 	const FWBUnitState* GetUnitById(int32 UnitId) const;
 	FWBUnitState* GetMutableUnitById(int32 UnitId);
 	int32 UnitIdAt(const FWBTile& Tile) const;

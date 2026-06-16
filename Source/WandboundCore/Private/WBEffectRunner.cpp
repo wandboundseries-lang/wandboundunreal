@@ -12,6 +12,8 @@ FWBApplyActionResult WBEffectRunner::ApplyAction(FWBGameStateData& State, const 
 		return ApplyEndTurn(State, Action);
 	case EWBActionType::Pass:
 		return ApplyPass(State, Action);
+	case EWBActionType::PassResponse:
+		return ApplyPassResponse(State, Action);
 	default:
 		FWBApplyActionResult Result;
 		Result.bOk = false;
@@ -71,17 +73,13 @@ FWBApplyActionResult WBEffectRunner::ApplyEndTurn(FWBGameStateData& State, const
 	}
 
 	const int32 PreviousPlayer = State.CurrentPlayer;
-	const int32 NextPlayer = 1 - PreviousPlayer;
-
-	State.CurrentPlayer = NextPlayer;
-	State.PriorityPlayer = NextPlayer;
-	State.TurnNumber += 1;
+	State.AdvanceTurnBasic();
 
 	FWBTraceEvent EndTurnEvent;
 	EndTurnEvent.Kind = FName(TEXT("end_turn"));
 	EndTurnEvent.PlayerId = Action.PlayerId;
 	EndTurnEvent.FromPlayer = PreviousPlayer;
-	EndTurnEvent.ToPlayer = NextPlayer;
+	EndTurnEvent.ToPlayer = State.CurrentPlayer;
 	EndTurnEvent.TurnNumber = State.TurnNumber;
 	EndTurnEvent.bOk = true;
 
@@ -104,9 +102,39 @@ FWBApplyActionResult WBEffectRunner::ApplyPass(FWBGameStateData& State, const FW
 
 	const int32 PreviousPriorityPlayer = State.PriorityPlayer;
 	State.PriorityPlayer = State.CurrentPlayer;
+	State.Phase = EWBGamePhase::NormalTurn;
 
 	FWBTraceEvent PassEvent;
 	PassEvent.Kind = FName(TEXT("pass"));
+	PassEvent.PlayerId = Action.PlayerId;
+	PassEvent.FromPlayer = PreviousPriorityPlayer;
+	PassEvent.ToPlayer = State.PriorityPlayer;
+	PassEvent.TurnNumber = State.TurnNumber;
+	PassEvent.bOk = true;
+
+	Result.bOk = true;
+	Result.TraceEvents.Add(PassEvent);
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyPassResponse(FWBGameStateData& State, const FWBAction& Action)
+{
+	FWBApplyActionResult Result;
+
+	const FWBActionQueryResult Query = WBRules::QueryPassResponse(State, Action);
+	if (!Query.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = Query.Reason;
+		return Result;
+	}
+
+	const int32 PreviousPriorityPlayer = State.PriorityPlayer;
+	State.PriorityPlayer = State.CurrentPlayer;
+	State.Phase = EWBGamePhase::NormalTurn;
+
+	FWBTraceEvent PassEvent;
+	PassEvent.Kind = FName(TEXT("pass_response"));
 	PassEvent.PlayerId = Action.PlayerId;
 	PassEvent.FromPlayer = PreviousPriorityPlayer;
 	PassEvent.ToPlayer = State.PriorityPlayer;

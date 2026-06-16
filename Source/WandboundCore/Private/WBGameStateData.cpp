@@ -2,6 +2,77 @@
 
 #include "WBRules.h"
 
+bool FWBGameStateData::IsValidPlayerId(const int32 PlayerId)
+{
+	return PlayerId == 0 || PlayerId == 1;
+}
+
+int32 FWBGameStateData::GetCurrentPlayerId() const
+{
+	return CurrentPlayer;
+}
+
+int32 FWBGameStateData::GetActionPriorityPlayerId() const
+{
+	return PriorityPlayer;
+}
+
+const FWBPlayerStateData* FWBGameStateData::GetPlayerById(const int32 PlayerId) const
+{
+	for (const FWBPlayerStateData& Player : Players)
+	{
+		if (Player.PlayerId == PlayerId)
+		{
+			return &Player;
+		}
+	}
+
+	return nullptr;
+}
+
+FWBPlayerStateData* FWBGameStateData::GetMutablePlayerById(const int32 PlayerId)
+{
+	for (FWBPlayerStateData& Player : Players)
+	{
+		if (Player.PlayerId == PlayerId)
+		{
+			return &Player;
+		}
+	}
+
+	return nullptr;
+}
+
+const FWBPlayerStateData* FWBGameStateData::GetCurrentPlayer() const
+{
+	return GetPlayerById(CurrentPlayer);
+}
+
+FWBPlayerStateData* FWBGameStateData::GetMutableCurrentPlayer()
+{
+	return GetMutablePlayerById(CurrentPlayer);
+}
+
+bool FWBGameStateData::IsNormalTurnPhase() const
+{
+	return Phase == EWBGamePhase::NormalTurn;
+}
+
+bool FWBGameStateData::IsResponsePhase() const
+{
+	return Phase == EWBGamePhase::Response;
+}
+
+void FWBGameStateData::AdvanceTurnBasic()
+{
+	const int32 PreviousPlayer = CurrentPlayer;
+	CurrentPlayer = PreviousPlayer == 0 ? 1 : 0;
+	PriorityPlayer = CurrentPlayer;
+	Phase = EWBGamePhase::NormalTurn;
+	TurnNumber += 1;
+	// TODO: MP dice rolls, card draw, and start-of-turn triggers are intentionally outside this deterministic baseline.
+}
+
 const FWBUnitState* FWBGameStateData::GetUnitById(const int32 UnitId) const
 {
 	for (const FWBUnitState& Unit : Units)
