@@ -4,51 +4,58 @@ Date of check: 2026-06-16 (America/New_York)
 
 ## Scope
 
-This pass added deterministic replay fixture coverage for turn commands while preserving existing `FWBAction` legal action replay.
+This pass added deterministic selected-action runtime execution integration while preserving legal action generation, `FWBAction` replay, and `WBActionCodec` action IDs.
 
 Implemented:
 
-- replay turn command audit
-- explicit `apply_turn_command` fixture operation support
-- fixture utility helpers for turn command parsing and common expected-state assertions
-- replay fixtures for basic end turn, full deterministic transition, invalid MP roll, and action replay unchanged
-- automation tests for command fixtures, action replay stability, legal action stability, and trace JSON serialization
+- selected-action runtime execution audit
+- pure C++ `WBSelectedActionExecutor`
+- `FWBSelectedActionExecutionContext`
+- selected `Move` delegation to `WBEffectRunner::ApplyMove`
+- selected `EndTurn` basic delegation to `WBEffectRunner::ApplyEndTurn`
+- selected `EndTurn` full transition delegation through `WBTurnController::ApplyTurnCommand`
+- selected `PassResponse` delegation to `WBEffectRunner::ApplyPassResponse`
+- fixture operation `apply_selected_action` for selected-action tests only
+- selected-action GoldenScenarios fixtures
+- automation coverage for direct executor behavior, fixture scenarios, legal generation stability, action codec stability, and replay `apply_action` stability
 
 Not implemented:
 
 - new gameplay mechanics
-- player-facing `EndTurn` rewiring to full transition
-- full transition legal actions
-- `WBActionCodec` support for controller commands
+- legal action generation changes
+- full transition as a player legal action
+- `WBActionCodec` command encoding
+- replay `apply_action` behavior changes
+- random dice generation
+- draw
+- NPC phase
 - attacks
 - cards/effects
-- draw
-- random dice generation
-- NPC phase
 - UI/Blueprint/3D runtime
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Replay Fixture Notes
+## Selected-Action Gateway Notes
 
-New fixture operation:
-
-```text
-operation = apply_turn_command
-```
-
-Supported fixture modes:
+New API:
 
 ```text
-basic_end_turn
-deterministic_full_transition
+FWBSelectedActionExecutionContext
+WBSelectedActionExecutor::ApplySelectedAction(State, Action, Context)
 ```
 
-`apply_turn_command` fixtures parse an `FWBTurnCommand` and call `WBTurnController::ApplyTurnCommand`.
+Selected action behavior:
 
-`apply_action` fixtures still use `WBActionCodec` and the existing player `FWBAction` replay path.
+- `Move` delegates to `WBEffectRunner::ApplyMove`.
+- `EndTurn` with full transition disabled delegates to `WBEffectRunner::ApplyEndTurn`.
+- `EndTurn` with full transition enabled builds an `FWBTurnCommand` and delegates to `WBTurnController::ApplyTurnCommand`.
+- `PassResponse` delegates to `WBEffectRunner::ApplyPassResponse`.
 
-`WBActionCodec` remains scoped to player legal actions. It does not encode full deterministic turn transitions or controller commands.
+Full-transition selected `EndTurn` requires `NextPlayerExplicitMPRoll` from `1` to `6`. Invalid or missing rolls fail without mutation and do not fall back to basic end turn.
+
+`apply_action` replay fixtures still use `WBActionCodec` plus `WBEffectRunner::ApplyAction`.
+
+`WBActionCodec` remains scoped to player legal actions and still encodes `EndTurn` as `end_turn:p0`.
 
 Legal action generation remains unchanged:
 
@@ -59,16 +66,17 @@ Legal action generation remains unchanged:
 
 ## Implemented This Pass
 
-- Added `Docs/Replay_Turn_Command_Audit.md`.
-- Added `Docs/Replay_Turn_Command_Report.md`.
-- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.h`.
-- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
-- Added `Source/WandboundTests/Private/WBTurnCommandReplayFixtureTests.cpp`.
+- Added `Docs/Selected_Action_Runtime_Execution_Audit.md`.
+- Added `Docs/Selected_Action_Runtime_Execution_Report.md`.
+- Added `Source/WandboundCore/Public/WBSelectedActionExecutor.h`.
+- Added `Source/WandboundCore/Private/WBSelectedActionExecutor.cpp`.
+- Added `Source/WandboundTests/Private/WBSelectedActionExecutorTests.cpp`.
 - Added GodotCanon fixtures:
-  - `replay_turn_command_basic_end_turn_only.json`
-  - `replay_turn_command_full_transition_burn_poison_setup.json`
-  - `replay_turn_command_full_transition_invalid_roll_no_mutation.json`
-  - `replay_turn_command_does_not_change_action_replay.json`
+  - `selected_action_end_turn_basic.json`
+  - `selected_action_end_turn_full_transition.json`
+  - `selected_action_end_turn_full_transition_invalid_roll.json`
+  - `selected_action_move_unchanged.json`
+  - `selected_action_pass_response_unchanged.json`
 
 ## Build
 
@@ -82,7 +90,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 14.50 seconds
+Total execution time: 65.09 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -96,7 +104,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=110
+succeeded=121
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -104,12 +112,17 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.TurnCommandReplay.BasicEndTurnOnlyFixture`
-- `Wandbound.Core.TurnCommandReplay.FullTransitionFixture`
-- `Wandbound.Core.TurnCommandReplay.InvalidRollNoMutationFixture`
-- `Wandbound.Core.TurnCommandReplay.ActionReplayStillBasic`
-- `Wandbound.Core.TurnCommandReplay.LegalActionsUnaffected`
-- `Wandbound.Core.TurnCommandReplay.TraceSerialization`
+- `Wandbound.Core.SelectedAction.ActionCodecUnchanged`
+- `Wandbound.Core.SelectedAction.EndTurnBasic`
+- `Wandbound.Core.SelectedAction.EndTurnBasicIgnoresRoll`
+- `Wandbound.Core.SelectedAction.EndTurnFullTransition`
+- `Wandbound.Core.SelectedAction.EndTurnFullTransitionInvalidRoll`
+- `Wandbound.Core.SelectedAction.EndTurnFullTransitionMissingRoll`
+- `Wandbound.Core.SelectedAction.FixtureScenarios`
+- `Wandbound.Core.SelectedAction.LegalGenerationUnchanged`
+- `Wandbound.Core.SelectedAction.MoveDelegatesToApplyMove`
+- `Wandbound.Core.SelectedAction.PassResponseDelegates`
+- `Wandbound.Core.SelectedAction.ReplayApplyActionUnchanged`
 
 ## Generated File Tracking
 
@@ -130,12 +143,13 @@ Build and automation reported no warnings. `git diff --check` should still be us
 
 ## Risks/Unknowns
 
-- Player-facing `EndTurn` remains basic and is intentionally not rewired to full transition.
-- Future runtime/UI orchestration still needs an explicit integration pass.
-- Network replay semantics are not defined yet.
+- UI/runtime code is not wired to `WBSelectedActionExecutor` yet.
+- Full-transition selected `EndTurn` still requires an explicit deterministic MP roll.
+- Random MP generation is intentionally absent.
+- Network replay semantics for selected-action execution are not defined yet.
 - Full death/prevention is still absent after status ticks.
-- Draw, random MP generation, hooks, card triggers, and NPC phase are still absent.
+- Draw, hooks, card triggers, NPC phase, attacks, and card effects are still absent.
 
 ## Next Recommended Implementation Milestone
 
-Add deterministic runtime turn orchestration integration that maps a selected player `EndTurn` action to the explicit `WBTurnController` command flow, while preserving `FWBAction` replay IDs and keeping the full-transition command out of legal action generation.
+Add a deterministic runtime-facing turn resolution adapter that supplies explicit MP rolls to `WBSelectedActionExecutor` from a test-controlled source, then proves selected EndTurn can be resolved end-to-end without changing legal action IDs or replay `apply_action` semantics.

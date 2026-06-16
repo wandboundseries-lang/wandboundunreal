@@ -250,6 +250,37 @@
   - card triggers
   - attacks/combat
 
+## Milestone: Selected Action Runtime Execution Gateway
+
+- Added a pure C++ selected-action execution gateway:
+  - `FWBSelectedActionExecutionContext`
+  - `WBSelectedActionExecutor::ApplySelectedAction`
+- Runtime-selected `Move` delegates to the existing `WBEffectRunner::ApplyMove`.
+- Runtime-selected `PassResponse` delegates to the existing `WBEffectRunner::ApplyPassResponse`.
+- Runtime-selected `EndTurn` preserves basic behavior by default through `WBEffectRunner::ApplyEndTurn`.
+- Runtime-selected `EndTurn` can use the full deterministic turn transition only when explicitly requested with:
+  - `bUseFullTurnTransitionForEndTurn = true`
+  - a valid `NextPlayerExplicitMPRoll` from `1` to `6`
+- Full selected end turn delegates through `WBTurnController::ApplyTurnCommand`.
+- Invalid or missing full-transition MP rolls fail without mutation.
+- `FWBAction` replay remains unchanged.
+- `WBActionCodec` action IDs remain unchanged.
+- Legal action generation remains unchanged and does not emit full transition commands.
+- Added fixture coverage for:
+  - selected basic end turn
+  - selected full transition end turn
+  - selected full transition invalid roll
+  - selected move
+  - selected pass response
+- Intentionally not implemented yet:
+  - UI/Blueprint wiring
+  - random MP roll generation
+  - draw
+  - NPC phase
+  - card triggers
+  - attacks/combat
+  - network replay
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

@@ -1,0 +1,71 @@
+{
+  "id": "selected_action_pass_response_unchanged",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A runtime-selected PassResponse action delegates to the existing response pass path and does not involve full turn orchestration.",
+  "operation": "apply_selected_action",
+  "action": {
+    "type": "pass_response",
+    "kind": "pass_response",
+    "player_id": 1
+  },
+  "context": {
+    "use_full_turn_transition_for_end_turn": true,
+    "next_player_explicit_mp_roll": 4
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 1,
+    "turn_number": 6,
+    "phase": "response",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 1,
+        "last_mp_roll": 1,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "reason": "",
+    "final_current_player": 0,
+    "final_priority_player": 0,
+    "final_turn_number": 6,
+    "final_phase": "normal_turn",
+    "player_resources": {
+      "0": {
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      "1": {
+        "remaining_mp": 1,
+        "last_mp_roll": 1,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    },
+    "final_units": [],
+    "expected_trace_order": [
+      "pass_response"
+    ]
+  }
+}
