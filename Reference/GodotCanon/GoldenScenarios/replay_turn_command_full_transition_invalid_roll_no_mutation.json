@@ -1,0 +1,120 @@
+{
+  "id": "replay_turn_command_full_transition_invalid_roll_no_mutation",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:mp_pool"
+  ],
+  "intent": "A full-transition controller command with an invalid explicit MP roll fails before any mutation.",
+  "operation": "apply_turn_command",
+  "mode": "deterministic_full_transition",
+  "acting_player_id": 0,
+  "next_player_explicit_mp_roll": 0,
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 1,
+        "max_attacks_per_turn": 1
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "x": 6,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 2
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 2
+        }
+      },
+      "2": {
+        "Poison": {
+          "status_id": "Poison",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "expected": {
+    "ok": false,
+    "reason": "invalid_mp_roll",
+    "final_current_player": 0,
+    "final_priority_player": 0,
+    "final_turn_number": 3,
+    "final_phase": "normal_turn",
+    "player_resources": {
+      "0": {
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      "1": {
+        "remaining_mp": 0,
+        "last_mp_roll": 0,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    },
+    "final_units": [
+      {
+        "id": 1,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 1,
+        "statuses": [
+          "Burn"
+        ],
+        "status_turns": {
+          "Burn": 2
+        }
+      },
+      {
+        "id": 2,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 0,
+        "statuses": [
+          "Poison"
+        ],
+        "status_turns": {
+          "Poison": 2
+        }
+      }
+    ],
+    "expected_trace_order": []
+  }
+}

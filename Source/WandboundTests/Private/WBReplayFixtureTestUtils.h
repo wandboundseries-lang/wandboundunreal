@@ -1,11 +1,64 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WBGameStateData.h"
+#include "WBReplayTrace.h"
+#include "WBTurnController.h"
 
 class FJsonObject;
 
 namespace WandboundTest
 {
+enum class EWBFixtureOperationKind : uint8
+{
+	Unknown,
+	ApplyAction,
+	ApplyTurnCommand
+};
+
+bool BuildGameStateFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBGameStateData& OutState,
+	FString& OutReason);
+
+bool ParseTurnCommandFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBTurnCommand& OutCommand,
+	FString& OutReason);
+
+bool ApplyTurnCommandFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBGameStateData& State,
+	FWBApplyActionResult& OutResult,
+	FString& OutReason);
+
+bool ApplyFixtureOperation(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBGameStateData& State,
+	FWBApplyActionResult& OutResult,
+	EWBFixtureOperationKind& OutOperationKind,
+	FString& OutReason);
+
+bool ExpectTraceOrder(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const TArray<FWBTraceEvent>& TraceEvents,
+	FString& OutReason);
+
+bool ExpectPlayerResources(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBGameStateData& State,
+	FString& OutReason);
+
+bool ExpectUnitStatusSummary(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBGameStateData& State,
+	FString& OutReason);
+
+bool ExpectFinalTurnState(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBGameStateData& State,
+	FString& OutReason);
+
 bool ExtractReplayLogJson(const TSharedPtr<FJsonObject>& Fixture, FString& OutReplayLogJson);
 
 bool TryGetReplayDecisionObject(

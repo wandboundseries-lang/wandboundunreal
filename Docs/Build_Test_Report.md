@@ -4,23 +4,22 @@ Date of check: 2026-06-16 (America/New_York)
 
 ## Scope
 
-This pass implemented deterministic turn command/controller coverage in `WandboundCore`.
+This pass added deterministic replay fixture coverage for turn commands while preserving existing `FWBAction` legal action replay.
 
 Implemented:
 
-- turn command audit
-- pure C++ `WBTurnController`
-- `BasicEndTurn` command mode
-- `DeterministicFullTransition` command mode
-- command validation helper
-- GodotCanon turn command fixtures
-- automation coverage for direct command behavior and fixture-driven command scenarios
+- replay turn command audit
+- explicit `apply_turn_command` fixture operation support
+- fixture utility helpers for turn command parsing and common expected-state assertions
+- replay fixtures for basic end turn, full deterministic transition, invalid MP roll, and action replay unchanged
+- automation tests for command fixtures, action replay stability, legal action stability, and trace JSON serialization
 
 Not implemented:
 
 - new gameplay mechanics
 - player-facing `EndTurn` rewiring to full transition
-- legal action generation for full transitions
+- full transition legal actions
+- `WBActionCodec` support for controller commands
 - attacks
 - cards/effects
 - draw
@@ -30,37 +29,26 @@ Not implemented:
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Turn Command Notes
+## Replay Fixture Notes
 
-The command/controller layer is pure C++ and exists only as an explicit orchestration gateway.
-
-New API:
+New fixture operation:
 
 ```text
-WBTurnController::CanApplyTurnCommand(State, Command, OutReason)
-WBTurnController::ApplyTurnCommand(State, Command)
+operation = apply_turn_command
 ```
 
-Command modes:
+Supported fixture modes:
 
-- `BasicEndTurn`
-- `DeterministicFullTransition`
+```text
+basic_end_turn
+deterministic_full_transition
+```
 
-`BasicEndTurn`:
+`apply_turn_command` fixtures parse an `FWBTurnCommand` and call `WBTurnController::ApplyTurnCommand`.
 
-- delegates to existing `WBRules::CanEndTurn`
-- calls existing `WBEffectRunner::ApplyEndTurn`
-- ignores `NextPlayerExplicitMPRoll`
-- does not run status ticks
-- does not run resource setup
-- emits only the existing `end_turn` trace
+`apply_action` fixtures still use `WBActionCodec` and the existing player `FWBAction` replay path.
 
-`DeterministicFullTransition`:
-
-- delegates validation to `WBRules::CanApplyDeterministicTurnTransition`
-- calls existing `WBEffectRunner::ApplyDeterministicTurnTransition`
-- requires explicit MP roll `1..6`
-- emits the full existing transition trace sequence
+`WBActionCodec` remains scoped to player legal actions. It does not encode full deterministic turn transitions or controller commands.
 
 Legal action generation remains unchanged:
 
@@ -69,17 +57,18 @@ Legal action generation remains unchanged:
 - `PassResponse` in response phase
 - no full-transition player action
 
-Full audit notes are in `Docs/Wandbound_Turn_Command_Audit.md`.
-
 ## Implemented This Pass
 
-- Added `Source/WandboundCore/Public/WBTurnController.h`.
-- Added `Source/WandboundCore/Private/WBTurnController.cpp`.
+- Added `Docs/Replay_Turn_Command_Audit.md`.
+- Added `Docs/Replay_Turn_Command_Report.md`.
+- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.h`.
+- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
+- Added `Source/WandboundTests/Private/WBTurnCommandReplayFixtureTests.cpp`.
 - Added GodotCanon fixtures:
-  - `turn_command_basic_end_turn_only.json`
-  - `turn_command_full_transition.json`
-  - `turn_command_full_transition_invalid_roll_no_mutation.json`
-- Added automation tests in `Source/WandboundTests/Private/WBTurnControllerCommandTests.cpp`.
+  - `replay_turn_command_basic_end_turn_only.json`
+  - `replay_turn_command_full_transition_burn_poison_setup.json`
+  - `replay_turn_command_full_transition_invalid_roll_no_mutation.json`
+  - `replay_turn_command_does_not_change_action_replay.json`
 
 ## Build
 
@@ -93,7 +82,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 12.22 seconds
+Total execution time: 14.50 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -107,7 +96,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=104
+succeeded=110
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -115,15 +104,12 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.TurnController.BasicEndTurnOnly`
-- `Wandbound.Core.TurnController.FullTransition`
-- `Wandbound.Core.TurnController.InvalidRollNoMutation`
-- `Wandbound.Core.TurnController.BasicIgnoresRoll`
-- `Wandbound.Core.TurnController.InvalidActingPlayerFails`
-- `Wandbound.Core.TurnController.GameOverFails`
-- `Wandbound.Core.TurnController.InvalidModeFails`
-- `Wandbound.Core.TurnController.LegalActionsRemainPlayerActions`
-- `Wandbound.Core.TurnController.FixtureScenarios`
+- `Wandbound.Core.TurnCommandReplay.BasicEndTurnOnlyFixture`
+- `Wandbound.Core.TurnCommandReplay.FullTransitionFixture`
+- `Wandbound.Core.TurnCommandReplay.InvalidRollNoMutationFixture`
+- `Wandbound.Core.TurnCommandReplay.ActionReplayStillBasic`
+- `Wandbound.Core.TurnCommandReplay.LegalActionsUnaffected`
+- `Wandbound.Core.TurnCommandReplay.TraceSerialization`
 
 ## Generated File Tracking
 
@@ -136,6 +122,8 @@ Generated folders/artifacts remain untracked:
 - `DerivedDataCache/`
 - common binary/log artifacts such as `*.pdb`, `*.obj`, `*.pch`, `*.ilk`, and `*.log`
 
+The pre-existing untracked `MaxHP` file remains untouched.
+
 ## Remaining Warnings
 
 Build and automation reported no warnings. `git diff --check` should still be used before commit; prior passes have only shown LF-to-CRLF notices.
@@ -144,9 +132,10 @@ Build and automation reported no warnings. `git diff --check` should still be us
 
 - Player-facing `EndTurn` remains basic and is intentionally not rewired to full transition.
 - Future runtime/UI orchestration still needs an explicit integration pass.
+- Network replay semantics are not defined yet.
 - Full death/prevention is still absent after status ticks.
 - Draw, random MP generation, hooks, card triggers, and NPC phase are still absent.
 
 ## Next Recommended Implementation Milestone
 
-Add replay/log fixture coverage for full turn commands, keeping `FWBAction` legal-action replay unchanged and recording turn command execution only through an explicit controller-command fixture path.
+Add deterministic runtime turn orchestration integration that maps a selected player `EndTurn` action to the explicit `WBTurnController` command flow, while preserving `FWBAction` replay IDs and keeping the full-transition command out of legal action generation.

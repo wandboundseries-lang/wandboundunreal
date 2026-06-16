@@ -1,0 +1,124 @@
+{
+  "id": "replay_turn_command_does_not_change_action_replay",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "The existing FWBAction replay path still applies EndTurn as a basic player action and does not execute the full turn transition.",
+  "operation": "apply_action",
+  "action": {
+    "id": "end_turn:p0",
+    "kind": "end_turn",
+    "player_id": 0
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 1,
+        "max_attacks_per_turn": 1
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "x": 6,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 2
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 2
+        }
+      },
+      "2": {
+        "Poison": {
+          "status_id": "Poison",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "expected": {
+    "ok": true,
+    "reason": "",
+    "final_current_player": 1,
+    "final_priority_player": 1,
+    "final_turn_number": 4,
+    "final_phase": "normal_turn",
+    "player_resources": {
+      "0": {
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      "1": {
+        "remaining_mp": 0,
+        "last_mp_roll": 0,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    },
+    "final_units": [
+      {
+        "id": 1,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 1,
+        "statuses": [
+          "Burn"
+        ],
+        "status_turns": {
+          "Burn": 2
+        }
+      },
+      {
+        "id": 2,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 0,
+        "statuses": [
+          "Poison"
+        ],
+        "status_turns": {
+          "Poison": 2
+        }
+      }
+    ],
+    "expected_trace_order": [
+      "end_turn"
+    ]
+  }
+}

@@ -219,6 +219,37 @@
 - UI/runtime integration is intentionally not wired yet; this pass only makes the low-level command choice explicit and testable.
 - This protects player action semantics while giving tests and future runtime code a deterministic full-transition gateway.
 
+## Milestone: Turn Command Replay Fixtures
+
+- Added an explicit replay fixture operation:
+  - `operation = apply_turn_command`
+- Supported command fixture modes:
+  - `basic_end_turn`
+  - `deterministic_full_transition`
+- `apply_turn_command` fixtures parse `FWBTurnCommand` and call `WBTurnController::ApplyTurnCommand`.
+- `apply_action` fixtures continue to use `FWBAction` and `WBActionCodec`.
+- `FWBAction` legal action replay remains unchanged:
+  - `Move`
+  - `EndTurn`
+  - `Pass`
+  - `PassResponse`
+- Full deterministic transition remains test/controller command only and is not emitted by legal action generation.
+- Added replay fixture coverage for:
+  - basic end turn only
+  - full transition with Burn, Poison, and explicit MP setup
+  - invalid explicit MP roll with no mutation
+  - player `EndTurn` action replay staying basic
+- Added trace serialization coverage for full transition command traces.
+- No player-facing action semantics changed.
+- Intentionally not implemented yet:
+  - network replay
+  - UI/runtime wiring
+  - random MP roll generation
+  - draw
+  - NPC phase
+  - card triggers
+  - attacks/combat
+
 ## Phase 3 - Movement
 
 - 9x9 bounds
