@@ -1,0 +1,78 @@
+{
+  "id": "end_turn_stunned_duration_expires",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/game_state.gd:apply_status",
+    "scripts/sim/game_state.gd:_process_statuses_for_timing"
+  ],
+  "intent": "A timed Stunned status decays at end turn and expires when its duration reaches zero.",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 1
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 1
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Stunned": {
+          "status_id": "Stunned",
+          "turns_remaining": 1
+        }
+      }
+    }
+  },
+  "operation": {
+    "kind": "apply_end_turn_status_ticks",
+    "player_id": 0
+  },
+  "expect": {
+    "ok": true,
+    "reason": "",
+    "final_units": [
+      {
+        "id": 1,
+        "hp": 5,
+        "max_hp": 5,
+        "statuses": [],
+        "status_turns": {
+          "Stunned": 0
+        }
+      }
+    ],
+    "trace_events": [
+      {
+        "kind": "end_turn_status_ticks",
+        "player_id": 0,
+        "turn_number": 3
+      },
+      {
+        "kind": "status_expired",
+        "status_id": "Stunned",
+        "player_id": 0,
+        "target_unit_id": 1,
+        "previous_status_turns": 1,
+        "new_status_turns": 0,
+        "expired_status": true
+      }
+    ]
+  }
+}

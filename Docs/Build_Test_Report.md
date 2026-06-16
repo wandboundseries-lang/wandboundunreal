@@ -4,86 +4,65 @@ Date of check: 2026-06-16 (America/New_York)
 
 ## Scope
 
-This pass implemented deterministic start-of-turn status tick scaffolding in `WandboundCore`.
+This pass implemented deterministic end-of-turn status tick scaffolding in `WandboundCore`.
 
 Implemented:
 
-- status duration metadata beside `FWBUnitState::Statuses`
-- status helper APIs on `FWBUnitState`
-- start-turn status tick validation
-- start-turn status tick mutation in `WBEffectRunner`
-- Poison MaxHP loss, HP clamp, duration decrement, and expiration
-- Frozen pausing Poison tick/decay
-- explicit status trace fields and serialization
-- GodotCanon start-turn status fixtures
+- end-turn status tick validation
+- end-turn status tick mutation in `WBEffectRunner`
+- Burn end-turn HP damage
+- Burn timed duration decrement and expiration
+- Rooted, Stunned, and Frozen timed duration decrement and expiration
+- Poison intentionally not ticking or decaying at end turn
+- optional trace flags for expired statuses and zero-HP Burn results
+- GodotCanon end-turn status fixtures
 - automation coverage for direct C++ cases and fixture-driven cases
 
 Not implemented:
 
-- end-turn Burn damage
-- end-turn Rooted/Stunned duration decay
 - full death/prevention
-- draw
-- random MP generation
-- card triggers
+- unit removal from Burn damage
+- end-turn card triggers
 - NPC phase
+- response windows
+- card effects
 - attacks/cards/effects/UI/3D runtime
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Godot Status Model Notes
+## Godot End-Turn Status Model Notes
 
 Godot status reference inspection found:
 
-- `scripts/sim/game_state.gd` stores statuses in `statuses_by_unit`.
-- status instances include timing and tick counters.
-- `autoload/Game.gd:start_turn_impl` calls `state.tick_statuses("turn_start", current_player)`.
-- current Godot `tick_statuses` ignores `active_player_id`, so this Unreal pass ticks all board units with start-turn statuses.
-- `poison` ticks at `turn_start`.
-- `burn`, `root`, and `stun` tick/decay at `turn_end`.
-- Poison reduces MaxHP by one to a minimum of one and clamps current HP down to MaxHP.
-- Frozen pauses Poison tick and duration decay.
+- `autoload/Game.gd:end_turn_impl` calls `state.tick_statuses("turn_end", current_player)`.
+- current Godot `tick_statuses` ignores `active_player_id`, so this Unreal pass ticks all board units with end-turn statuses.
+- `burn`, `root`, `stun`, and `frozen` use `turn_end` timing.
+- Burn calls `apply_damage(unit_id, 1, "burn")`.
+- Burn damage bypasses armor in Godot.
+- Burn, Root, Stun, and Frozen durations decay at end turn.
+- Poison does not tick or decay at end turn.
+- Godot clamps HP to zero and then may remove units through later death/prevention handling; this Unreal pass does not implement that death/prevention layer.
 
 Full audit notes are in `Docs/Status_Model_Audit.md`.
 
 ## Implemented This Pass
 
-- Added `FWBUnitState::StatusTurnsRemaining`.
-- Added status helpers:
-  - `HasStatus`
-  - `AddStatus`
-  - `RemoveStatus`
-  - `GetStatusTurnsRemaining`
-  - `SetStatusTurnsRemaining`
-  - `GetSortedStatusIdsForTrace`
-- Preserved lowercase Godot aliases for existing fixtures:
-  - `root` / `Rooted`
-  - `stun` / `Stunned`
-  - `burn` / `Burn`
-  - `poison` / `Poison`
-  - `frozen` / `Frozen`
-- Updated movement blocking to use `FWBUnitState::HasStatus`.
-- Added `WBRules::CanApplyStartOfTurnStatusTicks`.
-- Added `WBEffectRunner::ApplyStartOfTurnStatusTicks`.
-- Added status trace fields:
-  - `status_id`
-  - `target_unit_id`
-  - `previous_hp`
-  - `new_hp`
-  - `previous_max_hp`
-  - `new_max_hp`
-  - `previous_status_turns`
-  - `new_status_turns`
-- Added trace event kinds:
-  - `start_turn_status_ticks`
-  - `status_tick`
-  - `status_expired`
+- Added `WBRules::CanApplyEndOfTurnStatusTicks`.
+- Added `WBEffectRunner::ApplyEndOfTurnStatusTicks`.
+- Added `end_turn_status_ticks` parent trace events.
+- Added Burn `status_tick` trace events.
+- Added status expiration trace flag:
+  - `expired_status`
+- Added zero-HP trace flag:
+  - `at_or_below_zero_hp`
 - Added GodotCanon fixtures:
-  - `start_turn_poison_reduces_max_hp.json`
-  - `start_turn_poison_clamps_hp_to_max.json`
-  - `start_turn_burn_does_not_tick.json`
-  - `start_turn_status_ticks_invalid_player_fails.json`
-  - `start_turn_status_duration_expires.json`
+  - `end_turn_burn_deals_damage.json`
+  - `end_turn_burn_duration_expires.json`
+  - `end_turn_poison_does_not_tick.json`
+  - `end_turn_rooted_duration_expires.json`
+  - `end_turn_stunned_duration_expires.json`
+  - `end_turn_status_ticks_invalid_player_fails.json`
+  - `end_turn_frozen_duration_expires.json`
 
 ## Build
 
@@ -97,7 +76,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 17.27 seconds
+Total execution time: 18.44 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -111,7 +90,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=74
+succeeded=86
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -119,18 +98,18 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.StatusTicks.StatusHelperAliases`
-- `Wandbound.Core.StatusTicks.PoisonReducesMaxHP`
-- `Wandbound.Core.StatusTicks.PoisonKeepsHPUnderNewMax`
-- `Wandbound.Core.StatusTicks.PoisonMinMaxHPIsOne`
-- `Wandbound.Core.StatusTicks.BurnDoesNotTickAtStart`
-- `Wandbound.Core.StatusTicks.AllBoardPoisonTicks`
-- `Wandbound.Core.StatusTicks.PoisonPausedByFrozen`
-- `Wandbound.Core.StatusTicks.PoisonDurationExpires`
-- `Wandbound.Core.StatusTicks.RootedStunnedDoNotExpireAtStart`
-- `Wandbound.Core.StatusTicks.InvalidPlayerFails`
-- `Wandbound.Core.StatusTicks.GameOverFails`
-- `Wandbound.Core.StatusTicks.FixtureScenarios`
+- `Wandbound.Core.EndTurnStatusTicks.BurnDealsDamage`
+- `Wandbound.Core.EndTurnStatusTicks.BurnCanDropHPToZero`
+- `Wandbound.Core.EndTurnStatusTicks.BurnDurationExpires`
+- `Wandbound.Core.EndTurnStatusTicks.PoisonDoesNotTick`
+- `Wandbound.Core.EndTurnStatusTicks.RootedDurationExpires`
+- `Wandbound.Core.EndTurnStatusTicks.StunnedDurationExpires`
+- `Wandbound.Core.EndTurnStatusTicks.PermanentStatusesDoNotExpire`
+- `Wandbound.Core.EndTurnStatusTicks.FrozenDurationExpires`
+- `Wandbound.Core.EndTurnStatusTicks.AllBoardBurnTicks`
+- `Wandbound.Core.EndTurnStatusTicks.InvalidPlayerFails`
+- `Wandbound.Core.EndTurnStatusTicks.GameOverFails`
+- `Wandbound.Core.EndTurnStatusTicks.FixtureScenarios`
 
 ## Generated File Tracking
 
@@ -150,10 +129,10 @@ Generated folders/artifacts remain untracked:
 ## Risks/Unknowns
 
 - Godot currently ignores `active_player_id` during status ticks. If canon changes to active-player-only status ticks, Unreal fixtures and implementation should be updated together.
-- `FWBUnitState::MPRemaining` remains a legacy fixture mirror from earlier movement migration work.
-- End-turn status processing is still absent, so Burn and Rooted/Stunned duration decay are intentionally incomplete.
-- Full death/prevention resolution is intentionally absent after Poison MaxHP changes.
+- End-turn status ticks are not yet integrated into `WBEffectRunner::ApplyEndTurn`; they remain a separate deterministic phase operation until replay/turn orchestration is extended.
+- Full death/prevention and unit removal remain intentionally absent after Burn HP reaches zero.
+- Burn-triggered passive effects are intentionally absent from this scaffolding pass.
 
 ## Next Recommended Implementation Milestone
 
-Add deterministic end-of-turn status ticks for Burn and Rooted/Stunned duration decay, still without card triggers or full death/prevention.
+Add deterministic turn orchestration that composes end-turn status ticks, turn advancement, start-turn status ticks, and explicit resource setup without changing player action semantics or adding card triggers yet.

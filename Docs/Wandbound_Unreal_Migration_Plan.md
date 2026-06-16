@@ -132,6 +132,40 @@
   - card triggers
   - NPC phase
 
+## Milestone: End-of-Turn Status Tick Scaffolding
+
+- End-turn status model audit result:
+  - `autoload/Game.gd:end_turn_impl` calls `state.tick_statuses("turn_end", current_player)`.
+  - Godot currently ignores the `active_player_id` argument to `tick_statuses`, so this Unreal pass ticks all units whose status timing matches end turn.
+  - `burn`, `root`, `stun`, and `frozen` use `turn_end` timing.
+  - Burn damage bypasses armor in Godot and can drive HP to zero before later death/prevention processing.
+- Added deterministic phase API:
+  - `WBRules::CanApplyEndOfTurnStatusTicks`
+  - `WBEffectRunner::ApplyEndOfTurnStatusTicks`
+- Implemented Burn end-turn behavior:
+  - HP decreases by one.
+  - MaxHP is unchanged.
+  - HP clamps at zero.
+  - timed Burn decrements and expires at zero.
+- Implemented timed duration decay/expiration for:
+  - `Rooted`
+  - `Stunned`
+  - `Frozen`
+- Poison intentionally does not tick or decay at end turn.
+- Added trace support:
+  - `end_turn_status_ticks`
+  - `status_tick` for Burn
+  - `status_expired`
+  - `expired_status`
+  - `at_or_below_zero_hp`
+- Status ticks remain separate deterministic phase operations for now; `ApplyEndTurn` replay behavior was not changed in this pass.
+- Intentionally not implemented yet:
+  - full death/prevention
+  - end-turn card triggers
+  - NPC phase
+  - response windows
+  - card effects
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

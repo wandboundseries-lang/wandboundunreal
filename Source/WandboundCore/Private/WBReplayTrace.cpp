@@ -115,6 +115,16 @@ TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("new_status_turns"), Event.NewStatusTurns);
 	}
 
+	if (Event.bExpiredStatus)
+	{
+		Object->SetBoolField(TEXT("expired_status"), Event.bExpiredStatus);
+	}
+
+	if (Event.bAtOrBelowZeroHP)
+	{
+		Object->SetBoolField(TEXT("at_or_below_zero_hp"), Event.bAtOrBelowZeroHP);
+	}
+
 	if (IsSetTile(Event.FromTile))
 	{
 		Object->SetObjectField(TEXT("from_tile"), TileToJsonObject(Event.FromTile));

@@ -369,6 +369,39 @@ bool WBRules::CanApplyStartOfTurnStatusTicks(
 	return true;
 }
 
+bool WBRules::CanApplyEndOfTurnStatusTicks(
+	const FWBGameStateData& State,
+	const int32 PlayerId,
+	FString& OutReason)
+{
+	if (State.bGameOver)
+	{
+		OutReason = TEXT("game_over");
+		return false;
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(PlayerId))
+	{
+		OutReason = TEXT("bad_player");
+		return false;
+	}
+
+	if (State.GetPlayerById(PlayerId) == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
+		return false;
+	}
+
+	if (PlayerId != State.CurrentPlayer)
+	{
+		OutReason = TEXT("not_active_player");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& State, const int32 PlayerId, const int32 UnitId)
 {
 	TArray<FWBAction> LegalMoves;

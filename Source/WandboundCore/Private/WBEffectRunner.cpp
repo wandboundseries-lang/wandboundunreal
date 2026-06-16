@@ -4,7 +4,10 @@
 
 namespace
 {
+const FName BurnStatusId(TEXT("Burn"));
 const FName PoisonStatusId(TEXT("Poison"));
+const FName RootedStatusId(TEXT("Rooted"));
+const FName StunnedStatusId(TEXT("Stunned"));
 const FName FrozenStatusId(TEXT("Frozen"));
 
 void AppendStartTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const int32 PlayerId, const int32 TurnNumber)
@@ -13,6 +16,43 @@ void AppendStartTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const in
 	Event.Kind = FName(TEXT("start_turn_status_ticks"));
 	Event.PlayerId = PlayerId;
 	Event.TurnNumber = TurnNumber;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendEndTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const int32 PlayerId, const int32 TurnNumber)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("end_turn_status_ticks"));
+	Event.PlayerId = PlayerId;
+	Event.TurnNumber = TurnNumber;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendBurnTickTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const int32 PlayerId,
+	const int32 TargetUnitId,
+	const int32 PreviousHP,
+	const int32 NewHP,
+	const int32 PreviousMaxHP,
+	const int32 NewMaxHP,
+	const int32 PreviousStatusTurns,
+	const int32 NewStatusTurns)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("status_tick"));
+	Event.StatusId = BurnStatusId;
+	Event.PlayerId = PlayerId;
+	Event.TargetUnitId = TargetUnitId;
+	Event.PreviousHP = PreviousHP;
+	Event.NewHP = NewHP;
+	Event.PreviousMaxHP = PreviousMaxHP;
+	Event.NewMaxHP = NewMaxHP;
+	Event.PreviousStatusTurns = PreviousStatusTurns;
+	Event.NewStatusTurns = NewStatusTurns;
+	Event.bAtOrBelowZeroHP = NewHP <= 0;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -57,8 +97,30 @@ void AppendStatusExpiredTrace(
 	Event.TargetUnitId = TargetUnitId;
 	Event.PreviousStatusTurns = PreviousStatusTurns;
 	Event.NewStatusTurns = 0;
+	Event.bExpiredStatus = true;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
+}
+
+bool DecayTimedStatus(FWBUnitState& Unit, const FName StatusId, int32& OutPreviousStatusTurns, int32& OutNewStatusTurns)
+{
+	OutPreviousStatusTurns = Unit.GetStatusTurnsRemaining(StatusId);
+	OutNewStatusTurns = OutPreviousStatusTurns;
+	if (OutPreviousStatusTurns <= 0)
+	{
+		return false;
+	}
+
+	OutNewStatusTurns = OutPreviousStatusTurns - 1;
+	if (OutNewStatusTurns <= 0)
+	{
+		Unit.RemoveStatus(StatusId);
+		OutNewStatusTurns = 0;
+		return true;
+	}
+
+	Unit.SetStatusTurnsRemaining(StatusId, OutNewStatusTurns);
+	return false;
 }
 }
 
@@ -248,6 +310,74 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 		if (bExpired)
 		{
 			AppendStatusExpiredTrace(Result.TraceEvents, PlayerId, PoisonStatusId, Unit.UnitId, PreviousStatusTurns);
+		}
+	}
+
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData& State, const int32 PlayerId)
+{
+	FWBApplyActionResult Result;
+
+	FString Reason;
+	if (!WBRules::CanApplyEndOfTurnStatusTicks(State, PlayerId, Reason))
+	{
+		Result.bOk = false;
+		Result.Reason = Reason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	AppendEndTurnStatusTickTrace(Result.TraceEvents, PlayerId, State.TurnNumber);
+
+	for (FWBUnitState& Unit : State.Units)
+	{
+		if (Unit.HasStatus(BurnStatusId))
+		{
+			const int32 PreviousHP = Unit.HP;
+			const int32 PreviousMaxHP = Unit.MaxHP;
+			int32 PreviousStatusTurns = 0;
+			int32 NewStatusTurns = 0;
+			const bool bExpired = DecayTimedStatus(Unit, BurnStatusId, PreviousStatusTurns, NewStatusTurns);
+
+			Unit.HP = FMath::Max(Unit.HP - 1, 0);
+			AppendBurnTickTrace(
+				Result.TraceEvents,
+				PlayerId,
+				Unit.UnitId,
+				PreviousHP,
+				Unit.HP,
+				PreviousMaxHP,
+				Unit.MaxHP,
+				PreviousStatusTurns,
+				NewStatusTurns);
+
+			if (bExpired)
+			{
+				AppendStatusExpiredTrace(Result.TraceEvents, PlayerId, BurnStatusId, Unit.UnitId, PreviousStatusTurns);
+			}
+		}
+
+		const FName EndTurnDurationStatusIds[] = {
+			RootedStatusId,
+			StunnedStatusId,
+			FrozenStatusId
+		};
+
+		for (const FName StatusId : EndTurnDurationStatusIds)
+		{
+			if (!Unit.HasStatus(StatusId))
+			{
+				continue;
+			}
+
+			int32 PreviousStatusTurns = 0;
+			int32 NewStatusTurns = 0;
+			if (DecayTimedStatus(Unit, StatusId, PreviousStatusTurns, NewStatusTurns))
+			{
+				AppendStatusExpiredTrace(Result.TraceEvents, PlayerId, StatusId, Unit.UnitId, PreviousStatusTurns);
+			}
 		}
 	}
 

@@ -26,6 +26,8 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 NewMaxHP = -1;
 	int32 PreviousStatusTurns = -1;
 	int32 NewStatusTurns = -1;
+	bool bExpiredStatus = false;
+	bool bAtOrBelowZeroHP = false;
 	FWBTile FromTile;
 	FWBTile ToTile;
 	bool bOk = false;

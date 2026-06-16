@@ -14,5 +14,6 @@ public:
 	static FWBApplyActionResult ApplyPass(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPassResponse(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyStartOfTurnStatusTicks(FWBGameStateData& State, int32 PlayerId);
+	static FWBApplyActionResult ApplyEndOfTurnStatusTicks(FWBGameStateData& State, int32 PlayerId);
 	static FWBApplyActionResult ApplyTurnStartResourceSetup(FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll);
 };
