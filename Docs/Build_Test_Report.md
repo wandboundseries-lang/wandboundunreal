@@ -4,76 +4,82 @@ Date of check: 2026-06-16 (America/New_York)
 
 ## Scope
 
-This pass implemented deterministic turn orchestration in `WandboundCore`.
+This pass implemented deterministic turn command/controller coverage in `WandboundCore`.
 
 Implemented:
 
-- turn orchestration audit
-- deterministic turn transition validation
-- explicit deterministic turn transition effect API
-- parent `turn_transition` trace event
-- trace fields for next player and turn number before/after
-- copied-state application to prevent partial mutation on invalid input
-- GodotCanon turn transition fixtures
-- automation coverage for direct C++ cases and fixture-driven cases
+- turn command audit
+- pure C++ `WBTurnController`
+- `BasicEndTurn` command mode
+- `DeterministicFullTransition` command mode
+- command validation helper
+- GodotCanon turn command fixtures
+- automation coverage for direct command behavior and fixture-driven command scenarios
 
 Not implemented:
 
-- draw
-- random MP roll generation
-- start/end turn card triggers
-- NPC phase
+- new gameplay mechanics
+- player-facing `EndTurn` rewiring to full transition
+- legal action generation for full transitions
 - attacks
-- summoning
-- card effects
-- full response windows
-- full death/prevention
+- cards/effects
+- draw
+- random dice generation
+- NPC phase
 - UI/Blueprint/3D runtime
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Turn Orchestration Notes
+## Turn Command Notes
 
-Current `ApplyEndTurn` remains basic:
+The command/controller layer is pure C++ and exists only as an explicit orchestration gateway.
 
-- validates `EndTurn`
-- flips `CurrentPlayer`
-- sets `PriorityPlayer`
-- sets phase to `NormalTurn`
-- increments `TurnNumber`
-- emits one `end_turn` trace
-
-The new explicit orchestration API is:
+New API:
 
 ```text
-WBEffectRunner::ApplyDeterministicTurnTransition(State, EndingPlayerId, NextPlayerExplicitMPRoll)
+WBTurnController::CanApplyTurnCommand(State, Command, OutReason)
+WBTurnController::ApplyTurnCommand(State, Command)
 ```
 
-The sequence is:
+Command modes:
 
-1. `turn_transition` parent trace
-2. `ApplyEndOfTurnStatusTicks`
-3. `ApplyEndTurn`
-4. `ApplyStartOfTurnStatusTicks`
-5. `ApplyTurnStartResourceSetup`
+- `BasicEndTurn`
+- `DeterministicFullTransition`
 
-`ApplyDeterministicTurnTransition` uses existing substep APIs rather than duplicating rules/effect logic.
+`BasicEndTurn`:
 
-Full audit notes are in `Docs/Wandbound_Turn_Orchestration_Audit.md`.
+- delegates to existing `WBRules::CanEndTurn`
+- calls existing `WBEffectRunner::ApplyEndTurn`
+- ignores `NextPlayerExplicitMPRoll`
+- does not run status ticks
+- does not run resource setup
+- emits only the existing `end_turn` trace
+
+`DeterministicFullTransition`:
+
+- delegates validation to `WBRules::CanApplyDeterministicTurnTransition`
+- calls existing `WBEffectRunner::ApplyDeterministicTurnTransition`
+- requires explicit MP roll `1..6`
+- emits the full existing transition trace sequence
+
+Legal action generation remains unchanged:
+
+- movement first
+- then `EndTurn`
+- `PassResponse` in response phase
+- no full-transition player action
+
+Full audit notes are in `Docs/Wandbound_Turn_Command_Audit.md`.
 
 ## Implemented This Pass
 
-- Added `WBRules::CanApplyDeterministicTurnTransition`.
-- Added `WBEffectRunner::ApplyDeterministicTurnTransition`.
-- Added trace fields:
-  - `next_player_id`
-  - `turn_number_before`
-  - `turn_number_after`
+- Added `Source/WandboundCore/Public/WBTurnController.h`.
+- Added `Source/WandboundCore/Private/WBTurnController.cpp`.
 - Added GodotCanon fixtures:
-  - `turn_transition_burn_then_poison_then_setup.json`
-  - `turn_transition_invalid_roll_no_mutation.json`
-  - `turn_transition_invalid_player_no_mutation.json`
-  - `turn_transition_status_expiration_order.json`
+  - `turn_command_basic_end_turn_only.json`
+  - `turn_command_full_transition.json`
+  - `turn_command_full_transition_invalid_roll_no_mutation.json`
+- Added automation tests in `Source/WandboundTests/Private/WBTurnControllerCommandTests.cpp`.
 
 ## Build
 
@@ -87,7 +93,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 39.00 seconds
+Total execution time: 12.22 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -101,7 +107,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=95
+succeeded=104
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -109,15 +115,15 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.TurnTransition.ValidSequence`
-- `Wandbound.Core.TurnTransition.BurnThenPoisonOrder`
-- `Wandbound.Core.TurnTransition.ExpirationOrder`
-- `Wandbound.Core.TurnTransition.InvalidRollNoMutation`
-- `Wandbound.Core.TurnTransition.InvalidPlayerNoMutation`
-- `Wandbound.Core.TurnTransition.GameOverNoMutation`
-- `Wandbound.Core.TurnTransition.ApplyEndTurnRemainsBasic`
-- `Wandbound.Core.TurnTransition.LegalActionsAfterTransition`
-- `Wandbound.Core.TurnTransition.FixtureScenarios`
+- `Wandbound.Core.TurnController.BasicEndTurnOnly`
+- `Wandbound.Core.TurnController.FullTransition`
+- `Wandbound.Core.TurnController.InvalidRollNoMutation`
+- `Wandbound.Core.TurnController.BasicIgnoresRoll`
+- `Wandbound.Core.TurnController.InvalidActingPlayerFails`
+- `Wandbound.Core.TurnController.GameOverFails`
+- `Wandbound.Core.TurnController.InvalidModeFails`
+- `Wandbound.Core.TurnController.LegalActionsRemainPlayerActions`
+- `Wandbound.Core.TurnController.FixtureScenarios`
 
 ## Generated File Tracking
 
@@ -136,11 +142,11 @@ Build and automation reported no warnings. `git diff --check` should still be us
 
 ## Risks/Unknowns
 
-- `ApplyEndTurn` remains basic. A later pass should explicitly decide if and how player-facing EndTurn uses the full deterministic transition.
-- `TurnNumber` still increments every player switch, matching the existing Unreal baseline. This remains documented as a policy to revisit only if canon requires a different count.
+- Player-facing `EndTurn` remains basic and is intentionally not rewired to full transition.
+- Future runtime/UI orchestration still needs an explicit integration pass.
 - Full death/prevention is still absent after status ticks.
 - Draw, random MP generation, hooks, card triggers, and NPC phase are still absent.
 
 ## Next Recommended Implementation Milestone
 
-Add replay/log fixture coverage for deterministic turn transitions, including legal action context before transition and final-state verification after transition, without wiring player-facing EndTurn yet.
+Add replay/log fixture coverage for full turn commands, keeping `FWBAction` legal-action replay unchanged and recording turn command execution only through an explicit controller-command fixture path.

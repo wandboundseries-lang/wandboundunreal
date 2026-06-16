@@ -202,6 +202,23 @@
   - effects
   - full death/prevention
 
+## Milestone: Turn Command Controller Coverage
+
+- Added a pure C++ command/controller gateway:
+  - `WBTurnController::CanApplyTurnCommand`
+  - `WBTurnController::ApplyTurnCommand`
+- Added command modes:
+  - `BasicEndTurn`
+  - `DeterministicFullTransition`
+- `BasicEndTurn` delegates to the existing player/action-level `ApplyEndTurn` only.
+- `BasicEndTurn` ignores `NextPlayerExplicitMPRoll` and does not run status ticks or resource setup.
+- `DeterministicFullTransition` delegates to the existing full deterministic turn transition sequence.
+- `DeterministicFullTransition` requires an explicit MP roll from `1` to `6`.
+- Legal action generation still emits player-facing `EndTurn` only, not full transition commands.
+- No action IDs or replay player actions were changed.
+- UI/runtime integration is intentionally not wired yet; this pass only makes the low-level command choice explicit and testable.
+- This protects player action semantics while giving tests and future runtime code a deterministic full-transition gateway.
+
 ## Phase 3 - Movement
 
 - 9x9 bounds
