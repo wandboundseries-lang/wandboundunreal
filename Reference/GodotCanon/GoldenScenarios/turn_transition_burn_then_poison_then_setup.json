@@ -1,0 +1,188 @@
+{
+  "id": "turn_transition_burn_then_poison_then_setup",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:end_turn_impl",
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:tick_statuses",
+    "scripts/sim/game_state.gd:mp_pool"
+  ],
+  "intent": "A deterministic turn transition applies end-turn Burn, advances the turn, applies start-turn Poison, then applies explicit resource setup.",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 1,
+        "max_attacks_per_turn": 1
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "x": 6,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 2
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 2
+        }
+      },
+      "2": {
+        "Poison": {
+          "status_id": "Poison",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "operation": {
+    "kind": "apply_deterministic_turn_transition",
+    "ending_player_id": 0,
+    "next_player_explicit_mp_roll": 4
+  },
+  "expect": {
+    "ok": true,
+    "reason": "",
+    "final_state": {
+      "current_player": 1,
+      "priority_player": 1,
+      "turn_number": 4,
+      "phase": "normal_turn",
+      "players": [
+        {
+          "player_id": 0,
+          "remaining_mp": 2,
+          "last_mp_roll": 2,
+          "walls_left": 0,
+          "wall_removals_left": 0
+        },
+        {
+          "player_id": 1,
+          "remaining_mp": 4,
+          "last_mp_roll": 4,
+          "walls_left": 1,
+          "wall_removals_left": 0
+        }
+      ],
+      "units": [
+        {
+          "id": 1,
+          "hp": 4,
+          "max_hp": 5,
+          "attacks_left": 1,
+          "statuses": [
+            "Burn"
+          ],
+          "status_turns": {
+            "Burn": 1
+          }
+        },
+        {
+          "id": 2,
+          "hp": 4,
+          "max_hp": 4,
+          "attacks_left": 2,
+          "statuses": [
+            "Poison"
+          ],
+          "status_turns": {
+            "Poison": 1
+          }
+        }
+      ]
+    },
+    "trace_events": [
+      {
+        "kind": "turn_transition",
+        "player_id": 0,
+        "from_player": 0,
+        "to_player": 1,
+        "next_player_id": 1,
+        "turn_number_before": 3,
+        "turn_number_after": 4,
+        "mp_roll": 4
+      },
+      {
+        "kind": "end_turn_status_ticks",
+        "player_id": 0,
+        "turn_number": 3
+      },
+      {
+        "kind": "status_tick",
+        "status_id": "Burn",
+        "player_id": 0,
+        "target_unit_id": 1,
+        "previous_hp": 5,
+        "new_hp": 4,
+        "previous_max_hp": 5,
+        "new_max_hp": 5,
+        "previous_status_turns": 2,
+        "new_status_turns": 1
+      },
+      {
+        "kind": "end_turn",
+        "player_id": 0,
+        "from_player": 0,
+        "to_player": 1,
+        "turn_number": 4
+      },
+      {
+        "kind": "start_turn_status_ticks",
+        "player_id": 1,
+        "turn_number": 4
+      },
+      {
+        "kind": "status_tick",
+        "status_id": "Poison",
+        "player_id": 1,
+        "target_unit_id": 2,
+        "previous_hp": 5,
+        "new_hp": 4,
+        "previous_max_hp": 5,
+        "new_max_hp": 4,
+        "previous_status_turns": 2,
+        "new_status_turns": 1
+      },
+      {
+        "kind": "turn_start_resource_setup",
+        "player_id": 1,
+        "turn_number": 4,
+        "mp_roll": 4,
+        "remaining_mp": 4,
+        "walls_left": 1,
+        "wall_removals_left": 0
+      }
+    ]
+  }
+}

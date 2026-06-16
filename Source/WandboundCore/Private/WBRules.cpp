@@ -402,6 +402,63 @@ bool WBRules::CanApplyEndOfTurnStatusTicks(
 	return true;
 }
 
+bool WBRules::CanApplyDeterministicTurnTransition(
+	const FWBGameStateData& State,
+	const int32 EndingPlayerId,
+	const int32 NextPlayerExplicitMPRoll,
+	FString& OutReason)
+{
+	if (State.bGameOver)
+	{
+		OutReason = TEXT("game_over");
+		return false;
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(EndingPlayerId))
+	{
+		OutReason = TEXT("bad_player");
+		return false;
+	}
+
+	if (EndingPlayerId != State.CurrentPlayer)
+	{
+		OutReason = TEXT("not_active_player");
+		return false;
+	}
+
+	if (NextPlayerExplicitMPRoll < 1 || NextPlayerExplicitMPRoll > 6)
+	{
+		OutReason = TEXT("invalid_mp_roll");
+		return false;
+	}
+
+	FWBAction EndTurnAction;
+	EndTurnAction.Type = EWBActionType::EndTurn;
+	EndTurnAction.PlayerId = EndingPlayerId;
+	const FWBActionQueryResult EndTurnQuery = QueryEndTurn(State, EndTurnAction);
+	if (!EndTurnQuery.bOk)
+	{
+		OutReason = EndTurnQuery.Reason;
+		return false;
+	}
+
+	if (State.GetPlayerById(EndingPlayerId) == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
+		return false;
+	}
+
+	const int32 NextPlayerId = EndingPlayerId == 0 ? 1 : 0;
+	if (State.GetPlayerById(NextPlayerId) == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& State, const int32 PlayerId, const int32 UnitId)
 {
 	TArray<FWBAction> LegalMoves;

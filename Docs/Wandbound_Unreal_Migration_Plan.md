@@ -166,6 +166,42 @@
   - response windows
   - card effects
 
+## Milestone: Deterministic Turn Orchestration
+
+- Added an explicit orchestration API:
+  - `WBRules::CanApplyDeterministicTurnTransition`
+  - `WBEffectRunner::ApplyDeterministicTurnTransition(State, EndingPlayerId, NextPlayerExplicitMPRoll)`
+- The composed deterministic sequence is:
+  - end-turn status ticks
+  - basic turn advancement
+  - start-turn status ticks
+  - explicit turn-start resource setup
+- The orchestration runs on a copied `FWBGameStateData` and assigns back only after every substep succeeds, preventing partial mutation on invalid input.
+- Added parent trace event:
+  - `turn_transition`
+- `turn_transition` records:
+  - ending player
+  - next player
+  - turn number before/after
+  - explicit next-player MP roll
+- Sub-trace ordering is deterministic:
+  - `turn_transition`
+  - `end_turn_status_ticks`
+  - end-turn `status_tick` / `status_expired`
+  - `end_turn`
+  - `start_turn_status_ticks`
+  - start-turn `status_tick` / `status_expired`
+  - `turn_start_resource_setup`
+- Existing player-facing `ApplyEndTurn` remains basic and was not wired to the full transition in this pass.
+- Intentionally not implemented yet:
+  - draw
+  - random MP roll
+  - start/end turn card triggers
+  - NPC phase
+  - attacks
+  - effects
+  - full death/prevention
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

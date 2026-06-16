@@ -30,6 +30,26 @@ void AppendEndTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const int3
 	TraceEvents.Add(Event);
 }
 
+FWBTraceEvent MakeTurnTransitionTrace(
+	const int32 EndingPlayerId,
+	const int32 NextPlayerId,
+	const int32 TurnNumberBefore,
+	const int32 TurnNumberAfter,
+	const int32 NextPlayerExplicitMPRoll)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("turn_transition"));
+	Event.PlayerId = EndingPlayerId;
+	Event.FromPlayer = EndingPlayerId;
+	Event.ToPlayer = NextPlayerId;
+	Event.NextPlayerId = NextPlayerId;
+	Event.TurnNumberBefore = TurnNumberBefore;
+	Event.TurnNumberAfter = TurnNumberAfter;
+	Event.MPRoll = NextPlayerExplicitMPRoll;
+	Event.bOk = true;
+	return Event;
+}
+
 void AppendBurnTickTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const int32 PlayerId,
@@ -381,6 +401,80 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 		}
 	}
 
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyDeterministicTurnTransition(
+	FWBGameStateData& State,
+	const int32 EndingPlayerId,
+	const int32 NextPlayerExplicitMPRoll)
+{
+	FWBApplyActionResult Result;
+
+	FString Reason;
+	if (!WBRules::CanApplyDeterministicTurnTransition(State, EndingPlayerId, NextPlayerExplicitMPRoll, Reason))
+	{
+		Result.bOk = false;
+		Result.Reason = Reason;
+		return Result;
+	}
+
+	FWBGameStateData WorkingState = State;
+	const int32 TurnNumberBefore = WorkingState.TurnNumber;
+
+	FWBApplyActionResult EndStatusResult = ApplyEndOfTurnStatusTicks(WorkingState, EndingPlayerId);
+	if (!EndStatusResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = EndStatusResult.Reason;
+		return Result;
+	}
+
+	FWBAction EndTurnAction;
+	EndTurnAction.Type = EWBActionType::EndTurn;
+	EndTurnAction.PlayerId = EndingPlayerId;
+	FWBApplyActionResult EndTurnResult = ApplyEndTurn(WorkingState, EndTurnAction);
+	if (!EndTurnResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = EndTurnResult.Reason;
+		return Result;
+	}
+
+	const int32 NextPlayerId = WorkingState.CurrentPlayer;
+	FWBApplyActionResult StartStatusResult = ApplyStartOfTurnStatusTicks(WorkingState, NextPlayerId);
+	if (!StartStatusResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = StartStatusResult.Reason;
+		return Result;
+	}
+
+	FWBApplyActionResult ResourceSetupResult = ApplyTurnStartResourceSetup(
+		WorkingState,
+		NextPlayerId,
+		NextPlayerExplicitMPRoll);
+	if (!ResourceSetupResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = ResourceSetupResult.Reason;
+		return Result;
+	}
+
+	const int32 TurnNumberAfter = WorkingState.TurnNumber;
+	Result.bOk = true;
+	Result.TraceEvents.Add(MakeTurnTransitionTrace(
+		EndingPlayerId,
+		NextPlayerId,
+		TurnNumberBefore,
+		TurnNumberAfter,
+		NextPlayerExplicitMPRoll));
+	Result.TraceEvents.Append(EndStatusResult.TraceEvents);
+	Result.TraceEvents.Append(EndTurnResult.TraceEvents);
+	Result.TraceEvents.Append(StartStatusResult.TraceEvents);
+	Result.TraceEvents.Append(ResourceSetupResult.TraceEvents);
+
+	State = WorkingState;
 	return Result;
 }
 

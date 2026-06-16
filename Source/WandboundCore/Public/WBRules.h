@@ -43,6 +43,7 @@ public:
 	static bool CanApplyTurnStartResourceSetup(const FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);
 	static bool CanApplyStartOfTurnStatusTicks(const FWBGameStateData& State, int32 PlayerId, FString& OutReason);
 	static bool CanApplyEndOfTurnStatusTicks(const FWBGameStateData& State, int32 PlayerId, FString& OutReason);
+	static bool CanApplyDeterministicTurnTransition(const FWBGameStateData& State, int32 EndingPlayerId, int32 NextPlayerExplicitMPRoll, FString& OutReason);
 	static TArray<FWBAction> GenerateLegalMoveActions(const FWBGameStateData& State, int32 PlayerId, int32 UnitId);
 	static void GenerateLegalActions(const FWBGameStateData& State, int32 PlayerId, TArray<FWBAction>& OutActions);
 	static TArray<FWBAction> GenerateLegalActions(const FWBGameStateData& State);

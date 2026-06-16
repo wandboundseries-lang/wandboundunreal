@@ -50,9 +50,24 @@ TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("to_player"), Event.ToPlayer);
 	}
 
+	if (Event.NextPlayerId != -1)
+	{
+		Object->SetNumberField(TEXT("next_player_id"), Event.NextPlayerId);
+	}
+
 	if (Event.TurnNumber != -1)
 	{
 		Object->SetNumberField(TEXT("turn_number"), Event.TurnNumber);
+	}
+
+	if (Event.TurnNumberBefore != -1)
+	{
+		Object->SetNumberField(TEXT("turn_number_before"), Event.TurnNumberBefore);
+	}
+
+	if (Event.TurnNumberAfter != -1)
+	{
+		Object->SetNumberField(TEXT("turn_number_after"), Event.TurnNumberAfter);
 	}
 
 	if (Event.MPRoll != -1)
