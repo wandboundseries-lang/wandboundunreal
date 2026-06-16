@@ -1,0 +1,41 @@
+# Unreal generated folders
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+
+# Visual Studio / Rider / IDE
+*.suo
+*.user
+*.userosscache
+*.sln.DotSettings.user
+.vscode/
+.idea/
+
+# Build artifacts
+*.obj
+*.pdb
+*.ilk
+*.log
+*.tmp
+*.pch
+
+# Unreal autosaves/backups
+*_BuiltData.uasset
+Saved/
+Autosaves/
+Backup/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Keep source/content/config
+!Config/
+!Content/
+!Source/
+!Plugins/
+
+# Local Godot reference copy; do not commit the full old project.
+Reference/GodotProject/

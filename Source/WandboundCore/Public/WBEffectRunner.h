@@ -1,0 +1,15 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "WBAction.h"
+#include "WBGameStateData.h"
+#include "WBReplayTrace.h"
+
+class WANDBOUNDCORE_API WBEffectRunner
+{
+public:
+	static FWBApplyActionResult ApplyAction(FWBGameStateData& State, const FWBAction& Action);
+	static FWBApplyActionResult ApplyMove(FWBGameStateData& State, const FWBAction& Action);
+	static FWBApplyActionResult ApplyEndTurn(FWBGameStateData& State, const FWBAction& Action);
+	static FWBApplyActionResult ApplyPass(FWBGameStateData& State, const FWBAction& Action);
+};

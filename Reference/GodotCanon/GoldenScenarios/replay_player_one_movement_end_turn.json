@@ -1,0 +1,132 @@
+{
+  "id": "replay_player_one_movement_end_turn",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/effect_runner.gd",
+    "scripts/sim/game_state.gd:move_unit_by_id"
+  ],
+  "intent": "Player 1 can take a movement decision and then end the turn back to player 0.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 1,
+    "priority_player": 1,
+    "turn_number": 7,
+    "units": [
+      {
+        "id": 30,
+        "owner_id": 0,
+        "card_id": "test_blocker",
+        "x": 7,
+        "y": 6,
+        "mp_remaining": 1
+      },
+      {
+        "id": 31,
+        "owner_id": 1,
+        "card_id": "test_mover",
+        "x": 6,
+        "y": 6,
+        "mp_remaining": 1
+      }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "replay_log": {
+    "decisions": [
+      {
+        "decision_index": 0,
+        "chosen_action_id": "move:p1:u31:6,6->6,5",
+        "chosen_action": {
+          "id": "move:p1:u31:6,6->6,5",
+          "kind": "move",
+          "player_id": 1,
+          "unit_id": 31,
+          "from_x": 6,
+          "from_y": 6,
+          "to_x": 6,
+          "to_y": 5
+        },
+        "legal_action_ids": [
+          "move:p1:u31:6,6->5,6",
+          "move:p1:u31:6,6->6,7",
+          "move:p1:u31:6,6->6,5",
+          "end_turn:p1"
+        ],
+        "trace_events": [
+          {
+            "kind": "move",
+            "ok": true,
+            "player_id": 1,
+            "source_unit_id": 31,
+            "from_tile": {
+              "x": 6,
+              "y": 6
+            },
+            "to_tile": {
+              "x": 6,
+              "y": 5
+            }
+          }
+        ]
+      },
+      {
+        "decision_index": 1,
+        "chosen_action_id": "end_turn:p1",
+        "chosen_action": {
+          "id": "end_turn:p1",
+          "kind": "end_turn",
+          "player_id": 1
+        },
+        "legal_action_ids": [
+          "end_turn:p1"
+        ],
+        "trace_events": [
+          {
+            "kind": "end_turn",
+            "ok": true,
+            "player_id": 1,
+            "from_player": 1,
+            "to_player": 0,
+            "turn_number": 8
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "legal_action_ids": [
+      "move:p1:u31:6,6->5,6",
+      "move:p1:u31:6,6->6,7",
+      "move:p1:u31:6,6->6,5",
+      "end_turn:p1"
+    ],
+    "final_state": {
+      "active_player": 0,
+      "priority_player": 0,
+      "turn_number": 8,
+      "units": [
+        {
+          "id": 30,
+          "owner_id": 0,
+          "x": 7,
+          "y": 6,
+          "mp_remaining": 1
+        },
+        {
+          "id": 31,
+          "owner_id": 1,
+          "x": 6,
+          "y": 5,
+          "mp_remaining": 0
+        }
+      ],
+      "walls": []
+    }
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "id": "action_generation_active_player_movement_first",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/rules.gd:get_move_tiles",
+    "scripts/shared/action_schema.gd"
+  ],
+  "intent": "Active-player action generation emits legal movement for every active-player unit in state order, then the end_turn action.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 0,
+    "priority_player": 0,
+    "turn_number": 1,
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "card_id": "test_mover",
+        "x": 4,
+        "y": 4,
+        "mp_remaining": 2
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "card_id": "test_blocker",
+        "x": 5,
+        "y": 4,
+        "mp_remaining": 2
+      },
+      {
+        "id": 3,
+        "owner_id": 0,
+        "card_id": "test_edge_mover",
+        "x": 0,
+        "y": 0,
+        "mp_remaining": 2
+      },
+      {
+        "id": 4,
+        "owner_id": 0,
+        "card_id": "test_rooted",
+        "x": 8,
+        "y": 8,
+        "mp_remaining": 2
+      }
+    ],
+    "walls": [
+      {
+        "between": [
+          {
+            "x": 4,
+            "y": 4
+          },
+          {
+            "x": 4,
+            "y": 3
+          }
+        ]
+      }
+    ],
+    "statuses_by_unit": {
+      "4": {
+        "root": {
+          "status_id": "root"
+        }
+      }
+    }
+  },
+  "expect": {
+    "legal_action_ids": [
+      "move:p0:u1:4,4->3,4",
+      "move:p0:u1:4,4->4,5",
+      "move:p0:u3:0,0->1,0",
+      "move:p0:u3:0,0->0,1",
+      "end_turn:p0"
+    ]
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "id": "replay_two_moves_end_turn",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd:make_move_action",
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/effect_runner.gd",
+    "scripts/sim/game_state.gd:move_unit_by_id"
+  ],
+  "intent": "A unit with 2 MP can make two adjacent move decisions before ending the turn.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 0,
+    "priority_player": 0,
+    "turn_number": 1,
+    "units": [
+      {
+        "id": 42,
+        "owner_id": 0,
+        "card_id": "test_mover",
+        "x": 2,
+        "y": 2,
+        "mp_remaining": 2
+      }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "replay_log": {
+    "decisions": [
+      {
+        "decision_index": 0,
+        "chosen_action_id": "move:p0:u42:2,2->3,2",
+        "chosen_action": {
+          "id": "move:p0:u42:2,2->3,2",
+          "kind": "move",
+          "player_id": 0,
+          "unit_id": 42,
+          "from_x": 2,
+          "from_y": 2,
+          "to_x": 3,
+          "to_y": 2
+        },
+        "legal_action_ids": [
+          "move:p0:u42:2,2->3,2",
+          "move:p0:u42:2,2->1,2",
+          "move:p0:u42:2,2->2,3",
+          "move:p0:u42:2,2->2,1",
+          "end_turn:p0"
+        ],
+        "trace_events": [
+          {
+            "kind": "move",
+            "ok": true,
+            "player_id": 0,
+            "source_unit_id": 42,
+            "from_tile": {
+              "x": 2,
+              "y": 2
+            },
+            "to_tile": {
+              "x": 3,
+              "y": 2
+            }
+          }
+        ]
+      },
+      {
+        "decision_index": 1,
+        "chosen_action_id": "move:p0:u42:3,2->3,3",
+        "chosen_action": {
+          "id": "move:p0:u42:3,2->3,3",
+          "kind": "move",
+          "player_id": 0,
+          "unit_id": 42,
+          "from_x": 3,
+          "from_y": 2,
+          "to_x": 3,
+          "to_y": 3
+        },
+        "legal_action_ids": [
+          "move:p0:u42:3,2->4,2",
+          "move:p0:u42:3,2->2,2",
+          "move:p0:u42:3,2->3,3",
+          "move:p0:u42:3,2->3,1",
+          "end_turn:p0"
+        ],
+        "trace_events": [
+          {
+            "kind": "move",
+            "ok": true,
+            "player_id": 0,
+            "source_unit_id": 42,
+            "from_tile": {
+              "x": 3,
+              "y": 2
+            },
+            "to_tile": {
+              "x": 3,
+              "y": 3
+            }
+          }
+        ]
+      },
+      {
+        "decision_index": 2,
+        "chosen_action_id": "end_turn:p0",
+        "chosen_action": {
+          "id": "end_turn:p0",
+          "kind": "end_turn",
+          "player_id": 0
+        },
+        "legal_action_ids": [
+          "end_turn:p0"
+        ],
+        "trace_events": [
+          {
+            "kind": "end_turn",
+            "ok": true,
+            "player_id": 0,
+            "from_player": 0,
+            "to_player": 1,
+            "turn_number": 2
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "legal_action_ids": [
+      "move:p0:u42:2,2->3,2",
+      "move:p0:u42:2,2->1,2",
+      "move:p0:u42:2,2->2,3",
+      "move:p0:u42:2,2->2,1",
+      "end_turn:p0"
+    ],
+    "final_state": {
+      "active_player": 1,
+      "priority_player": 1,
+      "turn_number": 2,
+      "units": [
+        {
+          "id": 42,
+          "owner_id": 0,
+          "x": 3,
+          "y": 3,
+          "mp_remaining": 0
+        }
+      ],
+      "walls": []
+    }
+  }
+}

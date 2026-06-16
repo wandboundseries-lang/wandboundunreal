@@ -1,0 +1,60 @@
+{
+  "id": "replay_pass_response",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A response-priority player can pass, returning priority to the active player without advancing the turn number.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 0,
+    "priority_player": 1,
+    "turn_number": 3,
+    "units": [],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "replay_log": {
+    "decisions": [
+      {
+        "decision_index": 0,
+        "chosen_action_id": "pass:p1",
+        "chosen_action": {
+          "id": "pass:p1",
+          "kind": "pass",
+          "player_id": 1
+        },
+        "legal_action_ids": [
+          "pass:p1"
+        ],
+        "trace_events": [
+          {
+            "kind": "pass",
+            "ok": true,
+            "player_id": 1,
+            "from_player": 1,
+            "to_player": 0,
+            "turn_number": 3
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "legal_action_ids": [
+      "pass:p1"
+    ],
+    "final_state": {
+      "active_player": 0,
+      "priority_player": 0,
+      "turn_number": 3,
+      "units": [],
+      "walls": []
+    }
+  }
+}

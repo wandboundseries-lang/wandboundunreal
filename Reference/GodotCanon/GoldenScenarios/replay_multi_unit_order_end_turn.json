@@ -1,0 +1,177 @@
+{
+  "id": "replay_multi_unit_order_end_turn",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/rules.gd:get_move_tiles",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "Replay legality preserves active-player unit order, movement first, and end_turn after all legal moves.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 0,
+    "priority_player": 0,
+    "turn_number": 5,
+    "units": [
+      {
+        "id": 10,
+        "owner_id": 0,
+        "card_id": "test_mover_a",
+        "x": 4,
+        "y": 4,
+        "mp_remaining": 1
+      },
+      {
+        "id": 11,
+        "owner_id": 0,
+        "card_id": "test_mover_b",
+        "x": 0,
+        "y": 0,
+        "mp_remaining": 1
+      },
+      {
+        "id": 20,
+        "owner_id": 1,
+        "card_id": "test_blocker",
+        "x": 5,
+        "y": 4,
+        "mp_remaining": 1
+      }
+    ],
+    "walls": [
+      {
+        "between": [
+          {
+            "x": 4,
+            "y": 4
+          },
+          {
+            "x": 4,
+            "y": 3
+          }
+        ]
+      }
+    ],
+    "statuses_by_unit": {}
+  },
+  "replay_log": {
+    "decisions": [
+      {
+        "decision_index": 0,
+        "chosen_action_id": "move:p0:u11:0,0->1,0",
+        "chosen_action": {
+          "id": "move:p0:u11:0,0->1,0",
+          "kind": "move",
+          "player_id": 0,
+          "unit_id": 11,
+          "from_x": 0,
+          "from_y": 0,
+          "to_x": 1,
+          "to_y": 0
+        },
+        "legal_action_ids": [
+          "move:p0:u10:4,4->3,4",
+          "move:p0:u10:4,4->4,5",
+          "move:p0:u11:0,0->1,0",
+          "move:p0:u11:0,0->0,1",
+          "end_turn:p0"
+        ],
+        "trace_events": [
+          {
+            "kind": "move",
+            "ok": true,
+            "player_id": 0,
+            "source_unit_id": 11,
+            "from_tile": {
+              "x": 0,
+              "y": 0
+            },
+            "to_tile": {
+              "x": 1,
+              "y": 0
+            }
+          }
+        ]
+      },
+      {
+        "decision_index": 1,
+        "chosen_action_id": "end_turn:p0",
+        "chosen_action": {
+          "id": "end_turn:p0",
+          "kind": "end_turn",
+          "player_id": 0
+        },
+        "legal_action_ids": [
+          "move:p0:u10:4,4->3,4",
+          "move:p0:u10:4,4->4,5",
+          "end_turn:p0"
+        ],
+        "trace_events": [
+          {
+            "kind": "end_turn",
+            "ok": true,
+            "player_id": 0,
+            "from_player": 0,
+            "to_player": 1,
+            "turn_number": 6
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "legal_action_ids": [
+      "move:p0:u10:4,4->3,4",
+      "move:p0:u10:4,4->4,5",
+      "move:p0:u11:0,0->1,0",
+      "move:p0:u11:0,0->0,1",
+      "end_turn:p0"
+    ],
+    "final_state": {
+      "active_player": 1,
+      "priority_player": 1,
+      "turn_number": 6,
+      "units": [
+        {
+          "id": 10,
+          "owner_id": 0,
+          "x": 4,
+          "y": 4,
+          "mp_remaining": 1
+        },
+        {
+          "id": 11,
+          "owner_id": 0,
+          "x": 1,
+          "y": 0,
+          "mp_remaining": 0
+        },
+        {
+          "id": 20,
+          "owner_id": 1,
+          "x": 5,
+          "y": 4,
+          "mp_remaining": 1
+        }
+      ],
+      "walls": [
+        {
+          "between": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 4,
+              "y": 3
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

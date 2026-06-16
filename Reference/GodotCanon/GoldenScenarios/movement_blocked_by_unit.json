@@ -1,0 +1,68 @@
+{
+  "id": "movement_blocked_by_unit",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:query_move",
+    "scripts/sim/game_state.gd:move_unit_by_id"
+  ],
+  "intent": "A move fails when the destination tile already contains any unit.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 0,
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "card_id": "test_mover",
+        "x": 4,
+        "y": 4
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "card_id": "test_blocker",
+        "x": 5,
+        "y": 4
+      }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "action": {
+    "kind": "move",
+    "player_id": 0,
+    "unit_id": 1,
+    "to_x": 5,
+    "to_y": 4
+  },
+  "expect": {
+    "legal": false,
+    "reason": "tile_occupied",
+    "legal_move_action_ids": [
+      "move:p0:u1:4,4->3,4",
+      "move:p0:u1:4,4->4,5",
+      "move:p0:u1:4,4->4,3"
+    ],
+    "legal_action_ids": [
+      "move:p0:u1:4,4->3,4",
+      "move:p0:u1:4,4->4,5",
+      "move:p0:u1:4,4->4,3",
+      "end_turn:p0"
+    ],
+    "final_units": [
+      {
+        "id": 1,
+        "x": 4,
+        "y": 4
+      },
+      {
+        "id": 2,
+        "x": 5,
+        "y": 4
+      }
+    ]
+  }
+}

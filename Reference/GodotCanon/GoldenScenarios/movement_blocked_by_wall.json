@@ -1,0 +1,70 @@
+{
+  "id": "movement_blocked_by_wall",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:query_move",
+    "scripts/sim/rules.gd:query_wall_cross",
+    "scripts/sim/game_state.gd:move_unit_by_id"
+  ],
+  "intent": "A normal adjacent move fails when a wall blocks the crossed edge.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 0,
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "card_id": "test_mover",
+        "x": 4,
+        "y": 4
+      }
+    ],
+    "walls": [
+      {
+        "between": [
+          {
+            "x": 4,
+            "y": 4
+          },
+          {
+            "x": 4,
+            "y": 3
+          }
+        ]
+      }
+    ],
+    "statuses_by_unit": {}
+  },
+  "action": {
+    "kind": "move",
+    "player_id": 0,
+    "unit_id": 1,
+    "to_x": 4,
+    "to_y": 3
+  },
+  "expect": {
+    "legal": false,
+    "reason": "blocked_by_wall",
+    "legal_move_action_ids": [
+      "move:p0:u1:4,4->5,4",
+      "move:p0:u1:4,4->3,4",
+      "move:p0:u1:4,4->4,5"
+    ],
+    "legal_action_ids": [
+      "move:p0:u1:4,4->5,4",
+      "move:p0:u1:4,4->3,4",
+      "move:p0:u1:4,4->4,5",
+      "end_turn:p0"
+    ],
+    "final_units": [
+      {
+        "id": 1,
+        "x": 4,
+        "y": 4
+      }
+    ]
+  }
+}

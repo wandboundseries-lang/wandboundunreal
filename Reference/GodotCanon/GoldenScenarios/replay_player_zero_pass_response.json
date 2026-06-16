@@ -1,0 +1,60 @@
+{
+  "id": "replay_player_zero_pass_response",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "Player 0 can pass while holding response priority during player 1's turn.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 1,
+    "priority_player": 0,
+    "turn_number": 4,
+    "units": [],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "replay_log": {
+    "decisions": [
+      {
+        "decision_index": 0,
+        "chosen_action_id": "pass:p0",
+        "chosen_action": {
+          "id": "pass:p0",
+          "kind": "pass",
+          "player_id": 0
+        },
+        "legal_action_ids": [
+          "pass:p0"
+        ],
+        "trace_events": [
+          {
+            "kind": "pass",
+            "ok": true,
+            "player_id": 0,
+            "from_player": 0,
+            "to_player": 1,
+            "turn_number": 4
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "legal_action_ids": [
+      "pass:p0"
+    ],
+    "final_state": {
+      "active_player": 1,
+      "priority_player": 1,
+      "turn_number": 4,
+      "units": [],
+      "walls": []
+    }
+  }
+}

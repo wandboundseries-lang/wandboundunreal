@@ -1,0 +1,55 @@
+{
+  "id": "movement_stunned_fails",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:can_unit_move",
+    "scripts/sim/rules.gd:query_move"
+  ],
+  "intent": "A stunned unit cannot make a voluntary movement action.",
+  "initial_state": {
+    "board": {
+      "width": 9,
+      "height": 9
+    },
+    "active_player": 0,
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "card_id": "test_mover",
+        "x": 4,
+        "y": 4
+      }
+    ],
+    "walls": [],
+    "statuses_by_unit": {
+      "1": {
+        "stun": {
+          "status_id": "stun"
+        }
+      }
+    }
+  },
+  "action": {
+    "kind": "move",
+    "player_id": 0,
+    "unit_id": 1,
+    "to_x": 4,
+    "to_y": 3
+  },
+  "expect": {
+    "legal": false,
+    "reason": "cannot_move",
+    "legal_move_action_ids": [],
+    "legal_action_ids": [
+      "end_turn:p0"
+    ],
+    "final_units": [
+      {
+        "id": 1,
+        "x": 4,
+        "y": 4
+      }
+    ]
+  }
+}
