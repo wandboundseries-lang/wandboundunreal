@@ -100,6 +100,38 @@
   - MP modifier hooks
   - NPC phase
 
+## Milestone: Start-of-Turn Status Tick Scaffolding
+
+- Status model audit result:
+  - Godot stores status instances in `statuses_by_unit`.
+  - `poison` ticks at `turn_start`.
+  - `burn`, `root`, and `stun` tick/decay at `turn_end`.
+  - Godot currently ignores the `active_player_id` argument to `tick_statuses`, so this Unreal pass ticks all units whose status timing matches start turn.
+- Unreal status representation now keeps `FWBUnitState::Statuses` as authoritative and adds optional `StatusTurnsRemaining` metadata.
+- Added status helper APIs on `FWBUnitState` for active checks, add/remove, duration access, and deterministic trace ordering.
+- Added deterministic phase API:
+  - `WBRules::CanApplyStartOfTurnStatusTicks`
+  - `WBEffectRunner::ApplyStartOfTurnStatusTicks`
+- Implemented Poison start-turn behavior:
+  - MaxHP decreases by one, to a minimum of one.
+  - HP clamps down to the new MaxHP.
+  - timed Poison decrements and expires at zero.
+  - Frozen pauses Poison tick and duration decay.
+- Burn is intentionally not implemented at start turn.
+- Rooted/Stunned remain movement-blocking and do not decay during start-turn ticks.
+- Added trace event support:
+  - `start_turn_status_ticks`
+  - `status_tick`
+  - `status_expired`
+- Intentionally not implemented yet:
+  - end-turn Burn
+  - end-turn Rooted/Stunned duration decay
+  - full death/prevention
+  - draw
+  - random MP generation
+  - card triggers
+  - NPC phase
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

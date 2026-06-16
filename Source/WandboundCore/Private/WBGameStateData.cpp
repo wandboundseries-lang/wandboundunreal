@@ -4,6 +4,64 @@
 
 namespace
 {
+void AddUniqueStatusName(TArray<FName>& Names, const TCHAR* Name)
+{
+	Names.AddUnique(FName(Name));
+}
+
+TArray<FName> GetStatusNameAliases(const FName StatusId)
+{
+	TArray<FName> Names;
+	if (!StatusId.IsNone())
+	{
+		Names.AddUnique(StatusId);
+	}
+
+	const FString LowerStatusId = StatusId.ToString().ToLower();
+	if (LowerStatusId == TEXT("root") || LowerStatusId == TEXT("rooted"))
+	{
+		AddUniqueStatusName(Names, TEXT("Rooted"));
+		AddUniqueStatusName(Names, TEXT("root"));
+	}
+	else if (LowerStatusId == TEXT("stun") || LowerStatusId == TEXT("stunned"))
+	{
+		AddUniqueStatusName(Names, TEXT("Stunned"));
+		AddUniqueStatusName(Names, TEXT("stun"));
+	}
+	else if (LowerStatusId == TEXT("poison"))
+	{
+		AddUniqueStatusName(Names, TEXT("Poison"));
+		AddUniqueStatusName(Names, TEXT("poison"));
+	}
+	else if (LowerStatusId == TEXT("burn"))
+	{
+		AddUniqueStatusName(Names, TEXT("Burn"));
+		AddUniqueStatusName(Names, TEXT("burn"));
+	}
+	else if (LowerStatusId == TEXT("frozen"))
+	{
+		AddUniqueStatusName(Names, TEXT("Frozen"));
+		AddUniqueStatusName(Names, TEXT("frozen"));
+	}
+
+	return Names;
+}
+
+bool TryFindActiveStatusKey(const FWBUnitState& Unit, const FName StatusId, FName& OutStatusKey)
+{
+	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	{
+		if (Unit.Statuses.Contains(Alias))
+		{
+			OutStatusKey = Alias;
+			return true;
+		}
+	}
+
+	OutStatusKey = NAME_None;
+	return false;
+}
+
 FWBPlayerStateData* FindOrAddTestPlayerState(FWBGameStateData& State, const int32 PlayerId, const int32 InitialRemainingMP)
 {
 	if (!FWBGameStateData::IsValidPlayerId(PlayerId))
@@ -24,6 +82,92 @@ FWBPlayerStateData* FindOrAddTestPlayerState(FWBGameStateData& State, const int3
 	State.Players.Add(Player);
 	return &State.Players.Last();
 }
+}
+
+bool FWBUnitState::HasStatus(const FName StatusId) const
+{
+	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	{
+		if (Statuses.Contains(Alias))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void FWBUnitState::AddStatus(const FName StatusId, const int32 TurnsRemaining)
+{
+	if (StatusId.IsNone())
+	{
+		return;
+	}
+
+	Statuses.Add(StatusId);
+	if (TurnsRemaining > 0)
+	{
+		StatusTurnsRemaining.Add(StatusId, TurnsRemaining);
+	}
+	else
+	{
+		for (const FName& Alias : GetStatusNameAliases(StatusId))
+		{
+			StatusTurnsRemaining.Remove(Alias);
+		}
+	}
+}
+
+void FWBUnitState::RemoveStatus(const FName StatusId)
+{
+	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	{
+		Statuses.Remove(Alias);
+		StatusTurnsRemaining.Remove(Alias);
+	}
+}
+
+int32 FWBUnitState::GetStatusTurnsRemaining(const FName StatusId) const
+{
+	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	{
+		if (const int32* TurnsRemaining = StatusTurnsRemaining.Find(Alias))
+		{
+			return *TurnsRemaining;
+		}
+	}
+
+	return 0;
+}
+
+void FWBUnitState::SetStatusTurnsRemaining(const FName StatusId, const int32 TurnsRemaining)
+{
+	FName ActiveStatusKey;
+	if (!TryFindActiveStatusKey(*this, StatusId, ActiveStatusKey))
+	{
+		return;
+	}
+
+	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	{
+		StatusTurnsRemaining.Remove(Alias);
+	}
+
+	if (TurnsRemaining > 0)
+	{
+		StatusTurnsRemaining.Add(ActiveStatusKey, TurnsRemaining);
+	}
+}
+
+TArray<FName> FWBUnitState::GetSortedStatusIdsForTrace() const
+{
+	TArray<FName> SortedStatusIds = Statuses.Array();
+	SortedStatusIds.Sort([](const FName& A, const FName& B)
+	{
+		return A.ToString() < B.ToString();
+	});
+
+	return SortedStatusIds;
 }
 
 bool FWBGameStateData::IsValidPlayerId(const int32 PlayerId)

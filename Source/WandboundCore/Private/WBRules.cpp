@@ -9,17 +9,10 @@ const FWBTile MoveDirections[] = {
 	FWBTile(0, 1),
 	FWBTile(0, -1)
 };
-const FName RootStatusName(TEXT("root"));
-const FName StunStatusName(TEXT("stun"));
-const FName LegacyRootedStatusName(TEXT("Rooted"));
-const FName LegacyStunnedStatusName(TEXT("Stunned"));
-
 bool HasMovementBlockingStatus(const FWBUnitState& Unit)
 {
-	return Unit.Statuses.Contains(RootStatusName)
-		|| Unit.Statuses.Contains(StunStatusName)
-		|| Unit.Statuses.Contains(LegacyRootedStatusName)
-		|| Unit.Statuses.Contains(LegacyStunnedStatusName);
+	return Unit.HasStatus(FName(TEXT("Rooted")))
+		|| Unit.HasStatus(FName(TEXT("Stunned")));
 }
 
 }
@@ -336,6 +329,39 @@ bool WBRules::CanApplyTurnStartResourceSetup(
 	if (ExplicitMPRoll < 1 || ExplicitMPRoll > 6)
 	{
 		OutReason = TEXT("invalid_mp_roll");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool WBRules::CanApplyStartOfTurnStatusTicks(
+	const FWBGameStateData& State,
+	const int32 PlayerId,
+	FString& OutReason)
+{
+	if (State.bGameOver)
+	{
+		OutReason = TEXT("game_over");
+		return false;
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(PlayerId))
+	{
+		OutReason = TEXT("bad_player");
+		return false;
+	}
+
+	if (State.GetPlayerById(PlayerId) == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
+		return false;
+	}
+
+	if (PlayerId != State.CurrentPlayer)
+	{
+		OutReason = TEXT("not_active_player");
 		return false;
 	}
 

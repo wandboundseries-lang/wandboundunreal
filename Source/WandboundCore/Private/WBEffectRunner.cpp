@@ -2,6 +2,66 @@
 
 #include "WBRules.h"
 
+namespace
+{
+const FName PoisonStatusId(TEXT("Poison"));
+const FName FrozenStatusId(TEXT("Frozen"));
+
+void AppendStartTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const int32 PlayerId, const int32 TurnNumber)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("start_turn_status_ticks"));
+	Event.PlayerId = PlayerId;
+	Event.TurnNumber = TurnNumber;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendPoisonTickTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const int32 PlayerId,
+	const int32 TargetUnitId,
+	const int32 PreviousHP,
+	const int32 NewHP,
+	const int32 PreviousMaxHP,
+	const int32 NewMaxHP,
+	const int32 PreviousStatusTurns,
+	const int32 NewStatusTurns)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("status_tick"));
+	Event.StatusId = PoisonStatusId;
+	Event.PlayerId = PlayerId;
+	Event.TargetUnitId = TargetUnitId;
+	Event.PreviousHP = PreviousHP;
+	Event.NewHP = NewHP;
+	Event.PreviousMaxHP = PreviousMaxHP;
+	Event.NewMaxHP = NewMaxHP;
+	Event.PreviousStatusTurns = PreviousStatusTurns;
+	Event.NewStatusTurns = NewStatusTurns;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendStatusExpiredTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const int32 PlayerId,
+	const FName StatusId,
+	const int32 TargetUnitId,
+	const int32 PreviousStatusTurns)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("status_expired"));
+	Event.StatusId = StatusId;
+	Event.PlayerId = PlayerId;
+	Event.TargetUnitId = TargetUnitId;
+	Event.PreviousStatusTurns = PreviousStatusTurns;
+	Event.NewStatusTurns = 0;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+}
+
 FWBApplyActionResult WBEffectRunner::ApplyAction(FWBGameStateData& State, const FWBAction& Action)
 {
 	switch (Action.Type)
@@ -124,6 +184,73 @@ FWBApplyActionResult WBEffectRunner::ApplyPass(FWBGameStateData& State, const FW
 
 	Result.bOk = true;
 	Result.TraceEvents.Add(PassEvent);
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateData& State, const int32 PlayerId)
+{
+	FWBApplyActionResult Result;
+
+	FString Reason;
+	if (!WBRules::CanApplyStartOfTurnStatusTicks(State, PlayerId, Reason))
+	{
+		Result.bOk = false;
+		Result.Reason = Reason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	AppendStartTurnStatusTickTrace(Result.TraceEvents, PlayerId, State.TurnNumber);
+
+	for (FWBUnitState& Unit : State.Units)
+	{
+		if (!Unit.HasStatus(PoisonStatusId) || Unit.HasStatus(FrozenStatusId))
+		{
+			continue;
+		}
+
+		const int32 PreviousHP = Unit.HP;
+		const int32 PreviousMaxHP = Unit.MaxHP;
+		const int32 PreviousStatusTurns = Unit.GetStatusTurnsRemaining(PoisonStatusId);
+		const int32 NewMaxHP = FMath::Max(PreviousMaxHP - 1, 1);
+
+		Unit.MaxHP = NewMaxHP;
+		Unit.HP = FMath::Min(Unit.HP, Unit.MaxHP);
+
+		int32 NewStatusTurns = PreviousStatusTurns;
+		bool bExpired = false;
+		if (PreviousStatusTurns > 0)
+		{
+			NewStatusTurns = PreviousStatusTurns - 1;
+			if (NewStatusTurns <= 0)
+			{
+				Unit.RemoveStatus(PoisonStatusId);
+				bExpired = true;
+				NewStatusTurns = 0;
+			}
+			else
+			{
+				Unit.SetStatusTurnsRemaining(PoisonStatusId, NewStatusTurns);
+			}
+		}
+
+		AppendPoisonTickTrace(
+			Result.TraceEvents,
+			PlayerId,
+			Unit.UnitId,
+			PreviousHP,
+			Unit.HP,
+			PreviousMaxHP,
+			Unit.MaxHP,
+			PreviousStatusTurns,
+			NewStatusTurns);
+
+		if (bExpired)
+		{
+			AppendStatusExpiredTrace(Result.TraceEvents, PlayerId, PoisonStatusId, Unit.UnitId, PreviousStatusTurns);
+		}
+	}
+
 	return Result;
 }
 

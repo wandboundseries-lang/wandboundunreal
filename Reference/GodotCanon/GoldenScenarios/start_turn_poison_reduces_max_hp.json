@@ -1,0 +1,85 @@
+{
+  "id": "start_turn_poison_reduces_max_hp",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:tick_statuses",
+    "scripts/sim/game_state.gd:_apply_status_tick",
+    "scripts/sim/game_state.gd:decrease_max_hp"
+  ],
+  "intent": "Poison ticks at turn start, reducing MaxHP by one while preserving HP when it remains below the new maximum.",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 1
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 1
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "hp": 3,
+        "max_hp": 5
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Poison": {
+          "status_id": "Poison",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "operation": {
+    "kind": "apply_start_turn_status_ticks",
+    "player_id": 0
+  },
+  "expect": {
+    "ok": true,
+    "reason": "",
+    "final_units": [
+      {
+        "id": 1,
+        "hp": 3,
+        "max_hp": 4,
+        "statuses": [
+          "Poison"
+        ],
+        "status_turns": {
+          "Poison": 1
+        }
+      }
+    ],
+    "trace_events": [
+      {
+        "kind": "start_turn_status_ticks",
+        "player_id": 0,
+        "turn_number": 3
+      },
+      {
+        "kind": "status_tick",
+        "status_id": "Poison",
+        "player_id": 0,
+        "target_unit_id": 1,
+        "previous_hp": 3,
+        "new_hp": 3,
+        "previous_max_hp": 5,
+        "new_max_hp": 4,
+        "previous_status_turns": 2,
+        "new_status_turns": 1
+      }
+    ]
+  }
+}

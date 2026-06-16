@@ -1,0 +1,72 @@
+{
+  "id": "start_turn_burn_does_not_tick",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:apply_status",
+    "scripts/sim/game_state.gd:_apply_status_tick"
+  ],
+  "intent": "Burn is a turn-end status and does not deal damage or decay during the start-of-turn status tick pass.",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 1
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 1
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "hp": 4,
+        "max_hp": 5
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "operation": {
+    "kind": "apply_start_turn_status_ticks",
+    "player_id": 0
+  },
+  "expect": {
+    "ok": true,
+    "reason": "",
+    "final_units": [
+      {
+        "id": 1,
+        "hp": 4,
+        "max_hp": 5,
+        "statuses": [
+          "Burn"
+        ],
+        "status_turns": {
+          "Burn": 2
+        }
+      }
+    ],
+    "trace_events": [
+      {
+        "kind": "start_turn_status_ticks",
+        "player_id": 0,
+        "turn_number": 3
+      }
+    ]
+  }
+}

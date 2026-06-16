@@ -75,6 +75,46 @@ TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("wall_removals_left"), Event.WallRemovalsLeft);
 	}
 
+	if (!Event.StatusId.IsNone())
+	{
+		Object->SetStringField(TEXT("status_id"), Event.StatusId.ToString());
+	}
+
+	if (Event.TargetUnitId != -1)
+	{
+		Object->SetNumberField(TEXT("target_unit_id"), Event.TargetUnitId);
+	}
+
+	if (Event.PreviousHP != -1)
+	{
+		Object->SetNumberField(TEXT("previous_hp"), Event.PreviousHP);
+	}
+
+	if (Event.NewHP != -1)
+	{
+		Object->SetNumberField(TEXT("new_hp"), Event.NewHP);
+	}
+
+	if (Event.PreviousMaxHP != -1)
+	{
+		Object->SetNumberField(TEXT("previous_max_hp"), Event.PreviousMaxHP);
+	}
+
+	if (Event.NewMaxHP != -1)
+	{
+		Object->SetNumberField(TEXT("new_max_hp"), Event.NewMaxHP);
+	}
+
+	if (Event.PreviousStatusTurns != -1)
+	{
+		Object->SetNumberField(TEXT("previous_status_turns"), Event.PreviousStatusTurns);
+	}
+
+	if (Event.NewStatusTurns != -1)
+	{
+		Object->SetNumberField(TEXT("new_status_turns"), Event.NewStatusTurns);
+	}
+
 	if (IsSetTile(Event.FromTile))
 	{
 		Object->SetObjectField(TEXT("from_tile"), TileToJsonObject(Event.FromTile));

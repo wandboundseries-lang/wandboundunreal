@@ -20,7 +20,15 @@ struct WANDBOUNDCORE_API FWBUnitState
 	int32 MaxAttacksPerTurn = 1;
 	int32 MPRemaining = 0;
 	TSet<FName> Statuses;
+	TMap<FName, int32> StatusTurnsRemaining;
 	TSet<FName> Passives;
+
+	bool HasStatus(FName StatusId) const;
+	void AddStatus(FName StatusId, int32 TurnsRemaining = 0);
+	void RemoveStatus(FName StatusId);
+	int32 GetStatusTurnsRemaining(FName StatusId) const;
+	void SetStatusTurnsRemaining(FName StatusId, int32 TurnsRemaining);
+	TArray<FName> GetSortedStatusIdsForTrace() const;
 };
 
 enum class EWBGamePhase : uint8
