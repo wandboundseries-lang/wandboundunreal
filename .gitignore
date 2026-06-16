@@ -22,8 +22,6 @@ Saved/
 *.pch
 
 # Unreal autosaves/backups
-*_BuiltData.uasset
-Saved/
 Autosaves/
 Backup/
 
@@ -31,11 +29,17 @@ Backup/
 .DS_Store
 Thumbs.db
 
-# Keep source/content/config
+# Keep source/content/config/reference/project files trackable
 !Config/
 !Content/
 !Source/
 !Plugins/
+!Docs/
+!Reference/
+!AGENTS.md
+!*.uproject
+!*.sln
+!.vsconfig
 
 # Local Godot reference copy; do not commit the full old project.
 Reference/GodotProject/

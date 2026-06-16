@@ -88,11 +88,17 @@ Run a specific Wandbound test group once it exists:
 & 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
 ```
 
-Clean generated files if needed:
+Generated file tracking policy:
 
-```powershell
-TODO: confirm repo policy for generated files before cleaning. This baseline currently contains generated Binaries, Intermediate, Saved, and DerivedDataCache entries, so do not remove them automatically.
-```
+- Generated Unreal/Visual Studio folders must not be tracked:
+  - `.vs/`
+  - `Binaries/`
+  - `Intermediate/`
+  - `Saved/`
+  - `DerivedDataCache/`
+- Generated logs, caches, object files, PDBs, PCH files, and local user settings must not be tracked.
+- Codex may remove these from Git tracking with `git rm --cached`, but must not delete the local developer's working files unless explicitly requested.
+- Real source/config/docs/reference files must remain tracked.
 
 ## Future Module Plan
 
