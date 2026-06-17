@@ -4,20 +4,21 @@ Date of check: 2026-06-17 (America/New_York)
 
 ## Scope
 
-This pass added a deterministic runtime turn-result envelope around selected-action execution. It reports selected action identity, consumed MP roll details, emitted traces through the existing apply result, and a final public turn summary.
+This pass added deterministic JSON serialization for `FWBRuntimeSelectedActionResult`.
 
 Implemented:
 
-- runtime turn result envelope audit
-- `FWBPublicPlayerTurnSummary`
-- `FWBPublicTurnSummary`
-- `WBPublicTurnSummary::Build`
-- `FWBRuntimeSelectedActionResult`
-- `WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult`
-- behavior-compatible `ApplyRuntimeSelectedAction` refactor through the envelope API
-- additive fixture support for `apply_runtime_selected_action_with_result`
-- runtime result GoldenScenarios fixtures
-- automation coverage for full EndTurn, basic EndTurn, Move, PassResponse, missing/invalid roll failures, action ID stability, legacy adapter behavior, and fixture scenarios
+- runtime result serialization audit
+- `WBRuntimeResultSerializer`
+- runtime selected-action result JSON object serialization
+- runtime selected-action result JSON string serialization
+- schema version 1
+- public trace event JSON object helper reuse through `WBReplayTrace::TraceEventToJsonObject`
+- public turn summary serialization
+- hidden deck/hand/discard/card-id exclusion coverage
+- additive fixture operation `apply_runtime_selected_action_with_result_and_serialize`
+- runtime result serialization GoldenScenarios fixtures
+- automation coverage for full EndTurn, basic EndTurn, Move, PassResponse, failure reason serialization, hidden data exclusion, action ID stability, existing behavior, JSON roundtrip, and fixture scenarios
 
 Not implemented:
 
@@ -36,64 +37,51 @@ Not implemented:
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Result Envelope Notes
+## Serialization Notes
 
-New public summary API:
-
-```text
-FWBPublicPlayerTurnSummary
-FWBPublicTurnSummary
-WBPublicTurnSummary::Build
-```
-
-New runtime envelope API:
+New serializer API:
 
 ```text
-FWBRuntimeSelectedActionResult
-WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult(State, SelectedAction, Context)
+WBRuntimeResultSerializer::RuntimeSelectedActionResultToJsonObject(Result)
+WBRuntimeResultSerializer::RuntimeSelectedActionResultToJsonString(Result, OutJson)
 ```
 
-Envelope fields:
+Serialized fields:
 
-- `ApplyResult`
-- `SelectedActionType`
-- `SelectedActionId`
-- `bConsumedMPRoll`
-- `ConsumedMPRoll`
-- `FinalPublicTurnSummary`
+- `schema_version`
+- `selected_action.type`
+- `selected_action.action_id`
+- `result.ok`
+- `result.reason`
+- `mp_roll.consumed`
+- `mp_roll.value`
+- `traces`
+- `final_public_turn_summary`
 
-`SelectedActionId` uses the existing `WBActionCodec::MakeActionId` format. Runtime context and MP rolls are not encoded into action IDs.
+`SelectedActionId` comes from the existing envelope field, which is populated from `WBActionCodec::MakeActionId`.
 
-The final public turn summary includes only turn and player resource fields. It does not include deck, hand, hidden choices, private card identities, or full hidden unit/card state.
+The serializer does not include runtime context, deck, hand, discard, private card IDs, hidden markers, pending choices, UObject pointers, resources, or file paths.
 
-Trace behavior is unchanged. The envelope reports traces through `ApplyResult.TraceEvents` and does not add wrapper traces.
+Trace generation is unchanged. Runtime result serialization reuses `WBReplayTrace::TraceEventToJsonObject`.
 
-`apply_action` replay fixtures still use `WBActionCodec` plus `WBEffectRunner::ApplyAction`.
-
-Legal action generation remains unchanged:
-
-- movement first
-- then `EndTurn`
-- `PassResponse` in response phase
-- no full-transition or roll player action
+Replay `apply_action` remains unchanged and still uses `WBActionCodec` plus `WBEffectRunner::ApplyAction`.
 
 ## Implemented This Pass
 
-- Added `Docs/Runtime_Turn_Result_Envelope_Audit.md`.
-- Added `Docs/Runtime_Turn_Result_Envelope_Report.md`.
-- Added `Source/WandboundCore/Public/WBPublicTurnSummary.h`.
-- Added `Source/WandboundCore/Private/WBPublicTurnSummary.cpp`.
-- Updated `Source/WandboundCore/Public/WBRuntimeTurnResolutionAdapter.h`.
-- Updated `Source/WandboundCore/Private/WBRuntimeTurnResolutionAdapter.cpp`.
+- Added `Docs/Runtime_Result_Serialization_Audit.md`.
+- Added `Docs/Runtime_Result_Serialization_Report.md`.
+- Added `Source/WandboundCore/Public/WBRuntimeResultSerializer.h`.
+- Added `Source/WandboundCore/Private/WBRuntimeResultSerializer.cpp`.
+- Updated `Source/WandboundCore/Public/WBReplayTrace.h`.
+- Updated `Source/WandboundCore/Private/WBReplayTrace.cpp`.
 - Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.h`.
 - Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
-- Added `Source/WandboundTests/Private/WBRuntimeTurnResultEnvelopeTests.cpp`.
+- Added `Source/WandboundTests/Private/WBRuntimeResultSerializationTests.cpp`.
 - Added GodotCanon fixtures:
-  - `runtime_result_end_turn_full_transition_roll_4.json`
-  - `runtime_result_end_turn_basic_no_roll.json`
-  - `runtime_result_move_summary.json`
-  - `runtime_result_pass_response_summary.json`
-  - `runtime_result_invalid_roll_no_mutation.json`
+  - `runtime_result_serialization_full_transition.json`
+  - `runtime_result_serialization_basic_end_turn.json`
+  - `runtime_result_serialization_hidden_data_exclusion.json`
+- Updated `Docs/Wandbound_Unreal_Migration_Plan.md`.
 
 ## Build
 
@@ -107,7 +95,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 30.06 seconds
+Total execution time: 29.47 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -121,7 +109,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=142
+succeeded=152
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -129,15 +117,16 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.RuntimeTurnResultEnvelope.BasicEndTurnReportsNoRoll`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.FixtureScenarios`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.FullEndTurnReportsActionIdAndRoll`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.InvalidQueuedRollFailure`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.LegacyAdapterStillWorks`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.MissingRollSourceFailure`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.MoveReportsNoRollAndFinalMP`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.PassResponseReportsNoRoll`
-- `Wandbound.Core.RuntimeTurnResultEnvelope.SelectedActionIdHasNoRuntimeContext`
+- `Wandbound.Core.RuntimeResultSerialization.ActionIdStability`
+- `Wandbound.Core.RuntimeResultSerialization.BasicEndTurnSerializesNoRoll`
+- `Wandbound.Core.RuntimeResultSerialization.ExistingBehaviorUnchanged`
+- `Wandbound.Core.RuntimeResultSerialization.FailureSerializesReason`
+- `Wandbound.Core.RuntimeResultSerialization.FixtureScenarios`
+- `Wandbound.Core.RuntimeResultSerialization.FullEndTurnSerializesActionIdAndRoll`
+- `Wandbound.Core.RuntimeResultSerialization.HiddenDataExcluded`
+- `Wandbound.Core.RuntimeResultSerialization.JsonParseRoundtripSmoke`
+- `Wandbound.Core.RuntimeResultSerialization.MoveSerializesFinalMP`
+- `Wandbound.Core.RuntimeResultSerialization.PassResponseSerializes`
 
 ## Generated File Tracking
 
@@ -154,16 +143,16 @@ The pre-existing untracked `MaxHP` file remains untouched.
 
 ## Remaining Warnings
 
-Build and automation reported no warnings. `git diff --check` should still be used before commit; prior passes have only shown LF-to-CRLF notices.
+Build and automation reported no warnings.
 
 ## Risks/Unknowns
 
-- UI/runtime code is not wired to consume the result envelope yet.
+- No public board summary exists yet.
+- Network replay envelope semantics are not defined yet.
+- UI/runtime code is not wired to consume serialized runtime results yet.
 - Random MP generation is intentionally absent.
-- Network replay semantics for runtime selected-action execution are not defined yet.
-- Full death/prevention is still absent after status ticks.
 - Draw, hooks, card triggers, NPC phase, attacks, and card effects are still absent.
 
 ## Next Recommended Implementation Milestone
 
-Add deterministic runtime result serialization for `FWBRuntimeSelectedActionResult`, covering selected action id, consumed roll fields, trace events, and final public turn summary without including hidden card data.
+Add a deterministic public board summary for runtime results, covering only public unit positions and public combat/status fields after explicitly auditing hidden marker and card identity policy.

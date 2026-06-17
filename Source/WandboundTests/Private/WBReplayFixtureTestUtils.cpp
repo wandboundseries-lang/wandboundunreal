@@ -7,6 +7,7 @@
 #include "WBActionCodec.h"
 #include "WBEffectRunner.h"
 #include "WBMPRollSource.h"
+#include "WBRuntimeResultSerializer.h"
 #include "WBRuntimeTurnResolutionAdapter.h"
 
 namespace WandboundTest
@@ -47,6 +48,29 @@ bool ReadStringArrayValues(
 
 	OutReason.Reset();
 	return true;
+}
+
+bool ReadOptionalStringArrayField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& FieldPath,
+	TArray<FString>& OutStrings,
+	FString& OutReason)
+{
+	const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetArrayField(FieldName, Values) || Values == nullptr)
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), *FieldPath);
+		return false;
+	}
+
+	return ReadStringArrayValues(*Values, FieldPath, OutStrings, OutReason);
 }
 
 bool TryGetReplayLogObject(
@@ -592,6 +616,27 @@ bool ApplyFixturePlayers(const TSharedPtr<FJsonObject>& StateObject, FWBGameStat
 		Player.LastMPRoll = ReadIntegerFieldOrDefault(PlayerObject, TEXT("last_mp_roll"), 0);
 		Player.WallsLeft = ReadIntegerFieldOrDefault(PlayerObject, TEXT("walls_left"), 0);
 		Player.WallRemovalsLeft = ReadIntegerFieldOrDefault(PlayerObject, TEXT("wall_removals_left"), 0);
+		if (!ReadOptionalStringArrayField(
+				PlayerObject,
+				TEXT("deck"),
+				FString::Printf(TEXT("initial_state.players[%d].deck"), Player.PlayerId),
+				Player.Deck,
+				OutReason)
+			|| !ReadOptionalStringArrayField(
+				PlayerObject,
+				TEXT("hand"),
+				FString::Printf(TEXT("initial_state.players[%d].hand"), Player.PlayerId),
+				Player.Hand,
+				OutReason)
+			|| !ReadOptionalStringArrayField(
+				PlayerObject,
+				TEXT("discard"),
+				FString::Printf(TEXT("initial_state.players[%d].discard"), Player.PlayerId),
+				Player.Discard,
+				OutReason))
+		{
+			return false;
+		}
 		OutState.Players.Add(Player);
 	}
 
@@ -931,7 +976,8 @@ bool ApplyRuntimeSelectedActionWithResultFixture(
 		return false;
 	}
 
-	if (OperationKind != TEXT("apply_runtime_selected_action_with_result"))
+	if (OperationKind != TEXT("apply_runtime_selected_action_with_result")
+		&& OperationKind != TEXT("apply_runtime_selected_action_with_result_and_serialize"))
 	{
 		OutReason = TEXT("fixture_operation_is_not_apply_runtime_selected_action_with_result");
 		OutEnvelope.ApplyResult = MakeFixtureFailure(OutReason);
@@ -962,6 +1008,35 @@ bool ApplyRuntimeSelectedActionWithResultFixture(
 	if (QueuedRollSource.IsValid())
 	{
 		OutRollSourceRemainingCount = QueuedRollSource->NumRemainingRolls();
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ApplyRuntimeSelectedActionWithResultAndSerializeFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBGameStateData& State,
+	FWBRuntimeSelectedActionResult& OutEnvelope,
+	FString& OutSerializedJson,
+	int32& OutRollSourceRemainingCount,
+	FString& OutReason)
+{
+	OutSerializedJson.Reset();
+	if (!ApplyRuntimeSelectedActionWithResultFixture(
+			Fixture,
+			State,
+			OutEnvelope,
+			OutRollSourceRemainingCount,
+			OutReason))
+	{
+		return false;
+	}
+
+	if (!WBRuntimeResultSerializer::RuntimeSelectedActionResultToJsonString(OutEnvelope, OutSerializedJson))
+	{
+		OutReason = TEXT("runtime_result_serialization_failed");
+		return false;
 	}
 
 	OutReason.Reset();
@@ -1007,6 +1082,23 @@ bool ApplyFixtureOperation(
 			Fixture,
 			State,
 			Envelope,
+			RollSourceRemainingCount,
+			OutReason);
+		OutResult = Envelope.ApplyResult;
+		return bApplied;
+	}
+
+	if (OperationKind == TEXT("apply_runtime_selected_action_with_result_and_serialize"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyRuntimeSelectedActionWithResultAndSerialize;
+		FWBRuntimeSelectedActionResult Envelope;
+		FString SerializedJson;
+		int32 RollSourceRemainingCount = -1;
+		const bool bApplied = ApplyRuntimeSelectedActionWithResultAndSerializeFixture(
+			Fixture,
+			State,
+			Envelope,
+			SerializedJson,
 			RollSourceRemainingCount,
 			OutReason);
 		OutResult = Envelope.ApplyResult;

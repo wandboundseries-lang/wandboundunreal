@@ -5,6 +5,8 @@
 #include "WBGameStateData.h"
 #include "WBTypes.h"
 
+class FJsonObject;
+
 struct WANDBOUNDCORE_API FWBTraceEvent
 {
 	FName Kind;
@@ -47,6 +49,7 @@ struct WANDBOUNDCORE_API FWBApplyActionResult
 class WANDBOUNDCORE_API WBReplayTrace
 {
 public:
+	static TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBTraceEvent& Event);
 	static FString SerializeEvent(const FWBTraceEvent& Event);
 	static FString SerializeEvents(const TArray<FWBTraceEvent>& Events);
 };

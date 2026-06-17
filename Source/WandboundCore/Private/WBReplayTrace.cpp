@@ -23,7 +23,7 @@ TSharedRef<FJsonObject> TileToJsonObject(const FWBTile& Tile)
 	return Object;
 }
 
-TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBTraceEvent& Event)
+TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 {
 	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 	Object->SetStringField(TEXT("kind"), Event.Kind.ToString());
@@ -164,7 +164,7 @@ TArray<TSharedPtr<FJsonValue>> TraceEventsToJsonValues(const TArray<FWBTraceEven
 	Values.Reserve(Events.Num());
 	for (const FWBTraceEvent& Event : Events)
 	{
-		Values.Add(MakeShared<FJsonValueObject>(TraceEventToJsonObject(Event)));
+		Values.Add(MakeShared<FJsonValueObject>(MakeTraceEventJsonObject(Event)));
 	}
 
 	return Values;
@@ -358,11 +358,16 @@ bool ParseTraceEventValues(const TArray<FWBTraceEvent>& TraceEvents, TArray<TSha
 }
 }
 
+TSharedRef<FJsonObject> WBReplayTrace::TraceEventToJsonObject(const FWBTraceEvent& Event)
+{
+	return MakeTraceEventJsonObject(Event);
+}
+
 FString WBReplayTrace::SerializeEvent(const FWBTraceEvent& Event)
 {
 	FString Output;
 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Output);
-	FJsonSerializer::Serialize(TraceEventToJsonObject(Event), Writer);
+	FJsonSerializer::Serialize(MakeTraceEventJsonObject(Event), Writer);
 	return Output;
 }
 

@@ -341,6 +341,37 @@
   - attacks/combat
   - network replay
 
+## Milestone - Runtime Result Serialization
+
+- Added deterministic JSON serialization for `FWBRuntimeSelectedActionResult`.
+- Added `WBRuntimeResultSerializer` with schema version 1.
+- Serialized runtime results include:
+  - selected action type/id
+  - resolved `ok` state and failure reason
+  - consumed MP roll fields
+  - emitted trace events
+  - final public turn summary
+- `WBReplayTrace::TraceEventToJsonObject` is now public so runtime result serialization reuses the same trace field logic as replay traces.
+- Final public turn summary serialization includes only turn/player resource fields.
+- Hidden card/deck/hand/discard data is excluded.
+- `WBActionCodec` action IDs remain unchanged.
+- Replay `apply_action` semantics remain unchanged.
+- Legal action generation remains unchanged.
+- Added serialization fixtures:
+  - `runtime_result_serialization_full_transition.json`
+  - `runtime_result_serialization_basic_end_turn.json`
+  - `runtime_result_serialization_hidden_data_exclusion.json`
+- Added optional fixture operation:
+  - `apply_runtime_selected_action_with_result_and_serialize`
+- Intentionally not implemented yet:
+  - random dice generation
+  - draw
+  - NPC phase
+  - attacks/combat
+  - card effects
+  - UI/Blueprint/3D runtime
+  - network replay envelope
+
 ## Phase 3 - Movement
 
 - 9x9 bounds
