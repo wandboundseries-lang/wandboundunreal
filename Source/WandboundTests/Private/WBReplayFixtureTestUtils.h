@@ -15,7 +15,8 @@ enum class EWBFixtureOperationKind : uint8
 	Unknown,
 	ApplyAction,
 	ApplyTurnCommand,
-	ApplyRuntimeSelectedAction
+	ApplyRuntimeSelectedAction,
+	ApplyRuntimeSelectedActionWithResult
 };
 
 bool BuildGameStateFromFixture(
@@ -38,6 +39,13 @@ bool ApplyRuntimeSelectedActionFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBGameStateData& State,
 	FWBApplyActionResult& OutResult,
+	int32& OutRollSourceRemainingCount,
+	FString& OutReason);
+
+bool ApplyRuntimeSelectedActionWithResultFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBGameStateData& State,
+	FWBRuntimeSelectedActionResult& OutEnvelope,
 	int32& OutRollSourceRemainingCount,
 	FString& OutReason);
 
@@ -70,6 +78,12 @@ bool ExpectFinalTurnState(
 
 bool ExpectRuntimeRollSourceRemainingCount(
 	const TSharedPtr<FJsonObject>& Fixture,
+	int32 RollSourceRemainingCount,
+	FString& OutReason);
+
+bool ExpectRuntimeSelectedActionEnvelope(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBRuntimeSelectedActionResult& Envelope,
 	int32 RollSourceRemainingCount,
 	FString& OutReason);
 

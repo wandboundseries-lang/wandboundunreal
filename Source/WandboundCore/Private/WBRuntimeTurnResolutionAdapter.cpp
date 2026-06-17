@@ -1,10 +1,11 @@
 #include "WBRuntimeTurnResolutionAdapter.h"
 
+#include "WBActionCodec.h"
 #include "WBSelectedActionExecutor.h"
 
 namespace
 {
-FWBApplyActionResult MakeFailureResult(const TCHAR* Reason)
+FWBApplyActionResult MakeFailureResult(const FString& Reason)
 {
 	FWBApplyActionResult Result;
 	Result.bOk = false;
@@ -23,22 +24,40 @@ FWBApplyActionResult WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedAction(
 	const FWBAction& SelectedAction,
 	FWBRuntimeTurnResolutionContext& Context)
 {
+	return ApplyRuntimeSelectedActionWithResult(State, SelectedAction, Context).ApplyResult;
+}
+
+FWBRuntimeSelectedActionResult WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult(
+	FWBGameStateData& State,
+	const FWBAction& SelectedAction,
+	FWBRuntimeTurnResolutionContext& Context)
+{
+	FWBRuntimeSelectedActionResult Envelope;
+	Envelope.SelectedActionType = FName(*WBActionCodec::GetActionKind(SelectedAction.Type));
+	Envelope.SelectedActionId = WBActionCodec::MakeActionId(SelectedAction);
+
 	if (SelectedAction.Type != EWBActionType::EndTurn)
 	{
 		FWBSelectedActionExecutionContext SelectedActionContext;
-		return WBSelectedActionExecutor::ApplySelectedAction(State, SelectedAction, SelectedActionContext);
+		Envelope.ApplyResult = WBSelectedActionExecutor::ApplySelectedAction(State, SelectedAction, SelectedActionContext);
+		Envelope.FinalPublicTurnSummary = WBPublicTurnSummary::Build(State);
+		return Envelope;
 	}
 
 	if (!Context.bResolveEndTurnAsFullTransition)
 	{
 		FWBSelectedActionExecutionContext SelectedActionContext;
 		SelectedActionContext.bUseFullTurnTransitionForEndTurn = false;
-		return WBSelectedActionExecutor::ApplySelectedAction(State, SelectedAction, SelectedActionContext);
+		Envelope.ApplyResult = WBSelectedActionExecutor::ApplySelectedAction(State, SelectedAction, SelectedActionContext);
+		Envelope.FinalPublicTurnSummary = WBPublicTurnSummary::Build(State);
+		return Envelope;
 	}
 
 	if (Context.MPRollSource == nullptr)
 	{
-		return MakeFailureResult(TEXT("missing_mp_roll_source"));
+		Envelope.ApplyResult = MakeFailureResult(TEXT("missing_mp_roll_source"));
+		Envelope.FinalPublicTurnSummary = WBPublicTurnSummary::Build(State);
+		return Envelope;
 	}
 
 	const int32 NextPlayerId = GetNextPlayerIdForTwoPlayerBaseline(SelectedAction.PlayerId);
@@ -46,14 +65,18 @@ FWBApplyActionResult WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedAction(
 	FString RollReason;
 	if (!Context.MPRollSource->TryGetNextMPRoll(NextPlayerId, NextPlayerExplicitMPRoll, RollReason))
 	{
-		FWBApplyActionResult Result;
-		Result.bOk = false;
-		Result.Reason = RollReason;
-		return Result;
+		Envelope.ApplyResult = MakeFailureResult(RollReason);
+		Envelope.FinalPublicTurnSummary = WBPublicTurnSummary::Build(State);
+		return Envelope;
 	}
+
+	Envelope.bConsumedMPRoll = true;
+	Envelope.ConsumedMPRoll = NextPlayerExplicitMPRoll;
 
 	FWBSelectedActionExecutionContext SelectedActionContext;
 	SelectedActionContext.bUseFullTurnTransitionForEndTurn = true;
 	SelectedActionContext.NextPlayerExplicitMPRoll = NextPlayerExplicitMPRoll;
-	return WBSelectedActionExecutor::ApplySelectedAction(State, SelectedAction, SelectedActionContext);
+	Envelope.ApplyResult = WBSelectedActionExecutor::ApplySelectedAction(State, SelectedAction, SelectedActionContext);
+	Envelope.FinalPublicTurnSummary = WBPublicTurnSummary::Build(State);
+	return Envelope;
 }

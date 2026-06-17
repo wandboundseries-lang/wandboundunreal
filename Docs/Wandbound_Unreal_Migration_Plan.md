@@ -309,6 +309,38 @@
   - attacks/combat
   - network replay
 
+## Milestone: Runtime Turn Result Envelope
+
+- Added public turn summary structs:
+  - `FWBPublicPlayerTurnSummary`
+  - `FWBPublicTurnSummary`
+  - `WBPublicTurnSummary::Build`
+- Added runtime selected-action result envelope:
+  - `FWBRuntimeSelectedActionResult`
+  - `WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult`
+- Existing `ApplyRuntimeSelectedAction` remains available and behavior-compatible by returning the envelope's `ApplyResult`.
+- The envelope reports:
+  - selected action type
+  - selected action id from `WBActionCodec::MakeActionId`
+  - whether an MP roll was consumed
+  - consumed MP roll value
+  - existing apply result and traces
+  - final public turn summary
+- Public turn summary is limited to turn/player resource state and does not include deck, hand, hidden choices, or private card data.
+- Added fixture support for:
+  - `operation = apply_runtime_selected_action_with_result`
+- `FWBAction` replay remains unchanged.
+- `WBActionCodec` action IDs remain unchanged.
+- Legal action generation remains unchanged.
+- Intentionally not implemented yet:
+  - random MP roll generation
+  - UI/Blueprint wiring
+  - draw
+  - NPC phase
+  - card triggers
+  - attacks/combat
+  - network replay
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

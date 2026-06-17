@@ -1,25 +1,31 @@
 # Build/Test Report
 
-Date of check: 2026-06-16 (America/New_York)
+Date of check: 2026-06-17 (America/New_York)
 
 ## Scope
 
-This pass added a deterministic runtime-facing turn resolution adapter that supplies explicit MP rolls to selected `EndTurn` execution through a test-controlled roll source.
+This pass added a deterministic runtime turn-result envelope around selected-action execution. It reports selected action identity, consumed MP roll details, emitted traces through the existing apply result, and a final public turn summary.
 
 Implemented:
 
-- runtime turn resolution adapter audit
-- `IWBMPRollSource`
-- `FWBFixedMPRollSource`
-- `FWBQueuedMPRollSource`
-- `FWBRuntimeTurnResolutionContext`
-- `WBRuntimeTurnResolutionAdapter`
-- additive fixture support for `apply_runtime_selected_action`
-- runtime-selected action GoldenScenarios fixtures
-- automation coverage for fixed rolls, queued roll consumption, missing/invalid roll failures, legal generation stability, action codec stability, and replay `apply_action` stability
+- runtime turn result envelope audit
+- `FWBPublicPlayerTurnSummary`
+- `FWBPublicTurnSummary`
+- `WBPublicTurnSummary::Build`
+- `FWBRuntimeSelectedActionResult`
+- `WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult`
+- behavior-compatible `ApplyRuntimeSelectedAction` refactor through the envelope API
+- additive fixture support for `apply_runtime_selected_action_with_result`
+- runtime result GoldenScenarios fixtures
+- automation coverage for full EndTurn, basic EndTurn, Move, PassResponse, missing/invalid roll failures, action ID stability, legacy adapter behavior, and fixture scenarios
 
 Not implemented:
 
+- new gameplay mechanics
+- legal action generation changes
+- full transition as a player legal action
+- `WBActionCodec` action ID changes
+- replay `apply_action` behavior changes
 - random dice generation
 - draw
 - NPC phase
@@ -27,48 +33,42 @@ Not implemented:
 - cards/effects
 - full death/prevention
 - UI/Blueprint/3D runtime
-- legal action generation changes
-- full transition as a player legal action
-- `WBActionCodec` action ID changes
-- replay `apply_action` behavior changes
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Runtime Adapter Notes
+## Result Envelope Notes
 
-New roll source API:
-
-```text
-IWBMPRollSource
-FWBFixedMPRollSource
-FWBQueuedMPRollSource
-```
-
-New runtime adapter API:
+New public summary API:
 
 ```text
-FWBRuntimeTurnResolutionContext
-WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedAction(State, SelectedAction, Context)
+FWBPublicPlayerTurnSummary
+FWBPublicTurnSummary
+WBPublicTurnSummary::Build
 ```
 
-Runtime-selected behavior:
+New runtime envelope API:
 
-- `Move` delegates through `WBSelectedActionExecutor` and does not require or consume a roll.
-- `PassResponse` delegates through `WBSelectedActionExecutor` and does not require or consume a roll.
-- `EndTurn` with full transition disabled stays basic.
-- `EndTurn` with full transition enabled requires a deterministic roll source and delegates through `WBSelectedActionExecutor`.
+```text
+FWBRuntimeSelectedActionResult
+WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult(State, SelectedAction, Context)
+```
 
-Roll source behavior:
+Envelope fields:
 
-- fixed roll source returns the configured roll if it is `1..6`
-- queued roll source consumes exactly one valid roll for full selected `EndTurn`
-- empty queue fails with `mp_roll_queue_empty`
-- invalid roll fails with `invalid_mp_roll`
-- invalid queued roll is not popped
+- `ApplyResult`
+- `SelectedActionType`
+- `SelectedActionId`
+- `bConsumedMPRoll`
+- `ConsumedMPRoll`
+- `FinalPublicTurnSummary`
+
+`SelectedActionId` uses the existing `WBActionCodec::MakeActionId` format. Runtime context and MP rolls are not encoded into action IDs.
+
+The final public turn summary includes only turn and player resource fields. It does not include deck, hand, hidden choices, private card identities, or full hidden unit/card state.
+
+Trace behavior is unchanged. The envelope reports traces through `ApplyResult.TraceEvents` and does not add wrapper traces.
 
 `apply_action` replay fixtures still use `WBActionCodec` plus `WBEffectRunner::ApplyAction`.
-
-`WBActionCodec` remains scoped to player legal actions and still encodes `EndTurn` as `end_turn:p0`.
 
 Legal action generation remains unchanged:
 
@@ -79,22 +79,21 @@ Legal action generation remains unchanged:
 
 ## Implemented This Pass
 
-- Added `Docs/Runtime_Turn_Resolution_Adapter_Audit.md`.
-- Added `Docs/Runtime_Turn_Resolution_Adapter_Report.md`.
-- Added `Source/WandboundCore/Public/WBMPRollSource.h`.
-- Added `Source/WandboundCore/Private/WBMPRollSource.cpp`.
-- Added `Source/WandboundCore/Public/WBRuntimeTurnResolutionAdapter.h`.
-- Added `Source/WandboundCore/Private/WBRuntimeTurnResolutionAdapter.cpp`.
+- Added `Docs/Runtime_Turn_Result_Envelope_Audit.md`.
+- Added `Docs/Runtime_Turn_Result_Envelope_Report.md`.
+- Added `Source/WandboundCore/Public/WBPublicTurnSummary.h`.
+- Added `Source/WandboundCore/Private/WBPublicTurnSummary.cpp`.
+- Updated `Source/WandboundCore/Public/WBRuntimeTurnResolutionAdapter.h`.
+- Updated `Source/WandboundCore/Private/WBRuntimeTurnResolutionAdapter.cpp`.
 - Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.h`.
 - Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
-- Added `Source/WandboundTests/Private/WBRuntimeTurnResolutionAdapterTests.cpp`.
+- Added `Source/WandboundTests/Private/WBRuntimeTurnResultEnvelopeTests.cpp`.
 - Added GodotCanon fixtures:
-  - `runtime_selected_end_turn_full_transition_roll_4.json`
-  - `runtime_selected_end_turn_basic_no_roll.json`
-  - `runtime_selected_end_turn_missing_roll_source_fails.json`
-  - `runtime_selected_end_turn_invalid_roll_no_mutation.json`
-  - `runtime_selected_move_does_not_consume_roll.json`
-  - `runtime_selected_pass_response_does_not_consume_roll.json`
+  - `runtime_result_end_turn_full_transition_roll_4.json`
+  - `runtime_result_end_turn_basic_no_roll.json`
+  - `runtime_result_move_summary.json`
+  - `runtime_result_pass_response_summary.json`
+  - `runtime_result_invalid_roll_no_mutation.json`
 
 ## Build
 
@@ -108,7 +107,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 37.86 seconds
+Total execution time: 30.06 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -122,7 +121,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=133
+succeeded=142
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -130,18 +129,15 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.RuntimeTurnResolution.ActionCodecUnchanged`
-- `Wandbound.Core.RuntimeTurnResolution.BasicEndTurnNoRoll`
-- `Wandbound.Core.RuntimeTurnResolution.FixtureScenarios`
-- `Wandbound.Core.RuntimeTurnResolution.FullEndTurnFixedRoll`
-- `Wandbound.Core.RuntimeTurnResolution.InvalidFixedRollFails`
-- `Wandbound.Core.RuntimeTurnResolution.LegalGenerationUnchanged`
-- `Wandbound.Core.RuntimeTurnResolution.MissingRollSourceFails`
-- `Wandbound.Core.RuntimeTurnResolution.MoveDoesNotRequireRollSource`
-- `Wandbound.Core.RuntimeTurnResolution.PassResponseDoesNotConsumeRoll`
-- `Wandbound.Core.RuntimeTurnResolution.QueuedInvalidRollDoesNotPop`
-- `Wandbound.Core.RuntimeTurnResolution.QueuedRollConsumedByFullEndTurnOnly`
-- `Wandbound.Core.RuntimeTurnResolution.ReplayApplyActionUnchanged`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.BasicEndTurnReportsNoRoll`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.FixtureScenarios`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.FullEndTurnReportsActionIdAndRoll`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.InvalidQueuedRollFailure`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.LegacyAdapterStillWorks`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.MissingRollSourceFailure`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.MoveReportsNoRollAndFinalMP`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.PassResponseReportsNoRoll`
+- `Wandbound.Core.RuntimeTurnResultEnvelope.SelectedActionIdHasNoRuntimeContext`
 
 ## Generated File Tracking
 
@@ -162,7 +158,7 @@ Build and automation reported no warnings. `git diff --check` should still be us
 
 ## Risks/Unknowns
 
-- UI/runtime code is not wired to `WBRuntimeTurnResolutionAdapter` yet.
+- UI/runtime code is not wired to consume the result envelope yet.
 - Random MP generation is intentionally absent.
 - Network replay semantics for runtime selected-action execution are not defined yet.
 - Full death/prevention is still absent after status ticks.
@@ -170,4 +166,4 @@ Build and automation reported no warnings. `git diff --check` should still be us
 
 ## Next Recommended Implementation Milestone
 
-Add a deterministic runtime turn-result envelope that reports the selected action ID, consumed MP roll, emitted traces, and final public turn summary without changing replay `apply_action` semantics or legal action generation.
+Add deterministic runtime result serialization for `FWBRuntimeSelectedActionResult`, covering selected action id, consumed roll fields, trace events, and final public turn summary without including hidden card data.

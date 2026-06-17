@@ -1,0 +1,82 @@
+{
+  "id": "runtime_result_pass_response_summary",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/rules.gd:get_legal_actions",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "Runtime result envelope reports selected PassResponse id, no consumed roll, and final public priority/phase summary.",
+  "operation": "apply_runtime_selected_action_with_result",
+  "action": {
+    "type": "pass_response",
+    "kind": "pass_response",
+    "player_id": 1
+  },
+  "runtime_context": {
+    "resolve_end_turn_as_full_transition": true,
+    "queued_mp_rolls": [
+      4
+    ]
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 1,
+    "turn_number": 6,
+    "phase": "response",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 1,
+        "last_mp_roll": 1,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "reason": "",
+    "selected_action_type": "pass_response",
+    "selected_action_id": "pass_response:p1",
+    "consumed_mp_roll": false,
+    "consumed_mp_roll_value": 0,
+    "roll_source_remaining_count": 1,
+    "final_public_turn_summary": {
+      "current_player_id": 0,
+      "priority_player_id": 0,
+      "turn_number": 6,
+      "phase": "normal_turn",
+      "game_over": false,
+      "players": [
+        {
+          "player_id": 0,
+          "remaining_mp": 2,
+          "last_mp_roll": 2,
+          "walls_left": 0,
+          "wall_removals_left": 0
+        },
+        {
+          "player_id": 1,
+          "remaining_mp": 1,
+          "last_mp_roll": 1,
+          "walls_left": 0,
+          "wall_removals_left": 0
+        }
+      ]
+    },
+    "expected_trace_order": [
+      "pass_response"
+    ]
+  }
+}
