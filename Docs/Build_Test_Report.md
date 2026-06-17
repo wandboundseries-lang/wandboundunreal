@@ -4,54 +4,67 @@ Date of check: 2026-06-16 (America/New_York)
 
 ## Scope
 
-This pass added deterministic selected-action runtime execution integration while preserving legal action generation, `FWBAction` replay, and `WBActionCodec` action IDs.
+This pass added a deterministic runtime-facing turn resolution adapter that supplies explicit MP rolls to selected `EndTurn` execution through a test-controlled roll source.
 
 Implemented:
 
-- selected-action runtime execution audit
-- pure C++ `WBSelectedActionExecutor`
-- `FWBSelectedActionExecutionContext`
-- selected `Move` delegation to `WBEffectRunner::ApplyMove`
-- selected `EndTurn` basic delegation to `WBEffectRunner::ApplyEndTurn`
-- selected `EndTurn` full transition delegation through `WBTurnController::ApplyTurnCommand`
-- selected `PassResponse` delegation to `WBEffectRunner::ApplyPassResponse`
-- fixture operation `apply_selected_action` for selected-action tests only
-- selected-action GoldenScenarios fixtures
-- automation coverage for direct executor behavior, fixture scenarios, legal generation stability, action codec stability, and replay `apply_action` stability
+- runtime turn resolution adapter audit
+- `IWBMPRollSource`
+- `FWBFixedMPRollSource`
+- `FWBQueuedMPRollSource`
+- `FWBRuntimeTurnResolutionContext`
+- `WBRuntimeTurnResolutionAdapter`
+- additive fixture support for `apply_runtime_selected_action`
+- runtime-selected action GoldenScenarios fixtures
+- automation coverage for fixed rolls, queued roll consumption, missing/invalid roll failures, legal generation stability, action codec stability, and replay `apply_action` stability
 
 Not implemented:
 
-- new gameplay mechanics
-- legal action generation changes
-- full transition as a player legal action
-- `WBActionCodec` command encoding
-- replay `apply_action` behavior changes
 - random dice generation
 - draw
 - NPC phase
 - attacks
 - cards/effects
+- full death/prevention
 - UI/Blueprint/3D runtime
+- legal action generation changes
+- full transition as a player legal action
+- `WBActionCodec` action ID changes
+- replay `apply_action` behavior changes
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Selected-Action Gateway Notes
+## Runtime Adapter Notes
 
-New API:
+New roll source API:
 
 ```text
-FWBSelectedActionExecutionContext
-WBSelectedActionExecutor::ApplySelectedAction(State, Action, Context)
+IWBMPRollSource
+FWBFixedMPRollSource
+FWBQueuedMPRollSource
 ```
 
-Selected action behavior:
+New runtime adapter API:
 
-- `Move` delegates to `WBEffectRunner::ApplyMove`.
-- `EndTurn` with full transition disabled delegates to `WBEffectRunner::ApplyEndTurn`.
-- `EndTurn` with full transition enabled builds an `FWBTurnCommand` and delegates to `WBTurnController::ApplyTurnCommand`.
-- `PassResponse` delegates to `WBEffectRunner::ApplyPassResponse`.
+```text
+FWBRuntimeTurnResolutionContext
+WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedAction(State, SelectedAction, Context)
+```
 
-Full-transition selected `EndTurn` requires `NextPlayerExplicitMPRoll` from `1` to `6`. Invalid or missing rolls fail without mutation and do not fall back to basic end turn.
+Runtime-selected behavior:
+
+- `Move` delegates through `WBSelectedActionExecutor` and does not require or consume a roll.
+- `PassResponse` delegates through `WBSelectedActionExecutor` and does not require or consume a roll.
+- `EndTurn` with full transition disabled stays basic.
+- `EndTurn` with full transition enabled requires a deterministic roll source and delegates through `WBSelectedActionExecutor`.
+
+Roll source behavior:
+
+- fixed roll source returns the configured roll if it is `1..6`
+- queued roll source consumes exactly one valid roll for full selected `EndTurn`
+- empty queue fails with `mp_roll_queue_empty`
+- invalid roll fails with `invalid_mp_roll`
+- invalid queued roll is not popped
 
 `apply_action` replay fixtures still use `WBActionCodec` plus `WBEffectRunner::ApplyAction`.
 
@@ -62,21 +75,26 @@ Legal action generation remains unchanged:
 - movement first
 - then `EndTurn`
 - `PassResponse` in response phase
-- no full-transition player action
+- no full-transition or roll player action
 
 ## Implemented This Pass
 
-- Added `Docs/Selected_Action_Runtime_Execution_Audit.md`.
-- Added `Docs/Selected_Action_Runtime_Execution_Report.md`.
-- Added `Source/WandboundCore/Public/WBSelectedActionExecutor.h`.
-- Added `Source/WandboundCore/Private/WBSelectedActionExecutor.cpp`.
-- Added `Source/WandboundTests/Private/WBSelectedActionExecutorTests.cpp`.
+- Added `Docs/Runtime_Turn_Resolution_Adapter_Audit.md`.
+- Added `Docs/Runtime_Turn_Resolution_Adapter_Report.md`.
+- Added `Source/WandboundCore/Public/WBMPRollSource.h`.
+- Added `Source/WandboundCore/Private/WBMPRollSource.cpp`.
+- Added `Source/WandboundCore/Public/WBRuntimeTurnResolutionAdapter.h`.
+- Added `Source/WandboundCore/Private/WBRuntimeTurnResolutionAdapter.cpp`.
+- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.h`.
+- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
+- Added `Source/WandboundTests/Private/WBRuntimeTurnResolutionAdapterTests.cpp`.
 - Added GodotCanon fixtures:
-  - `selected_action_end_turn_basic.json`
-  - `selected_action_end_turn_full_transition.json`
-  - `selected_action_end_turn_full_transition_invalid_roll.json`
-  - `selected_action_move_unchanged.json`
-  - `selected_action_pass_response_unchanged.json`
+  - `runtime_selected_end_turn_full_transition_roll_4.json`
+  - `runtime_selected_end_turn_basic_no_roll.json`
+  - `runtime_selected_end_turn_missing_roll_source_fails.json`
+  - `runtime_selected_end_turn_invalid_roll_no_mutation.json`
+  - `runtime_selected_move_does_not_consume_roll.json`
+  - `runtime_selected_pass_response_does_not_consume_roll.json`
 
 ## Build
 
@@ -90,7 +108,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 65.09 seconds
+Total execution time: 37.86 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -104,7 +122,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=121
+succeeded=133
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -112,17 +130,18 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.SelectedAction.ActionCodecUnchanged`
-- `Wandbound.Core.SelectedAction.EndTurnBasic`
-- `Wandbound.Core.SelectedAction.EndTurnBasicIgnoresRoll`
-- `Wandbound.Core.SelectedAction.EndTurnFullTransition`
-- `Wandbound.Core.SelectedAction.EndTurnFullTransitionInvalidRoll`
-- `Wandbound.Core.SelectedAction.EndTurnFullTransitionMissingRoll`
-- `Wandbound.Core.SelectedAction.FixtureScenarios`
-- `Wandbound.Core.SelectedAction.LegalGenerationUnchanged`
-- `Wandbound.Core.SelectedAction.MoveDelegatesToApplyMove`
-- `Wandbound.Core.SelectedAction.PassResponseDelegates`
-- `Wandbound.Core.SelectedAction.ReplayApplyActionUnchanged`
+- `Wandbound.Core.RuntimeTurnResolution.ActionCodecUnchanged`
+- `Wandbound.Core.RuntimeTurnResolution.BasicEndTurnNoRoll`
+- `Wandbound.Core.RuntimeTurnResolution.FixtureScenarios`
+- `Wandbound.Core.RuntimeTurnResolution.FullEndTurnFixedRoll`
+- `Wandbound.Core.RuntimeTurnResolution.InvalidFixedRollFails`
+- `Wandbound.Core.RuntimeTurnResolution.LegalGenerationUnchanged`
+- `Wandbound.Core.RuntimeTurnResolution.MissingRollSourceFails`
+- `Wandbound.Core.RuntimeTurnResolution.MoveDoesNotRequireRollSource`
+- `Wandbound.Core.RuntimeTurnResolution.PassResponseDoesNotConsumeRoll`
+- `Wandbound.Core.RuntimeTurnResolution.QueuedInvalidRollDoesNotPop`
+- `Wandbound.Core.RuntimeTurnResolution.QueuedRollConsumedByFullEndTurnOnly`
+- `Wandbound.Core.RuntimeTurnResolution.ReplayApplyActionUnchanged`
 
 ## Generated File Tracking
 
@@ -143,13 +162,12 @@ Build and automation reported no warnings. `git diff --check` should still be us
 
 ## Risks/Unknowns
 
-- UI/runtime code is not wired to `WBSelectedActionExecutor` yet.
-- Full-transition selected `EndTurn` still requires an explicit deterministic MP roll.
+- UI/runtime code is not wired to `WBRuntimeTurnResolutionAdapter` yet.
 - Random MP generation is intentionally absent.
-- Network replay semantics for selected-action execution are not defined yet.
+- Network replay semantics for runtime selected-action execution are not defined yet.
 - Full death/prevention is still absent after status ticks.
 - Draw, hooks, card triggers, NPC phase, attacks, and card effects are still absent.
 
 ## Next Recommended Implementation Milestone
 
-Add a deterministic runtime-facing turn resolution adapter that supplies explicit MP rolls to `WBSelectedActionExecutor` from a test-controlled source, then proves selected EndTurn can be resolved end-to-end without changing legal action IDs or replay `apply_action` semantics.
+Add a deterministic runtime turn-result envelope that reports the selected action ID, consumed MP roll, emitted traces, and final public turn summary without changing replay `apply_action` semantics or legal action generation.

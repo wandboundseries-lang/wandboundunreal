@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "WBGameStateData.h"
 #include "WBReplayTrace.h"
+#include "WBRuntimeTurnResolutionAdapter.h"
 #include "WBTurnController.h"
 
 class FJsonObject;
@@ -13,7 +14,8 @@ enum class EWBFixtureOperationKind : uint8
 {
 	Unknown,
 	ApplyAction,
-	ApplyTurnCommand
+	ApplyTurnCommand,
+	ApplyRuntimeSelectedAction
 };
 
 bool BuildGameStateFromFixture(
@@ -30,6 +32,13 @@ bool ApplyTurnCommandFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBGameStateData& State,
 	FWBApplyActionResult& OutResult,
+	FString& OutReason);
+
+bool ApplyRuntimeSelectedActionFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBGameStateData& State,
+	FWBApplyActionResult& OutResult,
+	int32& OutRollSourceRemainingCount,
 	FString& OutReason);
 
 bool ApplyFixtureOperation(
@@ -57,6 +66,11 @@ bool ExpectUnitStatusSummary(
 bool ExpectFinalTurnState(
 	const TSharedPtr<FJsonObject>& Fixture,
 	const FWBGameStateData& State,
+	FString& OutReason);
+
+bool ExpectRuntimeRollSourceRemainingCount(
+	const TSharedPtr<FJsonObject>& Fixture,
+	int32 RollSourceRemainingCount,
 	FString& OutReason);
 
 bool ExtractReplayLogJson(const TSharedPtr<FJsonObject>& Fixture, FString& OutReplayLogJson);

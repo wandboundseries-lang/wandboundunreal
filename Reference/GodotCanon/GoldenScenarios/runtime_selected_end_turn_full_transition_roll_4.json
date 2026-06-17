@@ -1,0 +1,136 @@
+{
+  "id": "runtime_selected_end_turn_full_transition_roll_4",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:end_turn_impl",
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:tick_statuses",
+    "scripts/sim/game_state.gd:mp_pool"
+  ],
+  "intent": "Runtime-selected EndTurn resolves through the full deterministic transition when a fixed deterministic MP roll is supplied.",
+  "operation": "apply_runtime_selected_action",
+  "action": {
+    "type": "end_turn",
+    "kind": "end_turn",
+    "player_id": 0
+  },
+  "runtime_context": {
+    "resolve_end_turn_as_full_transition": true,
+    "fixed_mp_roll": 4
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 1,
+        "max_attacks_per_turn": 1
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "x": 6,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 2
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 2
+        }
+      },
+      "2": {
+        "Poison": {
+          "status_id": "Poison",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "expected": {
+    "ok": true,
+    "reason": "",
+    "final_current_player": 1,
+    "final_priority_player": 1,
+    "final_turn_number": 4,
+    "final_phase": "normal_turn",
+    "player_resources": {
+      "0": {
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "walls_left": 0,
+        "wall_removals_left": 0
+      },
+      "1": {
+        "remaining_mp": 4,
+        "last_mp_roll": 4,
+        "walls_left": 1,
+        "wall_removals_left": 0
+      }
+    },
+    "final_units": [
+      {
+        "id": 1,
+        "hp": 4,
+        "max_hp": 5,
+        "attacks_left": 1,
+        "statuses": [
+          "Burn"
+        ],
+        "status_turns": {
+          "Burn": 1
+        }
+      },
+      {
+        "id": 2,
+        "hp": 4,
+        "max_hp": 4,
+        "attacks_left": 2,
+        "statuses": [
+          "Poison"
+        ],
+        "status_turns": {
+          "Poison": 1
+        }
+      }
+    ],
+    "expected_trace_order": [
+      "turn_transition",
+      "end_turn_status_ticks",
+      "status_tick:Burn",
+      "end_turn",
+      "start_turn_status_ticks",
+      "status_tick:Poison",
+      "turn_start_resource_setup"
+    ]
+  }
+}

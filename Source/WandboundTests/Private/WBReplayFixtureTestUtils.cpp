@@ -6,6 +6,8 @@
 #include "Serialization/JsonWriter.h"
 #include "WBActionCodec.h"
 #include "WBEffectRunner.h"
+#include "WBMPRollSource.h"
+#include "WBRuntimeTurnResolutionAdapter.h"
 
 namespace WandboundTest
 {
@@ -262,6 +264,119 @@ bool ParseFixtureTile(const TSharedPtr<FJsonObject>& Object, FWBTile& OutTile)
 {
 	return TryReadIntegerField(Object, TEXT("x"), OutTile.X)
 		&& TryReadIntegerField(Object, TEXT("y"), OutTile.Y);
+}
+
+bool ParseActionFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBGameStateData& State,
+	FWBAction& OutAction,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* ActionObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("action"), ActionObject)
+		|| ActionObject == nullptr
+		|| !ActionObject->IsValid())
+	{
+		OutReason = TEXT("missing_action");
+		return false;
+	}
+
+	TSharedPtr<FJsonObject> NormalizedActionObject = MakeShared<FJsonObject>();
+	NormalizedActionObject->Values = (*ActionObject)->Values;
+
+	FString Type;
+	if (!NormalizedActionObject->HasField(TEXT("kind")) && NormalizedActionObject->TryGetStringField(TEXT("type"), Type))
+	{
+		NormalizedActionObject->SetStringField(TEXT("kind"), Type);
+	}
+
+	int32 SourceUnitId = -1;
+	if (!NormalizedActionObject->HasField(TEXT("unit_id"))
+		&& TryReadIntegerField(NormalizedActionObject, TEXT("source_unit_id"), SourceUnitId))
+	{
+		NormalizedActionObject->SetNumberField(TEXT("unit_id"), SourceUnitId);
+	}
+
+	const FWBActionDecodeResult DecodeResult = WBActionCodec::DecodeAction(SerializeJsonObject(NormalizedActionObject), State);
+	if (!DecodeResult.bOk)
+	{
+		OutReason = DecodeResult.Reason;
+		return false;
+	}
+
+	OutAction = DecodeResult.Action;
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseRuntimeRollSource(
+	const TSharedPtr<FJsonObject>& RuntimeContextObject,
+	TUniquePtr<FWBFixedMPRollSource>& OutFixedRollSource,
+	TUniquePtr<FWBQueuedMPRollSource>& OutQueuedRollSource,
+	IWBMPRollSource*& OutRollSource,
+	FString& OutReason)
+{
+	OutFixedRollSource.Reset();
+	OutQueuedRollSource.Reset();
+	OutRollSource = nullptr;
+
+	const bool bHasFixedRoll = RuntimeContextObject.IsValid()
+		&& RuntimeContextObject->HasTypedField<EJson::Number>(TEXT("fixed_mp_roll"));
+	const bool bHasQueuedRolls = RuntimeContextObject.IsValid()
+		&& RuntimeContextObject->HasTypedField<EJson::Array>(TEXT("queued_mp_rolls"));
+
+	if (bHasFixedRoll && bHasQueuedRolls)
+	{
+		OutReason = TEXT("multiple_mp_roll_sources");
+		return false;
+	}
+
+	if (bHasFixedRoll)
+	{
+		int32 FixedRoll = 0;
+		if (!TryReadIntegerField(RuntimeContextObject, TEXT("fixed_mp_roll"), FixedRoll))
+		{
+			OutReason = TEXT("malformed_fixed_mp_roll");
+			return false;
+		}
+
+		OutFixedRollSource = MakeUnique<FWBFixedMPRollSource>(FixedRoll);
+		OutRollSource = OutFixedRollSource.Get();
+		OutReason.Reset();
+		return true;
+	}
+
+	if (bHasQueuedRolls)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* QueuedRollValues = nullptr;
+		if (!RuntimeContextObject->TryGetArrayField(TEXT("queued_mp_rolls"), QueuedRollValues)
+			|| QueuedRollValues == nullptr)
+		{
+			OutReason = TEXT("malformed_queued_mp_rolls");
+			return false;
+		}
+
+		OutQueuedRollSource = MakeUnique<FWBQueuedMPRollSource>();
+		for (int32 Index = 0; Index < QueuedRollValues->Num(); ++Index)
+		{
+			const TSharedPtr<FJsonValue>& RollValue = (*QueuedRollValues)[Index];
+			if (!RollValue.IsValid() || RollValue->Type != EJson::Number)
+			{
+				OutReason = FString::Printf(TEXT("malformed_queued_mp_rolls[%d]"), Index);
+				return false;
+			}
+
+			OutQueuedRollSource->EnqueueRoll(static_cast<int32>(RollValue->AsNumber()));
+		}
+
+		OutRollSource = OutQueuedRollSource.Get();
+		OutReason.Reset();
+		return true;
+	}
+
+	OutReason.Reset();
+	return true;
 }
 
 void ApplyFixtureStatuses(FWBGameStateData& State, const TSharedPtr<FJsonObject>& InitialStateObject)
@@ -609,6 +724,78 @@ bool ApplyTurnCommandFixture(
 	return true;
 }
 
+bool ApplyRuntimeSelectedActionFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBGameStateData& State,
+	FWBApplyActionResult& OutResult,
+	int32& OutRollSourceRemainingCount,
+	FString& OutReason)
+{
+	OutRollSourceRemainingCount = -1;
+
+	FString OperationKind;
+	TSharedPtr<FJsonObject> OperationObject;
+	if (!TryGetOperationKindAndObject(Fixture, OperationKind, OperationObject, OutReason))
+	{
+		OutResult = MakeFixtureFailure(OutReason);
+		return false;
+	}
+
+	if (OperationKind != TEXT("apply_runtime_selected_action"))
+	{
+		OutReason = TEXT("fixture_operation_is_not_apply_runtime_selected_action");
+		OutResult = MakeFixtureFailure(OutReason);
+		return false;
+	}
+
+	FWBAction SelectedAction;
+	if (!ParseActionFromFixture(Fixture, State, SelectedAction, OutReason))
+	{
+		OutResult = MakeFixtureFailure(OutReason);
+		return false;
+	}
+
+	const TSharedPtr<FJsonObject>* RuntimeContextObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("runtime_context"), RuntimeContextObject)
+		|| RuntimeContextObject == nullptr
+		|| !RuntimeContextObject->IsValid())
+	{
+		OutReason = TEXT("missing_runtime_context");
+		OutResult = MakeFixtureFailure(OutReason);
+		return false;
+	}
+
+	FWBRuntimeTurnResolutionContext RuntimeContext;
+	if (!(*RuntimeContextObject)->TryGetBoolField(
+		TEXT("resolve_end_turn_as_full_transition"),
+		RuntimeContext.bResolveEndTurnAsFullTransition))
+	{
+		OutReason = TEXT("missing_runtime_context_resolve_end_turn_as_full_transition");
+		OutResult = MakeFixtureFailure(OutReason);
+		return false;
+	}
+
+	TUniquePtr<FWBFixedMPRollSource> FixedRollSource;
+	TUniquePtr<FWBQueuedMPRollSource> QueuedRollSource;
+	IWBMPRollSource* RollSource = nullptr;
+	if (!ParseRuntimeRollSource(*RuntimeContextObject, FixedRollSource, QueuedRollSource, RollSource, OutReason))
+	{
+		OutResult = MakeFixtureFailure(OutReason);
+		return false;
+	}
+
+	RuntimeContext.MPRollSource = RollSource;
+	OutResult = WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedAction(State, SelectedAction, RuntimeContext);
+	if (QueuedRollSource.IsValid())
+	{
+		OutRollSourceRemainingCount = QueuedRollSource->NumRemainingRolls();
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ApplyFixtureOperation(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBGameStateData& State,
@@ -630,6 +817,13 @@ bool ApplyFixtureOperation(
 	{
 		OutOperationKind = EWBFixtureOperationKind::ApplyTurnCommand;
 		return ApplyTurnCommandFixture(Fixture, State, OutResult, OutReason);
+	}
+
+	if (OperationKind == TEXT("apply_runtime_selected_action"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyRuntimeSelectedAction;
+		int32 RollSourceRemainingCount = -1;
+		return ApplyRuntimeSelectedActionFixture(Fixture, State, OutResult, RollSourceRemainingCount, OutReason);
 	}
 
 	if (OperationKind == TEXT("apply_action"))
@@ -891,6 +1085,37 @@ bool ExpectFinalTurnState(
 	if (ReadExpectedFinalPhase(ExpectedObject, ExpectedPhase) && State.Phase != ExpectedPhase)
 	{
 		OutReason = TEXT("final_phase_mismatch");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ExpectRuntimeRollSourceRemainingCount(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const int32 RollSourceRemainingCount,
+	FString& OutReason)
+{
+	TSharedPtr<FJsonObject> ExpectedObject;
+	if (!TryGetExpectedObject(Fixture, ExpectedObject, OutReason))
+	{
+		return false;
+	}
+
+	int32 ExpectedRemainingCount = -1;
+	if (!TryReadIntegerField(ExpectedObject, TEXT("roll_source_remaining_count"), ExpectedRemainingCount))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (RollSourceRemainingCount != ExpectedRemainingCount)
+	{
+		OutReason = FString::Printf(
+			TEXT("roll_source_remaining_count_expected_%d_got_%d"),
+			ExpectedRemainingCount,
+			RollSourceRemainingCount);
 		return false;
 	}
 

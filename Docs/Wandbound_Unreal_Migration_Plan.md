@@ -281,6 +281,34 @@
   - attacks/combat
   - network replay
 
+## Milestone: Runtime Turn Resolution Adapter
+
+- Added a deterministic MP roll source abstraction:
+  - `IWBMPRollSource`
+  - `FWBFixedMPRollSource`
+  - `FWBQueuedMPRollSource`
+- Added a pure C++ runtime-facing adapter:
+  - `FWBRuntimeTurnResolutionContext`
+  - `WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedAction`
+- Runtime-selected `EndTurn` can resolve the full deterministic transition by requesting an explicit MP roll from the configured roll source.
+- Runtime-selected `EndTurn` can still execute basic end-turn behavior when full transition resolution is disabled.
+- Runtime-selected `Move` and `PassResponse` do not require or consume MP rolls.
+- Queued deterministic rolls are consumed only after the next queued value is valid.
+- Missing roll sources, empty queues, and invalid rolls fail without mutating game state.
+- Added fixture support for:
+  - `operation = apply_runtime_selected_action`
+- `FWBAction` replay remains unchanged.
+- `WBActionCodec` action IDs remain unchanged.
+- Legal action generation remains unchanged and does not emit full transition or roll actions.
+- Intentionally not implemented yet:
+  - random MP roll generation
+  - UI/Blueprint wiring
+  - draw
+  - NPC phase
+  - card triggers
+  - attacks/combat
+  - network replay
+
 ## Phase 3 - Movement
 
 - 9x9 bounds
