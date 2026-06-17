@@ -19,6 +19,7 @@ struct WANDBOUNDCORE_API FWBPublicTurnSummary
 	int32 TurnNumber = 0;
 	FName Phase;
 	bool bGameOver = false;
+	int32 WinnerPlayerId = -1;
 	TArray<FWBPublicPlayerTurnSummary> Players;
 };
 

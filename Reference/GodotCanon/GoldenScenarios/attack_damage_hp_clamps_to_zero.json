@@ -5,7 +5,7 @@
     "scripts/sim/combat_runner.gd:resolve_hit",
     "scripts/sim/game_state.gd:apply_damage"
   ],
-  "intent": "Attack damage clamps HP to zero without removing the unit in this baseline.",
+  "intent": "Attack damage clamps HP to zero and the zero-HP cleanup scaffold removes the defeated defender from the board.",
   "operation": "apply_pending_attack_damage",
   "initial_state": {
     "current_player": 0,
@@ -34,11 +34,11 @@
   },
   "expected": {
     "ok": true,
-    "expected_trace_order": [ "attack_damage_resolved" ],
+    "expected_trace_order": [ "attack_damage_resolved", "unit_defeated", "unit_removed_from_board" ],
     "pending_attack": { "active": false },
     "final_units": [
       { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "attacks_left": 1, "statuses": [] },
-      { "id": 2, "x": 5, "y": 4, "hp": 0, "max_hp": 5, "attacks_left": 1, "statuses": [] }
+      { "id": 2, "x": -1, "y": -1, "hp": 0, "max_hp": 5, "attacks_left": 1, "defeated": true, "removed_from_board": true, "statuses": [] }
     ]
   }
 }

@@ -12,6 +12,7 @@ public:
 	static FWBApplyActionResult ApplyMove(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyAttackDeclare(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPendingAttackDamage(FWBGameStateData& State);
+	static FWBApplyActionResult ApplyZeroHPDeathRemoval(FWBGameStateData& State);
 	static FWBApplyActionResult ApplyEndTurn(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPass(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPassResponse(FWBGameStateData& State, const FWBAction& Action);

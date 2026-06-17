@@ -33,7 +33,7 @@
 - Battle damage normally interacts with armor first in Godot; armor/prevention is out of scope for this Unreal pass.
 - Godot clamps HP to zero before replacement/prevention/death handling.
 - Godot can remove destroyed units through later destruction/prevention logic in `apply_damage`.
-- This Unreal pass intentionally clamps HP at zero but does not remove dead units or resolve hero loss.
+- The follow-up zero-HP death/removal pass now removes defeated units from active board state after lethal damage.
 
 ## Frozen
 
@@ -63,7 +63,7 @@
 - A second declaration while pending attack is active fails with `pending_attack_already_active`.
 - `ApplyPendingAttackDamage` validates only pending attack integrity, attacker/defender existence, distinct ids, and valid attacking player id.
 - Basic damage amount is `max(0, attacker.ATK)` at resolution time for now. Godot stores base damage at declaration, but the requested minimal Unreal pending state does not store damage; attack modifiers and response timing are future work.
-- Non-Frozen damage sets defender HP to `max(0, previous HP - damage amount)`, clears pending attack, and emits `attack_damage_resolved`.
+- Non-Frozen damage sets defender HP to `max(0, previous HP - damage amount)`, clears pending attack, and emits `attack_damage_resolved`; the later zero-HP cleanup pass appends defeat/removal traces after lethal damage.
 - Frozen defenders lose Frozen, take zero damage, clear pending attack, and emit `status_removed` followed by `attack_damage_resolved` with damage zero.
 - Public board summaries reflect HP/status changes after damage; pending attack state is not serialized as public board data.
 
@@ -76,7 +76,7 @@
 - wands
 - cards/effects
 - armor/prevention
-- full death/removal
+- prevention/replacement-aware full death handling
 - terrain attack modifiers
 - diagonal/ignore-wall/ignore-unit attack exceptions
 - UI, VFX, audio, Blueprint, Actor, or `.uasset` work

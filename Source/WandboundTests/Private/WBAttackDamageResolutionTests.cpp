@@ -323,8 +323,11 @@ bool FWBAttackDamageClampsHPToZeroTest::RunTest(const FString& Parameters)
 	const FWBApplyActionResult Result = WBEffectRunner::ApplyPendingAttackDamage(State);
 	TestTrue(TEXT("Damage succeeds"), Result.bOk);
 	TestEqual(TEXT("Defender HP clamped"), State.GetUnitById(2)->HP, 0);
-	TestTrue(TEXT("Defender remains on board"), State.GetUnitById(2) != nullptr);
+	TestTrue(TEXT("Defender record remains"), State.GetUnitById(2) != nullptr);
+	TestTrue(TEXT("Defender defeated"), State.GetUnitById(2)->bDefeated);
+	TestTrue(TEXT("Defender removed"), State.GetUnitById(2)->bRemovedFromBoard);
 	TestTrue(TEXT("Trace at or below zero"), Result.TraceEvents[0].bAtOrBelowZeroHP);
+	TestEqual(TEXT("Trace count includes cleanup"), Result.TraceEvents.Num(), 3);
 	return true;
 }
 

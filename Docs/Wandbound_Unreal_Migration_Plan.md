@@ -416,7 +416,7 @@
 - Attack declaration now stages pending attack data after spending `AttacksLeft`.
 - Attack declaration fails while another pending attack is active.
 - Added deterministic attack damage resolution through `WBEffectRunner::ApplyPendingAttackDamage`.
-- Damage uses the current attacker's non-negative `ATK`, clamps defender HP at zero, and does not remove units.
+- Damage uses the current attacker's non-negative `ATK` and clamps defender HP at zero.
 - Frozen defenders break before damage:
   - `Frozen` is removed
   - no HP damage is applied
@@ -430,11 +430,45 @@
 - Intentionally not implemented yet:
   - pre-hit/post-hit response windows
   - armor/prevention/replacement effects
-  - death/removal
   - counters
   - passives
   - wands
   - terrain attack modifiers
+  - UI/Blueprint/3D runtime
+
+## Milestone - Zero-HP Death/Removal Scaffolding
+
+- Added defeated/removed state to units:
+  - `bDefeated`
+  - `bRemovedFromBoard`
+- Added `WinnerPlayerId` for simple public game-over outcome reporting.
+- Added `WBEffectRunner::ApplyZeroHPDeathRemoval`.
+- Zero-HP cleanup marks units defeated, removes them from board occupancy, and preserves unit records for replay/debug.
+- Non-Hero zero-HP units emit:
+  - `unit_defeated`
+  - `unit_removed_from_board`
+- Simple no-replacement Hero loss sets `bGameOver`, sets `WinnerPlayerId`, and emits `hero_defeated`.
+- Lethal attack damage now appends zero-HP cleanup after `attack_damage_resolved`.
+- Removed units no longer:
+  - occupy tiles
+  - block movement or LOS
+  - move
+  - attack
+  - become attack targets
+  - appear in generated legal actions
+  - appear in public board summaries
+- Runtime public turn summary JSON includes `winner_player_id`.
+- Intentionally not implemented yet:
+  - prevention
+  - replacement
+  - Hybrid Hero replacement
+  - death triggers
+  - on-destroy buffs
+  - counters/responses
+  - passives
+  - wands
+  - cards/effects
+  - discard movement
   - UI/Blueprint/3D runtime
 
 ## Milestone - Public Board Summary for Runtime Results

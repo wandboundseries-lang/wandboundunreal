@@ -50,7 +50,7 @@ TArray<FWBAction> GenerateLegalAttackActions(const FWBGameStateData& State, cons
 	TArray<const FWBUnitState*> Attackers;
 	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (Unit.OwnerId == PlayerId)
+		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard() && !Unit.bDefeated)
 		{
 			Attackers.Add(&Unit);
 		}
@@ -60,7 +60,10 @@ TArray<FWBAction> GenerateLegalAttackActions(const FWBGameStateData& State, cons
 	TArray<const FWBUnitState*> Targets;
 	for (const FWBUnitState& Unit : State.Units)
 	{
-		Targets.Add(&Unit);
+		if (Unit.IsUnitOnBoard() && !Unit.bDefeated)
+		{
+			Targets.Add(&Unit);
+		}
 	}
 	Targets.Sort(UnitTileLess);
 
@@ -262,6 +265,11 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 		return FWBMoveQueryResult::Deny(TEXT("no_unit"));
 	}
 
+	if (Unit->bDefeated || !Unit->IsUnitOnBoard())
+	{
+		return FWBMoveQueryResult::Deny(TEXT("unit_removed"));
+	}
+
 	if (HasMovementBlockingStatus(*Unit))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("cannot_move"));
@@ -375,10 +383,20 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 		return FWBActionQueryResult::Deny(TEXT("no_attacker"));
 	}
 
+	if (Attacker->bDefeated || !Attacker->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("attacker_removed"));
+	}
+
 	const FWBUnitState* Defender = State.GetUnitById(Action.TargetUnitId);
 	if (Defender == nullptr)
 	{
 		return FWBActionQueryResult::Deny(TEXT("no_target"));
+	}
+
+	if (Defender->bDefeated || !Defender->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("target_removed"));
 	}
 
 	if (Attacker->UnitId == Defender->UnitId)
@@ -457,17 +475,54 @@ FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateDa
 		return FWBActionQueryResult::Deny(TEXT("same_unit"));
 	}
 
-	if (State.GetUnitById(State.PendingAttack.AttackerUnitId) == nullptr)
+	const FWBUnitState* Attacker = State.GetUnitById(State.PendingAttack.AttackerUnitId);
+	if (Attacker == nullptr)
 	{
 		return FWBActionQueryResult::Deny(TEXT("missing_attacker"));
 	}
 
-	if (State.GetUnitById(State.PendingAttack.DefenderUnitId) == nullptr)
+	if (Attacker->bDefeated || !Attacker->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("attacker_removed"));
+	}
+
+	const FWBUnitState* Defender = State.GetUnitById(State.PendingAttack.DefenderUnitId);
+	if (Defender == nullptr)
 	{
 		return FWBActionQueryResult::Deny(TEXT("missing_defender"));
 	}
 
+	if (Defender->bDefeated || !Defender->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("defender_removed"));
+	}
+
 	return FWBActionQueryResult::Ok();
+}
+
+bool WBRules::ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit)
+{
+	(void)State;
+	// TODO: Future prevention/replacement effects should hook in before returning true.
+	return Unit.HP <= 0 && !Unit.bDefeated && Unit.IsUnitOnBoard();
+}
+
+FWBActionQueryResult WBRules::CanApplyZeroHPDeathRemoval(const FWBGameStateData& State)
+{
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	for (const FWBUnitState& Unit : State.Units)
+	{
+		if (ShouldUnitBeDefeatedAtZeroHP(State, Unit))
+		{
+			return FWBActionQueryResult::Ok();
+		}
+	}
+
+	return FWBActionQueryResult::Deny(TEXT("no_zero_hp_units"));
 }
 
 FWBActionQueryResult WBRules::QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action)
@@ -737,7 +792,7 @@ TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& Stat
 	TArray<FWBAction> LegalMoves;
 
 	const FWBUnitState* Unit = State.GetUnitById(UnitId);
-	if (Unit == nullptr)
+	if (Unit == nullptr || Unit->bDefeated || !Unit->IsUnitOnBoard())
 	{
 		return LegalMoves;
 	}
@@ -788,7 +843,7 @@ TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(const FWBGameStateData&
 		// Deterministic ordering: units are traversed in stable state order; each unit emits east, west, south, north moves; EndTurn is appended last.
 		for (const FWBUnitState& Unit : State.Units)
 		{
-			if (Unit.OwnerId != PlayerId)
+			if (Unit.OwnerId != PlayerId || Unit.bDefeated || !Unit.IsUnitOnBoard())
 			{
 				continue;
 			}

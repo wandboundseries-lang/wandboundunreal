@@ -295,5 +295,64 @@ notRun=0
 ## Remaining Risks/Unknowns
 
 - Godot stores declaration-time attack damage in pending attack state; Unreal currently resolves from current attacker `ATK` because this pass kept pending attack data minimal.
-- Armor, prevention, replacement, death/removal, counterattacks, passives, wands, terrain attack modifiers, and response windows remain future work.
+- Armor, prevention, replacement, replacement-aware death handling, counterattacks, passives, wands, terrain attack modifiers, and response windows remain future work.
 - Friendly Frozen targeting is implemented only for the narrow break-Frozen case verified in the Godot audit.
+
+---
+
+# Zero-HP Death Removal Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 6.45 seconds
+```
+
+The first build for this pass failed on the `TArray<FWBUnitState*>::Sort` predicate signature in `WBEffectRunner.cpp`; the predicate was corrected and the final rebuild succeeded.
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=233
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added deterministic zero-HP defeat/removal scaffolding.
+- Removed units keep unit records but clear board position to `X = -1`, `Y = -1`.
+- Removed units no longer occupy, block, move, attack, become targets, generate legal actions, or appear in public board summaries.
+- Lethal attack damage now emits `attack_damage_resolved`, then zero-HP cleanup traces.
+- Simple no-replacement Hero loss sets `bGameOver` and `WinnerPlayerId`.
+- Runtime public turn summary JSON includes `winner_player_id`.
+- No `.uasset`, `.umap`, Blueprint, UI, VFX, response, counter, passive, wand, prevention, replacement, death-trigger, card/effect, discard, draw, random dice, NPC phase, or 3D runtime work was added.
+
+## New Tests Added
+
+- `Wandbound.Core.ZeroHPDeathRemoval.*`
+- Fixture-driven coverage for zero-HP cleanup and lethal attack cleanup under `Reference/GodotCanon/GoldenScenarios/`
+
+## Remaining Risks/Unknowns
+
+- Godot erases destroyed units from its `units` array; Unreal preserves records with defeated/removed flags for replay/debug safety.
+- Hero loss is simple no-replacement loss only; Hybrid Hero replacement and death prevention remain future work.
+- Discard movement, equipped wand fallout, death triggers, and on-destroy buffs remain future work.

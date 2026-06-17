@@ -19,10 +19,15 @@ struct WANDBOUNDCORE_API FWBUnitState
 	int32 AttacksLeft = 0;
 	int32 MaxAttacksPerTurn = 1;
 	int32 MPRemaining = 0;
+	bool bDefeated = false;
+	bool bRemovedFromBoard = false;
 	TSet<FName> Statuses;
 	TMap<FName, int32> StatusTurnsRemaining;
 	TSet<FName> Passives;
 
+	bool IsUnitOnBoard() const;
+	void MarkUnitDefeated();
+	void RemoveUnitFromBoard();
 	bool HasStatus(FName StatusId) const;
 	void AddStatus(FName StatusId, int32 TurnsRemaining = 0);
 	void RemoveStatus(FName StatusId);
@@ -68,6 +73,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	int32 TurnNumber = 1;
 	EWBGamePhase Phase = EWBGamePhase::NormalTurn;
 	bool bGameOver = false;
+	int32 WinnerPlayerId = -1;
 	TArray<FWBUnitState> Units;
 	TArray<FWBWallEdge> Walls;
 	FName DefaultTerrainId = FName(TEXT("Normal"));

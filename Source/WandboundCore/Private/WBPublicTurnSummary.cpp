@@ -23,6 +23,7 @@ FWBPublicTurnSummary WBPublicTurnSummary::Build(const FWBGameStateData& State)
 	Summary.TurnNumber = State.TurnNumber;
 	Summary.Phase = MakePublicPhaseName(State.Phase);
 	Summary.bGameOver = State.bGameOver;
+	Summary.WinnerPlayerId = State.WinnerPlayerId;
 
 	Summary.Players.Reserve(State.Players.Num());
 	for (const FWBPlayerStateData& Player : State.Players)

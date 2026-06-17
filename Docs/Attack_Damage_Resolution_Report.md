@@ -27,8 +27,8 @@ Godot stores base attack damage at declaration, then modifies it during hit reso
 ## HP Clamp and Death
 
 - HP clamps to zero.
-- Units are not removed at zero HP in this pass.
-- Hero loss, death replacement, prevention, discard, and wand fallout are deferred.
+- The later zero-HP death/removal pass now removes defeated units from active board state after lethal damage.
+- Death replacement, prevention, discard, and wand fallout are still deferred.
 
 ## Frozen Policy
 
@@ -62,7 +62,7 @@ Added GodotCanon fixtures for:
 
 - basic ATK damage
 - zero ATK no-op damage
-- HP clamp to zero
+- HP clamp to zero with follow-up cleanup
 - missing pending attack failure
 - missing attacker failure
 - missing defender failure
@@ -82,7 +82,7 @@ Added `WBAttackDamageResolutionTests.cpp` with direct and fixture-driven coverag
 - wands
 - cards/effects
 - armor/prevention
-- full death/removal
+- prevention/replacement-aware full death handling
 - terrain attack modifiers
 - diagonal/ignore-wall/ignore-unit attack exceptions
 - UI, VFX, audio, Blueprint, Actor, or `.uasset` work

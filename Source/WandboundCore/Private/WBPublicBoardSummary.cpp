@@ -272,6 +272,11 @@ FWBPublicBoardSummary WBPublicBoardSummary::Build(const FWBGameStateData& State)
 	Summary.Units.Reserve(State.Units.Num());
 	for (const FWBUnitState& Unit : State.Units)
 	{
+		if (!Unit.IsUnitOnBoard())
+		{
+			continue;
+		}
+
 		Summary.Units.Add(BuildPublicUnitSummary(Unit));
 	}
 

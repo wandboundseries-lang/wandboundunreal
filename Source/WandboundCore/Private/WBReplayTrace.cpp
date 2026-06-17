@@ -55,6 +55,11 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("next_player_id"), Event.NextPlayerId);
 	}
 
+	if (Event.WinningPlayerId != -1)
+	{
+		Object->SetNumberField(TEXT("winning_player_id"), Event.WinningPlayerId);
+	}
+
 	if (Event.TurnNumber != -1)
 	{
 		Object->SetNumberField(TEXT("turn_number"), Event.TurnNumber);

@@ -97,6 +97,23 @@ bool FWBUnitState::HasStatus(const FName StatusId) const
 	return false;
 }
 
+bool FWBUnitState::IsUnitOnBoard() const
+{
+	return !bDefeated && !bRemovedFromBoard && X >= 0 && Y >= 0;
+}
+
+void FWBUnitState::MarkUnitDefeated()
+{
+	bDefeated = true;
+}
+
+void FWBUnitState::RemoveUnitFromBoard()
+{
+	bRemovedFromBoard = true;
+	X = -1;
+	Y = -1;
+}
+
 void FWBUnitState::AddStatus(const FName StatusId, const int32 TurnsRemaining)
 {
 	if (StatusId.IsNone())
@@ -232,7 +249,7 @@ TArray<const FWBUnitState*> FWBGameStateData::GetUnitsForPlayer(const int32 Play
 	TArray<const FWBUnitState*> OwnedUnits;
 	for (const FWBUnitState& Unit : Units)
 	{
-		if (Unit.OwnerId == PlayerId)
+		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard())
 		{
 			OwnedUnits.Add(&Unit);
 		}
@@ -246,7 +263,7 @@ TArray<FWBUnitState*> FWBGameStateData::GetMutableUnitsForPlayer(const int32 Pla
 	TArray<FWBUnitState*> OwnedUnits;
 	for (FWBUnitState& Unit : Units)
 	{
-		if (Unit.OwnerId == PlayerId)
+		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard())
 		{
 			OwnedUnits.Add(&Unit);
 		}
@@ -383,7 +400,7 @@ int32 FWBGameStateData::UnitIdAt(const FWBTile& Tile) const
 {
 	for (const FWBUnitState& Unit : Units)
 	{
-		if (FWBTile(Unit.X, Unit.Y) == Tile)
+		if (Unit.IsUnitOnBoard() && FWBTile(Unit.X, Unit.Y) == Tile)
 		{
 			return Unit.UnitId;
 		}
@@ -400,7 +417,17 @@ bool FWBGameStateData::IsTileOccupied(const FWBTile& Tile) const
 bool FWBGameStateData::AddUnitForTest(const FWBUnitState& Unit)
 {
 	const FWBTile Tile(Unit.X, Unit.Y);
-	if (Unit.UnitId < 0 || !WBRules::IsTileInBounds(Tile) || IsTileOccupied(Tile) || GetUnitById(Unit.UnitId) != nullptr)
+	if (Unit.UnitId < 0 || GetUnitById(Unit.UnitId) != nullptr)
+	{
+		return false;
+	}
+
+	if (!Unit.bRemovedFromBoard && !WBRules::IsTileInBounds(Tile))
+	{
+		return false;
+	}
+
+	if (Unit.IsUnitOnBoard() && IsTileOccupied(Tile))
 	{
 		return false;
 	}

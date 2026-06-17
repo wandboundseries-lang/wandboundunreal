@@ -518,6 +518,13 @@ bool ExpectFinalPublicTurnSummary(
 		return false;
 	}
 
+	const int32 ExpectedWinnerPlayerId = ReadIntegerFieldOrDefault(*SummaryObject, TEXT("winner_player_id"), Summary.WinnerPlayerId);
+	if (Summary.WinnerPlayerId != ExpectedWinnerPlayerId)
+	{
+		OutReason = TEXT("final_public_turn_summary_winner_mismatch");
+		return false;
+	}
+
 	FString ExpectedPhase;
 	if ((*SummaryObject)->TryGetStringField(TEXT("phase"), ExpectedPhase) && Summary.Phase.ToString() != ExpectedPhase)
 	{
@@ -614,6 +621,7 @@ bool ApplyFixturePlayers(const TSharedPtr<FJsonObject>& StateObject, FWBGameStat
 
 		Player.RemainingMP = ReadIntegerFieldOrDefault(PlayerObject, TEXT("remaining_mp"), 0);
 		Player.LastMPRoll = ReadIntegerFieldOrDefault(PlayerObject, TEXT("last_mp_roll"), 0);
+		Player.HeroUnitId = ReadIntegerFieldOrDefault(PlayerObject, TEXT("hero_unit_id"), Player.HeroUnitId);
 		Player.WallsLeft = ReadIntegerFieldOrDefault(PlayerObject, TEXT("walls_left"), 0);
 		Player.WallRemovalsLeft = ReadIntegerFieldOrDefault(PlayerObject, TEXT("wall_removals_left"), 0);
 		if (!ReadOptionalStringArrayField(
@@ -681,6 +689,8 @@ bool ApplyFixtureUnits(const TSharedPtr<FJsonObject>& StateObject, FWBGameStateD
 		Unit.AttacksLeft = ReadIntegerFieldOrDefault(UnitObject, TEXT("attacks_left"), Unit.AttacksLeft);
 		Unit.MaxAttacksPerTurn = ReadIntegerFieldOrDefault(UnitObject, TEXT("max_attacks_per_turn"), Unit.MaxAttacksPerTurn);
 		Unit.MPRemaining = ReadIntegerFieldOrDefault(UnitObject, TEXT("mp_remaining"), 0);
+		Unit.bDefeated = ReadBoolFieldOrDefault(UnitObject, TEXT("defeated"), false);
+		Unit.bRemovedFromBoard = ReadBoolFieldOrDefault(UnitObject, TEXT("removed_from_board"), false);
 
 		if (!OutState.AddUnitForTest(Unit))
 		{
@@ -901,6 +911,7 @@ bool BuildGameStateFromFixture(
 	OutState.TurnNumber = ReadIntegerFieldOrDefault(*InitialStateObject, TEXT("turn_number"), 1);
 	OutState.Phase = ReadPhaseOrDefault(*InitialStateObject, EWBGamePhase::NormalTurn);
 	OutState.bGameOver = ReadBoolFieldOrDefault(*InitialStateObject, TEXT("game_over"), false);
+	OutState.WinnerPlayerId = ReadIntegerFieldOrDefault(*InitialStateObject, TEXT("winner_player_id"), -1);
 
 	if (!ApplyFixturePlayers(*InitialStateObject, OutState, OutReason)
 		|| !ApplyFixtureUnits(*InitialStateObject, OutState, OutReason)
@@ -1171,6 +1182,14 @@ bool ApplyFixtureOperation(
 		return true;
 	}
 
+	if (OperationKind == TEXT("apply_zero_hp_death_removal"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyZeroHPDeathRemoval;
+		OutResult = WBEffectRunner::ApplyZeroHPDeathRemoval(State);
+		OutReason.Reset();
+		return true;
+	}
+
 	if (OperationKind == TEXT("attack_declare_then_damage"))
 	{
 		OutOperationKind = EWBFixtureOperationKind::AttackDeclareThenDamage;
@@ -1408,7 +1427,9 @@ bool ExpectUnitStatusSummary(
 			|| Unit->Y != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("y"), Unit->Y)
 			|| Unit->HP != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("hp"), Unit->HP)
 			|| Unit->MaxHP != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("max_hp"), Unit->MaxHP)
-			|| Unit->AttacksLeft != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("attacks_left"), Unit->AttacksLeft))
+			|| Unit->AttacksLeft != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("attacks_left"), Unit->AttacksLeft)
+			|| Unit->bDefeated != ReadBoolFieldOrDefault(FinalUnitObject, TEXT("defeated"), Unit->bDefeated)
+			|| Unit->bRemovedFromBoard != ReadBoolFieldOrDefault(FinalUnitObject, TEXT("removed_from_board"), Unit->bRemovedFromBoard))
 		{
 			OutReason = FString::Printf(TEXT("unit_%d_state_mismatch"), UnitId);
 			return false;
@@ -1475,6 +1496,7 @@ bool ExpectFinalTurnState(
 	int32 ExpectedCurrentPlayer = State.CurrentPlayer;
 	int32 ExpectedPriorityPlayer = State.PriorityPlayer;
 	int32 ExpectedTurnNumber = State.TurnNumber;
+	int32 ExpectedWinnerPlayerId = State.WinnerPlayerId;
 	EWBGamePhase ExpectedPhase = State.Phase;
 
 	if (ReadExpectedFinalIntegerField(ExpectedObject, TEXT("final_current_player"), TEXT("current_player"), ExpectedCurrentPlayer)
@@ -1502,6 +1524,26 @@ bool ExpectFinalTurnState(
 	{
 		OutReason = TEXT("final_phase_mismatch");
 		return false;
+	}
+
+	const TSharedPtr<FJsonObject>* FinalStateObject = nullptr;
+	if (ExpectedObject->TryGetObjectField(TEXT("final_state"), FinalStateObject)
+		&& FinalStateObject != nullptr
+		&& FinalStateObject->IsValid())
+	{
+		const bool bExpectedGameOver = ReadBoolFieldOrDefault(*FinalStateObject, TEXT("game_over"), State.bGameOver);
+		if (State.bGameOver != bExpectedGameOver)
+		{
+			OutReason = TEXT("final_game_over_mismatch");
+			return false;
+		}
+
+		if (TryReadIntegerField(*FinalStateObject, TEXT("winner_player_id"), ExpectedWinnerPlayerId)
+			&& State.WinnerPlayerId != ExpectedWinnerPlayerId)
+		{
+			OutReason = TEXT("final_winner_player_id_mismatch");
+			return false;
+		}
 	}
 
 	OutReason.Reset();

@@ -27,6 +27,7 @@ TSharedRef<FJsonObject> PublicTurnSummaryToJsonObject(const FWBPublicTurnSummary
 	Object->SetNumberField(TEXT("turn_number"), Summary.TurnNumber);
 	Object->SetStringField(TEXT("phase"), Summary.Phase.ToString());
 	Object->SetBoolField(TEXT("game_over"), Summary.bGameOver);
+	Object->SetNumberField(TEXT("winner_player_id"), Summary.WinnerPlayerId);
 
 	TArray<TSharedPtr<FJsonValue>> Players;
 	Players.Reserve(Summary.Players.Num());
