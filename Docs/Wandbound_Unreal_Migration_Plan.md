@@ -401,6 +401,39 @@
   - network replay envelope
   - UI/Blueprint/3D runtime
 
+## Milestone - Public Wall and Terrain Summary for Runtime Results
+
+- Added public wall summary structs and serialization:
+  - `FWBPublicWallEdgeSummary`
+  - `final_public_board_summary.walls`
+- Wall summaries include normalized endpoints and orientation.
+- Wall ordering is deterministic by `ay`, `ax`, `by`, `bx`, then `orientation`.
+- Existing wall state and movement blocking behavior were not changed.
+- Added minimal public terrain state for reporting/test scaffolding:
+  - `FWBGameStateData::DefaultTerrainId`
+  - `FWBGameStateData::TerrainByTileIndex`
+  - `GetTerrainAt`
+  - `SetTerrainForTest`
+  - `ClearTerrainForTest`
+- Added public terrain summary structs and serialization:
+  - `FWBPublicTerrainTileSummary`
+  - `final_public_board_summary.default_terrain_id`
+  - `final_public_board_summary.terrain_tiles`
+- Terrain summaries are sparse and include only tiles whose terrain differs from `DefaultTerrainId`.
+- Unreal uses `Normal` as the public default terrain id while Godot's reference default is `"none"`.
+- Wall and terrain summaries are reporting-only.
+- No movement, LOS, wall placement/removal, terrain movement, or terrain effect gameplay rules changed.
+- Hidden markers remain excluded because Unreal marker state is not modeled yet.
+- Deck, hand, discard, pending choices, and private marker identity remain excluded.
+- Intentionally not implemented yet:
+  - marker summaries
+  - wall placement/removal actions
+  - wall action traces
+  - terrain movement rules
+  - terrain effect rules
+  - network replay envelope
+  - UI/Blueprint/3D runtime
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

@@ -26,11 +26,30 @@ struct WANDBOUNDCORE_API FWBPublicUnitBoardSummary
 	TArray<FWBPublicUnitStatusSummary> Statuses;
 };
 
+struct WANDBOUNDCORE_API FWBPublicWallEdgeSummary
+{
+	int32 AX = -1;
+	int32 AY = -1;
+	int32 BX = -1;
+	int32 BY = -1;
+	FName Orientation;
+};
+
+struct WANDBOUNDCORE_API FWBPublicTerrainTileSummary
+{
+	int32 X = -1;
+	int32 Y = -1;
+	FName TerrainId;
+};
+
 struct WANDBOUNDCORE_API FWBPublicBoardSummary
 {
 	int32 BoardWidth = 9;
 	int32 BoardHeight = 9;
+	FName DefaultTerrainId = FName(TEXT("Normal"));
 	TArray<FWBPublicUnitBoardSummary> Units;
+	TArray<FWBPublicWallEdgeSummary> Walls;
+	TArray<FWBPublicTerrainTileSummary> TerrainTiles;
 };
 
 class WANDBOUNDCORE_API WBPublicBoardSummary

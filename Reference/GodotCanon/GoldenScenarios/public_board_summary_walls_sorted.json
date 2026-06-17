@@ -1,0 +1,84 @@
+{
+  "id": "public_board_summary_walls_sorted",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/game_state.gd:wall_v",
+    "scripts/sim/game_state.gd:wall_h",
+    "scripts/ai/ai_env.gd:build_observation"
+  ],
+  "intent": "Public board summary includes public wall edges in deterministic order.",
+  "operation": "build_public_board_summary",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "default_terrain_id": "Normal",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0
+      }
+    ],
+    "units": [],
+    "walls": [
+      {
+        "between": [
+          { "x": 5, "y": 5 },
+          { "x": 5, "y": 6 }
+        ]
+      },
+      {
+        "between": [
+          { "x": 1, "y": 2 },
+          { "x": 2, "y": 2 }
+        ]
+      },
+      {
+        "between": [
+          { "x": 0, "y": 1 },
+          { "x": 0, "y": 2 }
+        ]
+      }
+    ],
+    "terrain_tiles": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "board_width": 9,
+    "board_height": 9,
+    "default_terrain_id": "Normal",
+    "units": [],
+    "walls": [
+      {
+        "ax": 0,
+        "ay": 1,
+        "bx": 0,
+        "by": 2,
+        "orientation": "vertical"
+      },
+      {
+        "ax": 1,
+        "ay": 2,
+        "bx": 2,
+        "by": 2,
+        "orientation": "horizontal"
+      },
+      {
+        "ax": 5,
+        "ay": 5,
+        "bx": 5,
+        "by": 6,
+        "orientation": "vertical"
+      }
+    ],
+    "terrain_tiles": [],
+    "forbidden_substrings": []
+  }
+}

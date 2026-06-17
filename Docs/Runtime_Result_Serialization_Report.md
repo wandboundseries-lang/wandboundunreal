@@ -98,6 +98,7 @@ The serialized final public board summary includes:
 
 - `board_width`
 - `board_height`
+- `default_terrain_id`
 - visible unit `unit_id`
 - visible unit `owner_id`
 - visible unit `card_id`
@@ -107,8 +108,26 @@ The serialized final public board summary includes:
 - RL total/used
 - attacks left
 - public statuses with turns remaining
+- public normalized wall edges in `walls`
+- sparse public non-default terrain tiles in `terrain_tiles`
 
 Visible unit `card_id` is included because Godot public observations expose visible board unit identity.
+
+Wall JSON fields:
+
+- `ax`
+- `ay`
+- `bx`
+- `by`
+- `orientation`
+
+Terrain JSON fields:
+
+- `x`
+- `y`
+- `terrain_id`
+
+Terrain serialization is sparse and uses `default_terrain_id` for omitted default tiles.
 
 Hidden marker identities are excluded. Unreal does not yet have marker state, and marker visibility must be player-perspective scoped when implemented.
 
@@ -156,6 +175,8 @@ Added:
 - `runtime_result_serialization_hidden_data_exclusion.json`
 - `runtime_result_serialization_public_board_summary_after_move.json`
 - `runtime_result_serialization_public_board_summary_after_full_turn.json`
+- `runtime_result_serialization_public_wall_terrain_after_move.json`
+- `runtime_result_serialization_public_wall_terrain_after_full_turn.json`
 
 Added optional fixture operation:
 
@@ -167,8 +188,9 @@ Existing fixture operations remain unchanged.
 
 ## Future TODO
 
-- Add public wall and terrain summaries.
 - Add marker summaries once hidden/revealed marker policy is represented in Unreal state.
+- Add public wall placement/removal action traces once wall actions exist.
+- Add terrain movement/effect rules once terrain gameplay parity begins.
 - Add a network replay envelope separate from existing `apply_action` replay.
 - Add a deterministic random roll source only after reporting remains stable.
 - Add UI/runtime consumers after the C++ JSON contract is proven.

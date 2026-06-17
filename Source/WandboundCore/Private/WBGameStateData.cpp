@@ -175,6 +175,12 @@ bool FWBGameStateData::IsValidPlayerId(const int32 PlayerId)
 	return PlayerId == 0 || PlayerId == 1;
 }
 
+int32 FWBGameStateData::TileToIndex(const FWBTile& Tile)
+{
+	constexpr int32 BoardWidth = 9;
+	return Tile.Y * BoardWidth + Tile.X;
+}
+
 int32 FWBGameStateData::GetCurrentPlayerId() const
 {
 	return CurrentPlayer;
@@ -420,4 +426,41 @@ bool FWBGameStateData::RemoveWallForTest(const FWBWallEdge& Edge)
 	}
 
 	return false;
+}
+
+FName FWBGameStateData::GetTerrainAt(const FWBTile& Tile) const
+{
+	if (!WBRules::IsTileInBounds(Tile))
+	{
+		return DefaultTerrainId;
+	}
+
+	const FName* TerrainId = TerrainByTileIndex.Find(TileToIndex(Tile));
+	return TerrainId != nullptr ? *TerrainId : DefaultTerrainId;
+}
+
+void FWBGameStateData::SetTerrainForTest(const FWBTile& Tile, const FName TerrainId)
+{
+	if (!WBRules::IsTileInBounds(Tile) || TerrainId.IsNone())
+	{
+		return;
+	}
+
+	if (TerrainId.GetPlainNameString().Equals(DefaultTerrainId.GetPlainNameString(), ESearchCase::IgnoreCase))
+	{
+		ClearTerrainForTest(Tile);
+		return;
+	}
+
+	TerrainByTileIndex.Add(TileToIndex(Tile), TerrainId);
+}
+
+void FWBGameStateData::ClearTerrainForTest(const FWBTile& Tile)
+{
+	if (!WBRules::IsTileInBounds(Tile))
+	{
+		return;
+	}
+
+	TerrainByTileIndex.Remove(TileToIndex(Tile));
 }

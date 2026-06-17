@@ -72,11 +72,32 @@ TSharedRef<FJsonObject> PublicUnitBoardSummaryToJsonObject(const FWBPublicUnitBo
 	return Object;
 }
 
+TSharedRef<FJsonObject> PublicWallEdgeSummaryToJsonObject(const FWBPublicWallEdgeSummary& Wall)
+{
+	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+	Object->SetNumberField(TEXT("ax"), Wall.AX);
+	Object->SetNumberField(TEXT("ay"), Wall.AY);
+	Object->SetNumberField(TEXT("bx"), Wall.BX);
+	Object->SetNumberField(TEXT("by"), Wall.BY);
+	Object->SetStringField(TEXT("orientation"), Wall.Orientation.GetPlainNameString());
+	return Object;
+}
+
+TSharedRef<FJsonObject> PublicTerrainTileSummaryToJsonObject(const FWBPublicTerrainTileSummary& TerrainTile)
+{
+	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+	Object->SetNumberField(TEXT("x"), TerrainTile.X);
+	Object->SetNumberField(TEXT("y"), TerrainTile.Y);
+	Object->SetStringField(TEXT("terrain_id"), TerrainTile.TerrainId.GetPlainNameString());
+	return Object;
+}
+
 TSharedRef<FJsonObject> PublicBoardSummaryToJsonObject(const FWBPublicBoardSummary& Summary)
 {
 	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 	Object->SetNumberField(TEXT("board_width"), Summary.BoardWidth);
 	Object->SetNumberField(TEXT("board_height"), Summary.BoardHeight);
+	Object->SetStringField(TEXT("default_terrain_id"), Summary.DefaultTerrainId.GetPlainNameString());
 
 	TArray<TSharedPtr<FJsonValue>> Units;
 	Units.Reserve(Summary.Units.Num());
@@ -85,6 +106,23 @@ TSharedRef<FJsonObject> PublicBoardSummaryToJsonObject(const FWBPublicBoardSumma
 		Units.Add(MakeShared<FJsonValueObject>(PublicUnitBoardSummaryToJsonObject(Unit)));
 	}
 	Object->SetArrayField(TEXT("units"), MoveTemp(Units));
+
+	TArray<TSharedPtr<FJsonValue>> Walls;
+	Walls.Reserve(Summary.Walls.Num());
+	for (const FWBPublicWallEdgeSummary& Wall : Summary.Walls)
+	{
+		Walls.Add(MakeShared<FJsonValueObject>(PublicWallEdgeSummaryToJsonObject(Wall)));
+	}
+	Object->SetArrayField(TEXT("walls"), MoveTemp(Walls));
+
+	TArray<TSharedPtr<FJsonValue>> TerrainTiles;
+	TerrainTiles.Reserve(Summary.TerrainTiles.Num());
+	for (const FWBPublicTerrainTileSummary& TerrainTile : Summary.TerrainTiles)
+	{
+		TerrainTiles.Add(MakeShared<FJsonValueObject>(PublicTerrainTileSummaryToJsonObject(TerrainTile)));
+	}
+	Object->SetArrayField(TEXT("terrain_tiles"), MoveTemp(TerrainTiles));
+
 	return Object;
 }
 

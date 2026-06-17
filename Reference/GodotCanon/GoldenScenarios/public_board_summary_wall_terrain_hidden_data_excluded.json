@@ -1,0 +1,115 @@
+{
+  "id": "public_board_summary_wall_terrain_hidden_data_excluded",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/ai/ai_env.gd:build_observation",
+    "scripts/ai/ai_env.gd:_public_marker_summary"
+  ],
+  "intent": "Public board summary includes public walls and terrain while excluding deck, hand, discard, hidden marker, and pending-choice secrets.",
+  "operation": "build_public_board_summary",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "default_terrain_id": "Normal",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2,
+        "deck": [
+          "SECRET_DECK_CARD_DO_NOT_LEAK"
+        ],
+        "hand": [
+          "SECRET_HAND_CARD_DO_NOT_LEAK"
+        ],
+        "discard": [
+          "SECRET_DISCARD_CARD_DO_NOT_LEAK"
+        ]
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "card_id": "char_visible_public_identity",
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "atk": 2,
+        "ar": 1,
+        "rl_total": 3,
+        "rl_used": 0,
+        "attacks_left": 1
+      }
+    ],
+    "walls": [
+      {
+        "between": [
+          { "x": 1, "y": 1 },
+          { "x": 1, "y": 2 }
+        ]
+      }
+    ],
+    "terrain_tiles": [
+      {
+        "x": 2,
+        "y": 3,
+        "terrain_id": "mud"
+      }
+    ],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "board_width": 9,
+    "board_height": 9,
+    "default_terrain_id": "Normal",
+    "units": [
+      {
+        "unit_id": 1,
+        "owner_id": 0,
+        "card_id": "char_visible_public_identity",
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "atk": 2,
+        "ar": 1,
+        "rl_total": 3,
+        "rl_used": 0,
+        "attacks_left": 1,
+        "statuses": []
+      }
+    ],
+    "walls": [
+      {
+        "ax": 1,
+        "ay": 1,
+        "bx": 1,
+        "by": 2,
+        "orientation": "vertical"
+      }
+    ],
+    "terrain_tiles": [
+      {
+        "x": 2,
+        "y": 3,
+        "terrain_id": "mud"
+      }
+    ],
+    "forbidden_substrings": [
+      "SECRET_DECK_CARD_DO_NOT_LEAK",
+      "SECRET_HAND_CARD_DO_NOT_LEAK",
+      "SECRET_DISCARD_CARD_DO_NOT_LEAK",
+      "SECRET_HIDDEN_MARKER_CARD_DO_NOT_LEAK",
+      "SECRET_PENDING_CHOICE_DO_NOT_LEAK"
+    ]
+  }
+}

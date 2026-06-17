@@ -15,6 +15,8 @@ Added:
 ```text
 FWBPublicUnitStatusSummary
 FWBPublicUnitBoardSummary
+FWBPublicWallEdgeSummary
+FWBPublicTerrainTileSummary
 FWBPublicBoardSummary
 WBPublicBoardSummary::Build
 ```
@@ -23,6 +25,7 @@ The summary includes:
 
 - board width
 - board height
+- default terrain id
 - visible unit id
 - visible unit owner id
 - visible unit card id
@@ -32,6 +35,52 @@ The summary includes:
 - RL total/used
 - attacks left
 - public status ids and turns remaining
+- public wall edges
+- sparse public non-default terrain tiles
+
+Walls and terrain are public board state. Markers remain excluded until marker state is modeled in Unreal.
+
+## Wall Summary
+
+Each wall summary includes:
+
+- `AX`
+- `AY`
+- `BX`
+- `BY`
+- `Orientation`
+
+Wall endpoints are normalized so the same edge serializes identically whether it was authored A-B or B-A.
+
+Wall summaries are sorted by:
+
+1. `AY`
+2. `AX`
+3. `BY`
+4. `BX`
+5. `Orientation`
+
+Invalid or non-orthogonal wall edges are excluded by the summary builder.
+
+## Terrain Summary
+
+Unreal now has minimal public terrain state for reporting/test scaffolding:
+
+- `DefaultTerrainId`
+- sparse `TerrainByTileIndex`
+- `GetTerrainAt`
+- `SetTerrainForTest`
+- `ClearTerrainForTest`
+
+The Unreal default terrain id is `Normal`. Godot defaults terrain to `"none"`; `Normal` is the safe Unreal baseline while terrain gameplay remains unimplemented.
+
+Terrain summaries are sparse: only tiles whose terrain differs from `DefaultTerrainId` are listed.
+
+Terrain tiles are sorted by:
+
+1. `Y`
+2. `X`
+3. `TerrainId`
 
 ## Excluded Fields
 
@@ -44,6 +93,8 @@ Excluded:
 - hidden marker card ids
 - pending choices
 - private response options
+- terrain effect ids
+- terrain ticks
 - passives
 - equipped card/wand internals
 - raw UObject pointers/resources
@@ -105,7 +156,7 @@ Tests assert that serialized runtime results do not contain secret tokens placed
 - hand
 - discard
 
-Marker and pending-choice secret tokens are documented as future coverage once Unreal owns those state fields.
+Marker and pending-choice secret tokens are asserted absent. Unreal marker state is not modeled yet, so hidden marker identity cannot be serialized in this pass.
 
 ## Fixtures
 
@@ -116,12 +167,18 @@ Added:
 - `public_board_summary_hidden_data_excluded.json`
 - `runtime_result_serialization_public_board_summary_after_move.json`
 - `runtime_result_serialization_public_board_summary_after_full_turn.json`
+- `public_board_summary_walls_sorted.json`
+- `public_board_summary_wall_edge_normalized.json`
+- `public_board_summary_terrain_sparse_sorted.json`
+- `public_board_summary_wall_terrain_hidden_data_excluded.json`
+- `runtime_result_serialization_public_wall_terrain_after_move.json`
+- `runtime_result_serialization_public_wall_terrain_after_full_turn.json`
 
 ## Future TODO
 
-- Add public wall summary.
-- Add public terrain summary.
 - Add revealed marker summaries after marker state exists.
+- Add public wall placement/removal action traces after those actions exist.
+- Add terrain movement/effect rules after behavior parity work begins.
 - Add public discard viewer/summary after a discard visibility audit.
 - Add network replay envelope.
 - Add UI/runtime consumer.

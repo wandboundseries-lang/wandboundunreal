@@ -729,6 +729,44 @@ bool ApplyFixtureWalls(const TSharedPtr<FJsonObject>& StateObject, FWBGameStateD
 	return true;
 }
 
+bool ApplyFixtureTerrain(const TSharedPtr<FJsonObject>& StateObject, FWBGameStateData& OutState, FString& OutReason)
+{
+	FString DefaultTerrainId;
+	if (StateObject->TryGetStringField(TEXT("default_terrain_id"), DefaultTerrainId) && !DefaultTerrainId.IsEmpty())
+	{
+		OutState.DefaultTerrainId = FName(*DefaultTerrainId);
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* TerrainTiles = nullptr;
+	if (!StateObject->TryGetArrayField(TEXT("terrain_tiles"), TerrainTiles) || TerrainTiles == nullptr)
+	{
+		return true;
+	}
+
+	for (const TSharedPtr<FJsonValue>& TerrainValue : *TerrainTiles)
+	{
+		const TSharedPtr<FJsonObject> TerrainObject = TerrainValue.IsValid() ? TerrainValue->AsObject() : nullptr;
+		if (!TerrainObject.IsValid())
+		{
+			OutReason = TEXT("malformed_initial_state_terrain_tile");
+			return false;
+		}
+
+		FWBTile Tile;
+		FString TerrainId;
+		if (!ParseFixtureTile(TerrainObject, Tile) || !TerrainObject->TryGetStringField(TEXT("terrain_id"), TerrainId) || TerrainId.IsEmpty())
+		{
+			OutReason = TEXT("malformed_initial_state_terrain_tile");
+			return false;
+		}
+
+		OutState.SetTerrainForTest(Tile, FName(*TerrainId));
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ReadExpectedFinalIntegerField(
 	const TSharedPtr<FJsonObject>& ExpectedObject,
 	const TCHAR* FieldName,
@@ -822,7 +860,8 @@ bool BuildGameStateFromFixture(
 
 	if (!ApplyFixturePlayers(*InitialStateObject, OutState, OutReason)
 		|| !ApplyFixtureUnits(*InitialStateObject, OutState, OutReason)
-		|| !ApplyFixtureWalls(*InitialStateObject, OutState, OutReason))
+		|| !ApplyFixtureWalls(*InitialStateObject, OutState, OutReason)
+		|| !ApplyFixtureTerrain(*InitialStateObject, OutState, OutReason))
 	{
 		return false;
 	}

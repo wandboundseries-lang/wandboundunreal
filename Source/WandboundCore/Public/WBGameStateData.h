@@ -59,9 +59,12 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	bool bGameOver = false;
 	TArray<FWBUnitState> Units;
 	TArray<FWBWallEdge> Walls;
+	FName DefaultTerrainId = FName(TEXT("Normal"));
+	TMap<int32, FName> TerrainByTileIndex;
 	TArray<FWBPlayerStateData> Players;
 
 	static bool IsValidPlayerId(int32 PlayerId);
+	static int32 TileToIndex(const FWBTile& Tile);
 	int32 GetCurrentPlayerId() const;
 	int32 GetActionPriorityPlayerId() const;
 	const FWBPlayerStateData* GetPlayerById(int32 PlayerId) const;
@@ -82,4 +85,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	bool AddUnitForTest(const FWBUnitState& Unit);
 	void AddWallForTest(const FWBWallEdge& Edge);
 	bool RemoveWallForTest(const FWBWallEdge& Edge);
+	FName GetTerrainAt(const FWBTile& Tile) const;
+	void SetTerrainForTest(const FWBTile& Tile, FName TerrainId);
+	void ClearTerrainForTest(const FWBTile& Tile);
 };

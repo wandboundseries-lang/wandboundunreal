@@ -4,97 +4,103 @@ Date of check: 2026-06-17 (America/New_York)
 
 ## Scope
 
-This pass added deterministic public board summary reporting and serialization for runtime selected-action results.
+This pass added deterministic public wall and terrain summaries to runtime selected-action results.
 
 Implemented:
 
-- hidden-information audit for public unit card identity and marker identity policy
-- `FWBPublicBoardSummary`, `FWBPublicUnitBoardSummary`, and `FWBPublicUnitStatusSummary`
-- `WBPublicBoardSummary::Build`
-- runtime selected-action result envelope field `FinalPublicBoardSummary`
-- runtime result JSON field `final_public_board_summary`
-- public unit position, owner, visible card identity, combat fields, action counters, and statuses
-- deterministic public unit ordering by `Y`, then `X`, then `UnitId`
-- deterministic public status ordering with canonical public status IDs
-- fixture state support for public combat fields `atk`, `ar`, `rl_total`, and `rl_used`
-- public board summary GoldenScenarios fixtures
-- runtime result serialization fixtures for public board summary after move and full turn
-- automation coverage for direct board summary building, runtime result serialization, hidden-data exclusion, fixture loading, failed-result summaries, and JSON field presence
+- public wall/terrain hidden-information audit
+- `FWBPublicWallEdgeSummary`
+- `FWBPublicTerrainTileSummary`
+- `FWBPublicBoardSummary::Walls`
+- `FWBPublicBoardSummary::TerrainTiles`
+- `FWBPublicBoardSummary::DefaultTerrainId`
+- minimal reporting-only terrain state in `FWBGameStateData`
+- wall summary normalization and deterministic sorting
+- sparse terrain summary with deterministic sorting
+- runtime result JSON fields `walls`, `terrain_tiles`, and `default_terrain_id`
+- fixture loading for `initial_state.default_terrain_id` and `initial_state.terrain_tiles`
+- GoldenScenarios for public walls, terrain, hidden-data exclusion, move serialization, and full-turn serialization
+- automation coverage for wall inclusion, normalization, sorting, invalid wall exclusion, terrain inclusion, default exclusion, terrain sorting, runtime JSON, and fixture scenarios
 
 Not implemented:
 
 - new gameplay mechanics
+- movement legality changes
+- wall blocking behavior changes
+- terrain movement/effect behavior
+- terrain effects
+- wall placement/removal actions
 - legal action generation changes
-- wall or terrain public summary
-- marker state or marker visibility summary
-- player-perspective marker reveal policy in Unreal
-- deck, hand, discard, pending choice, or private-card serialization
-- network replay envelope semantics
+- `WBActionCodec` action ID changes
+- replay `apply_action` behavior changes
+- attacks
+- cards/effects
+- draw
+- random dice
+- NPC phase
 - UI/Blueprint/3D runtime
+- marker state or marker summary
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Hidden-Information Policy
+## Public Wall/Terrain Policy
 
-Visible board unit `CardId` is public and included in the public board summary.
+Walls are public board state and now serialize as normalized wall edges.
 
-Hidden marker card identity remains private. Unreal does not model markers yet, so marker summary fields were not added in this pass. When marker state is introduced, unrevealed enemy marker identity must remain excluded from public summaries.
+Terrain is public board state and now serializes as sparse non-default terrain tiles.
 
-Deck, hand, discard, pending choices, runtime context, UObject pointers, resources, and file paths remain excluded from runtime result serialization.
+Godot defaults terrain to `"none"`. Unreal uses `Normal` as the safe public default terrain id while terrain gameplay remains unimplemented.
+
+Hidden marker identity remains excluded. Unreal marker state is not modeled yet, so no marker summary is emitted.
+
+Deck, hand, discard, pending choices, runtime context internals, UObject pointers, resources, file paths, terrain effect ids, and terrain ticks remain excluded.
 
 ## Serialized Public Board Summary
 
-Runtime selected-action result JSON now includes:
+Runtime selected-action result JSON includes:
 
 ```text
 final_public_board_summary
 ```
 
-Serialized fields:
+Additional fields from this pass:
 
-- `board_width`
-- `board_height`
-- `units`
-- `units[].unit_id`
-- `units[].owner_id`
-- `units[].card_id`
-- `units[].x`
-- `units[].y`
-- `units[].hp`
-- `units[].max_hp`
-- `units[].atk`
-- `units[].ar`
-- `units[].rl_total`
-- `units[].rl_used`
-- `units[].attacks_left`
-- `units[].statuses`
-- `units[].statuses[].status_id`
-- `units[].statuses[].turns_remaining`
+- `default_terrain_id`
+- `walls`
+- `walls[].ax`
+- `walls[].ay`
+- `walls[].bx`
+- `walls[].by`
+- `walls[].orientation`
+- `terrain_tiles`
+- `terrain_tiles[].x`
+- `terrain_tiles[].y`
+- `terrain_tiles[].terrain_id`
 
-Status IDs are canonical public names such as `Burn`, `Poison`, `Rooted`, `Stunned`, and `Frozen`.
+Existing unit summary fields are preserved.
 
 ## Implemented This Pass
 
-- Added `Docs/Public_Board_Summary_Hidden_Info_Audit.md`.
-- Added `Docs/Public_Board_Summary_Report.md`.
-- Added `Source/WandboundCore/Public/WBPublicBoardSummary.h`.
-- Added `Source/WandboundCore/Private/WBPublicBoardSummary.cpp`.
-- Updated `Source/WandboundCore/Public/WBRuntimeTurnResolutionAdapter.h`.
-- Updated `Source/WandboundCore/Private/WBRuntimeTurnResolutionAdapter.cpp`.
-- Updated `Source/WandboundCore/Private/WBRuntimeResultSerializer.cpp`.
-- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
-- Updated `Source/WandboundTests/Private/WBRuntimeResultSerializationTests.cpp`.
-- Added `Source/WandboundTests/Private/WBPublicBoardSummaryTests.cpp`.
-- Added `Source/WandboundTests/Private/WBRuntimeResultBoardSummarySerializationTests.cpp`.
-- Updated `Reference/GodotCanon/GoldenScenarios/runtime_result_serialization_hidden_data_exclusion.json`.
-- Added GodotCanon fixtures:
-  - `public_board_summary_units_sorted.json`
-  - `public_board_summary_statuses_sorted.json`
-  - `public_board_summary_hidden_data_excluded.json`
-  - `runtime_result_serialization_public_board_summary_after_move.json`
-  - `runtime_result_serialization_public_board_summary_after_full_turn.json`
+- Added `Docs/Public_Wall_Terrain_Summary_Audit.md`.
+- Added `Docs/Public_Wall_Terrain_Summary_Report.md`.
+- Updated `Docs/Public_Board_Summary_Report.md`.
 - Updated `Docs/Runtime_Result_Serialization_Report.md`.
 - Updated `Docs/Wandbound_Unreal_Migration_Plan.md`.
+- Updated `Source/WandboundCore/Public/WBGameStateData.h`.
+- Updated `Source/WandboundCore/Private/WBGameStateData.cpp`.
+- Updated `Source/WandboundCore/Public/WBPublicBoardSummary.h`.
+- Updated `Source/WandboundCore/Private/WBPublicBoardSummary.cpp`.
+- Updated `Source/WandboundCore/Private/WBRuntimeResultSerializer.cpp`.
+- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
+- Updated `Source/WandboundTests/Private/WBPublicBoardSummaryTests.cpp`.
+- Updated `Source/WandboundTests/Private/WBRuntimeResultBoardSummarySerializationTests.cpp`.
+- Added GodotCanon fixtures:
+  - `public_board_summary_walls_sorted.json`
+  - `public_board_summary_wall_edge_normalized.json`
+  - `public_board_summary_terrain_sparse_sorted.json`
+  - `public_board_summary_wall_terrain_hidden_data_excluded.json`
+  - `runtime_result_serialization_public_wall_terrain_after_move.json`
+  - `runtime_result_serialization_public_wall_terrain_after_full_turn.json`
 
 ## Build
 
@@ -108,7 +114,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 7.38 seconds
+Total execution time: 46.02 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -122,7 +128,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=166
+succeeded=175
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -130,26 +136,21 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.PublicBoardSummary.FixtureScenarios`
-- `Wandbound.Core.PublicBoardSummary.HiddenDataExcluded`
-- `Wandbound.Core.PublicBoardSummary.IncludesCombatFields`
-- `Wandbound.Core.PublicBoardSummary.IncludesStatuses`
-- `Wandbound.Core.PublicBoardSummary.IncludesVisibleUnitPosition`
-- `Wandbound.Core.PublicBoardSummary.StatusesSortedDeterministically`
-- `Wandbound.Core.PublicBoardSummary.UnitsSortedDeterministically`
-- `Wandbound.Core.PublicBoardSummary.VisibleUnitCardIdentityPolicy`
-- `Wandbound.Core.RuntimeResultBoardSummary.AfterFullEndTurn`
-- `Wandbound.Core.RuntimeResultBoardSummary.AfterMove`
-- `Wandbound.Core.RuntimeResultBoardSummary.FailedInvalidRollSummarizesUnchangedBoard`
-- `Wandbound.Core.RuntimeResultBoardSummary.FixtureScenarios`
-- `Wandbound.Core.RuntimeResultBoardSummary.HiddenDataExcluded`
-- `Wandbound.Core.RuntimeResultBoardSummary.SerializedJsonHasField`
+- `Wandbound.Core.PublicBoardSummary.DefaultTerrainExcluded`
+- `Wandbound.Core.PublicBoardSummary.InvalidWallExcluded`
+- `Wandbound.Core.PublicBoardSummary.TerrainIncluded`
+- `Wandbound.Core.PublicBoardSummary.TerrainSortedDeterministically`
+- `Wandbound.Core.PublicBoardSummary.WallEdgeNormalized`
+- `Wandbound.Core.PublicBoardSummary.WallsIncluded`
+- `Wandbound.Core.PublicBoardSummary.WallsSortedDeterministically`
+- `Wandbound.Core.RuntimeResultBoardSummary.SparseTerrainSerialized`
+- `Wandbound.Core.RuntimeResultBoardSummary.WallsSerialized`
+
+Existing public board and runtime result fixture tests were expanded to include the new wall/terrain fixtures.
 
 ## Exact Errors
 
 Final build and automation reported no errors.
-
-An initial automation run exposed an `FName` display-number serialization issue where status IDs emitted as values like `Burn_588`; this was fixed before the final successful run by canonicalizing status names through plain public strings.
 
 ## Generated File Tracking
 
@@ -168,16 +169,14 @@ The pre-existing untracked `MaxHP` file remains untouched.
 
 Build and automation reported no warnings.
 
-`git diff --stat` reported only LF-to-CRLF working-copy notices for touched text files.
-
 ## Risks/Unknowns
 
 - Unreal marker state does not exist yet, so hidden marker summary policy is documented but not implemented.
-- Public wall and terrain summaries are not included yet.
-- No player-perspective marker visibility summary exists yet.
-- Runtime/UI/network consumers are not wired to consume the serialized public board summary yet.
-- Discard visibility policy remains outside this board-summary pass.
+- Terrain state is reporting/test scaffolding only and is not connected to movement or effects.
+- Wall placement/removal actions and wall action traces are not implemented.
+- Runtime/UI/network consumers are not wired to consume the serialized public wall/terrain summaries yet.
+- Godot exposes a full terrain map with default `"none"`; Unreal intentionally serializes sparse terrain with default `Normal`.
 
 ## Next Recommended Implementation Milestone
 
-Add deterministic public wall and terrain summaries to runtime results, preserving the current public board unit summary and keeping hidden marker identity out until marker state is modeled.
+Add a deterministic revealed-marker public summary model once Unreal marker state exists, preserving hidden enemy marker identity and keeping marker summaries player-perspective scoped.

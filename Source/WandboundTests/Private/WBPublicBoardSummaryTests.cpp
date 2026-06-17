@@ -198,6 +198,44 @@ bool ExpectUnitMatches(
 	return true;
 }
 
+bool ExpectWallMatches(
+	FAutomationTestBase& Test,
+	const FString& Label,
+	const FWBPublicWallEdgeSummary& Actual,
+	const TSharedPtr<FJsonObject>& Expected)
+{
+	int32 ExpectedInt = -1;
+	FString ExpectedOrientation;
+	TryReadIntegerField(Expected, TEXT("ax"), ExpectedInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s ax"), *Label), Actual.AX, ExpectedInt);
+	TryReadIntegerField(Expected, TEXT("ay"), ExpectedInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s ay"), *Label), Actual.AY, ExpectedInt);
+	TryReadIntegerField(Expected, TEXT("bx"), ExpectedInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s bx"), *Label), Actual.BX, ExpectedInt);
+	TryReadIntegerField(Expected, TEXT("by"), ExpectedInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s by"), *Label), Actual.BY, ExpectedInt);
+	Expected->TryGetStringField(TEXT("orientation"), ExpectedOrientation);
+	Test.TestEqual(*FString::Printf(TEXT("%s orientation"), *Label), Actual.Orientation.GetPlainNameString(), ExpectedOrientation);
+	return true;
+}
+
+bool ExpectTerrainTileMatches(
+	FAutomationTestBase& Test,
+	const FString& Label,
+	const FWBPublicTerrainTileSummary& Actual,
+	const TSharedPtr<FJsonObject>& Expected)
+{
+	int32 ExpectedInt = -1;
+	FString ExpectedTerrainId;
+	TryReadIntegerField(Expected, TEXT("x"), ExpectedInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s x"), *Label), Actual.X, ExpectedInt);
+	TryReadIntegerField(Expected, TEXT("y"), ExpectedInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s y"), *Label), Actual.Y, ExpectedInt);
+	Expected->TryGetStringField(TEXT("terrain_id"), ExpectedTerrainId);
+	Test.TestEqual(*FString::Printf(TEXT("%s terrain id"), *Label), Actual.TerrainId.GetPlainNameString(), ExpectedTerrainId);
+	return true;
+}
+
 bool ExpectBoardSummaryMatches(
 	FAutomationTestBase& Test,
 	const FString& Label,
@@ -209,6 +247,15 @@ bool ExpectBoardSummaryMatches(
 	Test.TestEqual(*FString::Printf(TEXT("%s board width"), *Label), Actual.BoardWidth, ExpectedInt);
 	TryReadIntegerField(Expected, TEXT("board_height"), ExpectedInt);
 	Test.TestEqual(*FString::Printf(TEXT("%s board height"), *Label), Actual.BoardHeight, ExpectedInt);
+
+	FString ExpectedDefaultTerrainId;
+	if (Expected->TryGetStringField(TEXT("default_terrain_id"), ExpectedDefaultTerrainId))
+	{
+		Test.TestEqual(
+			*FString::Printf(TEXT("%s default terrain"), *Label),
+			Actual.DefaultTerrainId.GetPlainNameString(),
+			ExpectedDefaultTerrainId);
+	}
 
 	const TArray<TSharedPtr<FJsonValue>>* ExpectedUnits = nullptr;
 	Test.TestTrue(
@@ -228,6 +275,39 @@ bool ExpectBoardSummaryMatches(
 			FString::Printf(TEXT("%s unit %d"), *Label, UnitIndex),
 			Actual.Units[UnitIndex],
 			(*ExpectedUnits)[UnitIndex].IsValid() ? (*ExpectedUnits)[UnitIndex]->AsObject() : nullptr);
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* ExpectedWalls = nullptr;
+	if (Expected->TryGetArrayField(TEXT("walls"), ExpectedWalls) && ExpectedWalls != nullptr)
+	{
+		Test.TestEqual(*FString::Printf(TEXT("%s wall count"), *Label), Actual.Walls.Num(), ExpectedWalls->Num());
+		const int32 NumWallsToCompare = FMath::Min(Actual.Walls.Num(), ExpectedWalls->Num());
+		for (int32 WallIndex = 0; WallIndex < NumWallsToCompare; ++WallIndex)
+		{
+			ExpectWallMatches(
+				Test,
+				FString::Printf(TEXT("%s wall %d"), *Label, WallIndex),
+				Actual.Walls[WallIndex],
+				(*ExpectedWalls)[WallIndex].IsValid() ? (*ExpectedWalls)[WallIndex]->AsObject() : nullptr);
+		}
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* ExpectedTerrainTiles = nullptr;
+	if (Expected->TryGetArrayField(TEXT("terrain_tiles"), ExpectedTerrainTiles) && ExpectedTerrainTiles != nullptr)
+	{
+		Test.TestEqual(
+			*FString::Printf(TEXT("%s terrain tile count"), *Label),
+			Actual.TerrainTiles.Num(),
+			ExpectedTerrainTiles->Num());
+		const int32 NumTerrainTilesToCompare = FMath::Min(Actual.TerrainTiles.Num(), ExpectedTerrainTiles->Num());
+		for (int32 TerrainIndex = 0; TerrainIndex < NumTerrainTilesToCompare; ++TerrainIndex)
+		{
+			ExpectTerrainTileMatches(
+				Test,
+				FString::Printf(TEXT("%s terrain %d"), *Label, TerrainIndex),
+				Actual.TerrainTiles[TerrainIndex],
+				(*ExpectedTerrainTiles)[TerrainIndex].IsValid() ? (*ExpectedTerrainTiles)[TerrainIndex]->AsObject() : nullptr);
+		}
 	}
 
 	return true;
@@ -358,13 +438,132 @@ bool FWBPublicBoardSummaryVisibleCardIdentityTest::RunTest(const FString& Parame
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryWallsIncludedTest, "Wandbound.Core.PublicBoardSummary.WallsIncluded", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryWallsIncludedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeBoardSummaryState();
+	State.AddWallForTest(FWBWallEdge(FWBTile(4, 4), FWBTile(4, 5)));
+
+	const FWBPublicBoardSummary Summary = WBPublicBoardSummary::Build(State);
+	TestEqual(TEXT("Wall count"), Summary.Walls.Num(), 1);
+	TestEqual(TEXT("Wall ax"), Summary.Walls[0].AX, 4);
+	TestEqual(TEXT("Wall ay"), Summary.Walls[0].AY, 4);
+	TestEqual(TEXT("Wall bx"), Summary.Walls[0].BX, 4);
+	TestEqual(TEXT("Wall by"), Summary.Walls[0].BY, 5);
+	TestEqual(TEXT("Wall orientation"), Summary.Walls[0].Orientation.GetPlainNameString(), FString(TEXT("vertical")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryWallNormalizedTest, "Wandbound.Core.PublicBoardSummary.WallEdgeNormalized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryWallNormalizedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData ForwardState = MakeBoardSummaryState();
+	ForwardState.AddWallForTest(FWBWallEdge(FWBTile(4, 4), FWBTile(4, 5)));
+	FWBGameStateData ReverseState = MakeBoardSummaryState();
+	ReverseState.AddWallForTest(FWBWallEdge(FWBTile(4, 5), FWBTile(4, 4)));
+
+	const FWBPublicBoardSummary ForwardSummary = WBPublicBoardSummary::Build(ForwardState);
+	const FWBPublicBoardSummary ReverseSummary = WBPublicBoardSummary::Build(ReverseState);
+	TestEqual(TEXT("Forward wall count"), ForwardSummary.Walls.Num(), 1);
+	TestEqual(TEXT("Reverse wall count"), ReverseSummary.Walls.Num(), 1);
+	TestEqual(TEXT("AX matches"), ForwardSummary.Walls[0].AX, ReverseSummary.Walls[0].AX);
+	TestEqual(TEXT("AY matches"), ForwardSummary.Walls[0].AY, ReverseSummary.Walls[0].AY);
+	TestEqual(TEXT("BX matches"), ForwardSummary.Walls[0].BX, ReverseSummary.Walls[0].BX);
+	TestEqual(TEXT("BY matches"), ForwardSummary.Walls[0].BY, ReverseSummary.Walls[0].BY);
+	TestEqual(
+		TEXT("Orientation matches"),
+		ForwardSummary.Walls[0].Orientation.GetPlainNameString(),
+		ReverseSummary.Walls[0].Orientation.GetPlainNameString());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryWallSortTest, "Wandbound.Core.PublicBoardSummary.WallsSortedDeterministically", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryWallSortTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeBoardSummaryState();
+	State.AddWallForTest(FWBWallEdge(FWBTile(5, 5), FWBTile(5, 6)));
+	State.AddWallForTest(FWBWallEdge(FWBTile(1, 2), FWBTile(2, 2)));
+	State.AddWallForTest(FWBWallEdge(FWBTile(0, 1), FWBTile(0, 2)));
+
+	const FWBPublicBoardSummary Summary = WBPublicBoardSummary::Build(State);
+	TestEqual(TEXT("Wall count"), Summary.Walls.Num(), 3);
+	TestEqual(TEXT("First wall ay"), Summary.Walls[0].AY, 1);
+	TestEqual(TEXT("First wall ax"), Summary.Walls[0].AX, 0);
+	TestEqual(TEXT("Second wall ay"), Summary.Walls[1].AY, 2);
+	TestEqual(TEXT("Second wall ax"), Summary.Walls[1].AX, 1);
+	TestEqual(TEXT("Third wall ay"), Summary.Walls[2].AY, 5);
+	TestEqual(TEXT("Third wall ax"), Summary.Walls[2].AX, 5);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryInvalidWallExcludedTest, "Wandbound.Core.PublicBoardSummary.InvalidWallExcluded", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryInvalidWallExcludedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeBoardSummaryState();
+	State.Walls.Add(FWBWallEdge(FWBTile(1, 1), FWBTile(3, 3)));
+
+	const FWBPublicBoardSummary Summary = WBPublicBoardSummary::Build(State);
+	TestEqual(TEXT("Invalid wall excluded"), Summary.Walls.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryTerrainIncludedTest, "Wandbound.Core.PublicBoardSummary.TerrainIncluded", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryTerrainIncludedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeBoardSummaryState();
+	State.SetTerrainForTest(FWBTile(2, 3), FName(TEXT("Mud")));
+
+	const FWBPublicBoardSummary Summary = WBPublicBoardSummary::Build(State);
+	TestEqual(TEXT("Default terrain"), Summary.DefaultTerrainId.GetPlainNameString(), FString(TEXT("Normal")));
+	TestEqual(TEXT("Terrain count"), Summary.TerrainTiles.Num(), 1);
+	TestEqual(TEXT("Terrain x"), Summary.TerrainTiles[0].X, 2);
+	TestEqual(TEXT("Terrain y"), Summary.TerrainTiles[0].Y, 3);
+	TestEqual(TEXT("Terrain id"), Summary.TerrainTiles[0].TerrainId.GetPlainNameString(), FString(TEXT("mud")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryDefaultTerrainExcludedTest, "Wandbound.Core.PublicBoardSummary.DefaultTerrainExcluded", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryDefaultTerrainExcludedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeBoardSummaryState();
+	State.SetTerrainForTest(FWBTile(2, 3), FName(TEXT("Normal")));
+
+	const FWBPublicBoardSummary Summary = WBPublicBoardSummary::Build(State);
+	TestEqual(TEXT("Default terrain"), Summary.DefaultTerrainId.GetPlainNameString(), FString(TEXT("Normal")));
+	TestEqual(TEXT("Default terrain tile omitted"), Summary.TerrainTiles.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryTerrainSortTest, "Wandbound.Core.PublicBoardSummary.TerrainSortedDeterministically", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryTerrainSortTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeBoardSummaryState();
+	State.SetTerrainForTest(FWBTile(5, 5), FName(TEXT("lava")));
+	State.SetTerrainForTest(FWBTile(1, 2), FName(TEXT("ice")));
+	State.SetTerrainForTest(FWBTile(1, 1), FName(TEXT("water")));
+
+	const FWBPublicBoardSummary Summary = WBPublicBoardSummary::Build(State);
+	TestEqual(TEXT("Terrain count"), Summary.TerrainTiles.Num(), 3);
+	TestEqual(TEXT("First terrain y"), Summary.TerrainTiles[0].Y, 1);
+	TestEqual(TEXT("First terrain x"), Summary.TerrainTiles[0].X, 1);
+	TestEqual(TEXT("Second terrain y"), Summary.TerrainTiles[1].Y, 2);
+	TestEqual(TEXT("Second terrain x"), Summary.TerrainTiles[1].X, 1);
+	TestEqual(TEXT("Third terrain y"), Summary.TerrainTiles[2].Y, 5);
+	TestEqual(TEXT("Third terrain x"), Summary.TerrainTiles[2].X, 5);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryFixtureScenariosTest, "Wandbound.Core.PublicBoardSummary.FixtureScenarios", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBPublicBoardSummaryFixtureScenariosTest::RunTest(const FString& Parameters)
 {
 	const TArray<FString> FixtureNames = {
 		TEXT("public_board_summary_units_sorted.json"),
 		TEXT("public_board_summary_statuses_sorted.json"),
-		TEXT("public_board_summary_hidden_data_excluded.json")
+		TEXT("public_board_summary_hidden_data_excluded.json"),
+		TEXT("public_board_summary_walls_sorted.json"),
+		TEXT("public_board_summary_wall_edge_normalized.json"),
+		TEXT("public_board_summary_terrain_sparse_sorted.json"),
+		TEXT("public_board_summary_wall_terrain_hidden_data_excluded.json")
 	};
 
 	for (const FString& FixtureName : FixtureNames)

@@ -256,6 +256,59 @@ bool ExpectUnitJsonMatches(
 	return true;
 }
 
+bool ExpectWallJsonMatches(
+	FAutomationTestBase& Test,
+	const FString& Label,
+	const TSharedPtr<FJsonObject>& Expected,
+	const TSharedPtr<FJsonObject>& Actual)
+{
+	const TCHAR* IntegerFields[] = {
+		TEXT("ax"),
+		TEXT("ay"),
+		TEXT("bx"),
+		TEXT("by")
+	};
+
+	for (const TCHAR* FieldName : IntegerFields)
+	{
+		int32 ExpectedValue = -1;
+		int32 ActualValue = -1;
+		TryReadIntegerField(Expected, FieldName, ExpectedValue);
+		TryReadIntegerField(Actual, FieldName, ActualValue);
+		Test.TestEqual(*FString::Printf(TEXT("%s %s"), *Label, FieldName), ActualValue, ExpectedValue);
+	}
+
+	FString ExpectedOrientation;
+	FString ActualOrientation;
+	Expected->TryGetStringField(TEXT("orientation"), ExpectedOrientation);
+	Actual->TryGetStringField(TEXT("orientation"), ActualOrientation);
+	Test.TestEqual(*FString::Printf(TEXT("%s orientation"), *Label), ActualOrientation, ExpectedOrientation);
+	return true;
+}
+
+bool ExpectTerrainJsonMatches(
+	FAutomationTestBase& Test,
+	const FString& Label,
+	const TSharedPtr<FJsonObject>& Expected,
+	const TSharedPtr<FJsonObject>& Actual)
+{
+	int32 ExpectedInt = -1;
+	int32 ActualInt = -1;
+	TryReadIntegerField(Expected, TEXT("x"), ExpectedInt);
+	TryReadIntegerField(Actual, TEXT("x"), ActualInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s x"), *Label), ActualInt, ExpectedInt);
+	TryReadIntegerField(Expected, TEXT("y"), ExpectedInt);
+	TryReadIntegerField(Actual, TEXT("y"), ActualInt);
+	Test.TestEqual(*FString::Printf(TEXT("%s y"), *Label), ActualInt, ExpectedInt);
+
+	FString ExpectedTerrainId;
+	FString ActualTerrainId;
+	Expected->TryGetStringField(TEXT("terrain_id"), ExpectedTerrainId);
+	Actual->TryGetStringField(TEXT("terrain_id"), ActualTerrainId);
+	Test.TestEqual(*FString::Printf(TEXT("%s terrain id"), *Label), ActualTerrainId, ExpectedTerrainId);
+	return true;
+}
+
 bool ExpectBoardSummaryJsonMatches(
 	FAutomationTestBase& Test,
 	const FString& Label,
@@ -270,6 +323,14 @@ bool ExpectBoardSummaryJsonMatches(
 	TryReadIntegerField(Expected, TEXT("board_height"), ExpectedInt);
 	TryReadIntegerField(Actual, TEXT("board_height"), ActualInt);
 	Test.TestEqual(*FString::Printf(TEXT("%s board height"), *Label), ActualInt, ExpectedInt);
+
+	FString ExpectedDefaultTerrainId;
+	FString ActualDefaultTerrainId;
+	if (Expected->TryGetStringField(TEXT("default_terrain_id"), ExpectedDefaultTerrainId))
+	{
+		Actual->TryGetStringField(TEXT("default_terrain_id"), ActualDefaultTerrainId);
+		Test.TestEqual(*FString::Printf(TEXT("%s default terrain"), *Label), ActualDefaultTerrainId, ExpectedDefaultTerrainId);
+	}
 
 	const TArray<TSharedPtr<FJsonValue>>* ExpectedUnits = GetArrayField(Expected, TEXT("units"));
 	const TArray<TSharedPtr<FJsonValue>>* ActualUnits = GetArrayField(Actual, TEXT("units"));
@@ -291,6 +352,49 @@ bool ExpectBoardSummaryJsonMatches(
 			(*ActualUnits)[Index].IsValid() ? (*ActualUnits)[Index]->AsObject() : nullptr);
 	}
 
+	const TArray<TSharedPtr<FJsonValue>>* ExpectedWalls = GetArrayField(Expected, TEXT("walls"));
+	const TArray<TSharedPtr<FJsonValue>>* ActualWalls = GetArrayField(Actual, TEXT("walls"));
+	if (ExpectedWalls != nullptr)
+	{
+		Test.TestTrue(*FString::Printf(TEXT("%s actual walls"), *Label), ActualWalls != nullptr);
+		if (ActualWalls != nullptr)
+		{
+			Test.TestEqual(*FString::Printf(TEXT("%s wall count"), *Label), ActualWalls->Num(), ExpectedWalls->Num());
+			const int32 NumWallsToCompare = FMath::Min(ActualWalls->Num(), ExpectedWalls->Num());
+			for (int32 Index = 0; Index < NumWallsToCompare; ++Index)
+			{
+				ExpectWallJsonMatches(
+					Test,
+					FString::Printf(TEXT("%s wall %d"), *Label, Index),
+					(*ExpectedWalls)[Index].IsValid() ? (*ExpectedWalls)[Index]->AsObject() : nullptr,
+					(*ActualWalls)[Index].IsValid() ? (*ActualWalls)[Index]->AsObject() : nullptr);
+			}
+		}
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* ExpectedTerrainTiles = GetArrayField(Expected, TEXT("terrain_tiles"));
+	const TArray<TSharedPtr<FJsonValue>>* ActualTerrainTiles = GetArrayField(Actual, TEXT("terrain_tiles"));
+	if (ExpectedTerrainTiles != nullptr)
+	{
+		Test.TestTrue(*FString::Printf(TEXT("%s actual terrain tiles"), *Label), ActualTerrainTiles != nullptr);
+		if (ActualTerrainTiles != nullptr)
+		{
+			Test.TestEqual(
+				*FString::Printf(TEXT("%s terrain tile count"), *Label),
+				ActualTerrainTiles->Num(),
+				ExpectedTerrainTiles->Num());
+			const int32 NumTerrainTilesToCompare = FMath::Min(ActualTerrainTiles->Num(), ExpectedTerrainTiles->Num());
+			for (int32 Index = 0; Index < NumTerrainTilesToCompare; ++Index)
+			{
+				ExpectTerrainJsonMatches(
+					Test,
+					FString::Printf(TEXT("%s terrain %d"), *Label, Index),
+					(*ExpectedTerrainTiles)[Index].IsValid() ? (*ExpectedTerrainTiles)[Index]->AsObject() : nullptr,
+					(*ActualTerrainTiles)[Index].IsValid() ? (*ActualTerrainTiles)[Index]->AsObject() : nullptr);
+			}
+		}
+	}
+
 	return true;
 }
 }
@@ -300,6 +404,8 @@ bool FWBRuntimeResultBoardSummaryAfterMoveTest::RunTest(const FString& Parameter
 {
 	FWBGameStateData State = MakeRuntimeBoardState();
 	TestTrue(TEXT("Unit added"), State.AddUnitForTest(MakeRuntimeBoardUnit(1, 0, FWBTile(4, 4), TEXT("char_mover_public"))));
+	State.AddWallForTest(FWBWallEdge(FWBTile(1, 1), FWBTile(1, 2)));
+	State.SetTerrainForTest(FWBTile(2, 3), FName(TEXT("mud")));
 	FWBRuntimeTurnResolutionContext Context;
 	const FWBRuntimeSelectedActionResult Envelope = WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult(
 		State,
@@ -321,6 +427,18 @@ bool FWBRuntimeResultBoardSummaryAfterMoveTest::RunTest(const FString& Parameter
 		TestEqual(TEXT("Moved unit x"), X, 5);
 		TestEqual(TEXT("Moved unit y"), Y, 4);
 	}
+	const TArray<TSharedPtr<FJsonValue>>* Walls = GetArrayField(BoardSummary, TEXT("walls"));
+	const TArray<TSharedPtr<FJsonValue>>* TerrainTiles = GetArrayField(BoardSummary, TEXT("terrain_tiles"));
+	TestTrue(TEXT("Walls array exists"), Walls != nullptr);
+	TestTrue(TEXT("Terrain tiles array exists"), TerrainTiles != nullptr);
+	if (Walls != nullptr)
+	{
+		TestEqual(TEXT("Wall preserved after move"), Walls->Num(), 1);
+	}
+	if (TerrainTiles != nullptr)
+	{
+		TestEqual(TEXT("Terrain preserved after move"), TerrainTiles->Num(), 1);
+	}
 	return true;
 }
 
@@ -334,6 +452,8 @@ bool FWBRuntimeResultBoardSummaryAfterFullTurnTest::RunTest(const FString& Param
 	PoisonUnit.AddStatus(FName(TEXT("Poison")), 2);
 	TestTrue(TEXT("Burn unit added"), State.AddUnitForTest(BurnUnit));
 	TestTrue(TEXT("Poison unit added"), State.AddUnitForTest(PoisonUnit));
+	State.AddWallForTest(FWBWallEdge(FWBTile(1, 1), FWBTile(2, 1)));
+	State.SetTerrainForTest(FWBTile(2, 3), FName(TEXT("lava")));
 
 	FWBFixedMPRollSource RollSource(4);
 	FWBRuntimeTurnResolutionContext Context;
@@ -368,6 +488,18 @@ bool FWBRuntimeResultBoardSummaryAfterFullTurnTest::RunTest(const FString& Param
 		TestEqual(TEXT("Poison HP clamped"), HP, 4);
 		TestEqual(TEXT("Poison max HP reduced"), MaxHP, 4);
 		TestEqual(TEXT("Next player attacks reset"), AttacksLeft, 2);
+	}
+	const TArray<TSharedPtr<FJsonValue>>* Walls = GetArrayField(BoardSummary, TEXT("walls"));
+	const TArray<TSharedPtr<FJsonValue>>* TerrainTiles = GetArrayField(BoardSummary, TEXT("terrain_tiles"));
+	TestTrue(TEXT("Walls array exists"), Walls != nullptr);
+	TestTrue(TEXT("Terrain tiles array exists"), TerrainTiles != nullptr);
+	if (Walls != nullptr)
+	{
+		TestEqual(TEXT("Wall preserved after full turn"), Walls->Num(), 1);
+	}
+	if (TerrainTiles != nullptr)
+	{
+		TestEqual(TEXT("Terrain preserved after full turn"), TerrainTiles->Num(), 1);
 	}
 	return true;
 }
@@ -416,6 +548,81 @@ bool FWBRuntimeResultBoardSummaryJsonFieldTest::RunTest(const FString& Parameter
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeResultBoardSummaryWallsJsonTest, "Wandbound.Core.RuntimeResultBoardSummary.WallsSerialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeResultBoardSummaryWallsJsonTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeRuntimeBoardState();
+	TestTrue(TEXT("Unit added"), State.AddUnitForTest(MakeRuntimeBoardUnit(1, 0, FWBTile(4, 4), TEXT("char_visible_public"))));
+	State.AddWallForTest(FWBWallEdge(FWBTile(4, 5), FWBTile(4, 4)));
+
+	FWBRuntimeTurnResolutionContext Context;
+	Context.bResolveEndTurnAsFullTransition = false;
+	const FWBRuntimeSelectedActionResult Envelope = WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult(
+		State,
+		MakeRuntimeBoardAction(EWBActionType::EndTurn, 0),
+		Context);
+
+	FString Json;
+	const TSharedPtr<FJsonObject> Root = SerializeRuntimeBoardResultToObject(Envelope, Json);
+	const TSharedPtr<FJsonObject> BoardSummary = GetObjectField(Root, TEXT("final_public_board_summary"));
+	const TArray<TSharedPtr<FJsonValue>>* Walls = GetArrayField(BoardSummary, TEXT("walls"));
+	TestTrue(TEXT("Walls array exists"), Walls != nullptr);
+	if (Walls != nullptr)
+	{
+		TestEqual(TEXT("Wall count"), Walls->Num(), 1);
+		const TSharedPtr<FJsonObject> Wall = (*Walls)[0].IsValid() ? (*Walls)[0]->AsObject() : nullptr;
+		int32 Value = -1;
+		TryReadIntegerField(Wall, TEXT("ax"), Value);
+		TestEqual(TEXT("Wall ax normalized"), Value, 4);
+		TryReadIntegerField(Wall, TEXT("ay"), Value);
+		TestEqual(TEXT("Wall ay normalized"), Value, 4);
+		TryReadIntegerField(Wall, TEXT("by"), Value);
+		TestEqual(TEXT("Wall by normalized"), Value, 5);
+		FString Orientation;
+		Wall->TryGetStringField(TEXT("orientation"), Orientation);
+		TestEqual(TEXT("Wall orientation"), Orientation, FString(TEXT("vertical")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeResultBoardSummaryTerrainJsonTest, "Wandbound.Core.RuntimeResultBoardSummary.SparseTerrainSerialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeResultBoardSummaryTerrainJsonTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeRuntimeBoardState();
+	TestTrue(TEXT("Unit added"), State.AddUnitForTest(MakeRuntimeBoardUnit(1, 0, FWBTile(4, 4), TEXT("char_visible_public"))));
+	State.SetTerrainForTest(FWBTile(2, 3), FName(TEXT("Mud")));
+
+	FWBRuntimeTurnResolutionContext Context;
+	Context.bResolveEndTurnAsFullTransition = false;
+	const FWBRuntimeSelectedActionResult Envelope = WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult(
+		State,
+		MakeRuntimeBoardAction(EWBActionType::EndTurn, 0),
+		Context);
+
+	FString Json;
+	const TSharedPtr<FJsonObject> Root = SerializeRuntimeBoardResultToObject(Envelope, Json);
+	const TSharedPtr<FJsonObject> BoardSummary = GetObjectField(Root, TEXT("final_public_board_summary"));
+	FString DefaultTerrainId;
+	BoardSummary->TryGetStringField(TEXT("default_terrain_id"), DefaultTerrainId);
+	TestEqual(TEXT("Default terrain id"), DefaultTerrainId, FString(TEXT("Normal")));
+	const TArray<TSharedPtr<FJsonValue>>* TerrainTiles = GetArrayField(BoardSummary, TEXT("terrain_tiles"));
+	TestTrue(TEXT("Terrain tiles array exists"), TerrainTiles != nullptr);
+	if (TerrainTiles != nullptr)
+	{
+		TestEqual(TEXT("Terrain tile count"), TerrainTiles->Num(), 1);
+		const TSharedPtr<FJsonObject> Terrain = (*TerrainTiles)[0].IsValid() ? (*TerrainTiles)[0]->AsObject() : nullptr;
+		int32 Value = -1;
+		TryReadIntegerField(Terrain, TEXT("x"), Value);
+		TestEqual(TEXT("Terrain x"), Value, 2);
+		TryReadIntegerField(Terrain, TEXT("y"), Value);
+		TestEqual(TEXT("Terrain y"), Value, 3);
+		FString TerrainId;
+		Terrain->TryGetStringField(TEXT("terrain_id"), TerrainId);
+		TestEqual(TEXT("Terrain id"), TerrainId, FString(TEXT("mud")));
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeResultBoardSummaryHiddenDataTest, "Wandbound.Core.RuntimeResultBoardSummary.HiddenDataExcluded", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBRuntimeResultBoardSummaryHiddenDataTest::RunTest(const FString& Parameters)
 {
@@ -448,7 +655,9 @@ bool FWBRuntimeResultBoardSummaryFixtureScenariosTest::RunTest(const FString& Pa
 {
 	const TArray<FString> FixtureNames = {
 		TEXT("runtime_result_serialization_public_board_summary_after_move.json"),
-		TEXT("runtime_result_serialization_public_board_summary_after_full_turn.json")
+		TEXT("runtime_result_serialization_public_board_summary_after_full_turn.json"),
+		TEXT("runtime_result_serialization_public_wall_terrain_after_move.json"),
+		TEXT("runtime_result_serialization_public_wall_terrain_after_full_turn.json")
 	};
 
 	for (const FString& FixtureName : FixtureNames)
