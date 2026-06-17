@@ -1,0 +1,95 @@
+{
+  "id": "public_board_summary_statuses_sorted",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/ai/ai_env.gd:_status_ids_for_unit",
+    "scripts/sim/game_state.gd:statuses_by_unit"
+  ],
+  "intent": "Public board summary canonicalizes and sorts public unit statuses deterministically.",
+  "operation": "build_public_board_summary",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "card_id": "char_status_test",
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "atk": 2,
+        "ar": 1,
+        "rl_total": 3,
+        "rl_used": 0,
+        "attacks_left": 1
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "stun": {
+          "status_id": "stun",
+          "turns_remaining": 2
+        },
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 1
+        },
+        "root": {
+          "status_id": "root",
+          "turns_remaining": 3
+        }
+      }
+    }
+  },
+  "expected": {
+    "board_width": 9,
+    "board_height": 9,
+    "units": [
+      {
+        "unit_id": 1,
+        "owner_id": 0,
+        "card_id": "char_status_test",
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "atk": 2,
+        "ar": 1,
+        "rl_total": 3,
+        "rl_used": 0,
+        "attacks_left": 1,
+        "statuses": [
+          {
+            "status_id": "Burn",
+            "turns_remaining": 1
+          },
+          {
+            "status_id": "Rooted",
+            "turns_remaining": 3
+          },
+          {
+            "status_id": "Stunned",
+            "turns_remaining": 2
+          }
+        ]
+      }
+    ],
+    "forbidden_substrings": []
+  }
+}

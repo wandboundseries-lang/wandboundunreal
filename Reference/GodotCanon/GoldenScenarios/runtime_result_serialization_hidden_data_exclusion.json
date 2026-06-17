@@ -4,7 +4,7 @@
   "godot_reference": [
     "autoload/Game.gd:end_turn_impl"
   ],
-  "intent": "Runtime result serialization excludes private deck, hand, discard, and unit card identity strings.",
+  "intent": "Runtime result serialization excludes private deck, hand, and discard strings while allowing visible unit card identity.",
   "operation": "apply_runtime_selected_action_with_result_and_serialize",
   "action": {
     "type": "end_turn",
@@ -48,7 +48,7 @@
       {
         "id": 1,
         "owner_id": 0,
-        "card_id": "SECRET_UNIT_CARD_DO_NOT_LEAK",
+        "card_id": "char_visible_public_identity",
         "x": 4,
         "y": 4,
         "hp": 5,
@@ -93,8 +93,7 @@
     "forbidden_substrings": [
       "SECRET_DECK_CARD_DO_NOT_LEAK",
       "SECRET_HAND_CARD_DO_NOT_LEAK",
-      "SECRET_DISCARD_CARD_DO_NOT_LEAK",
-      "SECRET_UNIT_CARD_DO_NOT_LEAK"
+      "SECRET_DISCARD_CARD_DO_NOT_LEAK"
     ]
   }
 }

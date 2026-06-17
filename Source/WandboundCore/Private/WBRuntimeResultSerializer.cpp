@@ -38,6 +38,56 @@ TSharedRef<FJsonObject> PublicTurnSummaryToJsonObject(const FWBPublicTurnSummary
 	return Object;
 }
 
+TSharedRef<FJsonObject> PublicUnitStatusSummaryToJsonObject(const FWBPublicUnitStatusSummary& Status)
+{
+	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+	Object->SetStringField(TEXT("status_id"), Status.StatusId.GetPlainNameString());
+	Object->SetNumberField(TEXT("turns_remaining"), Status.TurnsRemaining);
+	return Object;
+}
+
+TSharedRef<FJsonObject> PublicUnitBoardSummaryToJsonObject(const FWBPublicUnitBoardSummary& Unit)
+{
+	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+	Object->SetNumberField(TEXT("unit_id"), Unit.UnitId);
+	Object->SetNumberField(TEXT("owner_id"), Unit.OwnerId);
+	Object->SetStringField(TEXT("card_id"), Unit.CardId);
+	Object->SetNumberField(TEXT("x"), Unit.X);
+	Object->SetNumberField(TEXT("y"), Unit.Y);
+	Object->SetNumberField(TEXT("hp"), Unit.HP);
+	Object->SetNumberField(TEXT("max_hp"), Unit.MaxHP);
+	Object->SetNumberField(TEXT("atk"), Unit.ATK);
+	Object->SetNumberField(TEXT("ar"), Unit.AR);
+	Object->SetNumberField(TEXT("rl_total"), Unit.RLTotal);
+	Object->SetNumberField(TEXT("rl_used"), Unit.RLUsed);
+	Object->SetNumberField(TEXT("attacks_left"), Unit.AttacksLeft);
+
+	TArray<TSharedPtr<FJsonValue>> Statuses;
+	Statuses.Reserve(Unit.Statuses.Num());
+	for (const FWBPublicUnitStatusSummary& Status : Unit.Statuses)
+	{
+		Statuses.Add(MakeShared<FJsonValueObject>(PublicUnitStatusSummaryToJsonObject(Status)));
+	}
+	Object->SetArrayField(TEXT("statuses"), MoveTemp(Statuses));
+	return Object;
+}
+
+TSharedRef<FJsonObject> PublicBoardSummaryToJsonObject(const FWBPublicBoardSummary& Summary)
+{
+	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+	Object->SetNumberField(TEXT("board_width"), Summary.BoardWidth);
+	Object->SetNumberField(TEXT("board_height"), Summary.BoardHeight);
+
+	TArray<TSharedPtr<FJsonValue>> Units;
+	Units.Reserve(Summary.Units.Num());
+	for (const FWBPublicUnitBoardSummary& Unit : Summary.Units)
+	{
+		Units.Add(MakeShared<FJsonValueObject>(PublicUnitBoardSummaryToJsonObject(Unit)));
+	}
+	Object->SetArrayField(TEXT("units"), MoveTemp(Units));
+	return Object;
+}
+
 TArray<TSharedPtr<FJsonValue>> TraceEventsToJsonValues(const TArray<FWBTraceEvent>& TraceEvents)
 {
 	TArray<TSharedPtr<FJsonValue>> Values;
@@ -76,6 +126,9 @@ TSharedRef<FJsonObject> WBRuntimeResultSerializer::RuntimeSelectedActionResultTo
 	Root->SetObjectField(
 		TEXT("final_public_turn_summary"),
 		PublicTurnSummaryToJsonObject(Result.FinalPublicTurnSummary));
+	Root->SetObjectField(
+		TEXT("final_public_board_summary"),
+		PublicBoardSummaryToJsonObject(Result.FinalPublicBoardSummary));
 
 	return Root;
 }

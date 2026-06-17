@@ -372,6 +372,35 @@
   - UI/Blueprint/3D runtime
   - network replay envelope
 
+## Milestone - Public Board Summary for Runtime Results
+
+- Added deterministic public board summaries:
+  - `FWBPublicUnitStatusSummary`
+  - `FWBPublicUnitBoardSummary`
+  - `FWBPublicBoardSummary`
+  - `WBPublicBoardSummary::Build`
+- Runtime selected-action results now include `FinalPublicBoardSummary`.
+- Runtime result JSON now includes `final_public_board_summary`.
+- Public board summary includes visible unit:
+  - position
+  - owner id
+  - card id
+  - combat fields
+  - public statuses and turns remaining
+- Visible board unit card identity is treated as public, matching Godot public unit observations.
+- Hidden marker identity remains excluded.
+- Deck, hand, and discard contents remain excluded.
+- Unit ordering is deterministic by `y`, then `x`, then `unit_id`.
+- Status ordering is deterministic by canonical public status id.
+- No gameplay, rule, legal-action, `WBActionCodec`, or replay `apply_action` behavior changed.
+- Intentionally not implemented yet:
+  - marker summaries
+  - wall summaries
+  - terrain summaries
+  - discard viewer/public discard summaries
+  - network replay envelope
+  - UI/Blueprint/3D runtime
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

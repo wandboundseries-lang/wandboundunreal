@@ -4,6 +4,7 @@
 #include "WBAction.h"
 #include "WBGameStateData.h"
 #include "WBMPRollSource.h"
+#include "WBPublicBoardSummary.h"
 #include "WBPublicTurnSummary.h"
 #include "WBReplayTrace.h"
 
@@ -21,6 +22,7 @@ struct WANDBOUNDCORE_API FWBRuntimeSelectedActionResult
 	bool bConsumedMPRoll = false;
 	int32 ConsumedMPRoll = 0;
 	FWBPublicTurnSummary FinalPublicTurnSummary;
+	FWBPublicBoardSummary FinalPublicBoardSummary;
 };
 
 class WANDBOUNDCORE_API WBRuntimeTurnResolutionAdapter

@@ -45,6 +45,7 @@ mp_roll.consumed
 mp_roll.value
 traces
 final_public_turn_summary
+final_public_board_summary
 ```
 
 All serialized field names use snake_case.
@@ -89,7 +90,27 @@ The serialized final summary includes:
 - per-player `walls_left`
 - per-player `wall_removals_left`
 
-It does not include board units, card IDs, deck, hand, discard, hidden markers, or pending choices.
+It does not include deck, hand, discard, hidden markers, or pending choices.
+
+## Final Public Board Summary
+
+The serialized final public board summary includes:
+
+- `board_width`
+- `board_height`
+- visible unit `unit_id`
+- visible unit `owner_id`
+- visible unit `card_id`
+- unit `x` and `y`
+- HP/max HP
+- ATK/AR
+- RL total/used
+- attacks left
+- public statuses with turns remaining
+
+Visible unit `card_id` is included because Godot public observations expose visible board unit identity.
+
+Hidden marker identities are excluded. Unreal does not yet have marker state, and marker visibility must be player-perspective scoped when implemented.
 
 ## Hidden Data Exclusions
 
@@ -98,9 +119,10 @@ Tests plant secret tokens in:
 - player deck
 - player hand
 - player discard
-- unit card id
 
 The serialized runtime result is asserted not to contain those tokens.
+
+Visible unit card ids are public and are asserted to serialize.
 
 ## Unchanged Systems
 
@@ -132,6 +154,8 @@ Added:
 - `runtime_result_serialization_full_transition.json`
 - `runtime_result_serialization_basic_end_turn.json`
 - `runtime_result_serialization_hidden_data_exclusion.json`
+- `runtime_result_serialization_public_board_summary_after_move.json`
+- `runtime_result_serialization_public_board_summary_after_full_turn.json`
 
 Added optional fixture operation:
 
@@ -143,7 +167,8 @@ Existing fixture operations remain unchanged.
 
 ## Future TODO
 
-- Add a public board summary once hidden-information policy for units and markers is explicit.
+- Add public wall and terrain summaries.
+- Add marker summaries once hidden/revealed marker policy is represented in Unreal state.
 - Add a network replay envelope separate from existing `apply_action` replay.
 - Add a deterministic random roll source only after reporting remains stable.
 - Add UI/runtime consumers after the C++ JSON contract is proven.

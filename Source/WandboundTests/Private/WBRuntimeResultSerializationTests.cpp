@@ -673,7 +673,7 @@ bool FWBRuntimeResultSerializationHiddenDataTest::RunTest(const FString& Paramet
 	State.Players[0].Hand.Add(TEXT("SECRET_HAND_CARD_DO_NOT_LEAK"));
 	State.Players[0].Discard.Add(TEXT("SECRET_DISCARD_CARD_DO_NOT_LEAK"));
 	FWBUnitState SecretUnit = MakeSerializationUnit(1, 0, FWBTile(4, 4));
-	SecretUnit.CardId = TEXT("SECRET_UNIT_CARD_DO_NOT_LEAK");
+	SecretUnit.CardId = TEXT("char_visible_public_identity");
 	TestTrue(TEXT("Secret unit added"), State.AddUnitForTest(SecretUnit));
 
 	FWBRuntimeTurnResolutionContext Context;
@@ -690,7 +690,7 @@ bool FWBRuntimeResultSerializationHiddenDataTest::RunTest(const FString& Paramet
 	TestFalse(TEXT("Deck secret excluded"), SerializedJson.Contains(TEXT("SECRET_DECK_CARD_DO_NOT_LEAK")));
 	TestFalse(TEXT("Hand secret excluded"), SerializedJson.Contains(TEXT("SECRET_HAND_CARD_DO_NOT_LEAK")));
 	TestFalse(TEXT("Discard secret excluded"), SerializedJson.Contains(TEXT("SECRET_DISCARD_CARD_DO_NOT_LEAK")));
-	TestFalse(TEXT("Unit card secret excluded"), SerializedJson.Contains(TEXT("SECRET_UNIT_CARD_DO_NOT_LEAK")));
+	TestTrue(TEXT("Visible unit card id included"), SerializedJson.Contains(TEXT("char_visible_public_identity")));
 	return true;
 }
 
@@ -786,6 +786,7 @@ bool FWBRuntimeResultSerializationRoundtripTest::RunTest(const FString& Paramete
 	TestTrue(TEXT("mp_roll exists"), GetObjectField(ParsedRoot, TEXT("mp_roll")).IsValid());
 	TestTrue(TEXT("traces exists"), GetArrayField(ParsedRoot, TEXT("traces")) != nullptr);
 	TestTrue(TEXT("final_public_turn_summary exists"), GetObjectField(ParsedRoot, TEXT("final_public_turn_summary")).IsValid());
+	TestTrue(TEXT("final_public_board_summary exists"), GetObjectField(ParsedRoot, TEXT("final_public_board_summary")).IsValid());
 	return true;
 }
 

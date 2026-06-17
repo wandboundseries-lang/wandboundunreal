@@ -1,0 +1,139 @@
+{
+  "id": "runtime_result_serialization_public_board_summary_after_full_turn",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:end_turn_impl",
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/game_state.gd:tick_statuses",
+    "scripts/ai/ai_env.gd:_public_unit_summary"
+  ],
+  "intent": "Runtime result serialization includes final public board summary after full deterministic end-turn transition.",
+  "operation": "apply_runtime_selected_action_with_result_and_serialize",
+  "action": {
+    "type": "end_turn",
+    "kind": "end_turn",
+    "player_id": 0
+  },
+  "runtime_context": {
+    "resolve_end_turn_as_full_transition": true,
+    "fixed_mp_roll": 4
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      {
+        "player_id": 0,
+        "remaining_mp": 2,
+        "last_mp_roll": 2
+      },
+      {
+        "player_id": 1,
+        "remaining_mp": 0,
+        "last_mp_roll": 0
+      }
+    ],
+    "units": [
+      {
+        "id": 1,
+        "owner_id": 0,
+        "card_id": "char_burn_public",
+        "x": 4,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "atk": 2,
+        "ar": 1,
+        "rl_total": 3,
+        "rl_used": 0,
+        "attacks_left": 1,
+        "max_attacks_per_turn": 1
+      },
+      {
+        "id": 2,
+        "owner_id": 1,
+        "card_id": "char_poison_public",
+        "x": 6,
+        "y": 4,
+        "hp": 5,
+        "max_hp": 5,
+        "atk": 3,
+        "ar": 2,
+        "rl_total": 4,
+        "rl_used": 1,
+        "attacks_left": 0,
+        "max_attacks_per_turn": 2
+      }
+    ],
+    "statuses_by_unit": {
+      "1": {
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 2
+        }
+      },
+      "2": {
+        "Poison": {
+          "status_id": "Poison",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "expected_json": {
+    "selected_action_type": "end_turn",
+    "selected_action_id": "end_turn:p0",
+    "ok": true,
+    "consumed_mp_roll": true,
+    "consumed_mp_roll_value": 4,
+    "final_public_board_summary": {
+      "board_width": 9,
+      "board_height": 9,
+      "units": [
+        {
+          "unit_id": 1,
+          "owner_id": 0,
+          "card_id": "char_burn_public",
+          "x": 4,
+          "y": 4,
+          "hp": 4,
+          "max_hp": 5,
+          "atk": 2,
+          "ar": 1,
+          "rl_total": 3,
+          "rl_used": 0,
+          "attacks_left": 1,
+          "statuses": [
+            {
+              "status_id": "Burn",
+              "turns_remaining": 1
+            }
+          ]
+        },
+        {
+          "unit_id": 2,
+          "owner_id": 1,
+          "card_id": "char_poison_public",
+          "x": 6,
+          "y": 4,
+          "hp": 4,
+          "max_hp": 4,
+          "atk": 3,
+          "ar": 2,
+          "rl_total": 4,
+          "rl_used": 1,
+          "attacks_left": 2,
+          "statuses": [
+            {
+              "status_id": "Poison",
+              "turns_remaining": 1
+            }
+          ]
+        }
+      ]
+    },
+    "forbidden_substrings": []
+  }
+}

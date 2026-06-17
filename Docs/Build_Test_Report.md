@@ -4,83 +4,96 @@ Date of check: 2026-06-17 (America/New_York)
 
 ## Scope
 
-This pass added deterministic JSON serialization for `FWBRuntimeSelectedActionResult`.
+This pass added deterministic public board summary reporting and serialization for runtime selected-action results.
 
 Implemented:
 
-- runtime result serialization audit
-- `WBRuntimeResultSerializer`
-- runtime selected-action result JSON object serialization
-- runtime selected-action result JSON string serialization
-- schema version 1
-- public trace event JSON object helper reuse through `WBReplayTrace::TraceEventToJsonObject`
-- public turn summary serialization
-- hidden deck/hand/discard/card-id exclusion coverage
-- additive fixture operation `apply_runtime_selected_action_with_result_and_serialize`
-- runtime result serialization GoldenScenarios fixtures
-- automation coverage for full EndTurn, basic EndTurn, Move, PassResponse, failure reason serialization, hidden data exclusion, action ID stability, existing behavior, JSON roundtrip, and fixture scenarios
+- hidden-information audit for public unit card identity and marker identity policy
+- `FWBPublicBoardSummary`, `FWBPublicUnitBoardSummary`, and `FWBPublicUnitStatusSummary`
+- `WBPublicBoardSummary::Build`
+- runtime selected-action result envelope field `FinalPublicBoardSummary`
+- runtime result JSON field `final_public_board_summary`
+- public unit position, owner, visible card identity, combat fields, action counters, and statuses
+- deterministic public unit ordering by `Y`, then `X`, then `UnitId`
+- deterministic public status ordering with canonical public status IDs
+- fixture state support for public combat fields `atk`, `ar`, `rl_total`, and `rl_used`
+- public board summary GoldenScenarios fixtures
+- runtime result serialization fixtures for public board summary after move and full turn
+- automation coverage for direct board summary building, runtime result serialization, hidden-data exclusion, fixture loading, failed-result summaries, and JSON field presence
 
 Not implemented:
 
 - new gameplay mechanics
 - legal action generation changes
-- full transition as a player legal action
-- `WBActionCodec` action ID changes
-- replay `apply_action` behavior changes
-- random dice generation
-- draw
-- NPC phase
-- attacks
-- cards/effects
-- full death/prevention
+- wall or terrain public summary
+- marker state or marker visibility summary
+- player-perspective marker reveal policy in Unreal
+- deck, hand, discard, pending choice, or private-card serialization
+- network replay envelope semantics
 - UI/Blueprint/3D runtime
 
 No `.uasset`, `.umap`, Blueprint, or Godot project files were changed.
 
-## Serialization Notes
+## Hidden-Information Policy
 
-New serializer API:
+Visible board unit `CardId` is public and included in the public board summary.
+
+Hidden marker card identity remains private. Unreal does not model markers yet, so marker summary fields were not added in this pass. When marker state is introduced, unrevealed enemy marker identity must remain excluded from public summaries.
+
+Deck, hand, discard, pending choices, runtime context, UObject pointers, resources, and file paths remain excluded from runtime result serialization.
+
+## Serialized Public Board Summary
+
+Runtime selected-action result JSON now includes:
 
 ```text
-WBRuntimeResultSerializer::RuntimeSelectedActionResultToJsonObject(Result)
-WBRuntimeResultSerializer::RuntimeSelectedActionResultToJsonString(Result, OutJson)
+final_public_board_summary
 ```
 
 Serialized fields:
 
-- `schema_version`
-- `selected_action.type`
-- `selected_action.action_id`
-- `result.ok`
-- `result.reason`
-- `mp_roll.consumed`
-- `mp_roll.value`
-- `traces`
-- `final_public_turn_summary`
+- `board_width`
+- `board_height`
+- `units`
+- `units[].unit_id`
+- `units[].owner_id`
+- `units[].card_id`
+- `units[].x`
+- `units[].y`
+- `units[].hp`
+- `units[].max_hp`
+- `units[].atk`
+- `units[].ar`
+- `units[].rl_total`
+- `units[].rl_used`
+- `units[].attacks_left`
+- `units[].statuses`
+- `units[].statuses[].status_id`
+- `units[].statuses[].turns_remaining`
 
-`SelectedActionId` comes from the existing envelope field, which is populated from `WBActionCodec::MakeActionId`.
-
-The serializer does not include runtime context, deck, hand, discard, private card IDs, hidden markers, pending choices, UObject pointers, resources, or file paths.
-
-Trace generation is unchanged. Runtime result serialization reuses `WBReplayTrace::TraceEventToJsonObject`.
-
-Replay `apply_action` remains unchanged and still uses `WBActionCodec` plus `WBEffectRunner::ApplyAction`.
+Status IDs are canonical public names such as `Burn`, `Poison`, `Rooted`, `Stunned`, and `Frozen`.
 
 ## Implemented This Pass
 
-- Added `Docs/Runtime_Result_Serialization_Audit.md`.
-- Added `Docs/Runtime_Result_Serialization_Report.md`.
-- Added `Source/WandboundCore/Public/WBRuntimeResultSerializer.h`.
-- Added `Source/WandboundCore/Private/WBRuntimeResultSerializer.cpp`.
-- Updated `Source/WandboundCore/Public/WBReplayTrace.h`.
-- Updated `Source/WandboundCore/Private/WBReplayTrace.cpp`.
-- Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.h`.
+- Added `Docs/Public_Board_Summary_Hidden_Info_Audit.md`.
+- Added `Docs/Public_Board_Summary_Report.md`.
+- Added `Source/WandboundCore/Public/WBPublicBoardSummary.h`.
+- Added `Source/WandboundCore/Private/WBPublicBoardSummary.cpp`.
+- Updated `Source/WandboundCore/Public/WBRuntimeTurnResolutionAdapter.h`.
+- Updated `Source/WandboundCore/Private/WBRuntimeTurnResolutionAdapter.cpp`.
+- Updated `Source/WandboundCore/Private/WBRuntimeResultSerializer.cpp`.
 - Updated `Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp`.
-- Added `Source/WandboundTests/Private/WBRuntimeResultSerializationTests.cpp`.
+- Updated `Source/WandboundTests/Private/WBRuntimeResultSerializationTests.cpp`.
+- Added `Source/WandboundTests/Private/WBPublicBoardSummaryTests.cpp`.
+- Added `Source/WandboundTests/Private/WBRuntimeResultBoardSummarySerializationTests.cpp`.
+- Updated `Reference/GodotCanon/GoldenScenarios/runtime_result_serialization_hidden_data_exclusion.json`.
 - Added GodotCanon fixtures:
-  - `runtime_result_serialization_full_transition.json`
-  - `runtime_result_serialization_basic_end_turn.json`
-  - `runtime_result_serialization_hidden_data_exclusion.json`
+  - `public_board_summary_units_sorted.json`
+  - `public_board_summary_statuses_sorted.json`
+  - `public_board_summary_hidden_data_excluded.json`
+  - `runtime_result_serialization_public_board_summary_after_move.json`
+  - `runtime_result_serialization_public_board_summary_after_full_turn.json`
+- Updated `Docs/Runtime_Result_Serialization_Report.md`.
 - Updated `Docs/Wandbound_Unreal_Migration_Plan.md`.
 
 ## Build
@@ -95,7 +108,7 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 29.47 seconds
+Total execution time: 7.38 seconds
 ```
 
 ## Wandbound Automation Tests
@@ -109,7 +122,7 @@ Command used:
 Result from `Saved/AutomationReports/Wandbound/index.json`:
 
 ```text
-succeeded=152
+succeeded=166
 succeededWithWarnings=0
 failed=0
 notRun=0
@@ -117,16 +130,26 @@ notRun=0
 
 New tests added:
 
-- `Wandbound.Core.RuntimeResultSerialization.ActionIdStability`
-- `Wandbound.Core.RuntimeResultSerialization.BasicEndTurnSerializesNoRoll`
-- `Wandbound.Core.RuntimeResultSerialization.ExistingBehaviorUnchanged`
-- `Wandbound.Core.RuntimeResultSerialization.FailureSerializesReason`
-- `Wandbound.Core.RuntimeResultSerialization.FixtureScenarios`
-- `Wandbound.Core.RuntimeResultSerialization.FullEndTurnSerializesActionIdAndRoll`
-- `Wandbound.Core.RuntimeResultSerialization.HiddenDataExcluded`
-- `Wandbound.Core.RuntimeResultSerialization.JsonParseRoundtripSmoke`
-- `Wandbound.Core.RuntimeResultSerialization.MoveSerializesFinalMP`
-- `Wandbound.Core.RuntimeResultSerialization.PassResponseSerializes`
+- `Wandbound.Core.PublicBoardSummary.FixtureScenarios`
+- `Wandbound.Core.PublicBoardSummary.HiddenDataExcluded`
+- `Wandbound.Core.PublicBoardSummary.IncludesCombatFields`
+- `Wandbound.Core.PublicBoardSummary.IncludesStatuses`
+- `Wandbound.Core.PublicBoardSummary.IncludesVisibleUnitPosition`
+- `Wandbound.Core.PublicBoardSummary.StatusesSortedDeterministically`
+- `Wandbound.Core.PublicBoardSummary.UnitsSortedDeterministically`
+- `Wandbound.Core.PublicBoardSummary.VisibleUnitCardIdentityPolicy`
+- `Wandbound.Core.RuntimeResultBoardSummary.AfterFullEndTurn`
+- `Wandbound.Core.RuntimeResultBoardSummary.AfterMove`
+- `Wandbound.Core.RuntimeResultBoardSummary.FailedInvalidRollSummarizesUnchangedBoard`
+- `Wandbound.Core.RuntimeResultBoardSummary.FixtureScenarios`
+- `Wandbound.Core.RuntimeResultBoardSummary.HiddenDataExcluded`
+- `Wandbound.Core.RuntimeResultBoardSummary.SerializedJsonHasField`
+
+## Exact Errors
+
+Final build and automation reported no errors.
+
+An initial automation run exposed an `FName` display-number serialization issue where status IDs emitted as values like `Burn_588`; this was fixed before the final successful run by canonicalizing status names through plain public strings.
 
 ## Generated File Tracking
 
@@ -145,14 +168,16 @@ The pre-existing untracked `MaxHP` file remains untouched.
 
 Build and automation reported no warnings.
 
+`git diff --stat` reported only LF-to-CRLF working-copy notices for touched text files.
+
 ## Risks/Unknowns
 
-- No public board summary exists yet.
-- Network replay envelope semantics are not defined yet.
-- UI/runtime code is not wired to consume serialized runtime results yet.
-- Random MP generation is intentionally absent.
-- Draw, hooks, card triggers, NPC phase, attacks, and card effects are still absent.
+- Unreal marker state does not exist yet, so hidden marker summary policy is documented but not implemented.
+- Public wall and terrain summaries are not included yet.
+- No player-perspective marker visibility summary exists yet.
+- Runtime/UI/network consumers are not wired to consume the serialized public board summary yet.
+- Discard visibility policy remains outside this board-summary pass.
 
 ## Next Recommended Implementation Milestone
 
-Add a deterministic public board summary for runtime results, covering only public unit positions and public combat/status fields after explicitly auditing hidden marker and card identity policy.
+Add deterministic public wall and terrain summaries to runtime results, preserving the current public board unit summary and keeping hidden marker identity out until marker state is modeled.

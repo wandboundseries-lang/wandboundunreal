@@ -674,6 +674,10 @@ bool ApplyFixtureUnits(const TSharedPtr<FJsonObject>& StateObject, FWBGameStateD
 		UnitObject->TryGetStringField(TEXT("card_id"), Unit.CardId);
 		Unit.HP = ReadIntegerFieldOrDefault(UnitObject, TEXT("hp"), Unit.HP);
 		Unit.MaxHP = ReadIntegerFieldOrDefault(UnitObject, TEXT("max_hp"), Unit.MaxHP);
+		Unit.ATK = ReadIntegerFieldOrDefault(UnitObject, TEXT("atk"), Unit.ATK);
+		Unit.AR = ReadIntegerFieldOrDefault(UnitObject, TEXT("ar"), Unit.AR);
+		Unit.RLTotal = ReadIntegerFieldOrDefault(UnitObject, TEXT("rl_total"), Unit.RLTotal);
+		Unit.RLUsed = ReadIntegerFieldOrDefault(UnitObject, TEXT("rl_used"), Unit.RLUsed);
 		Unit.AttacksLeft = ReadIntegerFieldOrDefault(UnitObject, TEXT("attacks_left"), Unit.AttacksLeft);
 		Unit.MaxAttacksPerTurn = ReadIntegerFieldOrDefault(UnitObject, TEXT("max_attacks_per_turn"), Unit.MaxAttacksPerTurn);
 		Unit.MPRemaining = ReadIntegerFieldOrDefault(UnitObject, TEXT("mp_remaining"), 0);
