@@ -405,6 +405,38 @@
   - UI/Blueprint/3D runtime
   - network replay envelope
 
+## Milestone - Attack Damage Resolution
+
+- Added deterministic pending attack state:
+  - attacker unit id
+  - defender unit id
+  - attacking player id
+  - declaration tiles
+  - declaration action id
+- Attack declaration now stages pending attack data after spending `AttacksLeft`.
+- Attack declaration fails while another pending attack is active.
+- Added deterministic attack damage resolution through `WBEffectRunner::ApplyPendingAttackDamage`.
+- Damage uses the current attacker's non-negative `ATK`, clamps defender HP at zero, and does not remove units.
+- Frozen defenders break before damage:
+  - `Frozen` is removed
+  - no HP damage is applied
+  - pending attack is cleared
+- Friendly targets remain illegal except for the Godot-confirmed friendly Frozen break case.
+- Added `attack_damage_resolved` replay traces.
+- Added `status_removed` traces for Frozen break resolution.
+- Added `damage_amount` replay trace serialization.
+- Pending attack state is intentionally excluded from public runtime summaries.
+- Legal action generation does not expose attack damage resolution as a player-selectable action.
+- Intentionally not implemented yet:
+  - pre-hit/post-hit response windows
+  - armor/prevention/replacement effects
+  - death/removal
+  - counters
+  - passives
+  - wands
+  - terrain attack modifiers
+  - UI/Blueprint/3D runtime
+
 ## Milestone - Public Board Summary for Runtime Results
 
 - Added deterministic public board summaries:

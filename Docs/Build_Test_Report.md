@@ -234,6 +234,66 @@ notRun=0
 
 ## Remaining Risks/Unknowns
 
-- Friendly frozen attack/break-Frozen behavior is out of scope until attack damage/resolution exists.
+- Friendly frozen attack/break-Frozen behavior is now covered by the attack damage resolution pass.
 - Diagonal, ignore-wall, through-wall, ignore-unit, and passive-modified attacks remain out of scope.
 - Neutral target behavior is currently treated as enemy targeting when the acting unit belongs to the active player.
+
+---
+
+# Attack Damage Resolution Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 5.85 seconds
+```
+
+The first full build after adding the attack damage files also succeeded in 39.02 seconds.
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=215
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added deterministic pending attack state staged by attack declaration.
+- Added `WBEffectRunner::ApplyPendingAttackDamage`.
+- Attack damage uses current non-negative attacker `ATK`, reduces defender HP, and clamps HP at zero.
+- Frozen defenders break before damage, removing `Frozen` and applying no HP damage.
+- Friendly attacks remain illegal except for the Godot-confirmed friendly Frozen break case.
+- Added `attack_damage_resolved` traces, Frozen `status_removed` traces, and `damage_amount` trace serialization.
+- Pending attack state stays out of public runtime summaries and is not generated as a player-selectable legal action.
+- No `.uasset`, `.umap`, Blueprint, UI, VFX, response-window, counter, passive, wand, armor, prevention, death/removal, or terrain attack modifier work was added.
+
+## New Tests Added
+
+- `Wandbound.Core.AttackDamage.*`
+- Fixture-driven coverage for attack damage success/failure cases under `Reference/GodotCanon/GoldenScenarios/`
+
+## Remaining Risks/Unknowns
+
+- Godot stores declaration-time attack damage in pending attack state; Unreal currently resolves from current attacker `ATK` because this pass kept pending attack data minimal.
+- Armor, prevention, replacement, death/removal, counterattacks, passives, wands, terrain attack modifiers, and response windows remain future work.
+- Friendly Frozen targeting is implemented only for the narrow break-Frozen case verified in the Godot audit.

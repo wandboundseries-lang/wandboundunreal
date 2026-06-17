@@ -338,6 +338,21 @@ bool FWBGameStateData::ApplyTurnStartResourceSetupForPlayer(
 	return true;
 }
 
+bool FWBGameStateData::HasPendingAttack() const
+{
+	return PendingAttack.bActive;
+}
+
+void FWBGameStateData::ClearPendingAttack()
+{
+	PendingAttack = FWBPendingAttackState();
+}
+
+void FWBGameStateData::SetPendingAttackForTest(const FWBPendingAttackState& InPendingAttack)
+{
+	PendingAttack = InPendingAttack;
+}
+
 const FWBUnitState* FWBGameStateData::GetUnitById(const int32 UnitId) const
 {
 	for (const FWBUnitState& Unit : Units)

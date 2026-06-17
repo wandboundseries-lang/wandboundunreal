@@ -39,6 +39,7 @@ public:
 	static bool HasOrthogonalLineOfSight(const FWBGameStateData& State, const FWBTile& From, const FWBTile& To, FString& OutReason);
 	static FWBMoveQueryResult QueryMove(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBActionQueryResult CanResolvePendingAttackDamage(const FWBGameStateData& State);
 	static FWBActionQueryResult QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult QueryPass(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult QueryPassResponse(const FWBGameStateData& State, const FWBAction& Action);

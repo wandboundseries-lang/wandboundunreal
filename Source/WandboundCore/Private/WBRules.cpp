@@ -25,6 +25,11 @@ bool HasAttackBlockingStatus(const FWBUnitState& Unit)
 		|| Unit.HasStatus(FName(TEXT("no_attack")));
 }
 
+bool IsFrozen(const FWBUnitState& Unit)
+{
+	return Unit.HasStatus(FName(TEXT("Frozen")));
+}
+
 bool UnitTileLess(const FWBUnitState& A, const FWBUnitState& B)
 {
 	if (A.Y != B.Y)
@@ -359,6 +364,11 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 		return FWBActionQueryResult::Deny(TEXT("not_normal_turn"));
 	}
 
+	if (State.HasPendingAttack())
+	{
+		return FWBActionQueryResult::Deny(TEXT("pending_attack_already_active"));
+	}
+
 	const FWBUnitState* Attacker = State.GetUnitById(Action.SourceUnitId);
 	if (Attacker == nullptr)
 	{
@@ -383,7 +393,10 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 
 	if (Defender->OwnerId == Attacker->OwnerId)
 	{
-		return FWBActionQueryResult::Deny(TEXT("friendly_target"));
+		if (!IsFrozen(*Defender))
+		{
+			return FWBActionQueryResult::Deny(TEXT("friendly_target"));
+		}
 	}
 
 	const FWBTile AttackerTile(Attacker->X, Attacker->Y);
@@ -417,6 +430,41 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 	if (!HasOrthogonalLineOfSight(State, AttackerTile, DefenderTile, LOSReason))
 	{
 		return FWBActionQueryResult::Deny(*LOSReason);
+	}
+
+	return FWBActionQueryResult::Ok();
+}
+
+FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateData& State)
+{
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (!State.HasPendingAttack())
+	{
+		return FWBActionQueryResult::Deny(TEXT("missing_pending_attack"));
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(State.PendingAttack.AttackingPlayerId))
+	{
+		return FWBActionQueryResult::Deny(TEXT("bad_player"));
+	}
+
+	if (State.PendingAttack.AttackerUnitId == State.PendingAttack.DefenderUnitId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("same_unit"));
+	}
+
+	if (State.GetUnitById(State.PendingAttack.AttackerUnitId) == nullptr)
+	{
+		return FWBActionQueryResult::Deny(TEXT("missing_attacker"));
+	}
+
+	if (State.GetUnitById(State.PendingAttack.DefenderUnitId) == nullptr)
+	{
+		return FWBActionQueryResult::Deny(TEXT("missing_defender"));
 	}
 
 	return FWBActionQueryResult::Ok();

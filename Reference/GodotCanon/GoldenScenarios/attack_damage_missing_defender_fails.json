@@ -1,0 +1,48 @@
+{
+  "id": "attack_damage_missing_defender_fails",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:_advance_pending_attack"
+  ],
+  "intent": "Damage resolution fails without mutation when the pending defender is missing.",
+  "operation": "apply_pending_attack_damage",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2, "last_mp_roll": 2 },
+      { "player_id": 1, "remaining_mp": 0, "last_mp_roll": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_attacker", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "atk": 2, "ar": 1, "attacks_left": 1 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {},
+    "pending_attack": {
+      "active": true,
+      "attacker_unit_id": 1,
+      "defender_unit_id": 99,
+      "attacking_player_id": 0,
+      "attacker_tile": { "x": 4, "y": 4 },
+      "defender_tile": { "x": 5, "y": 4 },
+      "declaration_action_id": "attack:p0:u1:t99"
+    }
+  },
+  "expected": {
+    "ok": false,
+    "reason_contains": "missing_defender",
+    "expected_trace_order": [],
+    "pending_attack": {
+      "active": true,
+      "attacker_unit_id": 1,
+      "defender_unit_id": 99,
+      "attacking_player_id": 0,
+      "declaration_action_id": "attack:p0:u1:t99"
+    },
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "attacks_left": 1, "statuses": [] }
+    ]
+  }
+}

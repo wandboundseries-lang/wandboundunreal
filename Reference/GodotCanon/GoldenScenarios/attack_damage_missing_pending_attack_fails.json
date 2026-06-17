@@ -1,0 +1,35 @@
+{
+  "id": "attack_damage_missing_pending_attack_fails",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:_advance_pending_attack"
+  ],
+  "intent": "Damage resolution fails clearly when no attack is pending.",
+  "operation": "apply_pending_attack_damage",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2, "last_mp_roll": 2 },
+      { "player_id": 1, "remaining_mp": 0, "last_mp_roll": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_attacker", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "atk": 2, "ar": 1, "attacks_left": 1 },
+      { "id": 2, "owner_id": 1, "card_id": "test_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5, "atk": 1, "ar": 1, "attacks_left": 1 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": false,
+    "reason_contains": "missing_pending_attack",
+    "expected_trace_order": [],
+    "pending_attack": { "active": false },
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "attacks_left": 1, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "attacks_left": 1, "statuses": [] }
+    ]
+  }
+}

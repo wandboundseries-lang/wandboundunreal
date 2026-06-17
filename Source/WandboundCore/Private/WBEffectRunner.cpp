@@ -1,5 +1,6 @@
 #include "WBEffectRunner.h"
 
+#include "WBActionCodec.h"
 #include "WBRules.h"
 
 namespace
@@ -118,6 +119,55 @@ void AppendStatusExpiredTrace(
 	Event.PreviousStatusTurns = PreviousStatusTurns;
 	Event.NewStatusTurns = 0;
 	Event.bExpiredStatus = true;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendStatusRemovedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const int32 PlayerId,
+	const FName StatusId,
+	const int32 TargetUnitId,
+	const int32 SourceUnitId,
+	const FWBTile& FromTile,
+	const FWBTile& ToTile,
+	const int32 PreviousHP,
+	const int32 NewHP)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("status_removed"));
+	Event.StatusId = StatusId;
+	Event.PlayerId = PlayerId;
+	Event.SourceUnitId = SourceUnitId;
+	Event.TargetUnitId = TargetUnitId;
+	Event.FromTile = FromTile;
+	Event.ToTile = ToTile;
+	Event.DamageAmount = 0;
+	Event.PreviousHP = PreviousHP;
+	Event.NewHP = NewHP;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendAttackDamageResolvedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBPendingAttackState& PendingAttack,
+	const int32 DamageAmount,
+	const int32 PreviousHP,
+	const int32 NewHP)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("attack_damage_resolved"));
+	Event.PlayerId = PendingAttack.AttackingPlayerId;
+	Event.SourceUnitId = PendingAttack.AttackerUnitId;
+	Event.TargetUnitId = PendingAttack.DefenderUnitId;
+	Event.FromTile = PendingAttack.AttackerTile;
+	Event.ToTile = PendingAttack.DefenderTile;
+	Event.ActionId = PendingAttack.DeclarationActionId;
+	Event.DamageAmount = DamageAmount;
+	Event.PreviousHP = PreviousHP;
+	Event.NewHP = NewHP;
+	Event.bAtOrBelowZeroHP = NewHP <= 0;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -249,8 +299,71 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State,
 	AttackEvent.AttacksLeftAfter = Attacker->AttacksLeft;
 	AttackEvent.bOk = true;
 
+	FWBPendingAttackState PendingAttack;
+	PendingAttack.bActive = true;
+	PendingAttack.AttackerUnitId = Attacker->UnitId;
+	PendingAttack.DefenderUnitId = Defender->UnitId;
+	PendingAttack.AttackingPlayerId = Action.PlayerId;
+	PendingAttack.AttackerTile = FWBTile(Attacker->X, Attacker->Y);
+	PendingAttack.DefenderTile = FWBTile(Defender->X, Defender->Y);
+	PendingAttack.DeclarationActionId = WBActionCodec::MakeActionId(Action);
+	State.PendingAttack = PendingAttack;
+
 	Result.bOk = true;
 	Result.TraceEvents.Add(AttackEvent);
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& State)
+{
+	FWBApplyActionResult Result;
+
+	const FWBActionQueryResult DamageQuery = WBRules::CanResolvePendingAttackDamage(State);
+	if (!DamageQuery.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = DamageQuery.Reason;
+		return Result;
+	}
+
+	const FWBPendingAttackState PendingAttack = State.PendingAttack;
+	const FWBUnitState* Attacker = State.GetUnitById(PendingAttack.AttackerUnitId);
+	FWBUnitState* Defender = State.GetMutableUnitById(PendingAttack.DefenderUnitId);
+	if (Attacker == nullptr || Defender == nullptr)
+	{
+		Result.bOk = false;
+		Result.Reason = TEXT("unit_disappeared_before_attack_damage");
+		return Result;
+	}
+
+	const int32 PreviousHP = Defender->HP;
+	if (Defender->HasStatus(FrozenStatusId))
+	{
+		Defender->RemoveStatus(FrozenStatusId);
+		State.ClearPendingAttack();
+
+		Result.bOk = true;
+		AppendStatusRemovedTrace(
+			Result.TraceEvents,
+			PendingAttack.AttackingPlayerId,
+			FrozenStatusId,
+			PendingAttack.DefenderUnitId,
+			PendingAttack.AttackerUnitId,
+			PendingAttack.AttackerTile,
+			PendingAttack.DefenderTile,
+			PreviousHP,
+			Defender->HP);
+		AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, 0, PreviousHP, Defender->HP);
+		return Result;
+	}
+
+	const int32 DamageAmount = FMath::Max(Attacker->ATK, 0);
+	Defender->HP = FMath::Max(PreviousHP - DamageAmount, 0);
+	const int32 NewHP = Defender->HP;
+	State.ClearPendingAttack();
+
+	Result.bOk = true;
+	AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, DamageAmount, PreviousHP, NewHP);
 	return Result;
 }
 

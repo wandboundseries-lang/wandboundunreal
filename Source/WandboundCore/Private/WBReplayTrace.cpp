@@ -110,6 +110,11 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("attacks_left_after"), Event.AttacksLeftAfter);
 	}
 
+	if (Event.DamageAmount != -1)
+	{
+		Object->SetNumberField(TEXT("damage_amount"), Event.DamageAmount);
+	}
+
 	if (Event.PreviousHP != -1)
 	{
 		Object->SetNumberField(TEXT("previous_hp"), Event.PreviousHP);

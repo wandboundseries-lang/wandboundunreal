@@ -767,6 +767,50 @@ bool ApplyFixtureTerrain(const TSharedPtr<FJsonObject>& StateObject, FWBGameStat
 	return true;
 }
 
+bool ApplyFixturePendingAttack(const TSharedPtr<FJsonObject>& StateObject, FWBGameStateData& OutState, FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* PendingAttackObject = nullptr;
+	if (!StateObject->TryGetObjectField(TEXT("pending_attack"), PendingAttackObject)
+		|| PendingAttackObject == nullptr
+		|| !PendingAttackObject->IsValid())
+	{
+		return true;
+	}
+
+	FWBPendingAttackState PendingAttack;
+	PendingAttack.bActive = ReadBoolFieldOrDefault(*PendingAttackObject, TEXT("active"), false);
+	if (!PendingAttack.bActive)
+	{
+		OutState.ClearPendingAttack();
+		OutReason.Reset();
+		return true;
+	}
+
+	const TSharedPtr<FJsonObject>* AttackerTileObject = nullptr;
+	const TSharedPtr<FJsonObject>* DefenderTileObject = nullptr;
+	if (!TryReadIntegerField(*PendingAttackObject, TEXT("attacker_unit_id"), PendingAttack.AttackerUnitId)
+		|| !TryReadIntegerField(*PendingAttackObject, TEXT("defender_unit_id"), PendingAttack.DefenderUnitId)
+		|| !TryReadIntegerField(*PendingAttackObject, TEXT("attacking_player_id"), PendingAttack.AttackingPlayerId)
+		|| !(*PendingAttackObject)->TryGetObjectField(TEXT("attacker_tile"), AttackerTileObject)
+		|| AttackerTileObject == nullptr
+		|| !AttackerTileObject->IsValid()
+		|| !ParseFixtureTile(*AttackerTileObject, PendingAttack.AttackerTile)
+		|| !(*PendingAttackObject)->TryGetObjectField(TEXT("defender_tile"), DefenderTileObject)
+		|| DefenderTileObject == nullptr
+		|| !DefenderTileObject->IsValid()
+		|| !ParseFixtureTile(*DefenderTileObject, PendingAttack.DefenderTile))
+	{
+		OutReason = TEXT("malformed_initial_state_pending_attack");
+		return false;
+	}
+
+	PendingAttack.DeclarationActionId = TEXT("");
+	(*PendingAttackObject)->TryGetStringField(TEXT("declaration_action_id"), PendingAttack.DeclarationActionId);
+	OutState.SetPendingAttackForTest(PendingAttack);
+	OutReason.Reset();
+	return true;
+}
+
 bool ReadExpectedFinalIntegerField(
 	const TSharedPtr<FJsonObject>& ExpectedObject,
 	const TCHAR* FieldName,
@@ -861,7 +905,8 @@ bool BuildGameStateFromFixture(
 	if (!ApplyFixturePlayers(*InitialStateObject, OutState, OutReason)
 		|| !ApplyFixtureUnits(*InitialStateObject, OutState, OutReason)
 		|| !ApplyFixtureWalls(*InitialStateObject, OutState, OutReason)
-		|| !ApplyFixtureTerrain(*InitialStateObject, OutState, OutReason))
+		|| !ApplyFixtureTerrain(*InitialStateObject, OutState, OutReason)
+		|| !ApplyFixturePendingAttack(*InitialStateObject, OutState, OutReason))
 	{
 		return false;
 	}
@@ -1101,6 +1146,55 @@ bool ApplyFixtureOperation(
 	{
 		OutResult = MakeFixtureFailure(OutReason);
 		return false;
+	}
+
+	if (OperationKind == TEXT("apply_attack_declare"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyAttackDeclare;
+		FWBAction Action;
+		if (!ParseActionFromFixture(Fixture, State, Action, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutResult = WBEffectRunner::ApplyAttackDeclare(State, Action);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_pending_attack_damage"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyPendingAttackDamage;
+		OutResult = WBEffectRunner::ApplyPendingAttackDamage(State);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("attack_declare_then_damage"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::AttackDeclareThenDamage;
+		FWBAction Action;
+		if (!ParseActionFromFixture(Fixture, State, Action, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		FWBApplyActionResult DeclareResult = WBEffectRunner::ApplyAttackDeclare(State, Action);
+		OutResult = DeclareResult;
+		if (!DeclareResult.bOk)
+		{
+			OutReason.Reset();
+			return true;
+		}
+
+		FWBApplyActionResult DamageResult = WBEffectRunner::ApplyPendingAttackDamage(State);
+		OutResult.bOk = DamageResult.bOk;
+		OutResult.Reason = DamageResult.Reason;
+		OutResult.TraceEvents.Append(DamageResult.TraceEvents);
+		OutReason.Reset();
+		return true;
 	}
 
 	if (OperationKind == TEXT("apply_turn_command"))

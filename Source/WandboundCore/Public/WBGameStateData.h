@@ -50,6 +50,17 @@ struct WANDBOUNDCORE_API FWBPlayerStateData
 	TArray<FString> Discard;
 };
 
+struct WANDBOUNDCORE_API FWBPendingAttackState
+{
+	bool bActive = false;
+	int32 AttackerUnitId = -1;
+	int32 DefenderUnitId = -1;
+	int32 AttackingPlayerId = -1;
+	FWBTile AttackerTile;
+	FWBTile DefenderTile;
+	FString DeclarationActionId;
+};
+
 struct WANDBOUNDCORE_API FWBGameStateData
 {
 	int32 CurrentPlayer = 0;
@@ -62,6 +73,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	FName DefaultTerrainId = FName(TEXT("Normal"));
 	TMap<int32, FName> TerrainByTileIndex;
 	TArray<FWBPlayerStateData> Players;
+	FWBPendingAttackState PendingAttack;
 
 	static bool IsValidPlayerId(int32 PlayerId);
 	static int32 TileToIndex(const FWBTile& Tile);
@@ -78,6 +90,9 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void AdvanceTurnBasic();
 	bool ResetActionResourcesForPlayer(int32 PlayerId, FString& OutReason);
 	bool ApplyTurnStartResourceSetupForPlayer(int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);
+	bool HasPendingAttack() const;
+	void ClearPendingAttack();
+	void SetPendingAttackForTest(const FWBPendingAttackState& InPendingAttack);
 	const FWBUnitState* GetUnitById(int32 UnitId) const;
 	FWBUnitState* GetMutableUnitById(int32 UnitId);
 	int32 UnitIdAt(const FWBTile& Tile) const;
