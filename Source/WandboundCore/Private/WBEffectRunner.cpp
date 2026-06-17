@@ -150,6 +150,8 @@ FWBApplyActionResult WBEffectRunner::ApplyAction(FWBGameStateData& State, const 
 	{
 	case EWBActionType::Move:
 		return ApplyMove(State, Action);
+	case EWBActionType::Attack:
+		return ApplyAttackDeclare(State, Action);
 	case EWBActionType::EndTurn:
 		return ApplyEndTurn(State, Action);
 	case EWBActionType::Pass:
@@ -209,6 +211,46 @@ FWBApplyActionResult WBEffectRunner::ApplyMove(FWBGameStateData& State, const FW
 
 	Result.bOk = true;
 	Result.TraceEvents.Add(MoveEvent);
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State, const FWBAction& Action)
+{
+	FWBApplyActionResult Result;
+
+	const FWBActionQueryResult AttackQuery = WBRules::CanDeclareAttack(State, Action);
+	if (!AttackQuery.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = AttackQuery.Reason;
+		return Result;
+	}
+
+	FWBUnitState* Attacker = State.GetMutableUnitById(Action.SourceUnitId);
+	const FWBUnitState* Defender = State.GetUnitById(Action.TargetUnitId);
+	if (Attacker == nullptr || Defender == nullptr)
+	{
+		Result.bOk = false;
+		Result.Reason = TEXT("unit_disappeared_before_attack_declaration");
+		return Result;
+	}
+
+	const int32 AttacksLeftBefore = Attacker->AttacksLeft;
+	Attacker->AttacksLeft = FMath::Max(Attacker->AttacksLeft - 1, 0);
+
+	FWBTraceEvent AttackEvent;
+	AttackEvent.Kind = FName(TEXT("attack_declared"));
+	AttackEvent.PlayerId = Action.PlayerId;
+	AttackEvent.SourceUnitId = Attacker->UnitId;
+	AttackEvent.TargetUnitId = Defender->UnitId;
+	AttackEvent.FromTile = FWBTile(Attacker->X, Attacker->Y);
+	AttackEvent.ToTile = FWBTile(Defender->X, Defender->Y);
+	AttackEvent.AttacksLeftBefore = AttacksLeftBefore;
+	AttackEvent.AttacksLeftAfter = Attacker->AttacksLeft;
+	AttackEvent.bOk = true;
+
+	Result.bOk = true;
+	Result.TraceEvents.Add(AttackEvent);
 	return Result;
 }
 

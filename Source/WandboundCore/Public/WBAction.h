@@ -7,6 +7,7 @@ enum class EWBActionType : uint8
 {
 	None,
 	Move,
+	Attack,
 	Pass,
 	EndTurn,
 	PassResponse
@@ -17,6 +18,7 @@ struct WANDBOUNDCORE_API FWBAction
 	EWBActionType Type = EWBActionType::None;
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
+	int32 TargetUnitId = -1;
 	FWBTile FromTile;
 	FWBTile ToTile;
 };

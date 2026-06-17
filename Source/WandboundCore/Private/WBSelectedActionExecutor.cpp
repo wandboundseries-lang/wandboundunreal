@@ -23,6 +23,8 @@ FWBApplyActionResult WBSelectedActionExecutor::ApplySelectedAction(
 	{
 	case EWBActionType::Move:
 		return WBEffectRunner::ApplyMove(State, Action);
+	case EWBActionType::Attack:
+		return WBEffectRunner::ApplyAttackDeclare(State, Action);
 	case EWBActionType::EndTurn:
 	{
 		if (!Context.bUseFullTurnTransitionForEndTurn)

@@ -1,0 +1,83 @@
+{
+  "id": "runtime_result_attack_declare_summary",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:request_attack_impl",
+    "scripts/sim/rules.gd:query_attack"
+  ],
+  "intent": "Runtime-selected attack declaration serializes selected action, trace, no MP roll consumption, and public board summary without damage.",
+  "operation": "apply_runtime_selected_action_with_result_and_serialize",
+  "action": {
+    "type": "attack",
+    "kind": "attack",
+    "player_id": 0,
+    "unit_id": 1,
+    "target_unit_id": 2
+  },
+  "runtime_context": {
+    "resolve_end_turn_as_full_transition": true,
+    "queued_mp_rolls": [ 6 ]
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 3,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2, "last_mp_roll": 2, "walls_left": 0, "wall_removals_left": 0 },
+      { "player_id": 1, "remaining_mp": 0, "last_mp_roll": 0, "walls_left": 0, "wall_removals_left": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_attacker", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "atk": 2, "ar": 1, "attacks_left": 2, "max_attacks_per_turn": 2 },
+      { "id": 2, "owner_id": 1, "card_id": "test_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5, "atk": 1, "ar": 1, "attacks_left": 1 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "reason": "",
+    "selected_action_type": "attack",
+    "selected_action_id": "attack:p0:u1:t2",
+    "consumed_mp_roll": false,
+    "consumed_mp_roll_value": 0,
+    "roll_source_remaining_count": 1,
+    "expected_trace_order": [ "attack_declared" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "attacks_left": 1, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "attacks_left": 1, "statuses": [] }
+    ],
+    "final_public_turn_summary": {
+      "current_player_id": 0,
+      "priority_player_id": 0,
+      "turn_number": 3,
+      "phase": "normal_turn",
+      "game_over": false,
+      "players": [
+        { "player_id": 0, "remaining_mp": 2, "last_mp_roll": 2, "walls_left": 0, "wall_removals_left": 0 },
+        { "player_id": 1, "remaining_mp": 0, "last_mp_roll": 0, "walls_left": 0, "wall_removals_left": 0 }
+      ]
+    }
+  },
+  "expected_json": {
+    "selected_action_type": "attack",
+    "selected_action_id": "attack:p0:u1:t2",
+    "ok": true,
+    "reason": "",
+    "consumed_mp_roll": false,
+    "consumed_mp_roll_value": 0,
+    "trace_order": [ "attack_declared" ],
+    "final_public_turn_summary": {
+      "current_player_id": 0,
+      "priority_player_id": 0,
+      "turn_number": 3,
+      "phase": "normal_turn",
+      "game_over": false,
+      "players": [
+        { "player_id": 0, "remaining_mp": 2, "last_mp_roll": 2, "walls_left": 0, "wall_removals_left": 0 },
+        { "player_id": 1, "remaining_mp": 0, "last_mp_roll": 0, "walls_left": 0, "wall_removals_left": 0 }
+      ]
+    },
+    "forbidden_substrings": [ "pending_attack", "damage" ]
+  }
+}

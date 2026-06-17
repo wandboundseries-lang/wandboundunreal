@@ -180,3 +180,60 @@ Build and automation reported no warnings.
 ## Next Recommended Implementation Milestone
 
 Add a deterministic revealed-marker public summary model once Unreal marker state exists, preserving hidden enemy marker identity and keeping marker summaries player-perspective scoped.
+
+---
+
+# Attack Declaration Legality Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 55.54 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=201
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added deterministic attack declaration legality and declaration application.
+- Added `attack_declared` traces with source, target, tiles, and attacks-left before/after fields.
+- Added attack action IDs using `attack:p{player}:u{source}:t{target}`.
+- Legal action generation now preserves movement first, appends attacks, and keeps EndTurn last.
+- Runtime selected attack results serialize selected action, trace, public board summary, and no MP roll consumption.
+- Damage, response windows, counterattacks, card/passive exceptions, wands, terrain attack modifiers, and UI/VFX remain future work.
+
+## New Tests Added
+
+- `Wandbound.Core.AttackDeclaration.*`
+- `Wandbound.Core.AttackLegalActionGeneration.*`
+- Runtime result fixture coverage for `runtime_result_attack_declare_summary.json`
+
+## Remaining Risks/Unknowns
+
+- Friendly frozen attack/break-Frozen behavior is out of scope until attack damage/resolution exists.
+- Diagonal, ignore-wall, through-wall, ignore-unit, and passive-modified attacks remain out of scope.
+- Neutral target behavior is currently treated as enemy targeting when the acting unit belongs to the active player.

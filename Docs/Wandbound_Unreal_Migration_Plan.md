@@ -118,6 +118,39 @@
   - timed Poison decrements and expires at zero.
   - Frozen pauses Poison tick and duration decay.
 - Burn is intentionally not implemented at start turn.
+
+## Milestone - Attack Declaration Legality
+
+- Added `WBRules::CanDeclareAttack` for deterministic attack declaration legality.
+- Added orthogonal range/LOS helpers:
+  - `OrthogonalDistance`
+  - `AreTilesOrthogonallyAligned`
+  - `HasOrthogonalLineOfSight`
+- Implemented baseline attack declaration checks:
+  - current normal-turn priority
+  - attacker and defender existence
+  - attacker ownership
+  - enemy or neutral target
+  - `AttacksLeft > 0`
+  - Stunned/Frozen/CannotAttack/no_attack restrictions
+  - orthogonal alignment
+  - AR range
+  - wall and intervening-unit LOS blocking
+- Added `WBEffectRunner::ApplyAttackDeclare`.
+- Added `Attack` selected-action execution.
+- Added attack legal action generation after movement and before EndTurn.
+- Added `WBActionCodec` attack serialization and stable IDs using `attack:p{player}:u{source}:t{target}`.
+- Runtime selected-action result serialization now reports selected attack IDs, `attack_declared` traces, and public board summaries after declaration.
+- Added GodotCanon attack declaration and legal action fixtures.
+- Intentionally still future work:
+  - damage
+  - Frozen break-on-hit resolution
+  - pre-hit/post-hit responses
+  - counterattacks
+  - attack passives
+  - wands
+  - terrain attack modifiers
+  - UI/VFX/runtime presentation
 - Rooted/Stunned remain movement-blocking and do not decay during start-turn ticks.
 - Added trace event support:
   - `start_turn_status_ticks`

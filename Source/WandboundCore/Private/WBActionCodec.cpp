@@ -41,6 +41,11 @@ TSharedRef<FJsonObject> ActionToJsonObject(const FWBAction& Action)
 		Object->SetNumberField(TEXT("unit_id"), Action.SourceUnitId);
 	}
 
+	if (Action.TargetUnitId != -1)
+	{
+		Object->SetNumberField(TEXT("target_unit_id"), Action.TargetUnitId);
+	}
+
 	if (IsSetTile(Action.FromTile))
 	{
 		Object->SetNumberField(TEXT("from_x"), Action.FromTile.X);
@@ -123,6 +128,31 @@ FWBActionDecodeResult DecodeActionObject(const TSharedPtr<FJsonObject>& Object, 
 			Action.FromTile = FWBTile(Unit->X, Unit->Y);
 		}
 	}
+	else if (Kind == TEXT("attack"))
+	{
+		Action.Type = EWBActionType::Attack;
+		if (!TryGetIntegerField(Object, TEXT("unit_id"), Action.SourceUnitId))
+		{
+			return DecodeFailure(TEXT("missing_attack_unit_id"));
+		}
+
+		if (!TryGetIntegerField(Object, TEXT("target_unit_id"), Action.TargetUnitId))
+		{
+			return DecodeFailure(TEXT("missing_attack_target_unit_id"));
+		}
+
+		const FWBUnitState* Attacker = State.GetUnitById(Action.SourceUnitId);
+		if (Attacker != nullptr)
+		{
+			Action.FromTile = FWBTile(Attacker->X, Attacker->Y);
+		}
+
+		const FWBUnitState* Target = State.GetUnitById(Action.TargetUnitId);
+		if (Target != nullptr)
+		{
+			Action.ToTile = FWBTile(Target->X, Target->Y);
+		}
+	}
 	else if (Kind == TEXT("end_turn"))
 	{
 		Action.Type = EWBActionType::EndTurn;
@@ -159,6 +189,8 @@ FString WBActionCodec::GetActionKind(const EWBActionType Type)
 	{
 	case EWBActionType::Move:
 		return TEXT("move");
+	case EWBActionType::Attack:
+		return TEXT("attack");
 	case EWBActionType::EndTurn:
 		return TEXT("end_turn");
 	case EWBActionType::Pass:
@@ -183,6 +215,12 @@ FString WBActionCodec::MakeActionId(const FWBAction& Action)
 			Action.FromTile.Y,
 			Action.ToTile.X,
 			Action.ToTile.Y);
+	case EWBActionType::Attack:
+		return FString::Printf(
+			TEXT("attack:p%d:u%d:t%d"),
+			Action.PlayerId,
+			Action.SourceUnitId,
+			Action.TargetUnitId);
 	case EWBActionType::EndTurn:
 		return FString::Printf(TEXT("end_turn:p%d"), Action.PlayerId);
 	case EWBActionType::Pass:

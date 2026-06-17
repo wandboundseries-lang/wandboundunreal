@@ -796,7 +796,8 @@ bool FWBRuntimeResultSerializationFixtureScenariosTest::RunTest(const FString& P
 	const TArray<FString> FixtureNames = {
 		TEXT("runtime_result_serialization_full_transition.json"),
 		TEXT("runtime_result_serialization_basic_end_turn.json"),
-		TEXT("runtime_result_serialization_hidden_data_exclusion.json")
+		TEXT("runtime_result_serialization_hidden_data_exclusion.json"),
+		TEXT("runtime_result_attack_declare_summary.json")
 	};
 
 	for (const FString& FixtureName : FixtureNames)

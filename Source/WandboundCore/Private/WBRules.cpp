@@ -15,6 +15,83 @@ bool HasMovementBlockingStatus(const FWBUnitState& Unit)
 		|| Unit.HasStatus(FName(TEXT("Stunned")));
 }
 
+bool HasAttackBlockingStatus(const FWBUnitState& Unit)
+{
+	return Unit.HasStatus(FName(TEXT("Stunned")))
+		|| Unit.HasStatus(FName(TEXT("Frozen")))
+		|| Unit.HasStatus(FName(TEXT("CannotAttack")))
+		|| Unit.HasStatus(FName(TEXT("Cannot Attack")))
+		|| Unit.HasStatus(FName(TEXT("cannot_attack")))
+		|| Unit.HasStatus(FName(TEXT("no_attack")));
+}
+
+bool UnitTileLess(const FWBUnitState& A, const FWBUnitState& B)
+{
+	if (A.Y != B.Y)
+	{
+		return A.Y < B.Y;
+	}
+
+	if (A.X != B.X)
+	{
+		return A.X < B.X;
+	}
+
+	return A.UnitId < B.UnitId;
+}
+
+TArray<FWBAction> GenerateLegalAttackActions(const FWBGameStateData& State, const int32 PlayerId)
+{
+	TArray<const FWBUnitState*> Attackers;
+	for (const FWBUnitState& Unit : State.Units)
+	{
+		if (Unit.OwnerId == PlayerId)
+		{
+			Attackers.Add(&Unit);
+		}
+	}
+	Attackers.Sort(UnitTileLess);
+
+	TArray<const FWBUnitState*> Targets;
+	for (const FWBUnitState& Unit : State.Units)
+	{
+		Targets.Add(&Unit);
+	}
+	Targets.Sort(UnitTileLess);
+
+	TArray<FWBAction> LegalAttacks;
+	for (const FWBUnitState* Attacker : Attackers)
+	{
+		if (Attacker == nullptr)
+		{
+			continue;
+		}
+
+		for (const FWBUnitState* Target : Targets)
+		{
+			if (Target == nullptr || Target->UnitId == Attacker->UnitId)
+			{
+				continue;
+			}
+
+			FWBAction Candidate;
+			Candidate.Type = EWBActionType::Attack;
+			Candidate.PlayerId = PlayerId;
+			Candidate.SourceUnitId = Attacker->UnitId;
+			Candidate.TargetUnitId = Target->UnitId;
+			Candidate.FromTile = FWBTile(Attacker->X, Attacker->Y);
+			Candidate.ToTile = FWBTile(Target->X, Target->Y);
+
+			if (WBRules::CanDeclareAttack(State, Candidate).bOk)
+			{
+				LegalAttacks.Add(Candidate);
+			}
+		}
+	}
+
+	return LegalAttacks;
+}
+
 }
 
 FWBMoveQueryResult FWBMoveQueryResult::Ok(const int32 InCostMP)
@@ -102,6 +179,59 @@ bool WBRules::IsTileOccupied(const FWBGameStateData& State, const FWBTile& Tile)
 const FWBUnitState* WBRules::GetUnitById(const FWBGameStateData& State, const int32 UnitId)
 {
 	return State.GetUnitById(UnitId);
+}
+
+int32 WBRules::OrthogonalDistance(const FWBTile& A, const FWBTile& B)
+{
+	return FMath::Abs(A.X - B.X) + FMath::Abs(A.Y - B.Y);
+}
+
+bool WBRules::AreTilesOrthogonallyAligned(const FWBTile& A, const FWBTile& B)
+{
+	return A != B && (A.X == B.X || A.Y == B.Y);
+}
+
+bool WBRules::HasOrthogonalLineOfSight(
+	const FWBGameStateData& State,
+	const FWBTile& From,
+	const FWBTile& To,
+	FString& OutReason)
+{
+	if (!IsTileInBounds(From) || !IsTileInBounds(To))
+	{
+		OutReason = TEXT("out_of_bounds");
+		return false;
+	}
+
+	if (!AreTilesOrthogonallyAligned(From, To))
+	{
+		OutReason = TEXT("not_in_line");
+		return false;
+	}
+
+	const int32 StepX = From.X == To.X ? 0 : (To.X > From.X ? 1 : -1);
+	const int32 StepY = From.Y == To.Y ? 0 : (To.Y > From.Y ? 1 : -1);
+	FWBTile Current = From;
+	while (Current != To)
+	{
+		const FWBTile Next(Current.X + StepX, Current.Y + StepY);
+		if (HasWallBetween(State, Current, Next))
+		{
+			OutReason = TEXT("blocked_by_wall");
+			return false;
+		}
+
+		if (Next != To && State.UnitIdAt(Next) != -1)
+		{
+			OutReason = TEXT("blocked_by_unit");
+			return false;
+		}
+
+		Current = Next;
+	}
+
+	OutReason.Reset();
+	return true;
 }
 
 FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAction& Action)
@@ -195,6 +325,101 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 	}
 
 	return FWBMoveQueryResult::Ok(1);
+}
+
+FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action)
+{
+	if (Action.Type != EWBActionType::Attack)
+	{
+		return FWBActionQueryResult::Deny(TEXT("invalid_action"));
+	}
+
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+	{
+		return FWBActionQueryResult::Deny(TEXT("bad_player"));
+	}
+
+	if (Action.PlayerId != State.CurrentPlayer)
+	{
+		return FWBActionQueryResult::Deny(TEXT("not_active_player"));
+	}
+
+	if (Action.PlayerId != State.PriorityPlayer)
+	{
+		return FWBActionQueryResult::Deny(TEXT("no_priority"));
+	}
+
+	if (!State.IsNormalTurnPhase())
+	{
+		return FWBActionQueryResult::Deny(TEXT("not_normal_turn"));
+	}
+
+	const FWBUnitState* Attacker = State.GetUnitById(Action.SourceUnitId);
+	if (Attacker == nullptr)
+	{
+		return FWBActionQueryResult::Deny(TEXT("no_attacker"));
+	}
+
+	const FWBUnitState* Defender = State.GetUnitById(Action.TargetUnitId);
+	if (Defender == nullptr)
+	{
+		return FWBActionQueryResult::Deny(TEXT("no_target"));
+	}
+
+	if (Attacker->UnitId == Defender->UnitId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("same_unit"));
+	}
+
+	if (Attacker->OwnerId != Action.PlayerId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("wrong_player"));
+	}
+
+	if (Defender->OwnerId == Attacker->OwnerId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("friendly_target"));
+	}
+
+	const FWBTile AttackerTile(Attacker->X, Attacker->Y);
+	const FWBTile DefenderTile(Defender->X, Defender->Y);
+	if (!IsTileInBounds(AttackerTile) || !IsTileInBounds(DefenderTile))
+	{
+		return FWBActionQueryResult::Deny(TEXT("out_of_bounds"));
+	}
+
+	if (Attacker->AttacksLeft <= 0)
+	{
+		return FWBActionQueryResult::Deny(TEXT("no_attacks_left"));
+	}
+
+	if (HasAttackBlockingStatus(*Attacker))
+	{
+		return FWBActionQueryResult::Deny(TEXT("cannot_attack"));
+	}
+
+	if (!AreTilesOrthogonallyAligned(AttackerTile, DefenderTile))
+	{
+		return FWBActionQueryResult::Deny(TEXT("not_in_line"));
+	}
+
+	if (OrthogonalDistance(AttackerTile, DefenderTile) > Attacker->AR)
+	{
+		return FWBActionQueryResult::Deny(TEXT("out_of_range"));
+	}
+
+	FString LOSReason;
+	if (!HasOrthogonalLineOfSight(State, AttackerTile, DefenderTile, LOSReason))
+	{
+		return FWBActionQueryResult::Deny(*LOSReason);
+	}
+
+	return FWBActionQueryResult::Ok();
 }
 
 FWBActionQueryResult WBRules::QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action)
@@ -522,6 +747,8 @@ TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(const FWBGameStateData&
 
 			LegalActions.Append(GenerateLegalMoveActions(State, PlayerId, Unit.UnitId));
 		}
+
+		LegalActions.Append(GenerateLegalAttackActions(State, PlayerId));
 
 		FWBAction EndTurnAction;
 		EndTurnAction.Type = EWBActionType::EndTurn;
