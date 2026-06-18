@@ -4,6 +4,7 @@
 #include "WBArmorEffect.h"
 #include "WBDamageResolution.h"
 #include "WBDeathResolution.h"
+#include "WBStatusEffect.h"
 #include "WBRules.h"
 
 namespace
@@ -238,6 +239,42 @@ void AppendArmorModifiedTrace(
 	Event.NewMaxArmor = ArmorResult.NewMaxArmor;
 	Event.ArmorEffectOperation = WBArmorEffect::GetOperationName(ArmorResult.Request.Operation);
 	Event.ArmorEffectAmount = ArmorResult.Request.Amount;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendStatusModifiedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBStatusEffectResult& StatusResult,
+	const FWBUnitState* Target)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("status_modified"));
+	Event.TargetUnitId = StatusResult.Request.TargetUnitId;
+	Event.PlayerId = Target != nullptr ? Target->OwnerId : -1;
+	Event.StatusId = StatusResult.Request.StatusId;
+	Event.StatusEffectOperation = WBStatusEffect::GetOperationName(StatusResult.Request.Operation);
+	Event.PreviousStatusTurns = StatusResult.PreviousDuration;
+	Event.NewStatusTurns = StatusResult.NewDuration;
+	Event.RemovedStatuses = StatusResult.RemovedStatuses;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendStatusEffectRemovedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBStatusEffectResult& StatusResult,
+	const FName StatusId,
+	const FWBUnitState* Target)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("status_removed"));
+	Event.StatusId = StatusId;
+	Event.TargetUnitId = StatusResult.Request.TargetUnitId;
+	Event.PlayerId = Target != nullptr ? Target->OwnerId : -1;
+	Event.StatusEffectOperation = WBStatusEffect::GetOperationName(StatusResult.Request.Operation);
+	Event.PreviousStatusTurns = StatusId == StatusResult.Request.StatusId ? StatusResult.PreviousDuration : -1;
+	Event.NewStatusTurns = 0;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -653,6 +690,29 @@ FWBApplyActionResult WBEffectRunner::ApplyArmorEffect(
 	return Result;
 }
 
+FWBApplyActionResult WBEffectRunner::ApplyStatusEffect(
+	FWBGameStateData& State,
+	const FWBStatusEffectRequest& Request)
+{
+	FWBApplyActionResult Result;
+	const FWBStatusEffectResult StatusResult = WBStatusEffect::ApplyStatusEffect(State, Request);
+	if (!StatusResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = StatusResult.Reason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	const FWBUnitState* Target = State.GetUnitById(StatusResult.Request.TargetUnitId);
+	AppendStatusModifiedTrace(Result.TraceEvents, StatusResult, Target);
+	for (const FName& RemovedStatus : StatusResult.RemovedStatuses)
+	{
+		AppendStatusEffectRemovedTrace(Result.TraceEvents, StatusResult, RemovedStatus, Target);
+	}
+	return Result;
+}
+
 FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 	FWBGameStateData& State,
 	const FWBEffectRequest& Request)
@@ -687,6 +747,17 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 			}
 
 			PayloadResult = ApplyArmorEffect(WorkingState, ArmorRequest);
+			break;
+		}
+		case EWBGenericEffectOp::StatusEffect:
+		{
+			FWBStatusEffectRequest StatusRequest = Payload.StatusEffect;
+			if (StatusRequest.TargetUnitId == -1)
+			{
+				StatusRequest.TargetUnitId = Request.Target.TargetUnitId;
+			}
+
+			PayloadResult = ApplyStatusEffect(WorkingState, StatusRequest);
 			break;
 		}
 		default:

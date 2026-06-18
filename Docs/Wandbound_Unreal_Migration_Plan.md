@@ -614,6 +614,52 @@
   - card-specific effects
   - UI/Blueprint/3D runtime
 
+## Milestone - Status Effect Request Scaffolding
+
+- Added deterministic generic status effect operations:
+  - `apply_status`
+  - `remove_status`
+  - `set_status_duration`
+  - `add_status_duration`
+  - `reduce_status_duration`
+  - `cleanse_status`
+  - `cleanse_all_statuses`
+- Added `WBStatusEffect`.
+- Added canonical public status aliases for:
+  - `Burn`
+  - `Poison`
+  - `Rooted`
+  - `Stunned`
+  - `Frozen`
+- Added standalone `WBEffectRunner::ApplyStatusEffect`.
+- Added `status_modified` traces.
+- Added replay trace serialization for:
+  - `status_effect_operation`
+  - `removed_statuses`
+- Extended `FWBEffectRequest` with `status_effect` payload support alongside `armor_effect`.
+- `status_effect` payloads route to `WBEffectRunner::ApplyStatusEffect`.
+- Multi-payload effect requests remain atomic through working-state dispatch.
+- Added fixture support for:
+  - `operation = apply_status_effect`
+  - `status_effect` payloads inside `operation = apply_effect_request`
+- Added standalone status fixtures and mixed armor/status effect request fixtures under `Reference/GodotCanon/GoldenScenarios/`.
+- Status operations are fixture-owned only in this milestone.
+- Existing status tick behavior remains unchanged.
+- Legal action generation remains unchanged except when status state itself changes existing legality, such as Rooted or Stunned.
+- `WBActionCodec` action IDs remain unchanged.
+- Intentionally not implemented yet:
+  - Godot CardDB import
+  - JSON card database loading
+  - real card activation timing
+  - effect legal action generation
+  - target selection UI
+  - response windows
+  - effect negation
+  - passives
+  - wands
+  - card-specific status effects
+  - UI/Blueprint/3D runtime
+
 ## Milestone - Public Board Summary for Runtime Results
 
 - Added deterministic public board summaries:

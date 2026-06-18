@@ -3,12 +3,14 @@
 #include "CoreMinimal.h"
 #include "WBArmorEffect.h"
 #include "WBReplayTrace.h"
+#include "WBStatusEffect.h"
 #include "WBTypes.h"
 
 enum class EWBGenericEffectOp : uint8
 {
 	Unknown,
-	ArmorEffect
+	ArmorEffect,
+	StatusEffect
 };
 
 struct WANDBOUNDCORE_API FWBEffectSourceRef
@@ -30,6 +32,7 @@ struct WANDBOUNDCORE_API FWBGenericEffectPayload
 {
 	EWBGenericEffectOp Operation = EWBGenericEffectOp::Unknown;
 	FWBArmorEffectRequest ArmorEffect;
+	FWBStatusEffectRequest StatusEffect;
 };
 
 struct WANDBOUNDCORE_API FWBEffectRequest

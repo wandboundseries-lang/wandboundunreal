@@ -15,6 +15,7 @@
 #include "WBRules.h"
 #include "WBRuntimeResultSerializer.h"
 #include "WBRuntimeTurnResolutionAdapter.h"
+#include "WBStatusEffect.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -86,6 +87,22 @@ FWBGenericEffectPayload MakeArmorPayload(
 	return Payload;
 }
 
+FWBGenericEffectPayload MakeStatusPayload(
+	const EWBStatusEffectOp Operation,
+	const FName StatusId,
+	const int32 Duration,
+	const int32 TargetUnitId = -1)
+{
+	FWBGenericEffectPayload Payload;
+	Payload.Operation = EWBGenericEffectOp::StatusEffect;
+	Payload.StatusEffect.Operation = Operation;
+	Payload.StatusEffect.TargetUnitId = TargetUnitId;
+	Payload.StatusEffect.StatusId = StatusId;
+	Payload.StatusEffect.Duration = Duration;
+	Payload.StatusEffect.SourceReason = FName(TEXT("test"));
+	return Payload;
+}
+
 FWBEffectRequest MakeEffectRequest(
 	const EWBArmorEffectOp Operation,
 	const int32 Amount,
@@ -100,6 +117,24 @@ FWBEffectRequest MakeEffectRequest(
 	Request.Source.SourceEffectId = TEXT("fixture_effect");
 	Request.Target.TargetUnitId = RequestTargetUnitId;
 	Request.Payloads.Add(MakeArmorPayload(Operation, Amount, PayloadTargetUnitId));
+	return Request;
+}
+
+FWBEffectRequest MakeStatusEffectRequest(
+	const EWBStatusEffectOp Operation,
+	const FName StatusId,
+	const int32 Duration,
+	const int32 RequestTargetUnitId = 2,
+	const int32 PayloadTargetUnitId = -1,
+	const int32 SourceUnitId = 1)
+{
+	FWBEffectRequest Request;
+	Request.Source.PlayerId = 0;
+	Request.Source.SourceUnitId = SourceUnitId;
+	Request.Source.SourceCardId = TEXT("fixture_card_status");
+	Request.Source.SourceEffectId = TEXT("fixture_status_effect");
+	Request.Target.TargetUnitId = RequestTargetUnitId;
+	Request.Payloads.Add(MakeStatusPayload(Operation, StatusId, Duration, PayloadTargetUnitId));
 	return Request;
 }
 
@@ -270,6 +305,17 @@ bool ExpectTraceFieldsFromFixture(
 			Test.TestEqual(*FString::Printf(TEXT("%s operation"), *TraceLabel), ActualTrace.ArmorEffectOperation.ToString(), ExpectedOperation);
 		}
 
+		if (ExpectedTrace->TryGetStringField(TEXT("status_effect_operation"), ExpectedOperation))
+		{
+			Test.TestEqual(*FString::Printf(TEXT("%s status operation"), *TraceLabel), ActualTrace.StatusEffectOperation.ToString(), ExpectedOperation);
+		}
+
+		FString ExpectedStatusId;
+		if (ExpectedTrace->TryGetStringField(TEXT("status_id"), ExpectedStatusId))
+		{
+			Test.TestEqual(*FString::Printf(TEXT("%s status id"), *TraceLabel), ActualTrace.StatusId.ToString(), ExpectedStatusId);
+		}
+
 		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("player_id"), ActualTrace.PlayerId);
 		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("source_unit_id"), ActualTrace.SourceUnitId);
 		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("target_unit_id"), ActualTrace.TargetUnitId);
@@ -278,6 +324,8 @@ bool ExpectTraceFieldsFromFixture(
 		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("previous_max_armor"), ActualTrace.PreviousMaxArmor);
 		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("new_max_armor"), ActualTrace.NewMaxArmor);
 		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("armor_effect_amount"), ActualTrace.ArmorEffectAmount);
+		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("previous_status_turns"), ActualTrace.PreviousStatusTurns);
+		CompareOptionalIntegerTraceField(Test, TraceLabel, ExpectedTrace, TEXT("new_status_turns"), ActualTrace.NewStatusTurns);
 	}
 
 	return TraceEvents.Num() == TraceFields->Num();
@@ -328,6 +376,49 @@ bool ExpectRuntimeArmorJson(
 	Test.TestEqual(*FString::Printf(TEXT("%s current armor"), *Label), CurrentArmor, ExpectedCurrentArmor);
 	Test.TestEqual(*FString::Printf(TEXT("%s max armor"), *Label), MaxArmor, ExpectedMaxArmor);
 	return CurrentArmor == ExpectedCurrentArmor && MaxArmor == ExpectedMaxArmor;
+}
+
+bool ExpectRuntimeStatusJson(
+	FAutomationTestBase& Test,
+	const FString& Label,
+	const FString& SerializedJson,
+	const int32 UnitId,
+	const FName ExpectedStatusId)
+{
+	const TSharedPtr<FJsonObject> Root = ParseJsonObject(SerializedJson);
+	const TSharedPtr<FJsonObject> UnitObject = FindPublicUnitObject(Root, UnitId);
+	Test.TestTrue(*FString::Printf(TEXT("%s unit exists"), *Label), UnitObject.IsValid());
+	if (!UnitObject.IsValid())
+	{
+		return false;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* StatusValues = GetArrayField(UnitObject, TEXT("statuses"));
+	Test.TestTrue(*FString::Printf(TEXT("%s statuses exist"), *Label), StatusValues != nullptr);
+	if (StatusValues == nullptr)
+	{
+		return false;
+	}
+
+	for (const TSharedPtr<FJsonValue>& Value : *StatusValues)
+	{
+		if (Value.IsValid() && Value->Type == EJson::String && Value->AsString() == ExpectedStatusId.ToString())
+		{
+			return true;
+		}
+
+		const TSharedPtr<FJsonObject> StatusObject = Value.IsValid() ? Value->AsObject() : nullptr;
+		FString StatusId;
+		if (StatusObject.IsValid()
+			&& StatusObject->TryGetStringField(TEXT("status_id"), StatusId)
+			&& StatusId == ExpectedStatusId.ToString())
+		{
+			return true;
+		}
+	}
+
+	Test.AddError(FString::Printf(TEXT("%s missing status %s"), *Label, *ExpectedStatusId.ToString()));
+	return false;
 }
 
 bool CompareActionIdArrays(
@@ -491,6 +582,70 @@ bool FWBEffectRequestParentTracePrecedesPayloadTraceTest::RunTest(const FString&
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestStatusApplyTest, "Wandbound.Core.EffectRequestScaffolding.StatusApplySucceeds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBEffectRequestStatusApplyTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeEffectRequestState(1, 3);
+	const FWBEffectRequestResult Result = WBEffectRunner::ApplyEffectRequest(State, MakeStatusEffectRequest(EWBStatusEffectOp::ApplyStatus, FName(TEXT("Burn")), 2));
+	TestTrue(TEXT("Result ok"), Result.bOk);
+	TestTrue(TEXT("Burn applied"), State.GetUnitById(2)->HasStatus(FName(TEXT("Burn"))));
+	TestEqual(TEXT("Burn duration"), State.GetUnitById(2)->GetStatusTurnsRemaining(FName(TEXT("Burn"))), 2);
+	TestEqual(TEXT("Trace count"), Result.TraceEvents.Num(), 2);
+	if (Result.TraceEvents.Num() == 2)
+	{
+		TestEqual(TEXT("Parent trace"), Result.TraceEvents[0].Kind, FName(TEXT("effect_request_resolved")));
+		TestEqual(TEXT("Status trace"), Result.TraceEvents[1].Kind, FName(TEXT("status_modified")));
+		TestEqual(TEXT("Status op"), Result.TraceEvents[1].StatusEffectOperation, FName(TEXT("apply_status")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestStatusCleanseAllTest, "Wandbound.Core.EffectRequestScaffolding.StatusCleanseAllSucceeds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBEffectRequestStatusCleanseAllTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeEffectRequestState(1, 3);
+	FWBUnitState* Target = State.GetMutableUnitById(2);
+	Target->AddStatus(FName(TEXT("Burn")), 2);
+	Target->AddStatus(FName(TEXT("Poison")), 1);
+
+	const FWBEffectRequestResult Result = WBEffectRunner::ApplyEffectRequest(State, MakeStatusEffectRequest(EWBStatusEffectOp::CleanseAllStatuses, NAME_None, 0));
+	TestTrue(TEXT("Result ok"), Result.bOk);
+	TestEqual(TEXT("No statuses remain"), State.GetUnitById(2)->Statuses.Num(), 0);
+	TestEqual(TEXT("Trace count"), Result.TraceEvents.Num(), 4);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestArmorThenStatusAtomicSuccessTest, "Wandbound.Core.EffectRequestScaffolding.ArmorThenStatusAtomicSuccess", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBEffectRequestArmorThenStatusAtomicSuccessTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeEffectRequestState(1, 3);
+	FWBEffectRequest Request = MakeEffectRequest(EWBArmorEffectOp::AddCurrentArmor, 2, 2, 2);
+	Request.Payloads.Add(MakeStatusPayload(EWBStatusEffectOp::ApplyStatus, FName(TEXT("Burn")), 2, 2));
+
+	const FWBEffectRequestResult Result = WBEffectRunner::ApplyEffectRequest(State, Request);
+	TestTrue(TEXT("Result ok"), Result.bOk);
+	TestEqual(TEXT("Armor updated"), State.GetUnitById(2)->GetCurrentArmor(), 3);
+	TestTrue(TEXT("Burn applied"), State.GetUnitById(2)->HasStatus(FName(TEXT("Burn"))));
+	TestEqual(TEXT("Trace count"), Result.TraceEvents.Num(), 3);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestArmorThenStatusAtomicFailureTest, "Wandbound.Core.EffectRequestScaffolding.ArmorThenStatusAtomicFailure", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBEffectRequestArmorThenStatusAtomicFailureTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeEffectRequestState(1, 3);
+	FWBEffectRequest Request = MakeEffectRequest(EWBArmorEffectOp::AddCurrentArmor, 2, 2, 2);
+	Request.Payloads.Add(MakeStatusPayload(EWBStatusEffectOp::ApplyStatus, FName(TEXT("Burn")), -1, 2));
+
+	const FWBEffectRequestResult Result = WBEffectRunner::ApplyEffectRequest(State, Request);
+	TestFalse(TEXT("Result fails"), Result.bOk);
+	TestEqual(TEXT("Reason"), Result.Reason, FString(TEXT("negative_status_effect_duration")));
+	TestEqual(TEXT("Armor unchanged"), State.GetUnitById(2)->GetCurrentArmor(), 1);
+	TestFalse(TEXT("Burn not applied"), State.GetUnitById(2)->HasStatus(FName(TEXT("Burn"))));
+	TestEqual(TEXT("No traces"), Result.TraceEvents.Num(), 0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestHiddenDataExclusionTest, "Wandbound.Core.EffectRequestScaffolding.HiddenDataExcludedFromRuntimeSerialization", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBEffectRequestHiddenDataExclusionTest::RunTest(const FString& Parameters)
 {
@@ -536,13 +691,58 @@ bool FWBEffectRequestHiddenDataExclusionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestStatusHiddenDataExclusionTest, "Wandbound.Core.EffectRequestScaffolding.StatusHiddenDataExcludedFromRuntimeSerialization", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBEffectRequestStatusHiddenDataExclusionTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeEffectRequestState(1, 3);
+	State.Players[0].Deck.Add(TEXT("secret_deck_card_token"));
+	State.Players[0].Hand.Add(TEXT("secret_hand_card_token"));
+	State.Players[0].Discard.Add(TEXT("secret_discard_card_token"));
+
+	FWBEffectRequest Request = MakeStatusEffectRequest(EWBStatusEffectOp::ApplyStatus, FName(TEXT("Burn")), 2);
+	Request.Source.SourceCardId = TEXT("secret_source_card_token");
+	Request.Source.SourceEffectId = TEXT("secret_source_effect_token");
+	const FWBEffectRequestResult EffectResult = WBEffectRunner::ApplyEffectRequest(State, Request);
+	TestTrue(TEXT("Effect request succeeds"), EffectResult.bOk);
+
+	FWBRuntimeSelectedActionResult Envelope;
+	Envelope.SelectedActionType = FName(TEXT("effect_request_test"));
+	Envelope.SelectedActionId = TEXT("effect_request_test");
+	Envelope.ApplyResult.bOk = EffectResult.bOk;
+	Envelope.ApplyResult.Reason = EffectResult.Reason;
+	Envelope.ApplyResult.TraceEvents = EffectResult.TraceEvents;
+	Envelope.FinalPublicTurnSummary = WBPublicTurnSummary::Build(State);
+	Envelope.FinalPublicBoardSummary = WBPublicBoardSummary::Build(State);
+
+	FString SerializedJson;
+	TestTrue(TEXT("Runtime result serializes"), WBRuntimeResultSerializer::RuntimeSelectedActionResultToJsonString(Envelope, SerializedJson));
+	TestTrue(TEXT("Runtime status json"), ExpectRuntimeStatusJson(*this, TEXT("effect request status runtime"), SerializedJson, 2, FName(TEXT("Burn"))));
+
+	const TArray<FString> ForbiddenSubstrings = {
+		TEXT("secret_deck_card_token"),
+		TEXT("secret_hand_card_token"),
+		TEXT("secret_discard_card_token"),
+		TEXT("secret_source_card_token"),
+		TEXT("secret_source_effect_token"),
+		TEXT("\"deck\""),
+		TEXT("\"hand\""),
+		TEXT("\"discard\""),
+		TEXT("pending_attack")
+	};
+	for (const FString& Forbidden : ForbiddenSubstrings)
+	{
+		TestFalse(*FString::Printf(TEXT("Forbidden substring excluded: %s"), *Forbidden), SerializedJson.Contains(Forbidden));
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestLegalGenerationUnchangedTest, "Wandbound.Core.EffectRequestScaffolding.LegalGenerationUnchanged", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBEffectRequestLegalGenerationUnchangedTest::RunTest(const FString& Parameters)
 {
 	FWBGameStateData BaselineState = MakeEffectRequestState(1, 3);
 	FWBGameStateData MutatedState = MakeEffectRequestState(1, 3);
 	const TArray<FString> BaselineIds = WBActionCodec::MakeActionIds(WBRules::GenerateLegalActionsForPlayer(BaselineState, 0));
-	WBEffectRunner::ApplyEffectRequest(MutatedState, MakeEffectRequest(EWBArmorEffectOp::AddCurrentArmor, 2));
+	WBEffectRunner::ApplyEffectRequest(MutatedState, MakeStatusEffectRequest(EWBStatusEffectOp::ApplyStatus, FName(TEXT("Burn")), 2));
 	const TArray<FString> MutatedIds = WBActionCodec::MakeActionIds(WBRules::GenerateLegalActionsForPlayer(MutatedState, 0));
 	CompareActionIdArrays(*this, TEXT("legal action ids"), MutatedIds, BaselineIds);
 	return true;
@@ -571,6 +771,11 @@ bool FWBEffectRequestFixtureScenariosTest::RunTest(const FString& Parameters)
 		TEXT("effect_request_missing_target_fails_no_mutation.json"),
 		TEXT("effect_request_removed_target_fails_no_mutation.json"),
 		TEXT("effect_request_unknown_operation_fails_no_mutation.json"),
+		TEXT("effect_request_status_apply_burn.json"),
+		TEXT("effect_request_status_cleanse_all.json"),
+		TEXT("effect_request_armor_then_status_atomic_success.json"),
+		TEXT("effect_request_armor_then_status_atomic_failure.json"),
+		TEXT("runtime_result_serialization_after_status_effect_request.json"),
 		TEXT("runtime_result_serialization_after_effect_request_armor.json")
 	};
 
@@ -620,6 +825,65 @@ bool FWBEffectRequestFixtureScenariosTest::RunTest(const FString& Parameters)
 		TestTrue(*FString::Printf(TEXT("%s trace fields"), *FixtureName), ExpectTraceFieldsFromFixture(*this, FixtureName, Fixture, ApplyResult.TraceEvents));
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBEffectRequestRuntimeStatusSerializationFixtureTest, "Wandbound.Core.EffectRequestScaffolding.RuntimeStatusSerializationFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBEffectRequestRuntimeStatusSerializationFixtureTest::RunTest(const FString& Parameters)
+{
+	const FString FixtureName = TEXT("runtime_result_serialization_after_status_effect_request.json");
+	TSharedPtr<FJsonObject> Fixture;
+	TestTrue(TEXT("Runtime status effect request fixture loads"), LoadEffectRequestFixture(FixtureName, Fixture));
+	if (!Fixture.IsValid())
+	{
+		return false;
+	}
+
+	FWBGameStateData State;
+	FString StateReason;
+	TestTrue(TEXT("State builds"), BuildGameStateFromFixture(Fixture, State, StateReason));
+	TestTrue(*FString::Printf(TEXT("State reason empty: %s"), *StateReason), StateReason.IsEmpty());
+	if (!StateReason.IsEmpty())
+	{
+		return false;
+	}
+
+	FWBApplyActionResult ApplyResult;
+	EWBFixtureOperationKind OperationKind = EWBFixtureOperationKind::Unknown;
+	FString ApplyReason;
+	TestTrue(TEXT("Effect request applies"), ApplyFixtureOperation(Fixture, State, ApplyResult, OperationKind, ApplyReason));
+	TestTrue(TEXT("Effect request succeeds"), ApplyResult.bOk);
+
+	FWBRuntimeSelectedActionResult Envelope;
+	Envelope.SelectedActionType = FName(TEXT("effect_request_test"));
+	Envelope.SelectedActionId = TEXT("effect_request_test");
+	Envelope.ApplyResult = ApplyResult;
+	Envelope.FinalPublicTurnSummary = WBPublicTurnSummary::Build(State);
+	Envelope.FinalPublicBoardSummary = WBPublicBoardSummary::Build(State);
+
+	FString SerializedJson;
+	TestTrue(TEXT("Runtime result serializes"), WBRuntimeResultSerializer::RuntimeSelectedActionResultToJsonString(Envelope, SerializedJson));
+	TestTrue(TEXT("Runtime status JSON matches"), ExpectRuntimeStatusJson(*this, FixtureName, SerializedJson, 2, FName(TEXT("Burn"))));
+
+	const TSharedPtr<FJsonObject> ExpectedJson = GetObjectField(Fixture, TEXT("expected_json"));
+	const TArray<TSharedPtr<FJsonValue>>* ForbiddenSubstrings = GetArrayField(ExpectedJson, TEXT("forbidden_substrings"));
+	if (ForbiddenSubstrings != nullptr)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : *ForbiddenSubstrings)
+		{
+			if (!Value.IsValid() || Value->Type != EJson::String)
+			{
+				continue;
+			}
+
+			const FString Forbidden = Value->AsString();
+			TestFalse(*FString::Printf(TEXT("Forbidden substring excluded: %s"), *Forbidden), SerializedJson.Contains(Forbidden));
+		}
+	}
+
+	FString ExpectReason;
+	TestTrue(*FString::Printf(TEXT("Trace order: %s"), *ExpectReason), ExpectTraceOrder(Fixture, ApplyResult.TraceEvents, ExpectReason));
+	TestTrue(*FString::Printf(TEXT("Final units: %s"), *ExpectReason), ExpectUnitStatusSummary(Fixture, State, ExpectReason));
 	return true;
 }
 

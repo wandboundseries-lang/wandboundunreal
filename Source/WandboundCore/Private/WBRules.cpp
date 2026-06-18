@@ -1,6 +1,7 @@
 #include "WBRules.h"
 
 #include "WBEffectRequest.h"
+#include "WBStatusEffect.h"
 
 namespace
 {
@@ -597,6 +598,48 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			if (Payload.ArmorEffect.Amount < 0)
 			{
 				return FWBActionQueryResult::Deny(TEXT("negative_armor_effect_amount"));
+			}
+			break;
+		}
+		case EWBGenericEffectOp::StatusEffect:
+		{
+			const int32 RequestTargetUnitId = Request.Target.TargetUnitId;
+			if (RequestTargetUnitId == -1)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (Payload.StatusEffect.TargetUnitId != -1
+				&& Payload.StatusEffect.TargetUnitId != RequestTargetUnitId)
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_payload_target_mismatch"));
+			}
+
+			const FWBUnitState* TargetUnit = State.GetUnitById(RequestTargetUnitId);
+			if (TargetUnit == nullptr)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (TargetUnit->bDefeated || !TargetUnit->IsUnitOnBoard())
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_target_unit_removed"));
+			}
+
+			if (Payload.StatusEffect.Operation == EWBStatusEffectOp::Unknown)
+			{
+				return FWBActionQueryResult::Deny(TEXT("unknown_status_effect_operation"));
+			}
+
+			if (Payload.StatusEffect.Duration < 0)
+			{
+				return FWBActionQueryResult::Deny(TEXT("negative_status_effect_duration"));
+			}
+
+			if (WBStatusEffect::DoesOperationRequireStatusId(Payload.StatusEffect.Operation)
+				&& WBStatusEffect::CanonicalizeStatusId(Payload.StatusEffect.StatusId).IsNone())
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_status_id"));
 			}
 			break;
 		}

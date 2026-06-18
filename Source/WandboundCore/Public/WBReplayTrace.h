@@ -43,12 +43,14 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FName DamageCause;
 	FName ArmorEffectOperation;
 	int32 ArmorEffectAmount = -1;
+	FName StatusEffectOperation;
 	int32 PreviousMaxArmor = -1;
 	int32 NewMaxArmor = -1;
 	int32 PreviousMaxHP = -1;
 	int32 NewMaxHP = -1;
 	int32 PreviousStatusTurns = -1;
 	int32 NewStatusTurns = -1;
+	TArray<FName> RemovedStatuses;
 	bool bExpiredStatus = false;
 	bool bAtOrBelowZeroHP = false;
 	FWBTile FromTile;

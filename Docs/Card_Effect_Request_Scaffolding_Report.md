@@ -4,9 +4,10 @@
 
 This pass adds deterministic card-effect request scaffolding for Unreal-owned fixture data. It creates a generic request transport and dispatcher, but only executes generic operations already implemented in Unreal.
 
-Implemented payload operation:
+Implemented payload operations:
 
 - `armor_effect`
+- `status_effect`
 
 Not implemented:
 
@@ -48,7 +49,7 @@ Added:
 - target tile
 - target wall edge
 
-Only target unit id is used by the current `armor_effect` payload.
+Only target unit id is used by the current `armor_effect` and `status_effect` payloads.
 
 ## Validation
 
@@ -67,6 +68,7 @@ Validation checks:
 - armor payload target matches request target if set
 - target unit exists and is not removed/defeated
 - armor operation and amount are valid
+- status operation, duration, and required status id are valid
 
 This is generic request validation, not player legal action validation. It does not validate hand/deck/card ownership, activation timing, response timing, or UI target selection.
 
@@ -86,12 +88,14 @@ Atomic behavior:
 
 `armor_effect` payloads fill a missing `FWBArmorEffectRequest::TargetUnitId` from the request target, then route to `WBEffectRunner::ApplyArmorEffect`.
 
+`status_effect` payloads fill a missing `FWBStatusEffectRequest::TargetUnitId` from the request target, then route to `WBEffectRunner::ApplyStatusEffect`.
+
 ## Trace Behavior
 
 Successful effect requests emit:
 
 1. `effect_request_resolved`
-2. child payload traces, such as `armor_modified`
+2. child payload traces, such as `armor_modified` or `status_modified`
 
 `effect_request_resolved` includes only safe fields:
 
@@ -148,6 +152,16 @@ Supported armor operation strings are the existing armor-effect fixture strings:
 - `set_max_armor`
 - `restore_armor_to_max`
 
+Supported status operation strings are:
+
+- `apply_status`
+- `remove_status`
+- `set_status_duration`
+- `add_status_duration`
+- `reduce_status_duration`
+- `cleanse_status`
+- `cleanse_all_statuses`
+
 ## Fixtures
 
 Added GodotCanon fixtures:
@@ -160,6 +174,11 @@ Added GodotCanon fixtures:
 - `effect_request_missing_target_fails_no_mutation.json`
 - `effect_request_removed_target_fails_no_mutation.json`
 - `effect_request_unknown_operation_fails_no_mutation.json`
+- `effect_request_status_apply_burn.json`
+- `effect_request_status_cleanse_all.json`
+- `effect_request_armor_then_status_atomic_success.json`
+- `effect_request_armor_then_status_atomic_failure.json`
+- `runtime_result_serialization_after_status_effect_request.json`
 - `runtime_result_serialization_after_effect_request_armor.json`
 
 ## Tests
@@ -181,6 +200,8 @@ Added `WBEffectRequestScaffoldingTests.cpp`, covering:
 - `WBActionCodec` unchanged
 - fixture-driven scenarios
 - runtime serialization fixture
+- status payload apply and cleanse coverage
+- mixed armor/status atomic success and failure
 
 ## Hidden Information
 
@@ -206,4 +227,4 @@ Visible board unit card ids remain public under the existing public board summar
 - passives
 - wands
 - card-specific armor cards
-- broader generic effect payloads such as damage, heal, status, walls, and terrain
+- broader generic effect payloads such as damage, heal, walls, and terrain

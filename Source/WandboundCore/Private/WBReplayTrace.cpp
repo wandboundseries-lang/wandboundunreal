@@ -190,6 +190,11 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("armor_effect_amount"), Event.ArmorEffectAmount);
 	}
 
+	if (!Event.StatusEffectOperation.IsNone())
+	{
+		Object->SetStringField(TEXT("status_effect_operation"), Event.StatusEffectOperation.ToString());
+	}
+
 	if (Event.PreviousMaxArmor != -1)
 	{
 		Object->SetNumberField(TEXT("previous_max_armor"), Event.PreviousMaxArmor);
@@ -218,6 +223,17 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	if (Event.NewStatusTurns != -1)
 	{
 		Object->SetNumberField(TEXT("new_status_turns"), Event.NewStatusTurns);
+	}
+
+	if (Event.RemovedStatuses.Num() > 0)
+	{
+		TArray<TSharedPtr<FJsonValue>> RemovedStatusValues;
+		RemovedStatusValues.Reserve(Event.RemovedStatuses.Num());
+		for (const FName& RemovedStatus : Event.RemovedStatuses)
+		{
+			RemovedStatusValues.Add(MakeShared<FJsonValueString>(RemovedStatus.ToString()));
+		}
+		Object->SetArrayField(TEXT("removed_statuses"), RemovedStatusValues);
 	}
 
 	if (Event.bExpiredStatus)

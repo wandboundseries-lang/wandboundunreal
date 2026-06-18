@@ -12,6 +12,7 @@
 #include "WBMPRollSource.h"
 #include "WBRuntimeResultSerializer.h"
 #include "WBRuntimeTurnResolutionAdapter.h"
+#include "WBStatusEffect.h"
 
 namespace WandboundTest
 {
@@ -1282,6 +1283,52 @@ EWBArmorEffectOp ReadArmorEffectOperationOrDefault(const TSharedPtr<FJsonObject>
 	return EWBArmorEffectOp::Unknown;
 }
 
+EWBStatusEffectOp ReadStatusEffectOperationOrDefault(const TSharedPtr<FJsonObject>& Object)
+{
+	FString OperationString;
+	if (!Object.IsValid() || !Object->TryGetStringField(TEXT("operation"), OperationString))
+	{
+		return EWBStatusEffectOp::Unknown;
+	}
+
+	if (OperationString == TEXT("apply_status"))
+	{
+		return EWBStatusEffectOp::ApplyStatus;
+	}
+
+	if (OperationString == TEXT("remove_status"))
+	{
+		return EWBStatusEffectOp::RemoveStatus;
+	}
+
+	if (OperationString == TEXT("set_status_duration"))
+	{
+		return EWBStatusEffectOp::SetStatusDuration;
+	}
+
+	if (OperationString == TEXT("add_status_duration"))
+	{
+		return EWBStatusEffectOp::AddStatusDuration;
+	}
+
+	if (OperationString == TEXT("reduce_status_duration"))
+	{
+		return EWBStatusEffectOp::ReduceStatusDuration;
+	}
+
+	if (OperationString == TEXT("cleanse_status"))
+	{
+		return EWBStatusEffectOp::CleanseStatus;
+	}
+
+	if (OperationString == TEXT("cleanse_all_statuses"))
+	{
+		return EWBStatusEffectOp::CleanseAllStatuses;
+	}
+
+	return EWBStatusEffectOp::Unknown;
+}
+
 bool ParseArmorEffectRequestFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBArmorEffectRequest& OutRequest,
@@ -1344,6 +1391,67 @@ bool ParseArmorEffectRequestObject(
 	return true;
 }
 
+bool ParseStatusEffectRequestObject(
+	const TSharedPtr<FJsonObject>& StatusRequestObject,
+	FWBStatusEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	if (!StatusRequestObject.IsValid())
+	{
+		OutReason = TEXT("missing_status_effect_payload");
+		return false;
+	}
+
+	OutRequest.Operation = ReadStatusEffectOperationOrDefault(StatusRequestObject);
+	OutRequest.TargetUnitId = ReadIntegerFieldOrDefault(StatusRequestObject, TEXT("target_unit_id"), -1);
+	OutRequest.Duration = ReadIntegerFieldOrDefault(StatusRequestObject, TEXT("duration"), 0);
+
+	FString StatusId;
+	if (StatusRequestObject->TryGetStringField(TEXT("status_id"), StatusId))
+	{
+		OutRequest.StatusId = FName(*StatusId);
+	}
+
+	FString SourceReason;
+	if (StatusRequestObject->TryGetStringField(TEXT("source_reason"), SourceReason))
+	{
+		OutRequest.SourceReason = FName(*SourceReason);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseStatusEffectRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBStatusEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* StatusRequestObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("status_effect_request"), StatusRequestObject)
+		|| StatusRequestObject == nullptr
+		|| !StatusRequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_status_effect_request");
+		return false;
+	}
+
+	if (!ParseStatusEffectRequestObject(*StatusRequestObject, OutRequest, OutReason))
+	{
+		return false;
+	}
+
+	if (OutRequest.TargetUnitId == -1)
+	{
+		OutReason = TEXT("malformed_status_effect_request");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 EWBGenericEffectOp ReadGenericEffectOperationOrDefault(const TSharedPtr<FJsonObject>& Object)
 {
 	FString OperationString;
@@ -1355,6 +1463,11 @@ EWBGenericEffectOp ReadGenericEffectOperationOrDefault(const TSharedPtr<FJsonObj
 	if (OperationString == TEXT("armor_effect"))
 	{
 		return EWBGenericEffectOp::ArmorEffect;
+	}
+
+	if (OperationString == TEXT("status_effect"))
+	{
+		return EWBGenericEffectOp::StatusEffect;
 	}
 
 	return EWBGenericEffectOp::Unknown;
@@ -1439,6 +1552,20 @@ bool ParseGenericEffectPayload(
 		}
 
 		return ParseArmorEffectRequestObject(*ArmorEffectObject, OutPayload.ArmorEffect, OutReason);
+	}
+
+	if (OutPayload.Operation == EWBGenericEffectOp::StatusEffect)
+	{
+		const TSharedPtr<FJsonObject>* StatusEffectObject = nullptr;
+		if (!PayloadObject->TryGetObjectField(TEXT("status_effect"), StatusEffectObject)
+			|| StatusEffectObject == nullptr
+			|| !StatusEffectObject->IsValid())
+		{
+			OutReason = FString::Printf(TEXT("missing_effect_request_payload_%d_status_effect"), PayloadIndex);
+			return false;
+		}
+
+		return ParseStatusEffectRequestObject(*StatusEffectObject, OutPayload.StatusEffect, OutReason);
 	}
 
 	OutReason.Reset();
@@ -1603,6 +1730,21 @@ bool ApplyFixtureOperation(
 		}
 
 		OutResult = WBEffectRunner::ApplyArmorEffect(State, ArmorRequest);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_status_effect"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyStatusEffect;
+		FWBStatusEffectRequest StatusRequest;
+		if (!ParseStatusEffectRequestFromFixture(Fixture, StatusRequest, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutResult = WBEffectRunner::ApplyStatusEffect(State, StatusRequest);
 		OutReason.Reset();
 		return true;
 	}

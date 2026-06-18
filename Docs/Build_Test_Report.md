@@ -2,6 +2,104 @@
 
 Date of check: 2026-06-18 (America/New_York)
 
+## Status Effect Request Scaffolding Pass
+
+### Scope
+
+This pass added deterministic generic status-effect request scaffolding for Unreal-owned fixture data.
+
+Implemented:
+
+- `WBStatusEffect`
+- generic status operations for apply, remove, duration set/add/reduce, cleanse one, and cleanse all
+- canonical public aliases for Burn, Poison, Rooted, Stunned, and Frozen
+- `WBEffectRunner::ApplyStatusEffect`
+- `status_modified` traces plus status-effect `status_removed` child traces
+- replay trace fields for `status_effect_operation` and `removed_statuses`
+- `status_effect` payload dispatch through `FWBEffectRequest`
+- fixture utility support for standalone `apply_status_effect` and effect-request `status_effect` payloads
+- standalone status-effect GodotCanon fixtures
+- mixed armor/status effect-request fixtures
+- runtime public serialization coverage after status effect requests
+
+Not implemented:
+
+- Godot CardDB import
+- JSON card database loading
+- real card activation timing
+- target selection UI
+- player legal action generation for effects
+- response windows, effect negation, passives, wands, or card-specific status behavior
+- UI, Blueprint, VFX, audio, 3D runtime, `.uasset`, or `.umap` work
+
+No Godot reference files were edited.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 36.04 seconds
+```
+
+After fixing three test assertions, the incremental rebuild also succeeded:
+
+```text
+Result: Succeeded
+Total execution time: 5.47 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=311
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+The first automation run after implementation reported 308 succeeded and 3 failed. Those failures were assertion issues in new tests only:
+
+- runtime status JSON helper expected statuses as strings instead of public status objects
+- the alias canonicalization test used case-insensitive `FName` containment to prove stored casing
+
+Both were corrected, and the final full Wandbound run passed.
+
+### New Tests Added
+
+- `Wandbound.Core.StatusEffectScaffolding.*`
+- additional `Wandbound.Core.EffectRequestScaffolding.*` status payload coverage
+- fixture-driven status effect and mixed armor/status request coverage under `Reference/GodotCanon/GoldenScenarios/`
+
+### Notes
+
+- Existing Burn, Poison, Rooted, Stunned, and Frozen tick behavior remains unchanged.
+- Applying Rooted or Stunned through status effects changes legal actions only through existing status legality checks.
+- Applying Burn through status effects does not change legal action generation.
+- `WBActionCodec` action ids remain unchanged.
+- Runtime/public serialization includes public status summaries and excludes hidden deck, hand, discard, source card id, source effect id, private choices, and pending attack internals.
+
+### Remaining Risks/Unknowns
+
+- Godot uses `-1` for some untimed status paths, while this Unreal pass keeps `Duration == 0` as the requested untimed convention.
+- Godot-specific status application side effects such as Frozen status-consume behavior and poison reapply immediate ticks remain deferred to card-specific behavior/import work.
+- CardDB import, target selection, response windows, negation, passives, wands, and card-specific status cards remain future work.
+
 ## Card Effect Request Scaffolding Pass
 
 ### Scope

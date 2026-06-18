@@ -23,5 +23,6 @@ public:
 	static FWBApplyActionResult ApplyDeterministicTurnTransition(FWBGameStateData& State, int32 EndingPlayerId, int32 NextPlayerExplicitMPRoll);
 	static FWBApplyActionResult ApplyTurnStartResourceSetup(FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll);
 	static FWBApplyActionResult ApplyArmorEffect(FWBGameStateData& State, const FWBArmorEffectRequest& Request);
+	static FWBApplyActionResult ApplyStatusEffect(FWBGameStateData& State, const FWBStatusEffectRequest& Request);
 	static FWBEffectRequestResult ApplyEffectRequest(FWBGameStateData& State, const FWBEffectRequest& Request);
 };
