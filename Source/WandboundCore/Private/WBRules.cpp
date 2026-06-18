@@ -1,5 +1,7 @@
 #include "WBRules.h"
 
+#include "WBEffectRequest.h"
+
 namespace
 {
 constexpr int32 BoardSize = 9;
@@ -523,6 +525,87 @@ FWBActionQueryResult WBRules::CanApplyZeroHPDeathRemoval(const FWBGameStateData&
 	}
 
 	return FWBActionQueryResult::Deny(TEXT("no_zero_hp_units"));
+}
+
+FWBActionQueryResult WBRules::CanApplyEffectRequest(
+	const FWBGameStateData& State,
+	const FWBEffectRequest& Request)
+{
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (Request.Source.PlayerId != -1 && !FWBGameStateData::IsValidPlayerId(Request.Source.PlayerId))
+	{
+		return FWBActionQueryResult::Deny(TEXT("invalid_effect_source_player"));
+	}
+
+	if (Request.Source.SourceUnitId != -1)
+	{
+		const FWBUnitState* SourceUnit = State.GetUnitById(Request.Source.SourceUnitId);
+		if (SourceUnit == nullptr)
+		{
+			return FWBActionQueryResult::Deny(TEXT("missing_effect_source_unit"));
+		}
+
+		if (SourceUnit->bDefeated || !SourceUnit->IsUnitOnBoard())
+		{
+			return FWBActionQueryResult::Deny(TEXT("effect_source_unit_removed"));
+		}
+	}
+
+	if (Request.Payloads.Num() == 0)
+	{
+		return FWBActionQueryResult::Deny(TEXT("empty_effect_payloads"));
+	}
+
+	for (const FWBGenericEffectPayload& Payload : Request.Payloads)
+	{
+		switch (Payload.Operation)
+		{
+		case EWBGenericEffectOp::ArmorEffect:
+		{
+			const int32 RequestTargetUnitId = Request.Target.TargetUnitId;
+			if (RequestTargetUnitId == -1)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (Payload.ArmorEffect.TargetUnitId != -1
+				&& Payload.ArmorEffect.TargetUnitId != RequestTargetUnitId)
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_payload_target_mismatch"));
+			}
+
+			const FWBUnitState* TargetUnit = State.GetUnitById(RequestTargetUnitId);
+			if (TargetUnit == nullptr)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (TargetUnit->bDefeated || !TargetUnit->IsUnitOnBoard())
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_target_unit_removed"));
+			}
+
+			if (Payload.ArmorEffect.Operation == EWBArmorEffectOp::Unknown)
+			{
+				return FWBActionQueryResult::Deny(TEXT("unknown_armor_effect_operation"));
+			}
+
+			if (Payload.ArmorEffect.Amount < 0)
+			{
+				return FWBActionQueryResult::Deny(TEXT("negative_armor_effect_amount"));
+			}
+			break;
+		}
+		default:
+			return FWBActionQueryResult::Deny(TEXT("unknown_effect_payload_operation"));
+		}
+	}
+
+	return FWBActionQueryResult::Ok();
 }
 
 FWBActionQueryResult WBRules::QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action)

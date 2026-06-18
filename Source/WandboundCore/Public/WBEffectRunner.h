@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "WBAction.h"
 #include "WBArmorEffect.h"
+#include "WBEffectRequest.h"
 #include "WBGameStateData.h"
 #include "WBReplayTrace.h"
 
@@ -22,4 +23,5 @@ public:
 	static FWBApplyActionResult ApplyDeterministicTurnTransition(FWBGameStateData& State, int32 EndingPlayerId, int32 NextPlayerExplicitMPRoll);
 	static FWBApplyActionResult ApplyTurnStartResourceSetup(FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll);
 	static FWBApplyActionResult ApplyArmorEffect(FWBGameStateData& State, const FWBArmorEffectRequest& Request);
+	static FWBEffectRequestResult ApplyEffectRequest(FWBGameStateData& State, const FWBEffectRequest& Request);
 };

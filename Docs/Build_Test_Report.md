@@ -2,6 +2,105 @@
 
 Date of check: 2026-06-18 (America/New_York)
 
+## Card Effect Request Scaffolding Pass
+
+### Scope
+
+This pass added deterministic card-effect request scaffolding for Unreal-owned fixture data.
+
+Implemented:
+
+- `FWBEffectRequest`
+- source and target refs for generic effect requests
+- `FWBGenericEffectPayload`
+- `WBRules::CanApplyEffectRequest`
+- `WBEffectRunner::ApplyEffectRequest`
+- generic `armor_effect` payload dispatch to the existing armor-effect runner
+- atomic multi-payload behavior through a working state copy
+- `effect_request_resolved` parent traces
+- fixture utility support for `operation = apply_effect_request`
+- GodotCanon effect request fixtures
+- `Wandbound.Core.EffectRequestScaffolding.*` tests
+
+Not implemented:
+
+- Godot CardDB import
+- JSON card database loading
+- real card activation timing
+- target selection UI
+- player legal action generation for effects
+- response windows, effect negation, passives, wands, or card-specific effects
+- UI, Blueprint, VFX, audio, 3D runtime, `.uasset`, or `.umap` work
+
+No Godot reference files were edited.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 52.75 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=289
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.EffectRequestScaffolding.ActionCodecUnchanged`
+- `Wandbound.Core.EffectRequestScaffolding.ArmorAddCurrentSucceeds`
+- `Wandbound.Core.EffectRequestScaffolding.ArmorAddMaxThenRestoreSucceeds`
+- `Wandbound.Core.EffectRequestScaffolding.ArmorReduceCurrentSucceeds`
+- `Wandbound.Core.EffectRequestScaffolding.FixtureScenarios`
+- `Wandbound.Core.EffectRequestScaffolding.HiddenDataExcludedFromRuntimeSerialization`
+- `Wandbound.Core.EffectRequestScaffolding.LegalGenerationUnchanged`
+- `Wandbound.Core.EffectRequestScaffolding.MissingTargetFailsWithoutMutation`
+- `Wandbound.Core.EffectRequestScaffolding.MultiplePayloadsAtomicOnFailure`
+- `Wandbound.Core.EffectRequestScaffolding.ParentTracePrecedesArmorModified`
+- `Wandbound.Core.EffectRequestScaffolding.RemovedTargetFailsWithoutMutation`
+- `Wandbound.Core.EffectRequestScaffolding.RuntimeSerializationFixture`
+- `Wandbound.Core.EffectRequestScaffolding.SourceUnitOptionalSucceeds`
+- `Wandbound.Core.EffectRequestScaffolding.SourceUnitRemovedFailsIfProvided`
+- `Wandbound.Core.EffectRequestScaffolding.UnknownOperationFailsWithoutMutation`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks/Unknowns
+
+- Only `armor_effect` payload dispatch is supported.
+- `SourceCardId` and `SourceEffectId` are fixture/debug metadata only and are not used for lookup.
+- Effect requests are not generated as legal player actions.
+- CardDB import, card activation timing, target selection, response windows, negation, passives, wands, and card-specific behavior remain future work.
+
+### Next Recommended Implementation Milestone
+
+Add deterministic effect request payload support for one more generic operation after auditing Godot behavior, likely status application or direct damage, still without importing CardDB or opening response windows.
+
+---
+
 ## Armor Effect Scaffolding Pass
 
 ### Scope

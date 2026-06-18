@@ -7,6 +7,7 @@
 #include "WBActionCodec.h"
 #include "WBArmorEffect.h"
 #include "WBDamageResolution.h"
+#include "WBEffectRequest.h"
 #include "WBEffectRunner.h"
 #include "WBMPRollSource.h"
 #include "WBRuntimeResultSerializer.h"
@@ -290,6 +291,69 @@ bool ParseFixtureTile(const TSharedPtr<FJsonObject>& Object, FWBTile& OutTile)
 {
 	return TryReadIntegerField(Object, TEXT("x"), OutTile.X)
 		&& TryReadIntegerField(Object, TEXT("y"), OutTile.Y);
+}
+
+bool ParseOptionalFixtureTileField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBTile& OutTile,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* TileObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, TileObject)
+		|| TileObject == nullptr
+		|| !TileObject->IsValid()
+		|| !ParseFixtureTile(*TileObject, OutTile))
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseOptionalWallEdgeField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBWallEdge& OutWallEdge,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* WallObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, WallObject)
+		|| WallObject == nullptr
+		|| !WallObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	if (!ParseOptionalFixtureTileField(*WallObject, TEXT("a"), OutWallEdge.A, OutReason)
+		|| !ParseOptionalFixtureTileField(*WallObject, TEXT("b"), OutWallEdge.B, OutReason))
+	{
+		return false;
+	}
+
+	if (OutWallEdge.A.X == -1 || OutWallEdge.A.Y == -1 || OutWallEdge.B.X == -1 || OutWallEdge.B.Y == -1)
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
 }
 
 bool ParseActionFromFixture(
@@ -1251,6 +1315,182 @@ bool ParseArmorEffectRequestFromFixture(
 	return true;
 }
 
+bool ParseArmorEffectRequestObject(
+	const TSharedPtr<FJsonObject>& ArmorRequestObject,
+	FWBArmorEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	if (!ArmorRequestObject.IsValid())
+	{
+		OutReason = TEXT("missing_armor_effect_payload");
+		return false;
+	}
+
+	OutRequest.Operation = ReadArmorEffectOperationOrDefault(ArmorRequestObject);
+	OutRequest.TargetUnitId = ReadIntegerFieldOrDefault(ArmorRequestObject, TEXT("target_unit_id"), -1);
+	if (!TryReadIntegerField(ArmorRequestObject, TEXT("amount"), OutRequest.Amount))
+	{
+		OutReason = TEXT("malformed_armor_effect_payload");
+		return false;
+	}
+
+	FString SourceReason;
+	if (ArmorRequestObject->TryGetStringField(TEXT("source_reason"), SourceReason))
+	{
+		OutRequest.SourceReason = FName(*SourceReason);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+EWBGenericEffectOp ReadGenericEffectOperationOrDefault(const TSharedPtr<FJsonObject>& Object)
+{
+	FString OperationString;
+	if (!Object.IsValid() || !Object->TryGetStringField(TEXT("operation"), OperationString))
+	{
+		return EWBGenericEffectOp::Unknown;
+	}
+
+	if (OperationString == TEXT("armor_effect"))
+	{
+		return EWBGenericEffectOp::ArmorEffect;
+	}
+
+	return EWBGenericEffectOp::Unknown;
+}
+
+bool ParseEffectSourceRef(
+	const TSharedPtr<FJsonObject>& EffectRequestObject,
+	FWBEffectSourceRef& OutSource,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* SourceObject = nullptr;
+	if (!EffectRequestObject.IsValid() || !EffectRequestObject->HasField(TEXT("source")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!EffectRequestObject->TryGetObjectField(TEXT("source"), SourceObject)
+		|| SourceObject == nullptr
+		|| !SourceObject->IsValid())
+	{
+		OutReason = TEXT("malformed_effect_request_source");
+		return false;
+	}
+
+	OutSource.PlayerId = ReadIntegerFieldOrDefault(*SourceObject, TEXT("player_id"), -1);
+	OutSource.SourceUnitId = ReadIntegerFieldOrDefault(*SourceObject, TEXT("source_unit_id"), -1);
+	(*SourceObject)->TryGetStringField(TEXT("source_card_id"), OutSource.SourceCardId);
+	(*SourceObject)->TryGetStringField(TEXT("source_effect_id"), OutSource.SourceEffectId);
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseEffectTargetRef(
+	const TSharedPtr<FJsonObject>& EffectRequestObject,
+	FWBEffectTargetRef& OutTarget,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* TargetObject = nullptr;
+	if (!EffectRequestObject.IsValid()
+		|| !EffectRequestObject->TryGetObjectField(TEXT("target"), TargetObject)
+		|| TargetObject == nullptr
+		|| !TargetObject->IsValid())
+	{
+		OutReason = TEXT("missing_effect_request_target");
+		return false;
+	}
+
+	OutTarget.TargetUnitId = ReadIntegerFieldOrDefault(*TargetObject, TEXT("target_unit_id"), -1);
+	if (!ParseOptionalFixtureTileField(*TargetObject, TEXT("target_tile"), OutTarget.TargetTile, OutReason)
+		|| !ParseOptionalWallEdgeField(*TargetObject, TEXT("target_wall_edge"), OutTarget.TargetWallEdge, OutReason))
+	{
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseGenericEffectPayload(
+	const TSharedPtr<FJsonObject>& PayloadObject,
+	const int32 PayloadIndex,
+	FWBGenericEffectPayload& OutPayload,
+	FString& OutReason)
+{
+	if (!PayloadObject.IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_effect_request_payload_%d"), PayloadIndex);
+		return false;
+	}
+
+	OutPayload.Operation = ReadGenericEffectOperationOrDefault(PayloadObject);
+	if (OutPayload.Operation == EWBGenericEffectOp::ArmorEffect)
+	{
+		const TSharedPtr<FJsonObject>* ArmorEffectObject = nullptr;
+		if (!PayloadObject->TryGetObjectField(TEXT("armor_effect"), ArmorEffectObject)
+			|| ArmorEffectObject == nullptr
+			|| !ArmorEffectObject->IsValid())
+		{
+			OutReason = FString::Printf(TEXT("missing_effect_request_payload_%d_armor_effect"), PayloadIndex);
+			return false;
+		}
+
+		return ParseArmorEffectRequestObject(*ArmorEffectObject, OutPayload.ArmorEffect, OutReason);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseEffectRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* EffectRequestObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("effect_request"), EffectRequestObject)
+		|| EffectRequestObject == nullptr
+		|| !EffectRequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_effect_request");
+		return false;
+	}
+
+	if (!ParseEffectSourceRef(*EffectRequestObject, OutRequest.Source, OutReason)
+		|| !ParseEffectTargetRef(*EffectRequestObject, OutRequest.Target, OutReason))
+	{
+		return false;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* PayloadValues = nullptr;
+	if (!(*EffectRequestObject)->TryGetArrayField(TEXT("payloads"), PayloadValues) || PayloadValues == nullptr)
+	{
+		OutReason = TEXT("missing_effect_request_payloads");
+		return false;
+	}
+
+	for (int32 PayloadIndex = 0; PayloadIndex < PayloadValues->Num(); ++PayloadIndex)
+	{
+		const TSharedPtr<FJsonObject> PayloadObject = (*PayloadValues)[PayloadIndex].IsValid()
+			? (*PayloadValues)[PayloadIndex]->AsObject()
+			: nullptr;
+		FWBGenericEffectPayload Payload;
+		if (!ParseGenericEffectPayload(PayloadObject, PayloadIndex, Payload, OutReason))
+		{
+			return false;
+		}
+
+		OutRequest.Payloads.Add(Payload);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ParseDamageRequestFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBDamageRequest& OutRequest,
@@ -1363,6 +1603,24 @@ bool ApplyFixtureOperation(
 		}
 
 		OutResult = WBEffectRunner::ApplyArmorEffect(State, ArmorRequest);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_effect_request"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyEffectRequest;
+		FWBEffectRequest EffectRequest;
+		if (!ParseEffectRequestFromFixture(Fixture, EffectRequest, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBEffectRequestResult EffectResult = WBEffectRunner::ApplyEffectRequest(State, EffectRequest);
+		OutResult.bOk = EffectResult.bOk;
+		OutResult.Reason = EffectResult.Reason;
+		OutResult.TraceEvents = EffectResult.TraceEvents;
 		OutReason.Reset();
 		return true;
 	}

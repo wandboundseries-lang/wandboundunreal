@@ -575,6 +575,45 @@
   - responses/counters/passives/wands
   - UI/Blueprint/3D runtime
 
+## Milestone - Card Effect Request Scaffolding
+
+- Added deterministic generic card-effect request transport:
+  - `EWBGenericEffectOp`
+  - `FWBEffectSourceRef`
+  - `FWBEffectTargetRef`
+  - `FWBGenericEffectPayload`
+  - `FWBEffectRequest`
+  - `FWBEffectRequestResult`
+- Added `WBRules::CanApplyEffectRequest`.
+- Added `WBEffectRunner::ApplyEffectRequest`.
+- Supported only one generic payload operation:
+  - `armor_effect`
+- `armor_effect` payloads route to existing `WBEffectRunner::ApplyArmorEffect`.
+- Multi-payload requests are atomic:
+  - validate first
+  - apply to a working state copy
+  - assign back only if all payloads succeed
+  - failures return no success traces and no mutation
+- Added parent `effect_request_resolved` traces before child payload traces.
+- Parent traces use only safe fields: player id, source unit id, target unit id, ok.
+- Source card id and source effect id are fixture/debug metadata only and are not serialized into traces or public summaries.
+- Added fixture support for:
+  - `operation = apply_effect_request`
+- Legal action generation remains unchanged.
+- `WBActionCodec` action IDs remain unchanged.
+- Intentionally not implemented yet:
+  - Godot CardDB import
+  - JSON card database loading
+  - real card activation timing
+  - effect legal action generation
+  - target selection UI
+  - response windows
+  - effect negation
+  - passives
+  - wands
+  - card-specific effects
+  - UI/Blueprint/3D runtime
+
 ## Milestone - Public Board Summary for Runtime Results
 
 - Added deterministic public board summaries:

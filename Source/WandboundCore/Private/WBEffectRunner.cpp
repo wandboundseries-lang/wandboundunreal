@@ -242,6 +242,19 @@ void AppendArmorModifiedTrace(
 	TraceEvents.Add(Event);
 }
 
+void AppendEffectRequestResolvedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBEffectRequest& Request)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("effect_request_resolved"));
+	Event.PlayerId = Request.Source.PlayerId;
+	Event.SourceUnitId = Request.Source.SourceUnitId;
+	Event.TargetUnitId = Request.Target.TargetUnitId;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
 void AppendHeroDefeatedTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const FWBUnitState& Unit,
@@ -637,6 +650,66 @@ FWBApplyActionResult WBEffectRunner::ApplyArmorEffect(
 
 	Result.bOk = true;
 	AppendArmorModifiedTrace(Result.TraceEvents, ArmorResult, State.GetUnitById(Request.TargetUnitId));
+	return Result;
+}
+
+FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
+	FWBGameStateData& State,
+	const FWBEffectRequest& Request)
+{
+	FWBEffectRequestResult Result;
+	Result.Request = Request;
+
+	const FWBActionQueryResult Query = WBRules::CanApplyEffectRequest(State, Request);
+	if (!Query.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = Query.Reason;
+		return Result;
+	}
+
+	FWBGameStateData WorkingState = State;
+	TArray<FWBApplyActionResult> PayloadResults;
+	TArray<FWBTraceEvent> WorkingTraceEvents;
+	AppendEffectRequestResolvedTrace(WorkingTraceEvents, Request);
+
+	for (const FWBGenericEffectPayload& Payload : Request.Payloads)
+	{
+		FWBApplyActionResult PayloadResult;
+		switch (Payload.Operation)
+		{
+		case EWBGenericEffectOp::ArmorEffect:
+		{
+			FWBArmorEffectRequest ArmorRequest = Payload.ArmorEffect;
+			if (ArmorRequest.TargetUnitId == -1)
+			{
+				ArmorRequest.TargetUnitId = Request.Target.TargetUnitId;
+			}
+
+			PayloadResult = ApplyArmorEffect(WorkingState, ArmorRequest);
+			break;
+		}
+		default:
+			Result.bOk = false;
+			Result.Reason = TEXT("unknown_effect_payload_operation");
+			return Result;
+		}
+
+		if (!PayloadResult.bOk)
+		{
+			Result.bOk = false;
+			Result.Reason = PayloadResult.Reason;
+			return Result;
+		}
+
+		WorkingTraceEvents.Append(PayloadResult.TraceEvents);
+		PayloadResults.Add(MoveTemp(PayloadResult));
+	}
+
+	State = WorkingState;
+	Result.bOk = true;
+	Result.PayloadResults = MoveTemp(PayloadResults);
+	Result.TraceEvents = MoveTemp(WorkingTraceEvents);
 	return Result;
 }
 
