@@ -8,6 +8,6 @@ public class WandboundTests : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "Core", "Json", "WandboundCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Json", "WandboundCore", "WandboundRuntime" });
 	}
 }

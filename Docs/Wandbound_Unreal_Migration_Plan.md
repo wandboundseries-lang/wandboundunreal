@@ -722,6 +722,25 @@
   - network replay envelope
   - UI/Blueprint/3D runtime
 
+## Milestone - Runtime Visual Scaffold
+
+- Added `WandboundRuntime` module.
+- Added `WBBoardViewTypes` board-to-world coordinate helpers.
+- Added `AWBBoardViewActor`.
+- Added `WBBoardViewDemoData` for manual visual smoke testing.
+- The board view actor consumes `FWBPublicBoardSummary` only.
+- Placeholder rendering covers:
+  - tiles
+  - public units
+  - public walls
+  - public terrain tiles
+- Mesh references are editable and null by default.
+- Null meshes skip instance creation without crashing.
+- Render count accessors expose intended public-summary counts for tests and future runtime wiring.
+- No gameplay rules, legal action generation, input, selection, UI, animation, VFX, sound, camera logic, CardDB import, or marker visuals were added.
+- No `.uasset`, `.umap`, Blueprint, UMG, material, mesh, or level assets were created or edited.
+- Hidden deck, hand, discard, pending choices, and marker identity remain excluded by consuming public summaries only.
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

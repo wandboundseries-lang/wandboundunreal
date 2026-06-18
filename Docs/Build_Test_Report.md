@@ -2,6 +2,85 @@
 
 Date of check: 2026-06-18 (America/New_York)
 
+## Runtime Visual Scaffold Pass
+
+### Scope
+
+This pass added the first read-only runtime visual scaffold for public board summaries.
+
+Implemented:
+
+- `WandboundRuntime` runtime module
+- `WBBoardViewTypes` board-to-world coordinate helper
+- `AWBBoardViewActor` with instanced mesh components for tiles, units, walls, and terrain
+- `WBBoardViewDemoData` public-summary demo helper
+- runtime coordinate and board-view actor automation coverage
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- state mutation
+- player input
+- tile picking
+- unit selection
+- UI, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The runtime visual layer consumes `FWBPublicBoardSummary` only and does not query or hold `FWBGameStateData`.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 4.93 seconds
+```
+
+An earlier build attempt failed only in the new coordinate tests because UE 5.7 `FVector` components are double-backed and the expected literals were float literals. The tests were updated to use double literals, and the final rebuild passed.
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=325
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.BoardViewCoordinates.*`
+- `Wandbound.Runtime.BoardViewActor.*`
+
+### Notes
+
+- Mesh properties are editable and null by default.
+- Null meshes skip instance creation and do not crash.
+- Rendered counts report intended public-summary counts even when no meshes are assigned.
+- No Godot reference files were edited.
+
 ## Status Effect Request Scaffolding Pass
 
 ### Scope
