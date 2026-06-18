@@ -1,0 +1,51 @@
+{
+  "id": "armor_effect_add_current_clamps_to_max",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/game_state.gd:set_current_armor",
+    "scripts/sim/effects/handlers/modify_stat_handler.gd"
+  ],
+  "intent": "Adding current armor clamps at max armor.",
+  "operation": "apply_armor_effect",
+  "armor_effect_request": {
+    "operation": "add_current_armor",
+    "target_unit_id": 1,
+    "amount": 5,
+    "source_reason": "fixture"
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 6,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_armored_unit", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 1, "max_armor": 3 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "expected_trace_order": [ "armor_modified" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 3, "max_armor": 3, "statuses": [] }
+    ],
+    "trace_fields": [
+      {
+        "kind": "armor_modified",
+        "target_unit_id": 1,
+        "player_id": 0,
+        "previous_armor": 1,
+        "new_armor": 3,
+        "previous_max_armor": 3,
+        "new_max_armor": 3,
+        "armor_effect_operation": "add_current_armor",
+        "armor_effect_amount": 5
+      }
+    ]
+  }
+}

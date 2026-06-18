@@ -120,3 +120,9 @@ Added GodotCanon fixtures:
 - `damage_trace_armor_absorption_fields.json`
 
 Added `WBGenericArmorTests.cpp`, covering direct damage behavior, attack traces, Burn bypass, Poison non-damage behavior, public/runtime serialization, action ID stability, legal generation stability, and fixture-driven canon coverage.
+
+## Follow-Up: Armor Effect Scaffolding
+
+Generic armor effect scaffolding is now available through `WBArmorEffect` and `WBEffectRunner::ApplyArmorEffect`.
+
+It supports deterministic current/max armor operations and emits `armor_modified` traces, but armor-granting cards, card database import, target selection, activation timing, passives, wands, responses, and UI/runtime presentation remain out of scope.

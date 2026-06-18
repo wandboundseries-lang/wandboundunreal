@@ -2,6 +2,106 @@
 
 Date of check: 2026-06-18 (America/New_York)
 
+## Armor Effect Scaffolding Pass
+
+### Scope
+
+This pass added deterministic generic armor effect scaffolding from audited Godot behavior.
+
+Implemented:
+
+- `WBArmorEffect`
+- `EWBArmorEffectOp`
+- `FWBArmorEffectRequest`
+- `FWBArmorEffectResult`
+- generic current/max armor operations
+- `WBEffectRunner::ApplyArmorEffect`
+- `armor_modified` traces
+- trace JSON fields for armor effect operation/amount and max armor before/after
+- fixture utility support for `operation = apply_armor_effect`
+- GodotCanon armor effect fixtures
+- `Wandbound.Core.ArmorEffectScaffolding.*` tests
+
+Not implemented:
+
+- card-specific armor cards
+- card database import
+- effect activation timing
+- target selection UI
+- responses, counters, passives, wands
+- UI, Blueprint, VFX, audio, 3D runtime, `.uasset`, or `.umap` work
+
+No Godot reference files were edited.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 41.99 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=274
+failed=0
+warnings=0
+errors=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.ArmorEffectScaffolding.ActionCodecUnchanged`
+- `Wandbound.Core.ArmorEffectScaffolding.AddCurrentClampsToMax`
+- `Wandbound.Core.ArmorEffectScaffolding.AddCurrentMaxZeroStaysZero`
+- `Wandbound.Core.ArmorEffectScaffolding.AddMaxDoesNotAutoFillCurrent`
+- `Wandbound.Core.ArmorEffectScaffolding.EffectRunnerEmitsArmorModifiedTrace`
+- `Wandbound.Core.ArmorEffectScaffolding.FixtureScenarios`
+- `Wandbound.Core.ArmorEffectScaffolding.LegalGenerationUnchanged`
+- `Wandbound.Core.ArmorEffectScaffolding.MissingTargetFailsWithoutMutation`
+- `Wandbound.Core.ArmorEffectScaffolding.NegativeAmountFailsWithoutMutation`
+- `Wandbound.Core.ArmorEffectScaffolding.PublicSummaryReflectsArmorChanges`
+- `Wandbound.Core.ArmorEffectScaffolding.ReduceCurrentClampsToZero`
+- `Wandbound.Core.ArmorEffectScaffolding.ReduceMaxClampsCurrent`
+- `Wandbound.Core.ArmorEffectScaffolding.RemovedTargetFailsWithoutMutation`
+- `Wandbound.Core.ArmorEffectScaffolding.RestoreArmorToMax`
+- `Wandbound.Core.ArmorEffectScaffolding.RuntimeSerializationFixture`
+- `Wandbound.Core.ArmorEffectScaffolding.SetCurrentClampsToMax`
+- `Wandbound.Core.ArmorEffectScaffolding.SetMaxClampsCurrent`
+- `Wandbound.Core.ArmorEffectScaffolding.UnknownOperationFailsWithoutMutation`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks/Unknowns
+
+- `RestoreArmorToMax` is a generic Unreal operation; Godot `restore_armor` is amount-based and clamps up to max.
+- Godot `restore_current_by_delta` / `also_restore_armor` behavior is documented but not exposed as a separate card-specific effect path in this pass.
+- Armor-granting cards and card activation timing remain future work.
+
+### Next Recommended Implementation Milestone
+
+Add deterministic card-effect request scaffolding that can carry generic effect operations from Unreal-owned fixture data, without importing Godot CardDB or adding UI activation windows yet.
+
+---
+
 ## Generic Armor Damage Handling Pass
 
 ### Scope

@@ -541,6 +541,40 @@
   - responses/counters/passives/wands
   - UI/Blueprint/3D runtime
 
+## Milestone - Armor Effect Scaffolding
+
+- Added pure C++ generic armor effect scaffolding:
+  - `EWBArmorEffectOp`
+  - `FWBArmorEffectRequest`
+  - `FWBArmorEffectResult`
+  - `WBArmorEffect::ApplyArmorEffect`
+- Supported deterministic armor operations:
+  - add/reduce/set current armor
+  - add/reduce/set max armor
+  - restore current armor to max
+- Added `WBEffectRunner::ApplyArmorEffect`.
+- Added `armor_modified` trace events with:
+  - previous/new current armor
+  - previous/new max armor
+  - armor effect operation
+  - armor effect amount
+- Added replay trace serialization for:
+  - `armor_effect_operation`
+  - `armor_effect_amount`
+  - `previous_max_armor`
+  - `new_max_armor`
+- Public board/runtime summaries already serialize current/max armor and now reflect armor-effect mutations.
+- Added fixture support for `operation = apply_armor_effect`.
+- Legal action generation remains unchanged.
+- `WBActionCodec` action IDs remain unchanged.
+- Intentionally not implemented yet:
+  - card-specific armor cards
+  - card database import
+  - target selection UI
+  - effect activation timing
+  - responses/counters/passives/wands
+  - UI/Blueprint/3D runtime
+
 ## Milestone - Public Board Summary for Runtime Results
 
 - Added deterministic public board summaries:

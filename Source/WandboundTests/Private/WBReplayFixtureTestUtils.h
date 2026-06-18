@@ -18,6 +18,7 @@ enum class EWBFixtureOperationKind : uint8
 	ApplyPendingAttackDamage,
 	ApplyZeroHPDeathRemoval,
 	ResolveDamageRequest,
+	ApplyArmorEffect,
 	ApplyStartOfTurnStatusTicks,
 	ApplyEndOfTurnStatusTicks,
 	AttackDeclareThenDamage,

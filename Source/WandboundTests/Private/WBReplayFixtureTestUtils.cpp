@@ -5,6 +5,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "WBActionCodec.h"
+#include "WBArmorEffect.h"
 #include "WBDamageResolution.h"
 #include "WBEffectRunner.h"
 #include "WBMPRollSource.h"
@@ -1171,6 +1172,85 @@ EWBDamageKind ReadDamageKindOrDefault(const TSharedPtr<FJsonObject>& Object)
 	return EWBDamageKind::Unknown;
 }
 
+EWBArmorEffectOp ReadArmorEffectOperationOrDefault(const TSharedPtr<FJsonObject>& Object)
+{
+	FString OperationString;
+	if (!Object.IsValid() || !Object->TryGetStringField(TEXT("operation"), OperationString))
+	{
+		return EWBArmorEffectOp::Unknown;
+	}
+
+	if (OperationString == TEXT("add_current_armor"))
+	{
+		return EWBArmorEffectOp::AddCurrentArmor;
+	}
+
+	if (OperationString == TEXT("reduce_current_armor"))
+	{
+		return EWBArmorEffectOp::ReduceCurrentArmor;
+	}
+
+	if (OperationString == TEXT("set_current_armor"))
+	{
+		return EWBArmorEffectOp::SetCurrentArmor;
+	}
+
+	if (OperationString == TEXT("add_max_armor"))
+	{
+		return EWBArmorEffectOp::AddMaxArmor;
+	}
+
+	if (OperationString == TEXT("reduce_max_armor"))
+	{
+		return EWBArmorEffectOp::ReduceMaxArmor;
+	}
+
+	if (OperationString == TEXT("set_max_armor"))
+	{
+		return EWBArmorEffectOp::SetMaxArmor;
+	}
+
+	if (OperationString == TEXT("restore_armor_to_max"))
+	{
+		return EWBArmorEffectOp::RestoreArmorToMax;
+	}
+
+	return EWBArmorEffectOp::Unknown;
+}
+
+bool ParseArmorEffectRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBArmorEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* ArmorRequestObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("armor_effect_request"), ArmorRequestObject)
+		|| ArmorRequestObject == nullptr
+		|| !ArmorRequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_armor_effect_request");
+		return false;
+	}
+
+	OutRequest.Operation = ReadArmorEffectOperationOrDefault(*ArmorRequestObject);
+	if (!TryReadIntegerField(*ArmorRequestObject, TEXT("target_unit_id"), OutRequest.TargetUnitId)
+		|| !TryReadIntegerField(*ArmorRequestObject, TEXT("amount"), OutRequest.Amount))
+	{
+		OutReason = TEXT("malformed_armor_effect_request");
+		return false;
+	}
+
+	FString SourceReason;
+	if ((*ArmorRequestObject)->TryGetStringField(TEXT("source_reason"), SourceReason))
+	{
+		OutRequest.SourceReason = FName(*SourceReason);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ParseDamageRequestFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBDamageRequest& OutRequest,
@@ -1268,6 +1348,21 @@ bool ApplyFixtureOperation(
 		const FWBDamageResolutionResult DamageResult = WBDamageResolution::ResolveDamageRequest(State, DamageRequest);
 		OutResult.bOk = DamageResult.bOk;
 		OutResult.Reason = DamageResult.Reason;
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_armor_effect"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyArmorEffect;
+		FWBArmorEffectRequest ArmorRequest;
+		if (!ParseArmorEffectRequestFromFixture(Fixture, ArmorRequest, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutResult = WBEffectRunner::ApplyArmorEffect(State, ArmorRequest);
 		OutReason.Reset();
 		return true;
 	}

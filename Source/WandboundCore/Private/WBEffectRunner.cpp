@@ -1,6 +1,7 @@
 #include "WBEffectRunner.h"
 
 #include "WBActionCodec.h"
+#include "WBArmorEffect.h"
 #include "WBDamageResolution.h"
 #include "WBDeathResolution.h"
 #include "WBRules.h"
@@ -218,6 +219,25 @@ void AppendUnitRemovedFromBoardTrace(
 	Event.PlayerId = Unit.OwnerId;
 	Event.TargetUnitId = Unit.UnitId;
 	Event.FromTile = PreviousTile;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendArmorModifiedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBArmorEffectResult& ArmorResult,
+	const FWBUnitState* Target)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("armor_modified"));
+	Event.TargetUnitId = ArmorResult.Request.TargetUnitId;
+	Event.PlayerId = Target != nullptr ? Target->OwnerId : -1;
+	Event.PreviousArmor = ArmorResult.PreviousCurrentArmor;
+	Event.NewArmor = ArmorResult.NewCurrentArmor;
+	Event.PreviousMaxArmor = ArmorResult.PreviousMaxArmor;
+	Event.NewMaxArmor = ArmorResult.NewMaxArmor;
+	Event.ArmorEffectOperation = WBArmorEffect::GetOperationName(ArmorResult.Request.Operation);
+	Event.ArmorEffectAmount = ArmorResult.Request.Amount;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -599,6 +619,24 @@ FWBApplyActionResult WBEffectRunner::ApplyZeroHPDeathRemoval(FWBGameStateData& S
 	}
 
 	Result.bOk = true;
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyArmorEffect(
+	FWBGameStateData& State,
+	const FWBArmorEffectRequest& Request)
+{
+	FWBApplyActionResult Result;
+	const FWBArmorEffectResult ArmorResult = WBArmorEffect::ApplyArmorEffect(State, Request);
+	if (!ArmorResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = ArmorResult.Reason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	AppendArmorModifiedTrace(Result.TraceEvents, ArmorResult, State.GetUnitById(Request.TargetUnitId));
 	return Result;
 }
 
