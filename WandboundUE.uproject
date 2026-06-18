@@ -15,6 +15,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "WandboundRuntime",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "WandboundTests",
 			"Type": "DeveloperTool",
 			"LoadingPhase": "Default"

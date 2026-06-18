@@ -47,10 +47,10 @@ Result:
 
 ```text
 Result: Succeeded
-Total execution time: 4.93 seconds
+Total execution time: 5.40 seconds
 ```
 
-An earlier build attempt failed only in the new coordinate tests because UE 5.7 `FVector` components are double-backed and the expected literals were float literals. The tests were updated to use double literals, and the final rebuild passed.
+A previous build attempt failed only in the new coordinate tests because UE 5.7 `FVector` components are double-backed and the expected literals were float literals. The tests were updated to use double literals, and the final rebuild passed.
 
 ### Wandbound Automation Tests
 
