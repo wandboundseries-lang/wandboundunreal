@@ -17,6 +17,7 @@ enum class EWBFixtureOperationKind : uint8
 	ApplyAttackDeclare,
 	ApplyPendingAttackDamage,
 	ApplyZeroHPDeathRemoval,
+	ResolveDamageRequest,
 	AttackDeclareThenDamage,
 	ApplyTurnCommand,
 	ApplyRuntimeSelectedAction,

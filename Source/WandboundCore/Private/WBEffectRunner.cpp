@@ -1,6 +1,8 @@
 #include "WBEffectRunner.h"
 
 #include "WBActionCodec.h"
+#include "WBDamageResolution.h"
+#include "WBDeathResolution.h"
 #include "WBRules.h"
 
 namespace
@@ -153,6 +155,7 @@ void AppendAttackDamageResolvedTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const FWBPendingAttackState& PendingAttack,
 	const int32 DamageAmount,
+	const FWBDamagePreventionResult& Prevention,
 	const int32 PreviousHP,
 	const int32 NewHP)
 {
@@ -165,6 +168,10 @@ void AppendAttackDamageResolvedTrace(
 	Event.ToTile = PendingAttack.DefenderTile;
 	Event.ActionId = PendingAttack.DeclarationActionId;
 	Event.DamageAmount = DamageAmount;
+	Event.bDamagePrevented = Prevention.bPrevented;
+	Event.PreventedDamageAmount = Prevention.PreventedAmount;
+	Event.FinalDamageAmount = Prevention.FinalDamage;
+	Event.PreventionReason = Prevention.PreventionReason;
 	Event.PreviousHP = PreviousHP;
 	Event.NewHP = NewHP;
 	Event.bAtOrBelowZeroHP = NewHP <= 0;
@@ -220,6 +227,17 @@ bool IsHeroUnitForOwner(const FWBGameStateData& State, const FWBUnitState& Unit)
 {
 	const FWBPlayerStateData* Player = State.GetPlayerById(Unit.OwnerId);
 	return Player != nullptr && Player->HeroUnitId == Unit.UnitId;
+}
+
+FWBDeathResolutionCandidate MakeDeathResolutionCandidate(
+	const FWBGameStateData& State,
+	const FWBUnitState& Unit)
+{
+	FWBDeathResolutionCandidate Candidate;
+	Candidate.UnitId = Unit.UnitId;
+	Candidate.OwnerId = Unit.OwnerId;
+	Candidate.bIsHero = IsHeroUnitForOwner(State, Unit);
+	return Candidate;
 }
 
 int32 OpposingPlayerId(const int32 PlayerId)
@@ -424,16 +442,21 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 
 		Result.bOk = true;
 		AppendStatusRemovedTrace(
-		Result.TraceEvents,
-		PendingAttack.AttackingPlayerId,
-		FrozenStatusId,
+			Result.TraceEvents,
+			PendingAttack.AttackingPlayerId,
+			FrozenStatusId,
 			PendingAttack.DefenderUnitId,
 			PendingAttack.AttackerUnitId,
 			PendingAttack.AttackerTile,
 			PendingAttack.DefenderTile,
 			PreviousHP,
 			Defender->HP);
-		AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, 0, PreviousHP, Defender->HP);
+		FWBDamagePreventionResult FrozenPrevention;
+		FrozenPrevention.bPrevented = false;
+		FrozenPrevention.PreventedAmount = 0;
+		FrozenPrevention.FinalDamage = 0;
+		FrozenPrevention.PreventionReason = NAME_None;
+		AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, 0, FrozenPrevention, PreviousHP, Defender->HP);
 		if (Defender->HP <= 0)
 		{
 			FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
@@ -447,13 +470,33 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 		return Result;
 	}
 
-	const int32 DamageAmount = FMath::Max(Attacker->ATK, 0);
-	Defender->HP = FMath::Max(PreviousHP - DamageAmount, 0);
-	const int32 NewHP = Defender->HP;
+	FWBDamageRequest DamageRequest;
+	DamageRequest.DamageKind = EWBDamageKind::Attack;
+	DamageRequest.SourceUnitId = PendingAttack.AttackerUnitId;
+	DamageRequest.TargetUnitId = PendingAttack.DefenderUnitId;
+	DamageRequest.SourcePlayerId = PendingAttack.AttackingPlayerId;
+	DamageRequest.BaseDamage = FMath::Max(Attacker->ATK, 0);
+
+	const FWBDamageResolutionResult DamageResult = WBDamageResolution::ResolveDamageRequest(State, DamageRequest);
+	if (!DamageResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = DamageResult.Reason;
+		return Result;
+	}
+
+	const int32 DamageAmount = FMath::Max(DamageRequest.BaseDamage, 0);
+	const int32 NewHP = DamageResult.NewHP;
 	State.ClearPendingAttack();
 
 	Result.bOk = true;
-	AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, DamageAmount, PreviousHP, NewHP);
+	AppendAttackDamageResolvedTrace(
+		Result.TraceEvents,
+		PendingAttack,
+		DamageAmount,
+		DamageResult.Prevention,
+		DamageResult.PreviousHP,
+		DamageResult.NewHP);
 	if (NewHP <= 0)
 	{
 		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
@@ -503,6 +546,13 @@ FWBApplyActionResult WBEffectRunner::ApplyZeroHPDeathRemoval(FWBGameStateData& S
 		const int32 PreviousHP = Unit->HP;
 		const FWBTile PreviousTile(Unit->X, Unit->Y);
 		const bool bHeroUnit = IsHeroUnitForOwner(State, *Unit);
+		const FWBDeathPreventionResult DeathPrevention = WBDeathResolution::EvaluateDeathPrevention(
+			State,
+			MakeDeathResolutionCandidate(State, *Unit));
+		if (DeathPrevention.bPrevented)
+		{
+			continue;
+		}
 
 		Unit->MarkUnitDefeated();
 		Unit->RemoveUnitFromBoard();

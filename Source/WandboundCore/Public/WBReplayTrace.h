@@ -29,6 +29,10 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 AttacksLeftBefore = -1;
 	int32 AttacksLeftAfter = -1;
 	int32 DamageAmount = -1;
+	bool bDamagePrevented = false;
+	int32 PreventedDamageAmount = -1;
+	int32 FinalDamageAmount = -1;
+	FName PreventionReason;
 	int32 PreviousHP = -1;
 	int32 NewHP = -1;
 	int32 PreviousMaxHP = -1;

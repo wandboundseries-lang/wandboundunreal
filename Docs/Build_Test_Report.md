@@ -356,3 +356,64 @@ notRun=0
 - Godot erases destroyed units from its `units` array; Unreal preserves records with defeated/removed flags for replay/debug safety.
 - Hero loss is simple no-replacement loss only; Hybrid Hero replacement and death prevention remain future work.
 - Discard movement, equipped wand fallout, death triggers, and on-destroy buffs remain future work.
+
+---
+
+# Damage and Death Prevention Scaffolding Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 24.81 seconds
+```
+
+The first build after adding the new resolver files also succeeded in 37.04 seconds.
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=242
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+The first automation run found one test assertion issue in `Wandbound.Core.DamagePreventionScaffolding.AttackDamageUsesResolverTraceDefaults`: the test used brittle exact JSON substring checks for `final_damage_amount` and `prevented_damage_amount`. The assertion was changed to parse trace JSON structurally, and the final rerun passed.
+
+## Notes
+
+- Added `WBDamageResolution` as a deterministic damage-prevention and future armor seam.
+- Added `WBDeathResolution` as a deterministic death-prevention and future replacement seam.
+- Routed attack damage through the damage resolver.
+- Zero-HP cleanup checks the default death-prevention seam before removal.
+- Added trace fields for prevention defaults: `damage_prevented`, `prevented_damage_amount`, `final_damage_amount`, and `prevention_reason`.
+- Normal attack damage, Frozen break, zero-HP cleanup, and simple Hero loss behavior remain unchanged.
+- Godot audit confirmed generic armor state exists in Godot, but Unreal armor gameplay was not added in this pass.
+- No `.uasset`, `.umap`, Blueprint, UI, VFX, response, counter, passive, wand, card-specific prevention, replacement, death-trigger, discard, draw, random dice, NPC phase, or 3D runtime work was added.
+
+## New Tests Added
+
+- `Wandbound.Core.DamagePreventionScaffolding.*`
+- Fixture-driven coverage for the four new damage/death scaffolding scenarios under `Reference/GodotCanon/GoldenScenarios/`
+
+## Remaining Risks/Unknowns
+
+- Godot armor is real (`current_armor`/`max_armor`) but Unreal does not model active armor yet.
+- Oathchain, Backfill, Juno, Hybrid Hero replacement, death triggers, equipped wand fallout, discard movement, responses, counters, passives, and wands remain future work.

@@ -471,6 +471,35 @@
   - discard movement
   - UI/Blueprint/3D runtime
 
+## Milestone - Damage and Death Prevention Scaffolding
+
+- Godot audit found generic armor state in `current_armor` and `max_armor`, plus card-specific prevention/replacement embedded in `apply_damage` and game-controller flows.
+- Added `WBDamageResolution` as the future damage-prevention and armor seam.
+- Added `WBDeathResolution` as the future death-prevention and replacement seam.
+- Attack damage now routes through `WBDamageResolution::ResolveDamageRequest`.
+- Direct damage resolution applies final damage, clamps HP at zero, and does not remove units.
+- Zero-HP cleanup now checks `WBDeathResolution::EvaluateDeathPrevention` before defeat/removal.
+- Current gameplay behavior is unchanged because default damage and death prevention both return no prevention.
+- Frozen break behavior remains unchanged and is not treated as prevention.
+- Added replay trace fields for prevention defaults:
+  - `damage_prevented`
+  - `prevented_damage_amount`
+  - `final_damage_amount`
+  - `prevention_reason`
+- Armor is documented as future work and is not added to `FWBUnitState` in this pass.
+- Intentionally not implemented yet:
+  - card-specific prevention
+  - active armor gameplay
+  - Oathchain
+  - Backfill
+  - Juno
+  - Hybrid Hero replacement
+  - death triggers
+  - discard movement
+  - equipped wand fallout
+  - responses/counters/passives/wands
+  - UI/Blueprint/3D runtime
+
 ## Milestone - Public Board Summary for Runtime Results
 
 - Added deterministic public board summaries:

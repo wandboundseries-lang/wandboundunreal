@@ -1,0 +1,37 @@
+{
+  "id": "zero_hp_cleanup_uses_death_resolution_pipeline",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/game_state.gd:apply_damage",
+    "scripts/sim/game_state.gd:remove_unit_by_id"
+  ],
+  "intent": "Zero-HP cleanup checks the default death-prevention scaffold and still removes the unit.",
+  "operation": "apply_zero_hp_death_removal",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 5,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2, "hero_unit_id": 1 },
+      { "player_id": 1, "remaining_mp": 0, "hero_unit_id": 3 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_hero_p0", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "atk": 2, "ar": 1 },
+      { "id": 2, "owner_id": 1, "card_id": "test_target", "x": 5, "y": 4, "hp": 0, "max_hp": 5, "atk": 1, "ar": 1 },
+      { "id": 3, "owner_id": 1, "card_id": "test_hero_p1", "x": 7, "y": 4, "hp": 5, "max_hp": 5, "atk": 1, "ar": 1 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "expected_trace_order": [ "unit_defeated", "unit_removed_from_board" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] },
+      { "id": 2, "x": -1, "y": -1, "hp": 0, "max_hp": 5, "defeated": true, "removed_from_board": true, "statuses": [] },
+      { "id": 3, "x": 7, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] }
+    ],
+    "final_state": { "game_over": false, "winner_player_id": -1 }
+  }
+}

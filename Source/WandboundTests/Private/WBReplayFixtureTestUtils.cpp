@@ -5,6 +5,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "WBActionCodec.h"
+#include "WBDamageResolution.h"
 #include "WBEffectRunner.h"
 #include "WBMPRollSource.h"
 #include "WBRuntimeResultSerializer.h"
@@ -1142,6 +1143,61 @@ bool ApplyRuntimeSelectedActionWithResultAndSerializeFixture(
 	return true;
 }
 
+EWBDamageKind ReadDamageKindOrDefault(const TSharedPtr<FJsonObject>& Object)
+{
+	FString DamageKindString;
+	if (!Object.IsValid() || !Object->TryGetStringField(TEXT("damage_kind"), DamageKindString))
+	{
+		return EWBDamageKind::Unknown;
+	}
+
+	if (DamageKindString == TEXT("attack"))
+	{
+		return EWBDamageKind::Attack;
+	}
+
+	if (DamageKindString == TEXT("burn"))
+	{
+		return EWBDamageKind::Burn;
+	}
+
+	if (DamageKindString == TEXT("effect"))
+	{
+		return EWBDamageKind::Effect;
+	}
+
+	return EWBDamageKind::Unknown;
+}
+
+bool ParseDamageRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBDamageRequest& OutRequest,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* DamageRequestObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("damage_request"), DamageRequestObject)
+		|| DamageRequestObject == nullptr
+		|| !DamageRequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_damage_request");
+		return false;
+	}
+
+	OutRequest.DamageKind = ReadDamageKindOrDefault(*DamageRequestObject);
+	if (!TryReadIntegerField(*DamageRequestObject, TEXT("source_unit_id"), OutRequest.SourceUnitId)
+		|| !TryReadIntegerField(*DamageRequestObject, TEXT("target_unit_id"), OutRequest.TargetUnitId)
+		|| !TryReadIntegerField(*DamageRequestObject, TEXT("source_player_id"), OutRequest.SourcePlayerId)
+		|| !TryReadIntegerField(*DamageRequestObject, TEXT("base_damage"), OutRequest.BaseDamage))
+	{
+		OutReason = TEXT("malformed_damage_request");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ApplyFixtureOperation(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBGameStateData& State,
@@ -1186,6 +1242,23 @@ bool ApplyFixtureOperation(
 	{
 		OutOperationKind = EWBFixtureOperationKind::ApplyZeroHPDeathRemoval;
 		OutResult = WBEffectRunner::ApplyZeroHPDeathRemoval(State);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("resolve_damage_request"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ResolveDamageRequest;
+		FWBDamageRequest DamageRequest;
+		if (!ParseDamageRequestFromFixture(Fixture, DamageRequest, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBDamageResolutionResult DamageResult = WBDamageResolution::ResolveDamageRequest(State, DamageRequest);
+		OutResult.bOk = DamageResult.bOk;
+		OutResult.Reason = DamageResult.Reason;
 		OutReason.Reset();
 		return true;
 	}

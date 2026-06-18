@@ -120,6 +120,26 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("damage_amount"), Event.DamageAmount);
 	}
 
+	if (Event.bDamagePrevented)
+	{
+		Object->SetBoolField(TEXT("damage_prevented"), Event.bDamagePrevented);
+	}
+
+	if (Event.PreventedDamageAmount != -1)
+	{
+		Object->SetNumberField(TEXT("prevented_damage_amount"), Event.PreventedDamageAmount);
+	}
+
+	if (Event.FinalDamageAmount != -1)
+	{
+		Object->SetNumberField(TEXT("final_damage_amount"), Event.FinalDamageAmount);
+	}
+
+	if (!Event.PreventionReason.IsNone())
+	{
+		Object->SetStringField(TEXT("prevention_reason"), Event.PreventionReason.ToString());
+	}
+
 	if (Event.PreviousHP != -1)
 	{
 		Object->SetNumberField(TEXT("previous_hp"), Event.PreviousHP);

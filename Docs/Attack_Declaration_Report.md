@@ -11,7 +11,7 @@ This pass adds deterministic attack declaration only. It validates whether a uni
 - Acting player must be a valid current/priority player in normal turn.
 - Attacker and defender must exist.
 - Attacker owner must match the acting player.
-- Defender must not share the attacker's owner.
+- Defender must not share the attacker's owner, except the later damage-resolution pass permits friendly Frozen targets for break-Frozen attacks.
 - Attacker and defender tiles must be in bounds.
 - Attacker must have `AttacksLeft > 0`.
 - Stunned, Frozen, Cannot Attack, `cannot_attack`, and `no_attack` block declaration.
@@ -23,7 +23,7 @@ This pass adds deterministic attack declaration only. It validates whether a uni
 
 - `WBEffectRunner::ApplyAttackDeclare` decrements the attacker's `AttacksLeft` by one.
 - It emits one `attack_declared` trace with player, source unit, target unit, source tile, target tile, and attacks-left before/after fields.
-- It does not change HP, MaxHP, MP, turn state, response state, or pending combat state.
+- It does not change HP, MaxHP, MP, turn state, or response state. The later damage-resolution pass stages deterministic pending attack state for resolution.
 
 ## Action ID
 
