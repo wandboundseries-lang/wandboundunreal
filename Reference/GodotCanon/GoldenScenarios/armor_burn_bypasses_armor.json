@@ -1,0 +1,65 @@
+{
+  "id": "armor_burn_bypasses_armor",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:end_turn_impl",
+    "scripts/sim/game_state.gd:tick_statuses",
+    "scripts/sim/game_state.gd:_apply_status_tick",
+    "scripts/sim/game_state.gd:apply_damage"
+  ],
+  "intent": "Burn is armor-bypass damage: HP decreases while armor stays unchanged.",
+  "operation": {
+    "kind": "apply_end_turn_status_ticks",
+    "player_id": 0
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 5,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 1 },
+      { "player_id": 1, "remaining_mp": 1 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_burning_armored_unit", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 3, "max_armor": 3 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {
+      "1": {
+        "Burn": {
+          "status_id": "Burn",
+          "turns_remaining": 2
+        }
+      }
+    }
+  },
+  "expected": {
+    "ok": true,
+    "expected_trace_order": [ "end_turn_status_ticks", "status_tick:Burn" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 4, "max_hp": 5, "current_armor": 3, "max_armor": 3, "statuses": [ "Burn" ], "status_turns": { "Burn": 1 } }
+    ],
+    "trace_fields": [
+      {
+        "kind": "end_turn_status_ticks",
+        "player_id": 0
+      },
+      {
+        "kind": "status_tick",
+        "status_id": "Burn",
+        "damage_amount": 1,
+        "previous_hp": 5,
+        "new_hp": 4,
+        "previous_armor": 3,
+        "new_armor": 3,
+        "armor_absorbed_amount": 0,
+        "hp_damage_amount": 1,
+        "bypassed_armor": true,
+        "damage_cause": "Burn",
+        "final_damage_amount": 1,
+        "prevented_damage_amount": 0
+      }
+    ]
+  }
+}

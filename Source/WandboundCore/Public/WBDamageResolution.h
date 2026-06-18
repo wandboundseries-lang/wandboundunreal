@@ -18,6 +18,8 @@ struct WANDBOUNDCORE_API FWBDamageRequest
 	int32 TargetUnitId = -1;
 	int32 SourcePlayerId = -1;
 	int32 BaseDamage = 0;
+	bool bBypassArmor = false;
+	FName DamageCause;
 };
 
 struct WANDBOUNDCORE_API FWBDamagePreventionResult
@@ -36,6 +38,11 @@ struct WANDBOUNDCORE_API FWBDamageResolutionResult
 	FWBDamagePreventionResult Prevention;
 	int32 PreviousHP = 0;
 	int32 NewHP = 0;
+	int32 PreviousArmor = 0;
+	int32 NewArmor = 0;
+	int32 ArmorAbsorbedAmount = 0;
+	bool bBypassedArmor = false;
+	int32 HPDamageAmount = 0;
 	bool bAtOrBelowZeroHP = false;
 };
 

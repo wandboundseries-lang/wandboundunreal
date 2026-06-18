@@ -1,0 +1,65 @@
+{
+  "id": "runtime_result_serialization_armor_fields",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:unit public snapshot",
+    "scripts/sim/game_state.gd:move_unit_by_id"
+  ],
+  "intent": "Runtime result public board summary serializes public armor fields.",
+  "operation": "apply_runtime_selected_action_with_result_and_serialize",
+  "action": {
+    "type": "move",
+    "kind": "move",
+    "player_id": 0,
+    "source_unit_id": 1,
+    "unit_id": 1,
+    "from_x": 4,
+    "from_y": 4,
+    "to_x": 5,
+    "to_y": 4
+  },
+  "runtime_context": {
+    "resolve_end_turn_as_full_transition": true,
+    "queued_mp_rolls": [ 4 ]
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 5,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2, "last_mp_roll": 2, "walls_left": 0, "wall_removals_left": 0 },
+      { "player_id": 1, "remaining_mp": 0, "last_mp_roll": 0, "walls_left": 0, "wall_removals_left": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_armored_unit", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 2, "max_armor": 3, "attacks_left": 1, "max_attacks_per_turn": 1 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "reason": "",
+    "selected_action_type": "move",
+    "selected_action_id": "move:p0:u1:4,4->5,4",
+    "consumed_mp_roll": false,
+    "consumed_mp_roll_value": 0,
+    "roll_source_remaining_count": 1,
+    "expected_trace_order": [ "move" ],
+    "final_units": [
+      { "id": 1, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 2, "max_armor": 3, "attacks_left": 1, "statuses": [] }
+    ]
+  },
+  "expected_json": {
+    "selected_action_type": "move",
+    "selected_action_id": "move:p0:u1:4,4->5,4",
+    "ok": true,
+    "trace_order": [ "move" ],
+    "final_public_board_summary": {
+      "units": [
+        { "unit_id": 1, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 2, "max_armor": 3 }
+      ]
+    },
+    "forbidden_substrings": [ "pending_attack" ]
+  }
+}

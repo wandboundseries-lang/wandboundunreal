@@ -177,6 +177,29 @@ bool ExpectUnitMatches(
 			ExpectedInt);
 	}
 
+	const TCHAR* OptionalIntegerFields[] = {
+		TEXT("current_armor"),
+		TEXT("max_armor")
+	};
+	const int32 OptionalActualValues[] = {
+		Actual.CurrentArmor,
+		Actual.MaxArmor
+	};
+
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(OptionalIntegerFields); ++Index)
+	{
+		if (!Expected.IsValid() || !Expected->HasField(OptionalIntegerFields[Index]))
+		{
+			continue;
+		}
+
+		TryReadIntegerField(Expected, OptionalIntegerFields[Index], ExpectedInt);
+		Test.TestEqual(
+			*FString::Printf(TEXT("%s %s"), *Label, OptionalIntegerFields[Index]),
+			OptionalActualValues[Index],
+			ExpectedInt);
+	}
+
 	const TArray<TSharedPtr<FJsonValue>>* ExpectedStatuses = nullptr;
 	Test.TestTrue(
 		*FString::Printf(TEXT("%s statuses exist"), *Label),
@@ -347,11 +370,31 @@ bool FWBPublicBoardSummaryCombatFieldsTest::RunTest(const FString& Parameters)
 	const FWBPublicUnitBoardSummary Unit = WBPublicBoardSummary::Build(State).Units[0];
 	TestEqual(TEXT("HP"), Unit.HP, 3);
 	TestEqual(TEXT("MaxHP"), Unit.MaxHP, 6);
+	TestEqual(TEXT("Current armor"), Unit.CurrentArmor, 0);
+	TestEqual(TEXT("Max armor"), Unit.MaxArmor, 0);
 	TestEqual(TEXT("ATK"), Unit.ATK, 4);
 	TestEqual(TEXT("AR"), Unit.AR, 2);
 	TestEqual(TEXT("RL total"), Unit.RLTotal, 5);
 	TestEqual(TEXT("RL used"), Unit.RLUsed, 1);
 	TestEqual(TEXT("Attacks left"), Unit.AttacksLeft, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBPublicBoardSummaryArmorFieldsTest, "Wandbound.Core.PublicBoardSummary.IncludesArmorFields", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBPublicBoardSummaryArmorFieldsTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeBoardSummaryState();
+	FWBUnitState Unit = MakeBoardSummaryUnit(1, 0, FWBTile(4, 4));
+	Unit.SetArmorForTest(2, 3);
+	TestTrue(TEXT("Unit added"), State.AddUnitForTest(Unit));
+
+	const FWBPublicUnitBoardSummary SummaryUnit = WBPublicBoardSummary::Build(State).Units[0];
+	TestEqual(TEXT("Current armor"), SummaryUnit.CurrentArmor, 2);
+	TestEqual(TEXT("Max armor"), SummaryUnit.MaxArmor, 3);
+
+	const FString Serialized = SerializeBoardSummaryThroughRuntimeResult(WBPublicBoardSummary::Build(State));
+	TestTrue(TEXT("Current armor serializes"), Serialized.Contains(TEXT("current_armor")));
+	TestTrue(TEXT("Max armor serializes"), Serialized.Contains(TEXT("max_armor")));
 	return true;
 }
 

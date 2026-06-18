@@ -2,7 +2,7 @@
 
 ## Scope
 
-This pass adds deterministic C++ scaffolding for future damage prevention, armor, death prevention, replacement, Hero replacement, and death triggers. It does not activate any card-specific behavior and keeps current attack damage and zero-HP cleanup behavior unchanged.
+This pass added deterministic C++ scaffolding for future damage prevention, death prevention, replacement, Hero replacement, and death triggers. A later generic armor pass now uses this damage-resolution seam, but card-specific prevention/replacement remains inactive.
 
 ## Damage Resolution
 
@@ -22,7 +22,7 @@ Default prevention behavior is:
 - `FinalDamage = max(0, BaseDamage)`
 - `PreventionReason = None`
 
-`ResolveDamageRequest` validates the target, applies `FinalDamage`, clamps HP at zero, reports previous/new HP, and does not remove the unit.
+`ResolveDamageRequest` validates the target, applies `FinalDamage`, clamps HP at zero, reports previous/new HP, and does not remove the unit. The later generic armor pass extends this step so non-bypass damage consumes armor before HP loss.
 
 ## Death Resolution
 
@@ -101,10 +101,22 @@ Added `WBDamagePreventionScaffoldingTests.cpp` covering:
 - Hero death default no-replacement loss
 - fixture-driven coverage for the four new scenarios
 
+## Generic Armor Follow-Up
+
+Generic armor is now implemented as part of damage resolution:
+
+- units have `CurrentArmor` and `MaxArmor`
+- non-bypass damage consumes armor before HP
+- bypass damage ignores armor
+- attack damage is non-bypass
+- Burn bypasses armor
+- Poison remains MaxHP status behavior and does not use armor
+
+Prevention/replacement remains future work. Armor-granting cards and card-specific armor modifications are still out of scope.
+
 ## Out of Scope
 
 - card-specific prevention
-- armor gameplay
 - Oathchain
 - Backfill
 - Juno

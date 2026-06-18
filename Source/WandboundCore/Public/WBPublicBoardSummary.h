@@ -18,6 +18,8 @@ struct WANDBOUNDCORE_API FWBPublicUnitBoardSummary
 	int32 Y = -1;
 	int32 HP = 0;
 	int32 MaxHP = 0;
+	int32 CurrentArmor = 0;
+	int32 MaxArmor = 0;
 	int32 ATK = 0;
 	int32 AR = 0;
 	int32 RLTotal = 0;

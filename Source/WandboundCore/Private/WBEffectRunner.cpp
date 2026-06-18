@@ -56,9 +56,7 @@ FWBTraceEvent MakeTurnTransitionTrace(
 void AppendBurnTickTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const int32 PlayerId,
-	const int32 TargetUnitId,
-	const int32 PreviousHP,
-	const int32 NewHP,
+	const FWBDamageResolutionResult& DamageResult,
 	const int32 PreviousMaxHP,
 	const int32 NewMaxHP,
 	const int32 PreviousStatusTurns,
@@ -68,14 +66,25 @@ void AppendBurnTickTrace(
 	Event.Kind = FName(TEXT("status_tick"));
 	Event.StatusId = BurnStatusId;
 	Event.PlayerId = PlayerId;
-	Event.TargetUnitId = TargetUnitId;
-	Event.PreviousHP = PreviousHP;
-	Event.NewHP = NewHP;
+	Event.TargetUnitId = DamageResult.Request.TargetUnitId;
+	Event.DamageAmount = DamageResult.Request.BaseDamage;
+	Event.bDamagePrevented = DamageResult.Prevention.bPrevented;
+	Event.PreventedDamageAmount = DamageResult.Prevention.PreventedAmount;
+	Event.FinalDamageAmount = DamageResult.Prevention.FinalDamage;
+	Event.PreventionReason = DamageResult.Prevention.PreventionReason;
+	Event.PreviousHP = DamageResult.PreviousHP;
+	Event.NewHP = DamageResult.NewHP;
+	Event.PreviousArmor = DamageResult.PreviousArmor;
+	Event.NewArmor = DamageResult.NewArmor;
+	Event.ArmorAbsorbedAmount = DamageResult.ArmorAbsorbedAmount;
+	Event.bBypassedArmor = DamageResult.bBypassedArmor;
+	Event.HPDamageAmount = DamageResult.HPDamageAmount;
+	Event.DamageCause = DamageResult.Request.DamageCause;
 	Event.PreviousMaxHP = PreviousMaxHP;
 	Event.NewMaxHP = NewMaxHP;
 	Event.PreviousStatusTurns = PreviousStatusTurns;
 	Event.NewStatusTurns = NewStatusTurns;
-	Event.bAtOrBelowZeroHP = NewHP <= 0;
+	Event.bAtOrBelowZeroHP = DamageResult.NewHP <= 0;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -155,9 +164,7 @@ void AppendAttackDamageResolvedTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const FWBPendingAttackState& PendingAttack,
 	const int32 DamageAmount,
-	const FWBDamagePreventionResult& Prevention,
-	const int32 PreviousHP,
-	const int32 NewHP)
+	const FWBDamageResolutionResult& DamageResult)
 {
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("attack_damage_resolved"));
@@ -168,13 +175,19 @@ void AppendAttackDamageResolvedTrace(
 	Event.ToTile = PendingAttack.DefenderTile;
 	Event.ActionId = PendingAttack.DeclarationActionId;
 	Event.DamageAmount = DamageAmount;
-	Event.bDamagePrevented = Prevention.bPrevented;
-	Event.PreventedDamageAmount = Prevention.PreventedAmount;
-	Event.FinalDamageAmount = Prevention.FinalDamage;
-	Event.PreventionReason = Prevention.PreventionReason;
-	Event.PreviousHP = PreviousHP;
-	Event.NewHP = NewHP;
-	Event.bAtOrBelowZeroHP = NewHP <= 0;
+	Event.bDamagePrevented = DamageResult.Prevention.bPrevented;
+	Event.PreventedDamageAmount = DamageResult.Prevention.PreventedAmount;
+	Event.FinalDamageAmount = DamageResult.Prevention.FinalDamage;
+	Event.PreventionReason = DamageResult.Prevention.PreventionReason;
+	Event.PreviousHP = DamageResult.PreviousHP;
+	Event.NewHP = DamageResult.NewHP;
+	Event.PreviousArmor = DamageResult.PreviousArmor;
+	Event.NewArmor = DamageResult.NewArmor;
+	Event.ArmorAbsorbedAmount = DamageResult.ArmorAbsorbedAmount;
+	Event.bBypassedArmor = DamageResult.bBypassedArmor;
+	Event.HPDamageAmount = DamageResult.HPDamageAmount;
+	Event.DamageCause = DamageResult.Request.DamageCause;
+	Event.bAtOrBelowZeroHP = DamageResult.NewHP <= 0;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -451,12 +464,28 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 			PendingAttack.DefenderTile,
 			PreviousHP,
 			Defender->HP);
-		FWBDamagePreventionResult FrozenPrevention;
-		FrozenPrevention.bPrevented = false;
-		FrozenPrevention.PreventedAmount = 0;
-		FrozenPrevention.FinalDamage = 0;
-		FrozenPrevention.PreventionReason = NAME_None;
-		AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, 0, FrozenPrevention, PreviousHP, Defender->HP);
+		FWBDamageResolutionResult FrozenDamageResult;
+		FrozenDamageResult.bOk = true;
+		FrozenDamageResult.Request.DamageKind = EWBDamageKind::Attack;
+		FrozenDamageResult.Request.SourceUnitId = PendingAttack.AttackerUnitId;
+		FrozenDamageResult.Request.TargetUnitId = PendingAttack.DefenderUnitId;
+		FrozenDamageResult.Request.SourcePlayerId = PendingAttack.AttackingPlayerId;
+		FrozenDamageResult.Request.BaseDamage = 0;
+		FrozenDamageResult.Request.bBypassArmor = false;
+		FrozenDamageResult.Request.DamageCause = FName(TEXT("Attack"));
+		FrozenDamageResult.Prevention.bPrevented = false;
+		FrozenDamageResult.Prevention.PreventedAmount = 0;
+		FrozenDamageResult.Prevention.FinalDamage = 0;
+		FrozenDamageResult.Prevention.PreventionReason = NAME_None;
+		FrozenDamageResult.PreviousHP = PreviousHP;
+		FrozenDamageResult.NewHP = Defender->HP;
+		FrozenDamageResult.PreviousArmor = Defender->GetCurrentArmor();
+		FrozenDamageResult.NewArmor = Defender->GetCurrentArmor();
+		FrozenDamageResult.ArmorAbsorbedAmount = 0;
+		FrozenDamageResult.bBypassedArmor = false;
+		FrozenDamageResult.HPDamageAmount = 0;
+		FrozenDamageResult.bAtOrBelowZeroHP = Defender->HP <= 0;
+		AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, 0, FrozenDamageResult);
 		if (Defender->HP <= 0)
 		{
 			FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
@@ -476,6 +505,8 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 	DamageRequest.TargetUnitId = PendingAttack.DefenderUnitId;
 	DamageRequest.SourcePlayerId = PendingAttack.AttackingPlayerId;
 	DamageRequest.BaseDamage = FMath::Max(Attacker->ATK, 0);
+	DamageRequest.bBypassArmor = false;
+	DamageRequest.DamageCause = FName(TEXT("Attack"));
 
 	const FWBDamageResolutionResult DamageResult = WBDamageResolution::ResolveDamageRequest(State, DamageRequest);
 	if (!DamageResult.bOk)
@@ -494,9 +525,7 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 		Result.TraceEvents,
 		PendingAttack,
 		DamageAmount,
-		DamageResult.Prevention,
-		DamageResult.PreviousHP,
-		DamageResult.NewHP);
+		DamageResult);
 	if (NewHP <= 0)
 	{
 		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
@@ -726,19 +755,31 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 
 		if (Unit.HasStatus(BurnStatusId))
 		{
-			const int32 PreviousHP = Unit.HP;
 			const int32 PreviousMaxHP = Unit.MaxHP;
 			int32 PreviousStatusTurns = 0;
 			int32 NewStatusTurns = 0;
 			const bool bExpired = DecayTimedStatus(Unit, BurnStatusId, PreviousStatusTurns, NewStatusTurns);
 
-			Unit.HP = FMath::Max(Unit.HP - 1, 0);
+			FWBDamageRequest BurnDamageRequest;
+			BurnDamageRequest.DamageKind = EWBDamageKind::Burn;
+			BurnDamageRequest.SourceUnitId = -1;
+			BurnDamageRequest.TargetUnitId = Unit.UnitId;
+			BurnDamageRequest.SourcePlayerId = PlayerId;
+			BurnDamageRequest.BaseDamage = 1;
+			BurnDamageRequest.bBypassArmor = true;
+			BurnDamageRequest.DamageCause = FName(TEXT("Burn"));
+			const FWBDamageResolutionResult BurnDamageResult = WBDamageResolution::ResolveDamageRequest(State, BurnDamageRequest);
+			if (!BurnDamageResult.bOk)
+			{
+				Result.bOk = false;
+				Result.Reason = BurnDamageResult.Reason;
+				return Result;
+			}
+
 			AppendBurnTickTrace(
 				Result.TraceEvents,
 				PlayerId,
-				Unit.UnitId,
-				PreviousHP,
-				Unit.HP,
+				BurnDamageResult,
 				PreviousMaxHP,
 				Unit.MaxHP,
 				PreviousStatusTurns,

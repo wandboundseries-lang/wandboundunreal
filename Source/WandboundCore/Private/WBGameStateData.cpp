@@ -102,6 +102,22 @@ bool FWBUnitState::IsUnitOnBoard() const
 	return !bDefeated && !bRemovedFromBoard && X >= 0 && Y >= 0;
 }
 
+int32 FWBUnitState::GetMaxArmor() const
+{
+	return FMath::Max(MaxArmor, 0);
+}
+
+int32 FWBUnitState::GetCurrentArmor() const
+{
+	return FMath::Clamp(CurrentArmor, 0, GetMaxArmor());
+}
+
+void FWBUnitState::SetArmorForTest(const int32 InCurrentArmor, const int32 InMaxArmor)
+{
+	MaxArmor = FMath::Max(InMaxArmor, 0);
+	CurrentArmor = FMath::Clamp(InCurrentArmor, 0, MaxArmor);
+}
+
 void FWBUnitState::MarkUnitDefeated()
 {
 	bDefeated = true;
@@ -433,7 +449,9 @@ bool FWBGameStateData::AddUnitForTest(const FWBUnitState& Unit)
 	}
 
 	FindOrAddTestPlayerState(*this, Unit.OwnerId, Unit.MPRemaining);
-	Units.Add(Unit);
+	FWBUnitState NormalizedUnit = Unit;
+	NormalizedUnit.SetArmorForTest(Unit.CurrentArmor, Unit.MaxArmor);
+	Units.Add(NormalizedUnit);
 	return true;
 }
 

@@ -1,6 +1,104 @@
 # Build/Test Report
 
-Date of check: 2026-06-17 (America/New_York)
+Date of check: 2026-06-18 (America/New_York)
+
+## Generic Armor Damage Handling Pass
+
+### Scope
+
+This pass implemented deterministic generic armor from Godot `current_armor` / `max_armor`.
+
+Implemented:
+
+- `FWBUnitState::CurrentArmor`
+- `FWBUnitState::MaxArmor`
+- armor normalization helpers
+- non-bypass damage armor absorption
+- bypass damage armor ignore
+- attack damage as non-bypass armor damage
+- Burn status damage as armor-bypass damage
+- Poison unchanged as MaxHP status behavior
+- armor trace fields
+- public board summary armor fields
+- runtime result JSON armor fields
+- GodotCanon armor fixtures
+- `Wandbound.Core.GenericArmor.*` tests
+
+Not implemented:
+
+- card-specific prevention/replacement
+- armor-granting cards
+- Oathchain, Backfill, Juno, Hybrid Hero replacement
+- death triggers, discard movement, equipped wand fallout
+- responses, counters, passives, wands
+- UI, Blueprint, VFX, audio, 3D runtime, `.uasset`, or `.umap` work
+
+No Godot reference files were edited.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 62.12 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=256
+failed=0
+warnings=0
+errors=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.GenericArmor.ActionIdsUnchanged`
+- `Wandbound.Core.GenericArmor.ArmorCannotGoNegative`
+- `Wandbound.Core.GenericArmor.AttackAbsorbsAllDamage`
+- `Wandbound.Core.GenericArmor.AttackNoArmorSameAsBefore`
+- `Wandbound.Core.GenericArmor.AttackPartiallyAbsorbsDamage`
+- `Wandbound.Core.GenericArmor.AttackTraceSerializesArmorFields`
+- `Wandbound.Core.GenericArmor.BurnBypassesArmor`
+- `Wandbound.Core.GenericArmor.FixtureScenarios`
+- `Wandbound.Core.GenericArmor.HPClampsAndCleanupRemovesUnit`
+- `Wandbound.Core.GenericArmor.LegalGenerationUnchanged`
+- `Wandbound.Core.GenericArmor.PoisonDoesNotUseArmor`
+- `Wandbound.Core.GenericArmor.PublicSummaryAndRuntimeJsonIncludeArmor`
+- `Wandbound.Core.GenericArmor.RuntimeSerializationFixture`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks/Unknowns
+
+- Burn can mark HP at or below zero in its trace, but status-tick zero-HP cleanup is still not composed into end-turn status ticks.
+- `bypassed_armor` is serialized only when true, matching the existing optional false-flag trace style.
+- Armor-granting and card-specific armor modification rules remain future work.
+- Card-specific prevention/replacement remains future work.
+
+### Next Recommended Implementation Milestone
+
+Add deterministic armor-granting/effect-side armor modification scaffolding from card data only after auditing Godot card/effect sources, keeping generic damage resolution unchanged.
+
+---
 
 ## Scope
 

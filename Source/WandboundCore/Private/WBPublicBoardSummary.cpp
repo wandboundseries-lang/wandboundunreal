@@ -101,6 +101,8 @@ FWBPublicUnitBoardSummary BuildPublicUnitSummary(const FWBUnitState& Unit)
 	Summary.Y = Unit.Y;
 	Summary.HP = Unit.HP;
 	Summary.MaxHP = Unit.MaxHP;
+	Summary.CurrentArmor = Unit.GetCurrentArmor();
+	Summary.MaxArmor = Unit.GetMaxArmor();
 	Summary.ATK = Unit.ATK;
 	Summary.AR = Unit.AR;
 	Summary.RLTotal = Unit.RLTotal;

@@ -229,6 +229,25 @@ bool ExpectUnitJsonMatches(
 		Test.TestEqual(*FString::Printf(TEXT("%s %s"), *Label, FieldName), ActualValue, ExpectedValue);
 	}
 
+	const TCHAR* OptionalIntegerFields[] = {
+		TEXT("current_armor"),
+		TEXT("max_armor")
+	};
+
+	for (const TCHAR* FieldName : OptionalIntegerFields)
+	{
+		if (!Expected.IsValid() || !Expected->HasField(FieldName))
+		{
+			continue;
+		}
+
+		int32 ExpectedValue = -1;
+		int32 ActualValue = -1;
+		TryReadIntegerField(Expected, FieldName, ExpectedValue);
+		TryReadIntegerField(Actual, FieldName, ActualValue);
+		Test.TestEqual(*FString::Printf(TEXT("%s %s"), *Label, FieldName), ActualValue, ExpectedValue);
+	}
+
 	FString ExpectedCardId;
 	FString ActualCardId;
 	Expected->TryGetStringField(TEXT("card_id"), ExpectedCardId);

@@ -486,10 +486,51 @@
   - `prevented_damage_amount`
   - `final_damage_amount`
   - `prevention_reason`
-- Armor is documented as future work and is not added to `FWBUnitState` in this pass.
+- Armor was documented as future work in this pass and is now handled by the later Generic Armor Damage Handling milestone.
 - Intentionally not implemented yet:
   - card-specific prevention
   - active armor gameplay
+  - Oathchain
+  - Backfill
+  - Juno
+  - Hybrid Hero replacement
+  - death triggers
+  - discard movement
+  - equipped wand fallout
+  - responses/counters/passives/wands
+  - UI/Blueprint/3D runtime
+
+## Milestone - Generic Armor Damage Handling
+
+- Added generic armor fields to `FWBUnitState`:
+  - `CurrentArmor`
+  - `MaxArmor`
+- Added armor helper APIs:
+  - `GetCurrentArmor`
+  - `GetMaxArmor`
+  - `SetArmorForTest`
+- `WBDamageResolution::ResolveDamageRequest` now applies non-bypass damage through armor before HP loss.
+- Bypass damage ignores armor and applies HP damage directly.
+- Attack damage is non-bypass and uses stable damage cause `Attack`.
+- Burn status damage routes through damage resolution as bypass damage with stable damage cause `Burn`.
+- Poison remains start-turn MaxHP reduction and does not use damage or armor.
+- Added trace fields for armor and actual HP loss:
+  - `previous_armor`
+  - `new_armor`
+  - `armor_absorbed_amount`
+  - `bypassed_armor`
+  - `hp_damage_amount`
+  - `damage_cause`
+- Public board summaries and runtime result JSON now serialize:
+  - `current_armor`
+  - `max_armor`
+- Action IDs remain unchanged.
+- Legal action generation remains unchanged by armor.
+- Added GodotCanon fixtures and `Wandbound.Core.GenericArmor.*` automation coverage.
+- Intentionally not implemented yet:
+  - armor-granting cards
+  - card-specific prevention
+  - card-specific replacement
   - Oathchain
   - Backfill
   - Juno

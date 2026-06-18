@@ -35,6 +35,12 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FName PreventionReason;
 	int32 PreviousHP = -1;
 	int32 NewHP = -1;
+	int32 PreviousArmor = -1;
+	int32 NewArmor = -1;
+	int32 ArmorAbsorbedAmount = -1;
+	bool bBypassedArmor = false;
+	int32 HPDamageAmount = -1;
+	FName DamageCause;
 	int32 PreviousMaxHP = -1;
 	int32 NewMaxHP = -1;
 	int32 PreviousStatusTurns = -1;

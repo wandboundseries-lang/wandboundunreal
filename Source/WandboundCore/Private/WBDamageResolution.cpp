@@ -38,7 +38,26 @@ FWBDamageResolutionResult WBDamageResolution::ResolveDamageRequest(
 	}
 
 	Result.PreviousHP = Target->HP;
-	Target->HP = FMath::Max(Result.PreviousHP - Result.Prevention.FinalDamage, 0);
+	Target->SetArmorForTest(Target->CurrentArmor, Target->MaxArmor);
+	Result.PreviousArmor = Target->GetCurrentArmor();
+	Result.NewArmor = Result.PreviousArmor;
+	Result.bBypassedArmor = Request.bBypassArmor;
+
+	const int32 DamageAfterPrevention = FMath::Max(Result.Prevention.FinalDamage, 0);
+	if (Request.bBypassArmor)
+	{
+		Result.ArmorAbsorbedAmount = 0;
+		Result.HPDamageAmount = DamageAfterPrevention;
+	}
+	else
+	{
+		Result.ArmorAbsorbedAmount = FMath::Min(Result.PreviousArmor, DamageAfterPrevention);
+		Result.NewArmor = FMath::Max(Result.PreviousArmor - Result.ArmorAbsorbedAmount, 0);
+		Target->CurrentArmor = Result.NewArmor;
+		Result.HPDamageAmount = FMath::Max(DamageAfterPrevention - Result.ArmorAbsorbedAmount, 0);
+	}
+
+	Target->HP = FMath::Max(Result.PreviousHP - Result.HPDamageAmount, 0);
 	Result.NewHP = Target->HP;
 	Result.bAtOrBelowZeroHP = Result.NewHP <= 0;
 	Result.bOk = true;

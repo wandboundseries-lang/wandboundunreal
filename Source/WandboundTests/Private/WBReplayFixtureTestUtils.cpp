@@ -683,6 +683,8 @@ bool ApplyFixtureUnits(const TSharedPtr<FJsonObject>& StateObject, FWBGameStateD
 		UnitObject->TryGetStringField(TEXT("card_id"), Unit.CardId);
 		Unit.HP = ReadIntegerFieldOrDefault(UnitObject, TEXT("hp"), Unit.HP);
 		Unit.MaxHP = ReadIntegerFieldOrDefault(UnitObject, TEXT("max_hp"), Unit.MaxHP);
+		Unit.CurrentArmor = ReadIntegerFieldOrDefault(UnitObject, TEXT("current_armor"), Unit.CurrentArmor);
+		Unit.MaxArmor = ReadIntegerFieldOrDefault(UnitObject, TEXT("max_armor"), Unit.MaxArmor);
 		Unit.ATK = ReadIntegerFieldOrDefault(UnitObject, TEXT("atk"), Unit.ATK);
 		Unit.AR = ReadIntegerFieldOrDefault(UnitObject, TEXT("ar"), Unit.AR);
 		Unit.RLTotal = ReadIntegerFieldOrDefault(UnitObject, TEXT("rl_total"), Unit.RLTotal);
@@ -1194,6 +1196,13 @@ bool ParseDamageRequestFromFixture(
 		return false;
 	}
 
+	(*DamageRequestObject)->TryGetBoolField(TEXT("bypass_armor"), OutRequest.bBypassArmor);
+	FString DamageCause;
+	if ((*DamageRequestObject)->TryGetStringField(TEXT("damage_cause"), DamageCause))
+	{
+		OutRequest.DamageCause = FName(*DamageCause);
+	}
+
 	OutReason.Reset();
 	return true;
 }
@@ -1259,6 +1268,38 @@ bool ApplyFixtureOperation(
 		const FWBDamageResolutionResult DamageResult = WBDamageResolution::ResolveDamageRequest(State, DamageRequest);
 		OutResult.bOk = DamageResult.bOk;
 		OutResult.Reason = DamageResult.Reason;
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_start_turn_status_ticks"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyStartOfTurnStatusTicks;
+		int32 PlayerId = -1;
+		if (!TryReadIntegerField(OperationObject, TEXT("player_id"), PlayerId))
+		{
+			OutReason = TEXT("missing_operation_player_id");
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutResult = WBEffectRunner::ApplyStartOfTurnStatusTicks(State, PlayerId);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_end_turn_status_ticks"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyEndOfTurnStatusTicks;
+		int32 PlayerId = -1;
+		if (!TryReadIntegerField(OperationObject, TEXT("player_id"), PlayerId))
+		{
+			OutReason = TEXT("missing_operation_player_id");
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutResult = WBEffectRunner::ApplyEndOfTurnStatusTicks(State, PlayerId);
 		OutReason.Reset();
 		return true;
 	}
@@ -1500,6 +1541,8 @@ bool ExpectUnitStatusSummary(
 			|| Unit->Y != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("y"), Unit->Y)
 			|| Unit->HP != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("hp"), Unit->HP)
 			|| Unit->MaxHP != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("max_hp"), Unit->MaxHP)
+			|| Unit->GetCurrentArmor() != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("current_armor"), Unit->GetCurrentArmor())
+			|| Unit->GetMaxArmor() != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("max_armor"), Unit->GetMaxArmor())
 			|| Unit->AttacksLeft != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("attacks_left"), Unit->AttacksLeft)
 			|| Unit->bDefeated != ReadBoolFieldOrDefault(FinalUnitObject, TEXT("defeated"), Unit->bDefeated)
 			|| Unit->bRemovedFromBoard != ReadBoolFieldOrDefault(FinalUnitObject, TEXT("removed_from_board"), Unit->bRemovedFromBoard))

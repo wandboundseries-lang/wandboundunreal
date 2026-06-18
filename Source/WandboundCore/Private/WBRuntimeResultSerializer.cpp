@@ -57,6 +57,8 @@ TSharedRef<FJsonObject> PublicUnitBoardSummaryToJsonObject(const FWBPublicUnitBo
 	Object->SetNumberField(TEXT("y"), Unit.Y);
 	Object->SetNumberField(TEXT("hp"), Unit.HP);
 	Object->SetNumberField(TEXT("max_hp"), Unit.MaxHP);
+	Object->SetNumberField(TEXT("current_armor"), Unit.CurrentArmor);
+	Object->SetNumberField(TEXT("max_armor"), Unit.MaxArmor);
 	Object->SetNumberField(TEXT("atk"), Unit.ATK);
 	Object->SetNumberField(TEXT("ar"), Unit.AR);
 	Object->SetNumberField(TEXT("rl_total"), Unit.RLTotal);

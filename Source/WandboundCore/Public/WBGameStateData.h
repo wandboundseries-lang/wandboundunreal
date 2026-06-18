@@ -12,6 +12,8 @@ struct WANDBOUNDCORE_API FWBUnitState
 	int32 Y = -1;
 	int32 HP = 1;
 	int32 MaxHP = 1;
+	int32 CurrentArmor = 0;
+	int32 MaxArmor = 0;
 	int32 ATK = 1;
 	int32 AR = 1;
 	int32 RLTotal = 0;
@@ -26,6 +28,9 @@ struct WANDBOUNDCORE_API FWBUnitState
 	TSet<FName> Passives;
 
 	bool IsUnitOnBoard() const;
+	int32 GetCurrentArmor() const;
+	int32 GetMaxArmor() const;
+	void SetArmorForTest(int32 InCurrentArmor, int32 InMaxArmor);
 	void MarkUnitDefeated();
 	void RemoveUnitFromBoard();
 	bool HasStatus(FName StatusId) const;

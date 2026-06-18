@@ -150,6 +150,36 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("new_hp"), Event.NewHP);
 	}
 
+	if (Event.PreviousArmor != -1)
+	{
+		Object->SetNumberField(TEXT("previous_armor"), Event.PreviousArmor);
+	}
+
+	if (Event.NewArmor != -1)
+	{
+		Object->SetNumberField(TEXT("new_armor"), Event.NewArmor);
+	}
+
+	if (Event.ArmorAbsorbedAmount != -1)
+	{
+		Object->SetNumberField(TEXT("armor_absorbed_amount"), Event.ArmorAbsorbedAmount);
+	}
+
+	if (Event.bBypassedArmor)
+	{
+		Object->SetBoolField(TEXT("bypassed_armor"), Event.bBypassedArmor);
+	}
+
+	if (Event.HPDamageAmount != -1)
+	{
+		Object->SetNumberField(TEXT("hp_damage_amount"), Event.HPDamageAmount);
+	}
+
+	if (!Event.DamageCause.IsNone())
+	{
+		Object->SetStringField(TEXT("damage_cause"), Event.DamageCause.ToString());
+	}
+
 	if (Event.PreviousMaxHP != -1)
 	{
 		Object->SetNumberField(TEXT("previous_max_hp"), Event.PreviousMaxHP);

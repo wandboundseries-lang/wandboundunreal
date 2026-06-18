@@ -1,0 +1,60 @@
+{
+  "id": "armor_attack_no_armor_same_as_before",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/combat_runner.gd:resolve_hit",
+    "scripts/sim/game_state.gd:apply_damage"
+  ],
+  "intent": "Units with zero armor keep the prior attack damage behavior.",
+  "operation": "apply_pending_attack_damage",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 5,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2, "last_mp_roll": 2 },
+      { "player_id": 1, "remaining_mp": 0, "last_mp_roll": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "test_attacker", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "atk": 2, "ar": 1, "attacks_left": 1 },
+      { "id": 2, "owner_id": 1, "card_id": "test_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 0, "max_armor": 0, "atk": 1, "ar": 1, "attacks_left": 1 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {},
+    "pending_attack": {
+      "active": true,
+      "attacker_unit_id": 1,
+      "defender_unit_id": 2,
+      "attacking_player_id": 0,
+      "attacker_tile": { "x": 4, "y": 4 },
+      "defender_tile": { "x": 5, "y": 4 },
+      "declaration_action_id": "attack:p0:u1:t2"
+    }
+  },
+  "expected": {
+    "ok": true,
+    "expected_trace_order": [ "attack_damage_resolved" ],
+    "pending_attack": { "active": false },
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 0, "max_armor": 0, "attacks_left": 1, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 3, "max_hp": 5, "current_armor": 0, "max_armor": 0, "attacks_left": 1, "statuses": [] }
+    ],
+    "trace_fields": [
+      {
+        "kind": "attack_damage_resolved",
+        "damage_amount": 2,
+        "previous_hp": 5,
+        "new_hp": 3,
+        "previous_armor": 0,
+        "new_armor": 0,
+        "armor_absorbed_amount": 0,
+        "hp_damage_amount": 2,
+        "bypassed_armor": false,
+        "damage_cause": "Attack",
+        "final_damage_amount": 2,
+        "prevented_damage_amount": 0
+      }
+    ]
+  }
+}
