@@ -741,6 +741,20 @@
 - No `.uasset`, `.umap`, Blueprint, UMG, material, mesh, or level assets were created or edited.
 - Hidden deck, hand, discard, pending choices, and marker identity remain excluded by consuming public summaries only.
 
+## Milestone - Runtime Board Summary Bridge
+
+- Added `WBBoardSummaryBridge`.
+- Added `FWBBoardViewRefreshResult`.
+- Bridge path:
+  - rules state
+  - `WBPublicBoardSummary::Build`
+  - `FWBPublicBoardSummary`
+  - `AWBBoardViewActor::RenderPublicBoardSummary`
+- The bridge consumes public summary data for rendering and does not store rules state.
+- `RenderStateToBoardView` accepts a const state only to use the existing public-summary conversion.
+- Hidden deck, hand, discard, pending choices, and marker identity remain excluded.
+- No gameplay mutation, legal action generation, input, selection, UI, camera, animation, VFX, sound, Blueprints, UMG, or asset work was added.
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

@@ -10,6 +10,7 @@ Added:
 - `WBBoardViewTypes` coordinate helper
 - `AWBBoardViewActor`
 - `WBBoardViewDemoData`
+- `WBBoardSummaryBridge`
 
 Not implemented:
 
@@ -40,6 +41,14 @@ Not implemented:
 `AWBBoardViewActor::RenderPublicBoardSummary` consumes `FWBPublicBoardSummary` only. It does not hold or query `FWBGameStateData`, deck, hand, discard, hidden marker identity, pending choices, or private replay data.
 
 Actors display state only. Rules truth remains in `WandboundCore`.
+
+`WBBoardSummaryBridge` now provides a minimal runtime-safe refresh path:
+
+- build a public summary from rules state through `WBPublicBoardSummary::Build`
+- render an existing public summary into `AWBBoardViewActor`
+- return public render counts through `FWBBoardViewRefreshResult`
+
+No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 ## Placeholder Rendering
 

@@ -2,6 +2,92 @@
 
 Date of check: 2026-06-18 (America/New_York)
 
+## Runtime Board Summary Bridge Pass
+
+### Scope
+
+This pass added the minimal runtime bridge from rules state/public summaries to the read-only board view actor.
+
+Implemented:
+
+- `WBBoardSummaryBridge`
+- `FWBBoardViewRefreshResult`
+- bridge tests for public-summary parity, null actor safety, no state mutation, actor count refresh, hidden data exclusion, and no action-generation source calls
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- state mutation
+- player input
+- tile picking
+- unit selection
+- UI, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The bridge accepts `const FWBGameStateData&` only to delegate to `WBPublicBoardSummary::Build`, then renders `FWBPublicBoardSummary` into `AWBBoardViewActor`.
+
+### Build
+
+Initial command:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Initial result:
+
+```text
+Unable to build while Live Coding is active.
+Result: Failed (OtherCompilationError)
+```
+
+Successful command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 35.86 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=331
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.BoardSummaryBridge.*`
+
+### Notes
+
+- No Godot reference files were edited.
+- No `.uasset`, `.umap`, Blueprint, UMG, or asset import work was added.
+- The pre-existing untracked `MaxHP` file remains untouched.
+
 ## Runtime Visual Scaffold Pass
 
 ### Scope
