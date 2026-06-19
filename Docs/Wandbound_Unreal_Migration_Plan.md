@@ -755,6 +755,15 @@
 - Hidden deck, hand, discard, pending choices, and marker identity remain excluded.
 - No gameplay mutation, legal action generation, input, selection, UI, camera, animation, VFX, sound, Blueprints, UMG, or asset work was added.
 
+## Milestone - Runtime Demo Harness Actor
+
+- Added `AWBBoardViewDemoHarnessActor`.
+- The harness can manually render `WBBoardViewDemoData` through `WBBoardSummaryBridge`.
+- `bRenderDemoOnBeginPlay` defaults false.
+- `bFindBoardViewActorIfMissing` defaults false and only finds an existing board view actor when enabled.
+- The harness consumes public summary data only.
+- No gameplay mutation, legal action generation, hidden information access, input, selection, UI, camera, animation, VFX, sound, Blueprints, UMG, `.uasset`, `.umap`, or asset work was added.
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

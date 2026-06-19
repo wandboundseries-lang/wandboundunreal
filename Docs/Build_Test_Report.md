@@ -1,6 +1,80 @@
 # Build/Test Report
 
-Date of check: 2026-06-18 (America/New_York)
+Date of check: 2026-06-19 (America/New_York)
+
+## Runtime Demo Harness Pass
+
+### Scope
+
+This pass added a tiny C++ manual verification harness for the runtime board scaffold.
+
+Implemented:
+
+- `AWBBoardViewDemoHarnessActor`
+- optional assigned-board-view rendering of `WBBoardViewDemoData`
+- optional world lookup for an existing `AWBBoardViewActor`
+- demo harness tests for class existence, null actor safety, count refresh, default no-render behavior, no state dependency source guard, and hidden data exclusion
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- state mutation
+- player input
+- tile picking
+- unit selection
+- UI, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The harness renders `WBBoardViewDemoData::MakeSmallDemoBoardSummary()` through `WBBoardSummaryBridge::RenderSummaryToBoardView`.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 40.25 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=337
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.BoardViewDemoHarness.*`
+
+### Notes
+
+- No Godot reference files were edited.
+- No `.uasset`, `.umap`, Blueprint, UMG, or asset import work was added.
+- The pre-existing untracked `MaxHP` file remains untouched.
 
 ## Runtime Board Summary Bridge Pass
 

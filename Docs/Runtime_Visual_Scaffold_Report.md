@@ -11,6 +11,7 @@ Added:
 - `AWBBoardViewActor`
 - `WBBoardViewDemoData`
 - `WBBoardSummaryBridge`
+- `AWBBoardViewDemoHarnessActor`
 
 Not implemented:
 
@@ -49,6 +50,8 @@ Actors display state only. Rules truth remains in `WandboundCore`.
 - return public render counts through `FWBBoardViewRefreshResult`
 
 No input, gameplay ownership, hidden-state access, or UI behavior was added.
+
+`AWBBoardViewDemoHarnessActor` now provides an optional C++ manual verification helper. It renders `WBBoardViewDemoData::MakeSmallDemoBoardSummary()` through the bridge into an assigned board view actor. It remains public-summary-only and does not add input, gameplay ownership, UI, camera, animation, VFX, Blueprints, or assets.
 
 ## Placeholder Rendering
 

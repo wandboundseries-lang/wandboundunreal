@@ -69,3 +69,9 @@ After a rules action resolves, future runtime code can:
 3. Let `AWBBoardViewActor` refresh placeholder visual instances from the public summary.
 
 No input, UI, camera, animation, VFX, or asset work is required for this bridge.
+
+## Demo Harness Use
+
+`AWBBoardViewDemoHarnessActor` now uses `WBBoardSummaryBridge::RenderSummaryToBoardView` to render `WBBoardViewDemoData::MakeSmallDemoBoardSummary()` into an assigned `AWBBoardViewActor` for manual editor verification.
+
+The harness does not call `RenderStateToBoardView`, does not query `FWBGameStateData`, and does not add gameplay ownership.
