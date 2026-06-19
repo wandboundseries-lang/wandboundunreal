@@ -61,6 +61,10 @@ The harness uses demo public summary data only. It does not query or store `FWBG
 
 No level, Blueprint, material, mesh, or map asset was created in this pass.
 
+## State Applier Note
+
+The demo harness remains unchanged by the board-view state applier pass. It still renders demo data directly through `WBBoardSummaryBridge`; it does not own or use `UWBBoardViewStateApplierComponent`.
+
 ## Future TODO
 
 - real mesh assignment

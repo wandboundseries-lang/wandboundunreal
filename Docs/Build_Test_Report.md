@@ -2,6 +2,81 @@
 
 Date of check: 2026-06-19 (America/New_York)
 
+## Runtime Board View State Applier Pass
+
+### Scope
+
+This pass added a read-only visual component that caches and applies the latest public board summary to a board view actor.
+
+Implemented:
+
+- `UWBBoardViewStateApplierComponent`
+- latest `FWBPublicBoardSummary` storage
+- optional public-summary build from const `FWBGameStateData` through `WBBoardSummaryBridge`
+- explicit and automatic apply-to-board-view behavior
+- state applier tests for initial state, summary storage, input immutability, null actor safety, actor count refresh, state conversion parity, state immutability, apply-on-set behavior, hidden data exclusion, and no action-generation source calls
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- state mutation
+- player input
+- tile picking
+- unit selection
+- UI, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The component stores `FWBPublicBoardSummary` only and does not store full `FWBGameStateData`.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 15.06 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=348
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.BoardViewStateApplier.*`
+
+### Notes
+
+- No Godot reference files were edited.
+- No `.uasset`, `.umap`, Blueprint, UMG, or asset import work was added.
+- The pre-existing untracked `MaxHP` file remains untouched.
+
 ## Runtime Demo Harness Pass
 
 ### Scope

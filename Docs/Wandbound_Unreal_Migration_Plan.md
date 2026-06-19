@@ -764,6 +764,16 @@
 - The harness consumes public summary data only.
 - No gameplay mutation, legal action generation, hidden information access, input, selection, UI, camera, animation, VFX, sound, Blueprints, UMG, `.uasset`, `.umap`, or asset work was added.
 
+## Milestone - Runtime Board View State Applier
+
+- Added `UWBBoardViewStateApplierComponent`.
+- The component caches and applies `FWBPublicBoardSummary`.
+- It can build a public summary from const rules state through `WBBoardSummaryBridge`.
+- It stores public summary data only, not full `FWBGameStateData`.
+- It applies the latest summary to an assigned `AWBBoardViewActor`.
+- It does not mutate game state or generate actions.
+- It does not add input, selection, UI, camera, animation, VFX, sound, Blueprints, UMG, `.uasset`, `.umap`, or asset work.
+
 ## Phase 3 - Movement
 
 - 9x9 bounds

@@ -75,3 +75,12 @@ No input, UI, camera, animation, VFX, or asset work is required for this bridge.
 `AWBBoardViewDemoHarnessActor` now uses `WBBoardSummaryBridge::RenderSummaryToBoardView` to render `WBBoardViewDemoData::MakeSmallDemoBoardSummary()` into an assigned `AWBBoardViewActor` for manual editor verification.
 
 The harness does not call `RenderStateToBoardView`, does not query `FWBGameStateData`, and does not add gameplay ownership.
+
+## State Applier Use
+
+`UWBBoardViewStateApplierComponent` uses the bridge for visual update flow:
+
+- `SetLatestPublicBoardSummaryFromState` delegates to `BuildPublicSummaryFromState`.
+- `ApplyLatestPublicBoardSummary` delegates to `RenderSummaryToBoardView`.
+
+The component caches only `FWBPublicBoardSummary`, not full rules state.
