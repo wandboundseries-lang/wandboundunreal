@@ -864,6 +864,16 @@
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Selected Action Visual Harness
+
+- Added `WBSelectedActionVisualHarness` as a C++ selected-action-to-visual-refresh seam.
+- It executes externally supplied selected actions through `WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult`.
+- It refreshes the visual controller from the runtime result's `FinalPublicBoardSummary`.
+- It accepts external mutable state by reference but does not own or cache state.
+- It does not generate legal actions.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

@@ -1187,3 +1187,59 @@ notRun=0
 
 - The visual controller shell is not wired to a real runtime selected-action producer yet.
 - It refreshes placeholder board view counts only; real meshes, camera behavior, input, UI, VFX, marker visuals, and assets remain future work.
+
+---
+
+# Runtime Selected Action Visual Harness Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 16.05 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=368
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added `WBSelectedActionVisualHarness`.
+- The harness executes externally supplied selected actions through `WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedActionWithResult`.
+- The harness can refresh `UWBRuntimeVisualControllerComponent` from `FinalPublicBoardSummary`.
+- Default refresh policy is success-only; failure refresh requires explicit opt-in.
+- The harness does not own or cache `FWBGameStateData`.
+- The harness does not generate legal actions or inspect hidden state.
+- No input, UI, camera, animation, VFX, sound, Blueprints, UMG, `.uasset`, `.umap`, asset import, marker visual, hidden marker identity, network replay, or AI work was added.
+
+## New Tests Added
+
+- `Wandbound.Runtime.SelectedActionVisualHarness.*`
+
+## Remaining Risks/Unknowns
+
+- Future runtime/input code still needs to supply a selected legal action.
+- The harness currently refreshes placeholder public board counts only through the existing visual controller path.
+- Real input, UI, camera, VFX, assets, marker visuals, and network replay remain future work.

@@ -62,3 +62,5 @@ The component consumes public board summaries only. Hidden deck, hand, discard, 
 ## Future Usage
 
 After selected-action resolution produces a `FWBRuntimeSelectedActionResult`, future runtime controller code can pass that result to the visual controller shell. The shell forwards the final public board summary to the state applier, and the state applier refreshes the board view actor's placeholder tile, unit, wall, and terrain instances.
+
+`WBSelectedActionVisualHarness` can now feed runtime selected-action results into this visual controller shell. The harness still executes only externally supplied selected actions through the existing runtime adapter and refreshes this component from the result's public board summary.
