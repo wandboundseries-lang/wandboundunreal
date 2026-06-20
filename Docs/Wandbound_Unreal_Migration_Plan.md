@@ -885,6 +885,20 @@
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Runtime Action Selection Bridge
+
+- Added `WBRuntimeActionSelectionBridge` as a pure C++ action-selection bridge.
+- It resolves selected `WBActionCodec` action IDs from externally supplied legal action lists.
+- It delegates resolved actions to `UWBRuntimeControllerFacadeComponent`.
+- It treats missing IDs as `selected_action_id_not_found`.
+- It treats duplicate matching IDs as `selected_action_id_ambiguous`.
+- It requires a non-null runtime controller facade for execution.
+- It does not generate legal actions.
+- It does not decide legality or call `WBRules` legality APIs.
+- It does not own or cache `FWBGameStateData`.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

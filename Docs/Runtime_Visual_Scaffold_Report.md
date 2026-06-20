@@ -64,6 +64,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `UWBRuntimeControllerFacadeComponent` now provides a C++-only runtime controller facade for future input/UI code. It accepts an externally selected action, delegates to the selected-action visual harness, stores the latest runtime and visual refresh results, and still does not own rules state or generate legal actions.
 
+`WBRuntimeActionSelectionBridge` now provides a C++-only action ID resolver for externally supplied legal action lists. It does not implement input/UI and does not generate or validate actions; it resolves a selected ID and delegates through the runtime controller facade.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

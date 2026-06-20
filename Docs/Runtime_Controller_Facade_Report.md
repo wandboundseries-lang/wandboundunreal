@@ -102,4 +102,6 @@ Future input/UI should:
 3. pass that `FWBAction` and deterministic runtime context into the facade
 4. consume the retained runtime result and visual refresh result for UI/runtime reporting
 
+`WBRuntimeActionSelectionBridge` can now sit immediately upstream of the facade. It resolves a selected `WBActionCodec` action ID from an externally supplied legal action list, then calls `UWBRuntimeControllerFacadeComponent::ExecuteSelectedAction` with the resolved `FWBAction`.
+
 The facade is intentionally C++-only in this pass.

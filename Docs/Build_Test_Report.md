@@ -2,6 +2,111 @@
 
 Date of check: 2026-06-20 (America/New_York)
 
+## Runtime Action Selection Bridge Pass
+
+### Scope
+
+This pass added a pure C++ runtime bridge from selected action IDs to the runtime controller facade.
+
+Implemented:
+
+- `WBRuntimeActionSelectionBridge`
+- `FWBResolvedRuntimeActionSelection`
+- `FWBRuntimeActionSelectionExecutionResult`
+- selected action ID resolution through `WBActionCodec::MakeActionId`
+- missing ID failure with `selected_action_id_not_found`
+- duplicate matching ID failure with `selected_action_id_ambiguous`
+- null facade failure with `runtime_controller_facade_missing`
+- execution delegation to `UWBRuntimeControllerFacadeComponent`
+- bridge tests for resolution, execution, no mutation on failure, no MP roll consumption on failed resolution, source guards, stable action IDs, and hidden data exclusion
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- legality decisions
+- state ownership
+- player input
+- tile picking
+- unit selection
+- UI, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The bridge consumes only an externally supplied legal action list and selected action ID. It does not call `WBRules` or generate actions.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 35.78 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=393
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.ActionSelectionBridge.ResolveMove`
+- `Wandbound.Runtime.ActionSelectionBridge.ResolveAttack`
+- `Wandbound.Runtime.ActionSelectionBridge.ResolveEndTurn`
+- `Wandbound.Runtime.ActionSelectionBridge.MissingActionIdFails`
+- `Wandbound.Runtime.ActionSelectionBridge.AmbiguousActionIdFails`
+- `Wandbound.Runtime.ActionSelectionBridge.EmptyLegalListFailsSafely`
+- `Wandbound.Runtime.ActionSelectionBridge.NullFacadeFailsWithoutMutation`
+- `Wandbound.Runtime.ActionSelectionBridge.ExecuteMoveThroughFacade`
+- `Wandbound.Runtime.ActionSelectionBridge.ExecuteFullEndTurnThroughFacade`
+- `Wandbound.Runtime.ActionSelectionBridge.FailedResolutionDoesNotConsumeRoll`
+- `Wandbound.Runtime.ActionSelectionBridge.NoActionGenerationSourceGuard`
+- `Wandbound.Runtime.ActionSelectionBridge.NoLegalityCallsSourceGuard`
+- `Wandbound.Runtime.ActionSelectionBridge.ActionIdsStable`
+- `Wandbound.Runtime.ActionSelectionBridge.HiddenDataExcluded`
+
+### Notes
+
+- Null facade execution is a hard failure and does not mutate state.
+- Duplicate action IDs are treated as ambiguous.
+- No Godot reference files were edited.
+- No `.uasset`, `.umap`, Blueprint, UMG, or asset import work was added.
+- The pre-existing untracked `MaxHP` file remains untouched.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Remaining Risks/Unknowns
+
+- Future runtime/UI still needs an owner to produce and hold the precomputed legal action list.
+- The bridge trusts the provided legal action list and does not prove that it is current.
+- Real input, UI, camera behavior, VFX, marker visuals, assets, and network replay remain future work.
+
 ## Runtime Controller Facade Pass
 
 ### Scope
