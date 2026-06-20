@@ -1,6 +1,105 @@
 # Build/Test Report
 
-Date of check: 2026-06-19 (America/New_York)
+Date of check: 2026-06-20 (America/New_York)
+
+## Runtime Controller Facade Pass
+
+### Scope
+
+This pass added a C++ runtime controller facade component for externally selected actions.
+
+Implemented:
+
+- `UWBRuntimeControllerFacadeComponent`
+- selected-action delegation to `WBSelectedActionVisualHarness`
+- configurable success/failure visual refresh policy
+- latest runtime result retention
+- latest visual refresh result retention
+- clear/reset API for retained results
+- facade tests for null visual controller safety, visual controller refresh, deterministic full end turn, failure refresh policies, result clearing, source guards, and hidden data exclusion
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- target legality decisions
+- state ownership
+- player input
+- tile picking
+- unit selection
+- UI, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The facade accepts external mutable `FWBGameStateData&`, an externally selected `FWBAction`, and an external `FWBRuntimeTurnResolutionContext`. It does not own rules state or generate actions.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 18.29 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=379
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.ControllerFacade.ClassExists`
+- `Wandbound.Runtime.ControllerFacade.InitialState`
+- `Wandbound.Runtime.ControllerFacade.MoveNullVisualControllerSafe`
+- `Wandbound.Runtime.ControllerFacade.MoveRefreshesVisualController`
+- `Wandbound.Runtime.ControllerFacade.FullEndTurnUsesDeterministicRoll`
+- `Wandbound.Runtime.ControllerFacade.FailureSkipsRefreshByDefault`
+- `Wandbound.Runtime.ControllerFacade.FailureCanRefreshWhenRequested`
+- `Wandbound.Runtime.ControllerFacade.ClearLastResults`
+- `Wandbound.Runtime.ControllerFacade.NoGameStateOwnershipSourceGuard`
+- `Wandbound.Runtime.ControllerFacade.NoActionGenerationSourceGuard`
+- `Wandbound.Runtime.ControllerFacade.HiddenDataExcluded`
+
+### Notes
+
+- Optional actor shell was intentionally skipped.
+- No Godot reference files were edited.
+- No `.uasset`, `.umap`, Blueprint, UMG, or asset import work was added.
+- The pre-existing untracked `MaxHP` file remains untouched.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Remaining Risks/Unknowns
+
+- The facade still requires future input/UI to supply a selected legal action.
+- The visual path still refreshes placeholder board-view counts only.
+- Real meshes, camera behavior, input, UI, VFX, marker visuals, assets, and network replay remain future work.
 
 ## Runtime Board View State Applier Pass
 

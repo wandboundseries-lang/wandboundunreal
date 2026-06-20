@@ -82,3 +82,5 @@ The harness does not:
 ## Future Usage
 
 Future runtime controller code can receive a selected legal action from input/UI, call this harness, and allow the harness to execute through the existing core adapter. The resulting public board summary then refreshes the visual controller and board view actor.
+
+`UWBRuntimeControllerFacadeComponent` now provides that first C++ runtime controller surface. It accepts externally selected actions and delegates to this harness while retaining the latest runtime and visual refresh results for future UI/runtime consumers.

@@ -874,6 +874,17 @@
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Runtime Controller Facade
+
+- Added `UWBRuntimeControllerFacadeComponent` as a C++ runtime controller facade.
+- It accepts externally selected `FWBAction` values and an external `FWBRuntimeTurnResolutionContext`.
+- It delegates selected-action execution and refresh policy to `WBSelectedActionVisualHarness`.
+- It stores the latest `FWBRuntimeSelectedActionResult` and `FWBBoardViewRefreshResult` for future runtime/UI consumers.
+- It does not own or cache `FWBGameStateData`.
+- It does not generate legal actions or call `WBRules` legality APIs.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

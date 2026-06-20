@@ -14,6 +14,7 @@ Added:
 - `AWBBoardViewDemoHarnessActor`
 - `UWBBoardViewStateApplierComponent`
 - `UWBRuntimeVisualControllerComponent`
+- `UWBRuntimeControllerFacadeComponent`
 
 Not implemented:
 
@@ -60,6 +61,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 `UWBRuntimeVisualControllerComponent` now provides the public-summary-only controller shell for future runtime selected-action results. It forwards `FWBPublicBoardSummary` directly, or reads only `FWBRuntimeSelectedActionResult::FinalPublicBoardSummary`, then coordinates refresh calls into `UWBBoardViewStateApplierComponent`.
 
 `WBSelectedActionVisualHarness` now provides a C++-only selected-action-to-visual-refresh seam. It executes an externally supplied selected action through the existing runtime adapter, then optionally forwards the runtime result's public board summary to the visual controller shell.
+
+`UWBRuntimeControllerFacadeComponent` now provides a C++-only runtime controller facade for future input/UI code. It accepts an externally selected action, delegates to the selected-action visual harness, stores the latest runtime and visual refresh results, and still does not own rules state or generate legal actions.
 
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
