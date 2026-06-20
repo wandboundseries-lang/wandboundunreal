@@ -854,6 +854,16 @@
 - camera
 - UMG
 
+## Milestone - Runtime Visual Controller Shell
+
+- Added `UWBRuntimeVisualControllerComponent` as a C++ visual controller shell.
+- The shell accepts `FWBPublicBoardSummary` directly.
+- The shell accepts `FWBRuntimeSelectedActionResult` only to read `FinalPublicBoardSummary`.
+- It does not own, cache, or mutate rules state.
+- It does not generate legal actions.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

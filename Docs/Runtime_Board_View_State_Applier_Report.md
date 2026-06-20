@@ -57,6 +57,10 @@ Runtime/controller code can call:
 
 `ApplyLatestPublicBoardSummary` calls `WBBoardSummaryBridge::RenderSummaryToBoardView` and stores the last refresh result.
 
+## Visual Controller Shell
+
+`UWBRuntimeVisualControllerComponent` now coordinates public-summary refresh calls into this state applier. The controller shell can accept a public board summary directly or a runtime selected-action result, but it reads only `FinalPublicBoardSummary` before delegating to the state applier.
+
 ## Public Summary Boundary
 
 The component caches public summary data only. Deck, hand, discard, pending hidden choices, and marker identity remain outside the component.

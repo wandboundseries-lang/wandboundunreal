@@ -1126,3 +1126,64 @@ The first automation run found one test assertion issue in `Wandbound.Core.Damag
 
 - Godot armor is real (`current_armor`/`max_armor`) but Unreal does not model active armor yet.
 - Oathchain, Backfill, Juno, Hybrid Hero replacement, death triggers, equipped wand fallout, discard movement, responses, counters, passives, and wands remain future work.
+
+---
+
+# Runtime Visual Controller Shell Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+First result:
+
+```text
+Result: Failed (OtherCompilationError)
+```
+
+The first build exposed pre-existing anonymous-namespace helper name collisions when Unreal grouped older `WandboundTests` files into a unity translation unit. `WBRuntimeVisualControllerShellTests.cpp` compiled separately; the failure was in existing test unity grouping. `WandboundTests.Build.cs` now sets `bUseUnity = false` so each test file keeps its private helpers private.
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 14.66 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=358
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added `UWBRuntimeVisualControllerComponent`.
+- The controller shell accepts `FWBPublicBoardSummary` directly.
+- The controller shell accepts `FWBRuntimeSelectedActionResult` only to read `FinalPublicBoardSummary`.
+- The component stores public refresh metadata only and does not own or mutate `FWBGameStateData`.
+- No gameplay rules, legal action generation, input, UI, camera, animation, VFX, sound, Blueprints, UMG, `.uasset`, `.umap`, asset import, marker visuals, or hidden marker identity work was added.
+
+## New Tests Added
+
+- `Wandbound.Runtime.VisualController.*`
+
+## Remaining Risks/Unknowns
+
+- The visual controller shell is not wired to a real runtime selected-action producer yet.
+- It refreshes placeholder board view counts only; real meshes, camera behavior, input, UI, VFX, marker visuals, and assets remain future work.

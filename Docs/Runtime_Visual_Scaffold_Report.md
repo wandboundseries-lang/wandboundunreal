@@ -13,6 +13,7 @@ Added:
 - `WBBoardSummaryBridge`
 - `AWBBoardViewDemoHarnessActor`
 - `UWBBoardViewStateApplierComponent`
+- `UWBRuntimeVisualControllerComponent`
 
 Not implemented:
 
@@ -55,6 +56,10 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 `AWBBoardViewDemoHarnessActor` now provides an optional C++ manual verification helper. It renders `WBBoardViewDemoData::MakeSmallDemoBoardSummary()` through the bridge into an assigned board view actor. It remains public-summary-only and does not add input, gameplay ownership, UI, camera, animation, VFX, Blueprints, or assets.
 
 `UWBBoardViewStateApplierComponent` now provides a read-only visual state update surface for future runtime/controller code. It caches and applies `FWBPublicBoardSummary` only, with optional const-state conversion through `WBBoardSummaryBridge`.
+
+`UWBRuntimeVisualControllerComponent` now provides the public-summary-only controller shell for future runtime selected-action results. It forwards `FWBPublicBoardSummary` directly, or reads only `FWBRuntimeSelectedActionResult::FinalPublicBoardSummary`, then coordinates refresh calls into `UWBBoardViewStateApplierComponent`.
+
+The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering
 
