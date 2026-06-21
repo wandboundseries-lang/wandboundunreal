@@ -85,6 +85,10 @@ After execution, the model does not regenerate legal actions and does not rebuil
 
 Future runtime owners must explicitly call `SetCurrentInteractionState` again after action resolution when refreshed legal actions and presentation data are needed.
 
+`WBRuntimeInteractionRefreshAdapter` is now the preferred runtime-facing way to replace stale legal actions and snapshots at decision points. It calls `SetCurrentInteractionState` with externally supplied legal actions and a public board summary, and it can refresh the visual controller from that same summary.
+
+`UWBRuntimeDecisionPointCoordinatorComponent` now feeds the model at decision points through the refresh adapter and exposes read-only current status plus presentation snapshot access for future UI.
+
 ## Hidden-Information Boundary
 
 The model stores only externally supplied actions, public board summary data, public presentation entries, and runtime result metadata. It does not inspect deck, hand, discard, hidden marker identity, private choices, or raw hidden state.

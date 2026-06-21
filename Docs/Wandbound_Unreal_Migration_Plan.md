@@ -928,6 +928,37 @@
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Runtime Interaction Refresh Adapter
+
+- Added `WBRuntimeInteractionRefreshAdapter` as a C++ decision-point refresh adapter.
+- It accepts externally generated legal actions and a public board summary.
+- It updates the turn interaction model with the supplied legal actions and summary.
+- It can update the visual controller from the same public summary.
+- It uses validation-first behavior so missing required targets do not partially refresh the other target.
+- It replaces stale turn interaction model legal actions and snapshots when a future runtime owner supplies fresh data.
+- It does not generate actions.
+- It does not decide legality or call `WBRules` legality APIs.
+- It does not own or cache `FWBGameStateData`.
+- It does not execute actions.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
+## Milestone - Runtime Decision-Point Coordinator
+
+- Added `UWBRuntimeDecisionPointCoordinatorComponent` as a C++ read-only decision-point coordinator.
+- It accepts externally generated legal actions and public board summaries.
+- It refreshes the interaction model and visual controller through `WBRuntimeInteractionRefreshAdapter`.
+- It exposes read-only current interaction status.
+- It exposes current presentation snapshots and presentation entry lookup for future UI.
+- It resets current status on failed refresh to avoid stale UI state.
+- It can clear the current decision point and clear the turn interaction model when available.
+- It does not generate actions.
+- It does not decide legality or call `WBRules` legality APIs.
+- It does not execute actions.
+- It does not own or cache `FWBGameStateData`.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

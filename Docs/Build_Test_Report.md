@@ -1,6 +1,213 @@
 # Build/Test Report
 
-Date of check: 2026-06-20 (America/New_York)
+Date of check: 2026-06-21 (America/New_York)
+
+## Runtime Decision-Point Coordinator Pass
+
+### Scope
+
+This pass added a C++ read-only decision-point coordinator for externally supplied legal actions and public board summaries.
+
+Implemented:
+
+- `FWBRuntimeDecisionPointStatus`
+- `UWBRuntimeDecisionPointCoordinatorComponent`
+- configurable refresh targets for the turn interaction model and visual controller
+- refresh through `WBRuntimeInteractionRefreshAdapter::RefreshDecisionPoint`
+- current decision-point status retention
+- last refresh result retention
+- presentation snapshot access for future UI
+- presentation entry lookup delegation to the turn interaction model
+- clear behavior that resets coordinator status and clears the turn interaction model when assigned
+- failed-refresh status reset to avoid exposing stale UI state
+- source guards for no action generation, no legality calls, no action execution, no state ownership, and no hidden zone access
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- legality decisions
+- action execution
+- authoritative state ownership
+- player input
+- tile picking
+- unit selection
+- UI widgets, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The coordinator consumes only externally supplied legal actions and `FWBPublicBoardSummary`. It does not call `WBRules`, call `WBEffectRunner`, generate actions, execute actions, own game state, or expose hidden deck/hand/discard data.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 58.83 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=450
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.DecisionPointCoordinator.ClassExists`
+- `Wandbound.Runtime.DecisionPointCoordinator.InitialState`
+- `Wandbound.Runtime.DecisionPointCoordinator.RefreshBothTargets`
+- `Wandbound.Runtime.DecisionPointCoordinator.RefreshModelOnly`
+- `Wandbound.Runtime.DecisionPointCoordinator.RefreshVisualOnly`
+- `Wandbound.Runtime.DecisionPointCoordinator.MissingModelFails`
+- `Wandbound.Runtime.DecisionPointCoordinator.MissingVisualFails`
+- `Wandbound.Runtime.DecisionPointCoordinator.NoTargetsFails`
+- `Wandbound.Runtime.DecisionPointCoordinator.ClearDecisionPointClearsModel`
+- `Wandbound.Runtime.DecisionPointCoordinator.TryFindPresentationEntryDelegates`
+- `Wandbound.Runtime.DecisionPointCoordinator.FailedRefreshResetsStaleStatus`
+- `Wandbound.Runtime.DecisionPointCoordinator.NoActionGenerationSourceGuard`
+- `Wandbound.Runtime.DecisionPointCoordinator.NoActionExecutionSourceGuard`
+- `Wandbound.Runtime.DecisionPointCoordinator.NoGameStateOwnershipSourceGuard`
+- `Wandbound.Runtime.DecisionPointCoordinator.HiddenDataExcluded`
+
+Existing interaction refresh adapter, turn interaction model, legal-action presentation, and visual controller tests also pass in the full Wandbound automation run.
+
+### Exact Errors
+
+None.
+
+### Risks / Unknowns
+
+- The coordinator exposes read-only status only; future UI still needs a separate selected-action handoff path.
+- Failed refresh resets coordinator status but does not forcibly clear stale state inside the turn interaction model unless `ClearDecisionPoint` is called.
+- Future runtime owners must still generate fresh legal actions and public summaries before calling the coordinator.
+- Hidden marker state remains unmodeled and excluded.
+- Pre-existing untracked `MaxHP` remains untouched.
+
+## Runtime Interaction Refresh Adapter Pass
+
+### Scope
+
+This pass added a pure C++ decision-point refresh adapter for externally supplied legal actions and public board summaries.
+
+Implemented:
+
+- `FWBRuntimeInteractionRefreshOptions`
+- `FWBRuntimeInteractionRefreshResult`
+- `WBRuntimeInteractionRefreshAdapter`
+- validation-first target checks
+- turn interaction model refresh from precomputed legal actions and public summary
+- optional visual controller refresh from the same public summary
+- result reporting for legal action count, presentation entry count, and visual refresh result
+- explicit no-target failure reason: `no_refresh_targets_enabled`
+- explicit missing target failure reasons: `turn_interaction_model_missing`, `visual_controller_missing`
+- stale legal action/snapshot replacement through the interaction model's existing `SetCurrentInteractionState`
+- source guards for no action generation, no legality calls, no action execution, no state ownership, and no hidden zone access
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- legality decisions
+- action execution
+- authoritative state ownership
+- player input
+- tile picking
+- unit selection
+- UI widgets, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The adapter consumes only externally supplied legal actions and `FWBPublicBoardSummary`. It does not call `WBRules`, generate actions, execute actions, own game state, or expose hidden deck/hand/discard data.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 14.45 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=435
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.InteractionRefreshAdapter.ClassExists`
+- `Wandbound.Runtime.InteractionRefreshAdapter.RefreshBothTargets`
+- `Wandbound.Runtime.InteractionRefreshAdapter.RefreshInteractionModelOnly`
+- `Wandbound.Runtime.InteractionRefreshAdapter.RefreshVisualControllerOnly`
+- `Wandbound.Runtime.InteractionRefreshAdapter.NoTargetsFails`
+- `Wandbound.Runtime.InteractionRefreshAdapter.MissingInteractionModelFailsValidationFirst`
+- `Wandbound.Runtime.InteractionRefreshAdapter.MissingVisualControllerFailsValidationFirst`
+- `Wandbound.Runtime.InteractionRefreshAdapter.ReplacesStaleLegalActions`
+- `Wandbound.Runtime.InteractionRefreshAdapter.SamePublicSummaryFeedsModelAndVisuals`
+- `Wandbound.Runtime.InteractionRefreshAdapter.NoActionGenerationSourceGuard`
+- `Wandbound.Runtime.InteractionRefreshAdapter.NoActionExecutionSourceGuard`
+- `Wandbound.Runtime.InteractionRefreshAdapter.NoGameStateOwnershipSourceGuard`
+- `Wandbound.Runtime.InteractionRefreshAdapter.HiddenDataExcluded`
+
+Existing turn interaction model, legal-action presentation, visual controller, and action-selection bridge tests also pass in the full Wandbound automation run.
+
+### Exact Errors
+
+None.
+
+### Risks / Unknowns
+
+- The adapter reports visual acceptance through `bOk`, while `bVisualControllerRefreshed` mirrors whether a board actor actually rendered.
+- Future runtime owners must still generate fresh legal actions and public summaries before calling the adapter.
+- Hidden marker state remains unmodeled and excluded.
+- Pre-existing untracked `MaxHP` remains untouched.
 
 ## Runtime Turn Interaction Model Pass
 

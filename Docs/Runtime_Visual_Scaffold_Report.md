@@ -70,6 +70,10 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `UWBRuntimeTurnInteractionModelComponent` now stores the current externally supplied legal actions and presentation snapshot for future UI consumption. It can execute selected action ids through the action-selection bridge/facade path, but still does not generate actions, own rules state, or implement input/UI.
 
+`WBRuntimeInteractionRefreshAdapter` now provides the C++-only decision-point refresh path. It accepts externally generated legal actions and a public board summary, refreshes the turn interaction model, and can refresh the visual controller from that same public summary. It still does not implement input/UI, generate actions, decide legality, execute actions, own state, inspect hidden information, or add camera/VFX/assets.
+
+`UWBRuntimeDecisionPointCoordinatorComponent` now provides the C++-only read-only decision-point status surface. It wraps the refresh adapter, exposes current status and presentation entries for future UI, and still does not implement input/UI, generate actions, decide legality, execute actions, own state, inspect hidden information, or add camera/VFX/assets.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering
