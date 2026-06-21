@@ -66,6 +66,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `WBRuntimeActionSelectionBridge` now provides a C++-only action ID resolver for externally supplied legal action lists. It does not implement input/UI and does not generate or validate actions; it resolves a selected ID and delegates through the runtime controller facade.
 
+`WBRuntimeLegalActionPresentation` now provides a C++-only public presentation snapshot for externally supplied legal actions. It consumes `FWBPublicBoardSummary`, emits action IDs and simple public labels, and still does not implement input/UI or generate/validate actions.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

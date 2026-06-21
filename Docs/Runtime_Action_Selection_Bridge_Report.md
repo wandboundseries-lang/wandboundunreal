@@ -97,3 +97,5 @@ The bridge compares action ID strings and copies an action from the supplied lis
 ## Future Usage
 
 Future UI/input code can present action IDs from a legal action list produced elsewhere. When the user chooses one ID, runtime code can pass the same precomputed list and chosen ID to this bridge. The bridge resolves and executes through the facade without adding UI, input, camera, VFX, assets, or rules ownership.
+
+`WBRuntimeLegalActionPresentation` can now sit upstream of this bridge. It consumes the same externally supplied legal action list plus a public board summary, then emits public labels and action IDs for future UI display before the chosen ID is passed back to this bridge.

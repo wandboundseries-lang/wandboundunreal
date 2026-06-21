@@ -899,6 +899,20 @@
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Runtime Legal Action Presentation Snapshot
+
+- Added `WBRuntimeLegalActionPresentation` as a pure C++ presentation snapshot builder.
+- It consumes externally supplied legal actions and `FWBPublicBoardSummary`.
+- It emits stable action IDs and simple public labels for future UI.
+- It preserves supplied action order and does not sort or filter actions.
+- It copies public source/target card ids only from the public board summary.
+- It treats duplicate action id lookup as ambiguous.
+- It does not generate legal actions.
+- It does not decide legality or call `WBRules` legality APIs.
+- It does not own or cache `FWBGameStateData`.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

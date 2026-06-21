@@ -104,4 +104,6 @@ Future input/UI should:
 
 `WBRuntimeActionSelectionBridge` can now sit immediately upstream of the facade. It resolves a selected `WBActionCodec` action ID from an externally supplied legal action list, then calls `UWBRuntimeControllerFacadeComponent::ExecuteSelectedAction` with the resolved `FWBAction`.
 
+`WBRuntimeLegalActionPresentation` remains farther upstream as a display snapshot only. The facade still receives only resolved selected actions and remains downstream of action ID presentation and selection.
+
 The facade is intentionally C++-only in this pass.

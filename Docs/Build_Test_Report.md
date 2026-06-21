@@ -2,6 +2,111 @@
 
 Date of check: 2026-06-20 (America/New_York)
 
+## Runtime Legal Action Presentation Snapshot Pass
+
+### Scope
+
+This pass added a pure C++ presentation snapshot for precomputed legal actions.
+
+Implemented:
+
+- `EWBRuntimeActionPresentationType`
+- `FWBRuntimeActionPresentationEntry`
+- `FWBRuntimeLegalActionPresentationSnapshot`
+- `WBRuntimeLegalActionPresentation`
+- stable action IDs through `WBActionCodec::MakeActionId`
+- simple public labels for Move, Attack, End Turn, Pass, and unknown Action entries
+- public source/target unit lookup from `FWBPublicBoardSummary`
+- duplicate action id lookup failure in `TryFindEntryByActionId`
+- presentation tests for ordering, labels, public source/target lookup, missing public units, duplicate/missing lookup, source guards, stable action IDs, and hidden data exclusion
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- legality decisions
+- state ownership
+- player input
+- tile picking
+- unit selection
+- UI widgets, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+- JSON serialization
+
+The snapshot consumes only externally supplied legal actions and `FWBPublicBoardSummary`. It does not call `WBRules` or accept `FWBGameStateData`.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 15.27 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=406
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.LegalActionPresentation.PreservesActionOrder`
+- `Wandbound.Runtime.LegalActionPresentation.MoveEntry`
+- `Wandbound.Runtime.LegalActionPresentation.AttackEntry`
+- `Wandbound.Runtime.LegalActionPresentation.EndTurnEntry`
+- `Wandbound.Runtime.LegalActionPresentation.PassEntries`
+- `Wandbound.Runtime.LegalActionPresentation.MissingPublicSourceUnit`
+- `Wandbound.Runtime.LegalActionPresentation.RemovedTargetNotInPublicSummary`
+- `Wandbound.Runtime.LegalActionPresentation.TryFindSuccess`
+- `Wandbound.Runtime.LegalActionPresentation.TryFindMissing`
+- `Wandbound.Runtime.LegalActionPresentation.TryFindDuplicate`
+- `Wandbound.Runtime.LegalActionPresentation.NoActionGenerationSourceGuard`
+- `Wandbound.Runtime.LegalActionPresentation.NoHiddenStateApi`
+- `Wandbound.Runtime.LegalActionPresentation.ActionIdsStable`
+
+### Notes
+
+- `PassResponse` presents as `Pass` for player-facing clarity.
+- Snapshot ordering preserves the supplied action order exactly.
+- No Godot reference files were edited.
+- No `.uasset`, `.umap`, Blueprint, UMG, or asset import work was added.
+- The pre-existing untracked `MaxHP` file remains untouched.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Remaining Risks/Unknowns
+
+- Future runtime/UI still needs an owner to produce current legal actions and a public board summary.
+- Labels are intentionally minimal and may need localization or richer copy later.
+- Real input, UI widgets, camera behavior, VFX, marker visuals, assets, and network replay remain future work.
+
 ## Runtime Action Selection Bridge Pass
 
 ### Scope
