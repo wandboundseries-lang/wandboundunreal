@@ -97,4 +97,6 @@ The snapshot builder itself preserves input order and includes duplicate IDs if 
 
 Future rules/runtime code can generate legal actions, build a public board summary, then build this presentation snapshot. Future UI can display the snapshot entries and pass the chosen action id to `WBRuntimeActionSelectionBridge` for execution through the runtime controller facade.
 
+`UWBRuntimeTurnInteractionModelComponent` now stores and exposes these snapshots for future UI consumption. The model owns no rules truth; it only caches externally supplied legal actions and public presentation data until a future owner refreshes them.
+
 This remains C++-only and does not add input, UI widgets, camera behavior, animation, VFX, assets, Blueprints, UMG, `.uasset`, or `.umap` work.

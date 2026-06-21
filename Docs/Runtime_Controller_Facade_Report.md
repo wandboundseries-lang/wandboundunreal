@@ -106,4 +106,6 @@ Future input/UI should:
 
 `WBRuntimeLegalActionPresentation` remains farther upstream as a display snapshot only. The facade still receives only resolved selected actions and remains downstream of action ID presentation and selection.
 
+`UWBRuntimeTurnInteractionModelComponent` is also upstream of the facade. It stores externally supplied legal actions and presentation snapshots, then routes selected action ids through `WBRuntimeActionSelectionBridge` before the facade receives the resolved action.
+
 The facade is intentionally C++-only in this pass.

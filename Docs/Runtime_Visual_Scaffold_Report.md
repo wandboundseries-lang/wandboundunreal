@@ -68,6 +68,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `WBRuntimeLegalActionPresentation` now provides a C++-only public presentation snapshot for externally supplied legal actions. It consumes `FWBPublicBoardSummary`, emits action IDs and simple public labels, and still does not implement input/UI or generate/validate actions.
 
+`UWBRuntimeTurnInteractionModelComponent` now stores the current externally supplied legal actions and presentation snapshot for future UI consumption. It can execute selected action ids through the action-selection bridge/facade path, but still does not generate actions, own rules state, or implement input/UI.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

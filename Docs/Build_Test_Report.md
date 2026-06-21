@@ -2,6 +2,107 @@
 
 Date of check: 2026-06-20 (America/New_York)
 
+## Runtime Turn Interaction Model Pass
+
+### Scope
+
+This pass added a pure C++ runtime turn interaction model component that stores externally supplied legal actions and a public presentation snapshot for future UI.
+
+Implemented:
+
+- `UWBRuntimeTurnInteractionModelComponent`
+- current precomputed legal action storage
+- current public board summary storage
+- current `FWBRuntimeLegalActionPresentationSnapshot` storage
+- selected action ID lookup through `WBRuntimeActionSelectionBridge`
+- action execution through the existing runtime controller facade path
+- last selected action ID, selection result, and execution result retention
+- explicit stale-state policy after execution: the component preserves the supplied legal actions/snapshot until an external owner refreshes or clears them
+- missing-current-state failure reason: `no_current_interaction_state`
+- tests for class availability, initial/clear state, snapshot building, order preservation, presentation lookup, selected move/end-turn execution, null facade policy, hidden data exclusion, stale state behavior, and source guards
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- legality decisions
+- authoritative state ownership
+- player input
+- tile picking
+- unit selection
+- UI widgets, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The component consumes only externally supplied legal actions and `FWBPublicBoardSummary`. It does not call `WBRules`, generate actions, own game state, or expose hidden deck/hand/discard data.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 33.90 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=422
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.TurnInteractionModel.ClassExists`
+- `Wandbound.Runtime.TurnInteractionModel.InitialState`
+- `Wandbound.Runtime.TurnInteractionModel.SetStateBuildsSnapshot`
+- `Wandbound.Runtime.TurnInteractionModel.PreservesInputOrder`
+- `Wandbound.Runtime.TurnInteractionModel.ClearCurrentInteractionState`
+- `Wandbound.Runtime.TurnInteractionModel.TryFindPresentationEntrySuccess`
+- `Wandbound.Runtime.TurnInteractionModel.TryFindPresentationEntryMissing`
+- `Wandbound.Runtime.TurnInteractionModel.ExecuteWithoutStateFails`
+- `Wandbound.Runtime.TurnInteractionModel.ExecuteMissingIdFails`
+- `Wandbound.Runtime.TurnInteractionModel.ExecuteMoveSucceeds`
+- `Wandbound.Runtime.TurnInteractionModel.ExecuteFullEndTurnSucceeds`
+- `Wandbound.Runtime.TurnInteractionModel.NullFacadeFollowsBridgePolicy`
+- `Wandbound.Runtime.TurnInteractionModel.NoActionGenerationSourceGuard`
+- `Wandbound.Runtime.TurnInteractionModel.NoGameStateOwnershipSourceGuard`
+- `Wandbound.Runtime.TurnInteractionModel.HiddenDataExcluded`
+- `Wandbound.Runtime.TurnInteractionModel.StaleStatePolicyAfterExecution`
+
+### Exact Errors
+
+None.
+
+### Risks / Unknowns
+
+- Current legal actions and presentation snapshots are intentionally not refreshed by the component after execution; the future UI/controller owner must supply fresh legal actions after state changes.
+- The component stores a public board summary for presentation only. It is not authoritative state.
+- Hidden marker state remains unmodeled and is still excluded from public presentation.
+- Pre-existing untracked `MaxHP` remains untouched.
+
 ## Runtime Legal Action Presentation Snapshot Pass
 
 ### Scope

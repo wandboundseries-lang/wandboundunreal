@@ -913,6 +913,21 @@
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Runtime Turn Interaction Model
+
+- Added `UWBRuntimeTurnInteractionModelComponent` as a C++ runtime interaction model.
+- It stores externally supplied legal actions.
+- It stores a public board summary and presentation snapshot.
+- It exposes read-only access to current presentation entries.
+- It executes selected action ids through `WBRuntimeActionSelectionBridge` and the runtime controller facade path.
+- It stores last selected action id, selection result, and execution result.
+- It does not regenerate legal actions after execution; stored interaction state may be stale until explicitly refreshed.
+- It does not generate legal actions.
+- It does not decide legality or call `WBRules` legality APIs.
+- It does not own or cache `FWBGameStateData`.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art
