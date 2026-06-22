@@ -1,0 +1,52 @@
+{
+  "id": "card_activation_armor_effect_success",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A card activation command can wrap an externally selected armor effect request and delegate mutation to the effect runner.",
+  "operation": "apply_card_activation_command",
+  "card_activation": {
+    "source": { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_card_armor", "source_effect_id": "fixture_effect_armor" },
+    "debug_activation_id": "fixture_activation_armor",
+    "effect_request": {
+      "target": { "target_unit_id": 2 },
+      "payloads": [
+        {
+          "operation": "armor_effect",
+          "armor_effect": { "operation": "add_current_armor", "amount": 2, "source_reason": "fixture" }
+        }
+      ]
+    }
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 1, "max_armor": 3 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "expected_trace_order": [ "card_activation_resolved", "effect_request_resolved", "armor_modified" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 3, "max_armor": 3, "statuses": [] }
+    ],
+    "trace_fields": [
+      { "kind": "card_activation_resolved", "player_id": 0, "source_unit_id": 1, "target_unit_id": 2 },
+      { "kind": "effect_request_resolved", "player_id": 0, "source_unit_id": 1, "target_unit_id": 2 },
+      { "kind": "armor_modified", "target_unit_id": 2, "previous_armor": 1, "new_armor": 3 }
+    ]
+  }
+}

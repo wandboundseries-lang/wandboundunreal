@@ -2,6 +2,100 @@
 
 Date of check: 2026-06-22 (America/New_York)
 
+## Card Activation Command Scaffolding Pass
+
+### Scope
+
+This pass added deterministic card activation command scaffolding that consumes externally supplied `FWBEffectRequest` data and delegates mutation to the existing effect request dispatcher.
+
+Implemented:
+
+- `FWBCardActivationSource`
+- `FWBCardActivationCommand`
+- `FWBCardActivationCommandResult`
+- `WBRules::CanApplyCardActivationCommand`
+- `WBEffectRunner::ApplyCardActivationCommand`
+- `card_activation_resolved` parent traces
+- fixture operation `apply_card_activation_command`
+- GodotCanon card activation command fixtures for armor, status, damage, heal, mixed atomicity, source failures, missing target, and hidden metadata exclusion
+
+Not implemented:
+
+- Godot CardDB import
+- card activation legal action generation
+- card ownership/cost/timing validation
+- UI target selection
+- response windows
+- effect negation
+- passives
+- wands
+- card-specific behavior
+- Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 43.59 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=517
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.CardActivationCommandScaffolding.ValidationFillsSourceAndAllowsGlobal`
+- `Wandbound.Core.CardActivationCommandScaffolding.SourceFailuresAndMismatchNoMutation`
+- `Wandbound.Core.CardActivationCommandScaffolding.EffectFamiliesSucceed`
+- `Wandbound.Core.CardActivationCommandScaffolding.MixedPayloadAtomicity`
+- `Wandbound.Core.CardActivationCommandScaffolding.ParentTraceBeforeEffectTraces`
+- `Wandbound.Core.CardActivationCommandScaffolding.HiddenDataExcludedFromTraceAndRuntimeSerialization`
+- `Wandbound.Core.CardActivationCommandScaffolding.LegalGenerationAndActionCodecUnchanged`
+- `Wandbound.Core.CardActivationCommandScaffolding.FixtureScenarios`
+- `Wandbound.Core.CardActivationCommandScaffolding.RuntimeSerializationFixture`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- `card_activation_resolved` is emitted before `effect_request_resolved` and child payload traces.
+- Missing effect-request source fields are filled from command source metadata before effect request dispatch.
+- Source-less/global fixture commands are allowed with a valid player and `SourceUnitId == -1`.
+- Source card id, source effect id, debug activation id, and hidden deck/hand/discard data remain excluded from traces and public runtime serialization.
+- Legal action generation and `WBActionCodec` action IDs are unchanged.
+- `git diff --check` reported no whitespace errors, only LF-to-CRLF working-copy notices.
+- Pre-existing untracked `MaxHP` remains untouched.
+
+### Risks / Unknowns
+
+- Card activation commands are fixture/runtime scaffolding only; player legal action generation for cards does not exist yet.
+- CardDB expansion, costs, ownership, timing windows, target selection, response windows, negation, passives, and wands remain future work.
+- Source-less/global fixture effects are intentionally allowed for future controller-level effects, but should be revisited when real card ownership/timing is introduced.
+
 ## Damage/Heal Effect Request Scaffolding Pass
 
 ### Scope

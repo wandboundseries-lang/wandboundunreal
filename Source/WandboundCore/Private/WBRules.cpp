@@ -1,5 +1,6 @@
 #include "WBRules.h"
 
+#include "WBCardActivationCommand.h"
 #include "WBEffectRequest.h"
 #include "WBStatusEffect.h"
 
@@ -526,6 +527,82 @@ FWBActionQueryResult WBRules::CanApplyZeroHPDeathRemoval(const FWBGameStateData&
 	}
 
 	return FWBActionQueryResult::Deny(TEXT("no_zero_hp_units"));
+}
+
+FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
+	const FWBGameStateData& State,
+	const FWBCardActivationCommand& Command)
+{
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+
+	if (!FWBGameStateData::IsValidPlayerId(Command.Source.PlayerId))
+	{
+		return FWBActionQueryResult::Deny(TEXT("invalid_card_activation_source_player"));
+	}
+
+	if (State.GetPlayerById(Command.Source.PlayerId) == nullptr)
+	{
+		return FWBActionQueryResult::Deny(TEXT("missing_card_activation_source_player"));
+	}
+
+	if (Command.Source.SourceUnitId != -1)
+	{
+		const FWBUnitState* SourceUnit = State.GetUnitById(Command.Source.SourceUnitId);
+		if (SourceUnit == nullptr)
+		{
+			return FWBActionQueryResult::Deny(TEXT("missing_card_activation_source_unit"));
+		}
+
+		if (SourceUnit->bDefeated || !SourceUnit->IsUnitOnBoard())
+		{
+			return FWBActionQueryResult::Deny(TEXT("card_activation_source_unit_removed"));
+		}
+
+		if (SourceUnit->OwnerId != Command.Source.PlayerId)
+		{
+			return FWBActionQueryResult::Deny(TEXT("card_activation_source_owner_mismatch"));
+		}
+	}
+
+	if (Command.EffectRequest.Source.PlayerId != -1
+		&& Command.EffectRequest.Source.PlayerId != Command.Source.PlayerId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("card_activation_effect_source_player_mismatch"));
+	}
+
+	if (Command.EffectRequest.Source.SourceUnitId != -1
+		&& Command.EffectRequest.Source.SourceUnitId != Command.Source.SourceUnitId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("card_activation_effect_source_unit_mismatch"));
+	}
+
+	if (Command.EffectRequest.Payloads.Num() == 0)
+	{
+		return FWBActionQueryResult::Deny(TEXT("empty_effect_payloads"));
+	}
+
+	FWBEffectRequest FilledRequest = Command.EffectRequest;
+	if (FilledRequest.Source.PlayerId == -1)
+	{
+		FilledRequest.Source.PlayerId = Command.Source.PlayerId;
+	}
+	if (FilledRequest.Source.SourceUnitId == -1)
+	{
+		FilledRequest.Source.SourceUnitId = Command.Source.SourceUnitId;
+	}
+	if (FilledRequest.Source.SourceCardId.IsEmpty())
+	{
+		FilledRequest.Source.SourceCardId = Command.Source.SourceCardId;
+	}
+	if (FilledRequest.Source.SourceEffectId.IsEmpty())
+	{
+		FilledRequest.Source.SourceEffectId = Command.Source.SourceEffectId;
+	}
+
+	return CanApplyEffectRequest(State, FilledRequest);
 }
 
 FWBActionQueryResult WBRules::CanApplyEffectRequest(

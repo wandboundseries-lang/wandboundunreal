@@ -5,6 +5,7 @@
 #include "WBGameStateData.h"
 
 struct FWBEffectRequest;
+struct FWBCardActivationCommand;
 
 struct WANDBOUNDCORE_API FWBMoveQueryResult
 {
@@ -44,6 +45,7 @@ public:
 	static FWBActionQueryResult CanResolvePendingAttackDamage(const FWBGameStateData& State);
 	static bool ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit);
 	static FWBActionQueryResult CanApplyZeroHPDeathRemoval(const FWBGameStateData& State);
+	static FWBActionQueryResult CanApplyCardActivationCommand(const FWBGameStateData& State, const FWBCardActivationCommand& Command);
 	static FWBActionQueryResult CanApplyEffectRequest(const FWBGameStateData& State, const FWBEffectRequest& Request);
 	static FWBActionQueryResult QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult QueryPass(const FWBGameStateData& State, const FWBAction& Action);

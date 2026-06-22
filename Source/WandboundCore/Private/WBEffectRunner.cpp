@@ -2,6 +2,7 @@
 
 #include "WBActionCodec.h"
 #include "WBArmorEffect.h"
+#include "WBCardActivationCommand.h"
 #include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
 #include "WBDeathResolution.h"
@@ -338,6 +339,19 @@ void AppendEffectRequestResolvedTrace(
 	Event.PlayerId = Request.Source.PlayerId;
 	Event.SourceUnitId = Request.Source.SourceUnitId;
 	Event.TargetUnitId = Request.Target.TargetUnitId;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendCardActivationResolvedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBCardActivationCommand& Command)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("card_activation_resolved"));
+	Event.PlayerId = Command.Source.PlayerId;
+	Event.SourceUnitId = Command.Source.SourceUnitId;
+	Event.TargetUnitId = Command.EffectRequest.Target.TargetUnitId;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -916,6 +930,57 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 	Result.bOk = true;
 	Result.PayloadResults = MoveTemp(PayloadResults);
 	Result.TraceEvents = MoveTemp(WorkingTraceEvents);
+	return Result;
+}
+
+FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
+	FWBGameStateData& State,
+	const FWBCardActivationCommand& Command)
+{
+	FWBCardActivationCommandResult Result;
+	Result.Command = Command;
+
+	const FWBActionQueryResult Query = WBRules::CanApplyCardActivationCommand(State, Command);
+	if (!Query.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = Query.Reason;
+		return Result;
+	}
+
+	FWBCardActivationCommand FilledCommand = Command;
+	if (FilledCommand.EffectRequest.Source.PlayerId == -1)
+	{
+		FilledCommand.EffectRequest.Source.PlayerId = FilledCommand.Source.PlayerId;
+	}
+	if (FilledCommand.EffectRequest.Source.SourceUnitId == -1)
+	{
+		FilledCommand.EffectRequest.Source.SourceUnitId = FilledCommand.Source.SourceUnitId;
+	}
+	if (FilledCommand.EffectRequest.Source.SourceCardId.IsEmpty())
+	{
+		FilledCommand.EffectRequest.Source.SourceCardId = FilledCommand.Source.SourceCardId;
+	}
+	if (FilledCommand.EffectRequest.Source.SourceEffectId.IsEmpty())
+	{
+		FilledCommand.EffectRequest.Source.SourceEffectId = FilledCommand.Source.SourceEffectId;
+	}
+
+	FWBGameStateData WorkingState = State;
+	const FWBEffectRequestResult EffectResult = ApplyEffectRequest(WorkingState, FilledCommand.EffectRequest);
+	Result.Command = FilledCommand;
+	Result.EffectResult = EffectResult;
+	if (!EffectResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = EffectResult.Reason;
+		return Result;
+	}
+
+	State = WorkingState;
+	Result.bOk = true;
+	AppendCardActivationResolvedTrace(Result.TraceEvents, FilledCommand);
+	Result.TraceEvents.Append(EffectResult.TraceEvents);
 	return Result;
 }
 

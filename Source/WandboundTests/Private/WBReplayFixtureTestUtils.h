@@ -23,6 +23,7 @@ enum class EWBFixtureOperationKind : uint8
 	ApplyDamageEffect,
 	ApplyHealEffect,
 	ApplyEffectRequest,
+	ApplyCardActivationCommand,
 	ApplyStartOfTurnStatusTicks,
 	ApplyEndOfTurnStatusTicks,
 	AttackDeclareThenDamage,

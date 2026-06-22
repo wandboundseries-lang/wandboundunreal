@@ -1,0 +1,67 @@
+{
+  "id": "card_activation_mixed_payload_atomic_success",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A card activation command preserves effect request payload order and commits mixed payloads atomically.",
+  "operation": "apply_card_activation_command",
+  "card_activation": {
+    "source": { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_card_mixed", "source_effect_id": "fixture_effect_mixed" },
+    "debug_activation_id": "fixture_activation_mixed",
+    "effect_request": {
+      "target": { "target_unit_id": 2 },
+      "payloads": [
+        {
+          "operation": "armor_effect",
+          "armor_effect": { "operation": "add_current_armor", "amount": 1, "source_reason": "fixture" }
+        },
+        {
+          "operation": "status_effect",
+          "status_effect": { "operation": "apply_status", "status_id": "Burn", "duration": 2, "source_reason": "fixture" }
+        },
+        {
+          "operation": "damage_effect",
+          "damage_effect": { "amount": 3, "bypass_armor": false, "damage_cause": "Effect", "source_reason": "fixture" }
+        },
+        {
+          "operation": "heal_effect",
+          "heal_effect": { "amount": 2, "source_reason": "fixture" }
+        }
+      ]
+    }
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 1, "max_armor": 3 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "expected_trace_order": [ "card_activation_resolved", "effect_request_resolved", "armor_modified", "status_modified", "damage_effect_resolved", "heal_effect_resolved" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 0, "max_armor": 3, "statuses": [ "Burn" ], "status_turns": { "Burn": 2 } }
+    ],
+    "trace_fields": [
+      { "kind": "card_activation_resolved", "player_id": 0, "source_unit_id": 1, "target_unit_id": 2 },
+      { "kind": "effect_request_resolved", "player_id": 0, "source_unit_id": 1, "target_unit_id": 2 },
+      { "kind": "armor_modified", "target_unit_id": 2, "previous_armor": 1, "new_armor": 2 },
+      { "kind": "status_modified", "target_unit_id": 2, "status_id": "Burn", "new_status_turns": 2 },
+      { "kind": "damage_effect_resolved", "target_unit_id": 2, "previous_hp": 5, "new_hp": 4, "previous_armor": 2, "new_armor": 0 },
+      { "kind": "heal_effect_resolved", "target_unit_id": 2, "previous_hp": 4, "new_hp": 5, "effective_heal_amount": 1 }
+    ]
+  }
+}

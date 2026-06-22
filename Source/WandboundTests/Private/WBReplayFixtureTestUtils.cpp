@@ -6,6 +6,7 @@
 #include "Serialization/JsonWriter.h"
 #include "WBActionCodec.h"
 #include "WBArmorEffect.h"
+#include "WBCardActivationCommand.h"
 #include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
 #include "WBEffectRequest.h"
@@ -1785,6 +1786,71 @@ bool ParseEffectRequestFromFixture(
 	return true;
 }
 
+bool ParseCardActivationSourceObject(
+	const TSharedPtr<FJsonObject>& SourceObject,
+	FWBCardActivationSource& OutSource,
+	FString& OutReason)
+{
+	if (!SourceObject.IsValid())
+	{
+		OutReason = TEXT("missing_card_activation_source");
+		return false;
+	}
+
+	OutSource.PlayerId = ReadIntegerFieldOrDefault(SourceObject, TEXT("player_id"), -1);
+	OutSource.SourceUnitId = ReadIntegerFieldOrDefault(SourceObject, TEXT("source_unit_id"), -1);
+	SourceObject->TryGetStringField(TEXT("source_card_id"), OutSource.SourceCardId);
+	SourceObject->TryGetStringField(TEXT("source_effect_id"), OutSource.SourceEffectId);
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseCardActivationCommandFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBCardActivationCommand& OutCommand,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CardActivationObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("card_activation"), CardActivationObject)
+		|| CardActivationObject == nullptr
+		|| !CardActivationObject->IsValid())
+	{
+		OutReason = TEXT("missing_card_activation");
+		return false;
+	}
+
+	const TSharedPtr<FJsonObject>* SourceObject = nullptr;
+	if (!(*CardActivationObject)->TryGetObjectField(TEXT("source"), SourceObject)
+		|| SourceObject == nullptr
+		|| !SourceObject->IsValid())
+	{
+		OutReason = TEXT("missing_card_activation_source");
+		return false;
+	}
+
+	if (!ParseCardActivationSourceObject(*SourceObject, OutCommand.Source, OutReason))
+	{
+		return false;
+	}
+
+	(*CardActivationObject)->TryGetStringField(TEXT("debug_activation_id"), OutCommand.DebugActivationId);
+
+	const TSharedPtr<FJsonObject>* EffectRequestObject = nullptr;
+	if (!(*CardActivationObject)->TryGetObjectField(TEXT("effect_request"), EffectRequestObject)
+		|| EffectRequestObject == nullptr
+		|| !EffectRequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_card_activation_effect_request");
+		return false;
+	}
+
+	TSharedPtr<FJsonObject> EffectRequestRoot = MakeShared<FJsonObject>();
+	EffectRequestRoot->SetObjectField(TEXT("effect_request"), *EffectRequestObject);
+	return ParseEffectRequestFromFixture(EffectRequestRoot, OutCommand.EffectRequest, OutReason);
+}
+
 bool ParseDamageRequestFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBDamageRequest& OutRequest,
@@ -1960,6 +2026,24 @@ bool ApplyFixtureOperation(
 		OutResult.bOk = EffectResult.bOk;
 		OutResult.Reason = EffectResult.Reason;
 		OutResult.TraceEvents = EffectResult.TraceEvents;
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_card_activation_command"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyCardActivationCommand;
+		FWBCardActivationCommand Command;
+		if (!ParseCardActivationCommandFromFixture(Fixture, Command, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationCommandResult CommandResult = WBEffectRunner::ApplyCardActivationCommand(State, Command);
+		OutResult.bOk = CommandResult.bOk;
+		OutResult.Reason = CommandResult.Reason;
+		OutResult.TraceEvents = CommandResult.TraceEvents;
 		OutReason.Reset();
 		return true;
 	}

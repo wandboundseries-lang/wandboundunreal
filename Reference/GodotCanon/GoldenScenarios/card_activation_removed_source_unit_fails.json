@@ -1,0 +1,49 @@
+{
+  "id": "card_activation_removed_source_unit_fails",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A card activation command with a removed source unit fails before effect request mutation.",
+  "operation": "apply_card_activation_command",
+  "card_activation": {
+    "source": { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_card_removed_source", "source_effect_id": "fixture_effect_removed_source" },
+    "debug_activation_id": "fixture_activation_removed_source",
+    "effect_request": {
+      "target": { "target_unit_id": 2 },
+      "payloads": [
+        {
+          "operation": "damage_effect",
+          "damage_effect": { "amount": 2, "bypass_armor": false, "damage_cause": "Effect", "source_reason": "fixture" }
+        }
+      ]
+    }
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": -1, "y": -1, "hp": 0, "max_hp": 5, "defeated": true, "removed_from_board": true },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": false,
+    "reason_contains": "card_activation_source_unit_removed",
+    "expected_trace_order": [],
+    "final_units": [
+      { "id": 1, "x": -1, "y": -1, "hp": 0, "max_hp": 5, "defeated": true, "removed_from_board": true, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] }
+    ],
+    "trace_fields": []
+  }
+}

@@ -212,6 +212,16 @@ Added GodotCanon fixtures:
 - `effect_request_damage_then_heal_atomic_failure.json`
 - `effect_request_mixed_armor_status_damage_heal_atomic_success.json`
 - `runtime_result_serialization_after_damage_heal_effect_request.json`
+- `card_activation_armor_effect_success.json`
+- `card_activation_status_effect_success.json`
+- `card_activation_damage_effect_success.json`
+- `card_activation_heal_effect_success.json`
+- `card_activation_mixed_payload_atomic_success.json`
+- `card_activation_mixed_payload_atomic_failure.json`
+- `card_activation_missing_source_unit_fails.json`
+- `card_activation_removed_source_unit_fails.json`
+- `card_activation_missing_target_fails.json`
+- `card_activation_source_metadata_not_public_trace.json`
 
 ## Tests
 
@@ -237,10 +247,15 @@ Added `WBEffectRequestScaffoldingTests.cpp`, covering:
 - damage/heal payload dispatch
 - mixed armor/status/damage/heal atomic success
 - damage/heal atomic rollback on failure
+- card activation command source validation
+- card activation command source-field filling
+- card activation command parent trace ordering
+- card activation command hidden metadata exclusion
+- card activation command fixture scenarios
 
 ## Hidden Information
 
-Runtime/public serialization after an effect request excludes:
+Runtime/public serialization after an effect request or card activation command excludes:
 
 - deck contents
 - hand contents
@@ -248,13 +263,14 @@ Runtime/public serialization after an effect request excludes:
 - pending attack internals
 - source card id
 - source effect id
+- debug activation id
 
 Visible board unit card ids remain public under the existing public board summary policy.
 
 ## Remaining Work
 
 - Godot CardDB importer
-- card activation commands
+- card activation legal action generation
 - target selection
 - real card ownership/timing validation
 - response windows

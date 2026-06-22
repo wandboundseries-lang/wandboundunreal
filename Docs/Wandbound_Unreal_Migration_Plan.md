@@ -691,6 +691,29 @@
 - `WBActionCodec` action IDs remain unchanged.
 - No Godot CardDB import, card activation, target selection UI, response windows, effect negation, passives, wands, card-specific effects, UI, Blueprint, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Command Scaffolding
+
+- Added deterministic card activation command scaffolding:
+  - `FWBCardActivationSource`
+  - `FWBCardActivationCommand`
+  - `FWBCardActivationCommandResult`
+- Added `WBRules::CanApplyCardActivationCommand`.
+- Added `WBEffectRunner::ApplyCardActivationCommand`.
+- The command consumes externally supplied `FWBEffectRequest` data and delegates mutation to the existing effect request dispatcher.
+- Missing effect-request source metadata is filled from the command source before dispatch.
+- Source-less/global fixture effects are allowed when the command has a valid player and `SourceUnitId == -1`.
+- Successful activation traces emit:
+  - `card_activation_resolved`
+  - `effect_request_resolved`
+  - child effect traces in payload order
+- Source card id, source effect id, and debug activation id remain fixture/debug metadata and are excluded from traces and public runtime summaries.
+- Added fixture support for:
+  - `operation = apply_card_activation_command`
+- Added GodotCanon fixtures for armor, status, damage, heal, mixed atomic success/failure, source failures, missing target, and hidden metadata exclusion.
+- Legal action generation remains unchanged.
+- `WBActionCodec` action IDs remain unchanged.
+- No Godot CardDB import, card activation legal action generation, costs, timing windows, target selection UI, response windows, effect negation, passives, wands, card-specific effects, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
 ## Milestone - Public Board Summary for Runtime Results
 
 - Added deterministic public board summaries:

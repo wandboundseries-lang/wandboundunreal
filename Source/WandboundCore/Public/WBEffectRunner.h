@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "WBAction.h"
 #include "WBArmorEffect.h"
+#include "WBCardActivationCommand.h"
 #include "WBEffectRequest.h"
 #include "WBGameStateData.h"
 #include "WBReplayTrace.h"
@@ -27,4 +28,5 @@ public:
 	static FWBApplyActionResult ApplyDamageEffect(FWBGameStateData& State, const FWBDamageEffectRequest& Request);
 	static FWBApplyActionResult ApplyHealEffect(FWBGameStateData& State, const FWBHealEffectRequest& Request);
 	static FWBEffectRequestResult ApplyEffectRequest(FWBGameStateData& State, const FWBEffectRequest& Request);
+	static FWBCardActivationCommandResult ApplyCardActivationCommand(FWBGameStateData& State, const FWBCardActivationCommand& Command);
 };
