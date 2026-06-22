@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "WBRuntimeActionSelectionBridge.h"
 #include "WBRuntimeInteractionRefreshAdapter.h"
 #include "WBRuntimeLegalActionPresentation.h"
 #include "WBRuntimeDecisionPointCoordinatorComponent.generated.h"
@@ -19,6 +20,10 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeDecisionPointStatus
 	int32 PublicWallCount = 0;
 	int32 PublicTerrainCount = 0;
 	FString LastRefreshReason;
+	bool bHasLastSelectedAction = false;
+	FString LastSelectedActionId;
+	bool bLastSelectedActionResolved = false;
+	FString LastSelectedActionReason;
 };
 
 UCLASS()
@@ -63,8 +68,20 @@ public:
 		const FString& ActionId,
 		FWBRuntimeActionPresentationEntry& OutEntry) const;
 
+	FWBRuntimeActionSelectionExecutionResult ExecuteSelectedActionId(
+		FWBGameStateData& State,
+		const FString& SelectedActionId,
+		FWBRuntimeTurnResolutionContext& RuntimeContext,
+		UWBRuntimeControllerFacadeComponent* RuntimeControllerFacade);
+
+	bool HasLastSelectedActionExecution() const;
+	FWBRuntimeActionSelectionExecutionResult GetLastSelectedActionExecutionResult() const;
+	void ClearLastSelectedActionExecution();
+
 private:
 	FWBRuntimeInteractionRefreshResult LastRefreshResult;
+	FWBRuntimeActionSelectionExecutionResult LastSelectedActionExecutionResult;
 	FWBRuntimeDecisionPointStatus CurrentStatus;
 	bool bHasCurrentDecisionPoint = false;
+	bool bHasLastSelectedActionExecution = false;
 };

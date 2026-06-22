@@ -65,6 +65,10 @@ No level, Blueprint, material, mesh, or map asset was created in this pass.
 
 The demo harness remains unchanged by the board-view state applier pass. It still renders demo data directly through `WBBoardSummaryBridge`; it does not own or use `UWBBoardViewStateApplierComponent`.
 
+## Visual Controller Shell Note
+
+The demo harness remains unchanged by the runtime visual controller shell pass. The new controller shell is intended for future runtime selected-action result wiring and does not replace or rewrite the demo harness.
+
 ## Future TODO
 
 - real mesh assignment

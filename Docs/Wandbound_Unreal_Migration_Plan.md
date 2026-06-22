@@ -954,8 +954,23 @@
 - It can clear the current decision point and clear the turn interaction model when available.
 - It does not generate actions.
 - It does not decide legality or call `WBRules` legality APIs.
-- It does not execute actions.
+- It does not implement action execution directly.
 - It does not own or cache `FWBGameStateData`.
+- It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
+- It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
+## Milestone - Decision-Point Selected-Action Handoff
+
+- Added C++ selected-action handoff to `UWBRuntimeDecisionPointCoordinatorComponent`.
+- The coordinator accepts a selected action id, external `FWBGameStateData&`, external runtime context, and external runtime controller facade.
+- It requires a current decision point.
+- It delegates selected-action execution to the turn interaction model.
+- It records last selected-action status and the full delegated execution result.
+- It does not generate actions.
+- It does not decide legality or call `WBRules` legality APIs.
+- It does not call `WBEffectRunner` directly.
+- It does not own or cache `FWBGameStateData`.
+- It does not refresh legal actions automatically after execution.
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 

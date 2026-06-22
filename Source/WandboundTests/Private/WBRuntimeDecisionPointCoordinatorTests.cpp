@@ -5,6 +5,9 @@
 #include "WBBoardViewActor.h"
 #include "WBBoardViewDemoData.h"
 #include "WBBoardViewStateApplierComponent.h"
+#include "WBGameStateData.h"
+#include "WBMPRollSource.h"
+#include "WBRuntimeControllerFacadeComponent.h"
 #include "WBRuntimeDecisionPointCoordinatorComponent.h"
 #include "WBRuntimeTurnInteractionModelComponent.h"
 #include "WBRuntimeVisualControllerComponent.h"
@@ -97,6 +100,80 @@ TArray<FWBAction> MakeDecisionActionList()
 	return { MakeDecisionMoveAction(), MakeDecisionAttackAction(), MakeDecisionEndTurnAction() };
 }
 
+FWBPlayerStateData MakeDecisionPlayer(
+	const int32 PlayerId,
+	const int32 RemainingMP = 0,
+	const int32 LastMPRoll = 0)
+{
+	FWBPlayerStateData Player;
+	Player.PlayerId = PlayerId;
+	Player.RemainingMP = RemainingMP;
+	Player.LastMPRoll = LastMPRoll;
+	return Player;
+}
+
+FWBUnitState MakeDecisionUnit(
+	const int32 UnitId,
+	const int32 OwnerId,
+	const FWBTile& Tile,
+	const FString& CardId)
+{
+	FWBUnitState Unit;
+	Unit.UnitId = UnitId;
+	Unit.OwnerId = OwnerId;
+	Unit.CardId = CardId;
+	Unit.X = Tile.X;
+	Unit.Y = Tile.Y;
+	Unit.HP = 5;
+	Unit.MaxHP = 5;
+	Unit.ATK = 2;
+	Unit.AR = 1;
+	Unit.AttacksLeft = 1;
+	Unit.MaxAttacksPerTurn = 1;
+	return Unit;
+}
+
+FWBGameStateData MakeDecisionState()
+{
+	FWBGameStateData State;
+	State.CurrentPlayer = 0;
+	State.PriorityPlayer = 0;
+	State.TurnNumber = 3;
+	State.Phase = EWBGamePhase::NormalTurn;
+
+	FWBPlayerStateData Player0 = MakeDecisionPlayer(0, 2, 2);
+	Player0.Deck.Add(TEXT("SECRET_DECISION_HANDOFF_DECK"));
+	Player0.Hand.Add(TEXT("SECRET_DECISION_HANDOFF_HAND"));
+	Player0.Discard.Add(TEXT("SECRET_DECISION_HANDOFF_DISCARD"));
+
+	FWBPlayerStateData Player1 = MakeDecisionPlayer(1);
+	Player1.Deck.Add(TEXT("SECRET_DECISION_HANDOFF_OPPONENT_DECK"));
+	Player1.Hand.Add(TEXT("SECRET_DECISION_HANDOFF_OPPONENT_HAND"));
+	Player1.Discard.Add(TEXT("SECRET_DECISION_HANDOFF_OPPONENT_DISCARD"));
+
+	State.Players.Add(Player0);
+	State.Players.Add(Player1);
+	State.AddUnitForTest(MakeDecisionUnit(1, 0, FWBTile(3, 4), TEXT("visible_decision_handoff_player")));
+	State.AddUnitForTest(MakeDecisionUnit(2, 1, FWBTile(5, 4), TEXT("visible_decision_handoff_target")));
+	State.AddWallForTest(FWBWallEdge(FWBTile(0, 0), FWBTile(0, 1)));
+	State.SetTerrainForTest(FWBTile(2, 2), FName(TEXT("Mud")));
+	State.SetTerrainForTest(FWBTile(6, 6), FName(TEXT("Ice")));
+	return State;
+}
+
+void ExpectDecisionStateUnchanged(
+	FAutomationTestBase& Test,
+	const FWBGameStateData& State,
+	const FWBGameStateData& Before)
+{
+	Test.TestEqual(TEXT("Current player unchanged"), State.CurrentPlayer, Before.CurrentPlayer);
+	Test.TestEqual(TEXT("Priority player unchanged"), State.PriorityPlayer, Before.PriorityPlayer);
+	Test.TestEqual(TEXT("Turn unchanged"), State.TurnNumber, Before.TurnNumber);
+	Test.TestEqual(TEXT("Player MP unchanged"), State.GetPlayerById(0)->RemainingMP, Before.GetPlayerById(0)->RemainingMP);
+	Test.TestEqual(TEXT("Unit x unchanged"), State.GetUnitById(1)->X, Before.GetUnitById(1)->X);
+	Test.TestEqual(TEXT("Unit y unchanged"), State.GetUnitById(1)->Y, Before.GetUnitById(1)->Y);
+}
+
 void ExpectDefaultDecisionStatus(FAutomationTestBase& Test, const FWBRuntimeDecisionPointStatus& Status)
 {
 	Test.TestFalse(TEXT("Status not ready"), Status.bReady);
@@ -106,6 +183,8 @@ void ExpectDefaultDecisionStatus(FAutomationTestBase& Test, const FWBRuntimeDeci
 	Test.TestEqual(TEXT("Public unit count"), Status.PublicUnitCount, 0);
 	Test.TestEqual(TEXT("Public wall count"), Status.PublicWallCount, 0);
 	Test.TestEqual(TEXT("Public terrain count"), Status.PublicTerrainCount, 0);
+	Test.TestFalse(TEXT("No last selected action"), Status.bHasLastSelectedAction);
+	Test.TestFalse(TEXT("No last selected action resolved"), Status.bLastSelectedActionResolved);
 }
 
 void ExpectDemoVisualRefresh(FAutomationTestBase& Test, const FWBBoardViewRefreshResult& Result)
@@ -127,6 +206,25 @@ FString CombineDecisionSnapshotPublicText(const FWBRuntimeLegalActionPresentatio
 		Combined += Entry.SourcePublicCardId;
 		Combined += Entry.TargetPublicCardId;
 	}
+	return Combined;
+}
+
+FString CombineDecisionExecutionPublicText(
+	const FWBRuntimeDecisionPointStatus& Status,
+	const FWBRuntimeActionSelectionExecutionResult& Result)
+{
+	FString Combined;
+	Combined += Status.LastSelectedActionId;
+	Combined += Status.LastSelectedActionReason;
+	Combined += Result.Selection.SelectedActionId;
+	Combined += Result.Selection.Reason;
+	Combined += Result.Execution.RuntimeResult.ApplyResult.Reason;
+
+	for (const FWBPublicUnitBoardSummary& Unit : Result.Execution.RuntimeResult.FinalPublicBoardSummary.Units)
+	{
+		Combined += Unit.CardId;
+	}
+
 	return Combined;
 }
 
@@ -428,6 +526,307 @@ bool FWBRuntimeDecisionPointCoordinatorFailedRefreshResetsStatusTest::RunTest(co
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorExecuteNoDecisionPointFailsTest, "Wandbound.Runtime.DecisionPointCoordinator.ExecuteWithoutCurrentDecisionPointFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorExecuteNoDecisionPointFailsTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	const FWBGameStateData Before = State;
+	FWBRuntimeTurnResolutionContext Context;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	Coordinator->SetTurnInteractionModel(Model);
+	const FWBRuntimeActionSelectionExecutionResult Result = Coordinator->ExecuteSelectedActionId(
+		State,
+		TEXT("move:p0:u1:3,4->4,4"),
+		Context,
+		Facade);
+
+	TestFalse(TEXT("Selection fails"), Result.Selection.bOk);
+	TestEqual(TEXT("Failure reason"), Result.Selection.Reason, FString(TEXT("no_current_decision_point")));
+	ExpectDecisionStateUnchanged(*this, State, Before);
+	TestTrue(TEXT("Attempt stored"), Coordinator->HasLastSelectedActionExecution());
+	TestTrue(TEXT("Status has attempted id"), Coordinator->GetCurrentStatus().bHasLastSelectedAction);
+	TestEqual(TEXT("Status selected id"), Coordinator->GetCurrentStatus().LastSelectedActionId, FString(TEXT("move:p0:u1:3,4->4,4")));
+	TestEqual(TEXT("Status selected reason"), Coordinator->GetCurrentStatus().LastSelectedActionReason, FString(TEXT("no_current_decision_point")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorExecuteMissingModelFailsTest, "Wandbound.Runtime.DecisionPointCoordinator.ExecuteMissingModelFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorExecuteMissingModelFailsTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	const FWBGameStateData Before = State;
+	FWBRuntimeTurnResolutionContext Context;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ MakeDecisionMoveAction() }, WBBoardViewDemoData::MakeSmallDemoBoardSummary());
+	TestTrue(TEXT("Current decision point exists"), Coordinator->HasCurrentDecisionPoint());
+	Coordinator->SetTurnInteractionModel(nullptr);
+
+	const FWBRuntimeActionSelectionExecutionResult Result = Coordinator->ExecuteSelectedActionId(
+		State,
+		WBActionCodec::MakeActionId(MakeDecisionMoveAction()),
+		Context,
+		Facade);
+
+	TestFalse(TEXT("Selection fails"), Result.Selection.bOk);
+	TestEqual(TEXT("Failure reason"), Result.Selection.Reason, FString(TEXT("turn_interaction_model_missing")));
+	ExpectDecisionStateUnchanged(*this, State, Before);
+	TestTrue(TEXT("Attempt stored"), Coordinator->HasLastSelectedActionExecution());
+	TestEqual(TEXT("Status selected reason"), Coordinator->GetCurrentStatus().LastSelectedActionReason, FString(TEXT("turn_interaction_model_missing")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorExecuteMissingActionFailsTest, "Wandbound.Runtime.DecisionPointCoordinator.ExecuteMissingActionIdFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorExecuteMissingActionFailsTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	const FWBGameStateData Before = State;
+	FWBRuntimeTurnResolutionContext Context;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ MakeDecisionMoveAction() }, WBBoardViewDemoData::MakeSmallDemoBoardSummary());
+	const FWBRuntimeActionSelectionExecutionResult Result = Coordinator->ExecuteSelectedActionId(
+		State,
+		TEXT("end_turn:p0"),
+		Context,
+		Facade);
+
+	TestFalse(TEXT("Selection fails"), Result.Selection.bOk);
+	TestEqual(TEXT("Failure reason"), Result.Selection.Reason, FString(TEXT("selected_action_id_not_found")));
+	ExpectDecisionStateUnchanged(*this, State, Before);
+	TestTrue(TEXT("Attempt stored"), Coordinator->HasLastSelectedActionExecution());
+	TestTrue(TEXT("Status has last selected action"), Coordinator->GetCurrentStatus().bHasLastSelectedAction);
+	TestEqual(TEXT("Status selected id"), Coordinator->GetCurrentStatus().LastSelectedActionId, FString(TEXT("end_turn:p0")));
+	TestFalse(TEXT("Status selection unresolved"), Coordinator->GetCurrentStatus().bLastSelectedActionResolved);
+	TestEqual(TEXT("Status selected reason"), Coordinator->GetCurrentStatus().LastSelectedActionReason, FString(TEXT("selected_action_id_not_found")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorExecuteMoveSucceedsTest, "Wandbound.Runtime.DecisionPointCoordinator.ExecuteMoveSucceeds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorExecuteMoveSucceedsTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	FWBRuntimeTurnResolutionContext Context;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	const FWBAction MoveAction = MakeDecisionMoveAction();
+	const FString MoveId = WBActionCodec::MakeActionId(MoveAction);
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ MoveAction }, WBBoardViewDemoData::MakeSmallDemoBoardSummary());
+	const FWBRuntimeActionSelectionExecutionResult Result = Coordinator->ExecuteSelectedActionId(
+		State,
+		MoveId,
+		Context,
+		Facade);
+
+	TestTrue(TEXT("Selection succeeds"), Result.Selection.bOk);
+	TestTrue(TEXT("Move succeeds"), Result.Execution.RuntimeResult.ApplyResult.bOk);
+	TestEqual(TEXT("Unit moved x"), State.GetUnitById(1)->X, 4);
+	TestEqual(TEXT("Unit moved y"), State.GetUnitById(1)->Y, 4);
+	TestTrue(TEXT("Last result stored"), Coordinator->HasLastSelectedActionExecution());
+	TestEqual(TEXT("Stored selected id"), Coordinator->GetLastSelectedActionExecutionResult().Selection.SelectedActionId, MoveId);
+	TestTrue(TEXT("Status selection resolved"), Coordinator->GetCurrentStatus().bLastSelectedActionResolved);
+	TestTrue(TEXT("Decision point remains ready"), Coordinator->GetCurrentStatus().bReady);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorExecuteFullEndTurnSucceedsTest, "Wandbound.Runtime.DecisionPointCoordinator.ExecuteFullEndTurnSucceeds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorExecuteFullEndTurnSucceedsTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	FWBFixedMPRollSource RollSource(4);
+	FWBRuntimeTurnResolutionContext Context;
+	Context.bResolveEndTurnAsFullTransition = true;
+	Context.MPRollSource = &RollSource;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	const FWBAction EndTurnAction = MakeDecisionEndTurnAction();
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ EndTurnAction }, WBBoardViewDemoData::MakeSmallDemoBoardSummary());
+	const FWBRuntimeActionSelectionExecutionResult Result = Coordinator->ExecuteSelectedActionId(
+		State,
+		WBActionCodec::MakeActionId(EndTurnAction),
+		Context,
+		Facade);
+
+	TestTrue(TEXT("Selection succeeds"), Result.Selection.bOk);
+	TestTrue(TEXT("Full EndTurn succeeds"), Result.Execution.RuntimeResult.ApplyResult.bOk);
+	TestTrue(TEXT("Roll consumed"), Result.Execution.RuntimeResult.bConsumedMPRoll);
+	TestEqual(TEXT("Roll value"), Result.Execution.RuntimeResult.ConsumedMPRoll, 4);
+	TestEqual(TEXT("Current player advances"), State.CurrentPlayer, 1);
+	TestEqual(TEXT("Next player MP setup"), State.GetPlayerById(1)->RemainingMP, 4);
+	TestTrue(TEXT("Status selection resolved"), Coordinator->GetCurrentStatus().bLastSelectedActionResolved);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorExecuteInvalidFullEndTurnContextFailsTest, "Wandbound.Runtime.DecisionPointCoordinator.ExecuteInvalidFullEndTurnContextFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorExecuteInvalidFullEndTurnContextFailsTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	const FWBGameStateData Before = State;
+	FWBRuntimeTurnResolutionContext Context;
+	Context.bResolveEndTurnAsFullTransition = true;
+	Context.MPRollSource = nullptr;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	const FWBAction EndTurnAction = MakeDecisionEndTurnAction();
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ EndTurnAction }, WBBoardViewDemoData::MakeSmallDemoBoardSummary());
+	const FWBRuntimeActionSelectionExecutionResult Result = Coordinator->ExecuteSelectedActionId(
+		State,
+		WBActionCodec::MakeActionId(EndTurnAction),
+		Context,
+		Facade);
+
+	TestTrue(TEXT("Selection resolves"), Result.Selection.bOk);
+	TestFalse(TEXT("Runtime execution fails"), Result.Execution.RuntimeResult.ApplyResult.bOk);
+	TestEqual(TEXT("Failure reason"), Result.Execution.RuntimeResult.ApplyResult.Reason, FString(TEXT("missing_mp_roll_source")));
+	ExpectDecisionStateUnchanged(*this, State, Before);
+	TestTrue(TEXT("Status selection resolved"), Coordinator->GetCurrentStatus().bLastSelectedActionResolved);
+	TestEqual(TEXT("Status selected reason"), Coordinator->GetCurrentStatus().LastSelectedActionReason, FString(TEXT("missing_mp_roll_source")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorClearLastSelectedActionTest, "Wandbound.Runtime.DecisionPointCoordinator.ClearLastSelectedActionExecution", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorClearLastSelectedActionTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	FWBRuntimeTurnResolutionContext Context;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	const FWBAction MoveAction = MakeDecisionMoveAction();
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ MoveAction }, WBBoardViewDemoData::MakeSmallDemoBoardSummary());
+	Coordinator->ExecuteSelectedActionId(State, WBActionCodec::MakeActionId(MoveAction), Context, Facade);
+	TestTrue(TEXT("Last execution exists"), Coordinator->HasLastSelectedActionExecution());
+
+	Coordinator->ClearLastSelectedActionExecution();
+	TestFalse(TEXT("Last execution cleared"), Coordinator->HasLastSelectedActionExecution());
+	TestFalse(TEXT("Status selected action cleared"), Coordinator->GetCurrentStatus().bHasLastSelectedAction);
+	TestTrue(TEXT("Current decision point remains"), Coordinator->HasCurrentDecisionPoint());
+	TestNotNull(TEXT("Snapshot still available"), Coordinator->GetCurrentPresentationSnapshot());
+	TestEqual(TEXT("Snapshot count unchanged"), Coordinator->GetCurrentPresentationSnapshot()->Entries.Num(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorExecuteDoesNotRegenerateSnapshotTest, "Wandbound.Runtime.DecisionPointCoordinator.ExecuteDoesNotRegeneratePresentationSnapshot", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorExecuteDoesNotRegenerateSnapshotTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	FWBRuntimeTurnResolutionContext Context;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	const FWBAction MoveAction = MakeDecisionMoveAction();
+	const FString MoveId = WBActionCodec::MakeActionId(MoveAction);
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ MoveAction }, WBBoardViewDemoData::MakeSmallDemoBoardSummary());
+	const FWBRuntimeLegalActionPresentationSnapshot* SnapshotBefore = Coordinator->GetCurrentPresentationSnapshot();
+	TestNotNull(TEXT("Snapshot before execute"), SnapshotBefore);
+	if (SnapshotBefore == nullptr)
+	{
+		return false;
+	}
+	const FString SnapshotActionIdBefore = SnapshotBefore->Entries[0].ActionId;
+	const FWBTile SnapshotToTileBefore = SnapshotBefore->Entries[0].ToTile;
+
+	Coordinator->ExecuteSelectedActionId(State, MoveId, Context, Facade);
+
+	const FWBRuntimeLegalActionPresentationSnapshot* SnapshotAfter = Coordinator->GetCurrentPresentationSnapshot();
+	TestNotNull(TEXT("Snapshot after execute"), SnapshotAfter);
+	if (SnapshotAfter == nullptr)
+	{
+		return false;
+	}
+	TestEqual(TEXT("Snapshot count unchanged"), SnapshotAfter->Entries.Num(), 1);
+	TestEqual(TEXT("Snapshot action id unchanged"), SnapshotAfter->Entries[0].ActionId, SnapshotActionIdBefore);
+	TestEqual(TEXT("Snapshot to x unchanged"), SnapshotAfter->Entries[0].ToTile.X, SnapshotToTileBefore.X);
+	TestEqual(TEXT("Snapshot to y unchanged"), SnapshotAfter->Entries[0].ToTile.Y, SnapshotToTileBefore.Y);
+	TestEqual(TEXT("State moved"), State.GetUnitById(1)->X, 4);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorNoActionGenerationSourceGuardTest, "Wandbound.Runtime.DecisionPointCoordinator.NoActionGenerationSourceGuard", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBRuntimeDecisionPointCoordinatorNoActionGenerationSourceGuardTest::RunTest(const FString& Parameters)
 {
@@ -446,10 +845,12 @@ bool FWBRuntimeDecisionPointCoordinatorNoActionExecutionSourceGuardTest::RunTest
 {
 	FString Source;
 	TestTrue(TEXT("Coordinator source loads"), LoadDecisionCoordinatorSource(Source));
-	TestFalse(TEXT("Does not execute selected action ids"), Source.Contains(TEXT("ExecuteSelectedActionId")));
+	TestTrue(TEXT("Delegates selected action ids through interaction model"), Source.Contains(TEXT("TurnInteractionModel->ExecuteSelectedActionId")));
 	TestFalse(TEXT("Does not apply selected actions"), Source.Contains(TEXT("ApplySelectedAction")));
 	TestFalse(TEXT("Does not apply runtime selected actions"), Source.Contains(TEXT("ApplyRuntimeSelectedAction")));
 	TestFalse(TEXT("Does not mention effect runner"), Source.Contains(TEXT("WBEffectRunner")));
+	TestFalse(TEXT("Does not call action-selection bridge directly"), Source.Contains(TEXT("WBRuntimeActionSelectionBridge::")));
+	TestFalse(TEXT("Does not call selected-action visual harness"), Source.Contains(TEXT("WBSelectedActionVisualHarness")));
 	return true;
 }
 
@@ -458,12 +859,55 @@ bool FWBRuntimeDecisionPointCoordinatorNoGameStateOwnershipSourceGuardTest::RunT
 {
 	FString Source;
 	TestTrue(TEXT("Coordinator source loads"), LoadDecisionCoordinatorSource(Source));
-	TestFalse(TEXT("Does not accept game state"), Source.Contains(TEXT("FWBGameStateData")));
+	TestTrue(TEXT("Execution handoff accepts external state by reference"), Source.Contains(TEXT("FWBGameStateData& State")));
 	TestFalse(TEXT("No game state pointer storage"), Source.Contains(TEXT("GameStateData*")));
-	TestFalse(TEXT("No game state reference storage"), Source.Contains(TEXT("GameStateData&")));
+	TestFalse(TEXT("No current game state member"), Source.Contains(TEXT("FWBGameStateData Current")));
+	TestFalse(TEXT("No stored game state member"), Source.Contains(TEXT("FWBGameStateData Stored")));
 	TestFalse(TEXT("No deck access"), Source.Contains(TEXT("Deck")));
 	TestFalse(TEXT("No hand access"), Source.Contains(TEXT("Hand")));
 	TestFalse(TEXT("No discard access"), Source.Contains(TEXT("Discard")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBRuntimeDecisionPointCoordinatorHandoffHiddenDataExcludedTest, "Wandbound.Runtime.DecisionPointCoordinator.SelectedActionHandoffHiddenDataExcluded", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBRuntimeDecisionPointCoordinatorHandoffHiddenDataExcludedTest::RunTest(const FString& Parameters)
+{
+	UWBRuntimeDecisionPointCoordinatorComponent* Coordinator = MakeDecisionCoordinator();
+	UWBRuntimeTurnInteractionModelComponent* Model = MakeDecisionInteractionModel();
+	FWBGameStateData State = MakeDecisionState();
+	FWBRuntimeTurnResolutionContext Context;
+	UWBRuntimeControllerFacadeComponent* Facade = NewObject<UWBRuntimeControllerFacadeComponent>(GetTransientPackage());
+	TestNotNull(TEXT("Coordinator"), Coordinator);
+	TestNotNull(TEXT("Model"), Model);
+	TestNotNull(TEXT("Facade"), Facade);
+	if (Coordinator == nullptr || Model == nullptr || Facade == nullptr)
+	{
+		return false;
+	}
+
+	FWBPublicBoardSummary PublicSummary = WBBoardViewDemoData::MakeSmallDemoBoardSummary();
+	PublicSummary.Units[0].CardId = TEXT("visible_decision_handoff_player");
+	PublicSummary.Units[1].CardId = TEXT("visible_decision_handoff_target");
+
+	const FWBAction MoveAction = MakeDecisionMoveAction();
+	Coordinator->bRefreshVisualController = false;
+	Coordinator->SetTurnInteractionModel(Model);
+	Coordinator->RefreshDecisionPoint({ MoveAction }, PublicSummary);
+	const FWBRuntimeActionSelectionExecutionResult Result = Coordinator->ExecuteSelectedActionId(
+		State,
+		WBActionCodec::MakeActionId(MoveAction),
+		Context,
+		Facade);
+
+	TestTrue(TEXT("Move succeeds"), Result.Execution.RuntimeResult.ApplyResult.bOk);
+	const FString PublicText = CombineDecisionExecutionPublicText(Coordinator->GetCurrentStatus(), Result);
+	TestFalse(TEXT("Player deck secret absent"), PublicText.Contains(TEXT("SECRET_DECISION_HANDOFF_DECK")));
+	TestFalse(TEXT("Player hand secret absent"), PublicText.Contains(TEXT("SECRET_DECISION_HANDOFF_HAND")));
+	TestFalse(TEXT("Player discard secret absent"), PublicText.Contains(TEXT("SECRET_DECISION_HANDOFF_DISCARD")));
+	TestFalse(TEXT("Opponent deck secret absent"), PublicText.Contains(TEXT("SECRET_DECISION_HANDOFF_OPPONENT_DECK")));
+	TestFalse(TEXT("Opponent hand secret absent"), PublicText.Contains(TEXT("SECRET_DECISION_HANDOFF_OPPONENT_HAND")));
+	TestFalse(TEXT("Opponent discard secret absent"), PublicText.Contains(TEXT("SECRET_DECISION_HANDOFF_OPPONENT_DISCARD")));
+	TestTrue(TEXT("Visible card remains public"), PublicText.Contains(TEXT("visible_decision_handoff_player")));
 	return true;
 }
 

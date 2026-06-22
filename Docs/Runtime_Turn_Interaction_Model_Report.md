@@ -89,6 +89,8 @@ Future runtime owners must explicitly call `SetCurrentInteractionState` again af
 
 `UWBRuntimeDecisionPointCoordinatorComponent` now feeds the model at decision points through the refresh adapter and exposes read-only current status plus presentation snapshot access for future UI.
 
+`UWBRuntimeDecisionPointCoordinatorComponent` can now also hand selected action ids to this model. The model remains the execution boundary for resolving selected ids against its stored legal action list.
+
 ## Hidden-Information Boundary
 
 The model stores only externally supplied actions, public board summary data, public presentation entries, and runtime result metadata. It does not inspect deck, hand, discard, hidden marker identity, private choices, or raw hidden state.

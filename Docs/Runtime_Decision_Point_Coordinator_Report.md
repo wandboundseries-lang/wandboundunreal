@@ -10,13 +10,14 @@ Added:
 - `UWBRuntimeDecisionPointCoordinatorComponent`
 - decision-point coordinator automation tests
 - decision-point coordinator audit
+- selected-action handoff to the turn interaction model
 
 Not added:
 
 - gameplay rules
 - legal action generation
 - legality decisions
-- action execution
+- direct action execution
 - state ownership
 - player input
 - tile picking
@@ -38,7 +39,7 @@ Not added:
 
 `UWBRuntimeDecisionPointCoordinatorComponent` is a read-only runtime coordination component for future UI-facing decision points. It accepts externally generated legal actions and an externally supplied public board summary, calls `WBRuntimeInteractionRefreshAdapter`, and stores a compact public status describing the current decision point.
 
-It does not generate legal actions, decide legality, execute actions, own state, or inspect hidden information.
+It does not generate legal actions, decide legality, own state, or inspect hidden information. Selected-action execution is delegated to `UWBRuntimeTurnInteractionModelComponent`; the coordinator does not implement execution itself.
 
 ## Refresh Flow
 
@@ -54,6 +55,8 @@ Expected future flow:
 8. Future UI reads status and presentation snapshot entries.
 9. Future UI sends a selected action id to the turn interaction model or action-selection bridge path.
 
+`ExecuteSelectedActionId` now performs that future-facing handoff by requiring a current decision point, requiring a configured turn interaction model, and delegating to `UWBRuntimeTurnInteractionModelComponent::ExecuteSelectedActionId`.
+
 ## Current Status Fields
 
 `FWBRuntimeDecisionPointStatus` reports only public decision-point facts:
@@ -66,8 +69,14 @@ Expected future flow:
 - `PublicWallCount`
 - `PublicTerrainCount`
 - `LastRefreshReason`
+- `bHasLastSelectedAction`
+- `LastSelectedActionId`
+- `bLastSelectedActionResolved`
+- `LastSelectedActionReason`
 
 It does not include deck, hand, discard, private pending choices, hidden marker identity, or full `FWBGameStateData`.
+
+Selected-action fields report the last attempted action id and result reason only. They do not refresh or regenerate the current legal action list.
 
 ## Missing Component Policy
 
@@ -88,6 +97,12 @@ On failed refresh, the coordinator resets current status to non-ready and clears
 
 After clear, `GetCurrentPresentationSnapshot` returns `nullptr` and presentation entry lookup fails.
 
+`ClearLastSelectedActionExecution` clears only the selected-action handoff result and selected-action status fields. It does not clear the current decision point or presentation snapshot.
+
+## Selected-Action Stale-State Policy
+
+After selected-action handoff, the coordinator does not regenerate legal actions and does not rebuild the presentation snapshot. Current decision-point counts remain from the last refresh, and the caller must provide fresh legal actions and a public summary through `RefreshDecisionPoint`.
+
 ## Hidden-Information Boundary
 
 The coordinator consumes only:
@@ -103,10 +118,10 @@ The coordinator does not:
 
 - generate legal actions
 - validate legality
-- execute selected actions
+- implement selected-action execution directly
 - call `WBRules`
 - call `WBEffectRunner`
-- store or accept `FWBGameStateData`
+- store or cache `FWBGameStateData`
 - implement input
 - implement UI widgets
 - implement camera behavior
@@ -121,6 +136,7 @@ Future runtime decision flow can use the coordinator as the read-only bridge bet
 - coordinator refreshes UI-facing status and snapshot
 - future UI checks `bReady` and `bHasActions`
 - future UI displays presentation entries
-- future UI submits the selected action id to the existing interaction model/action bridge execution path
+- future UI submits the selected action id through coordinator `ExecuteSelectedActionId`
+- rules/runtime owner refreshes the coordinator after action resolution with fresh legal actions and a public summary
 
 This remains C++-only and adds no input, UI widgets, camera behavior, animation, VFX, assets, Blueprints, UMG, `.uasset`, or `.umap` work.

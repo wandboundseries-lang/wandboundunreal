@@ -2,6 +2,104 @@
 
 Date of check: 2026-06-21 (America/New_York)
 
+## Decision-Point Selected-Action Handoff Pass
+
+### Scope
+
+This pass added selected-action handoff from the decision-point coordinator to the existing turn interaction model execution path.
+
+Implemented:
+
+- selected-action reporting fields on `FWBRuntimeDecisionPointStatus`
+- `UWBRuntimeDecisionPointCoordinatorComponent::ExecuteSelectedActionId`
+- `HasLastSelectedActionExecution`
+- `GetLastSelectedActionExecutionResult`
+- `ClearLastSelectedActionExecution`
+- coordinator-level failure reason `no_current_decision_point`
+- coordinator-level failure reason `turn_interaction_model_missing`
+- delegated null-facade, missing-id, ambiguous-id, and runtime-context failure behavior through the existing model/bridge/facade path
+- stale-state policy: execution does not regenerate legal actions or presentation snapshots
+- selected-action handoff source guards for no legal-action generation, no direct bridge/harness/EffectRunner calls, and no state ownership
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- legality decisions
+- direct EffectRunner calls
+- automatic legal-action refresh after execution
+- authoritative state ownership
+- player input
+- tile picking
+- unit selection
+- UI widgets, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+The coordinator accepts `FWBGameStateData&` only for selected-action handoff to the turn interaction model. It does not store, cache, inspect, or directly mutate game state.
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 48.33 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=459
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.DecisionPointCoordinator.ExecuteWithoutCurrentDecisionPointFails`
+- `Wandbound.Runtime.DecisionPointCoordinator.ExecuteMissingModelFails`
+- `Wandbound.Runtime.DecisionPointCoordinator.ExecuteMissingActionIdFails`
+- `Wandbound.Runtime.DecisionPointCoordinator.ExecuteMoveSucceeds`
+- `Wandbound.Runtime.DecisionPointCoordinator.ExecuteFullEndTurnSucceeds`
+- `Wandbound.Runtime.DecisionPointCoordinator.ExecuteInvalidFullEndTurnContextFails`
+- `Wandbound.Runtime.DecisionPointCoordinator.ClearLastSelectedActionExecution`
+- `Wandbound.Runtime.DecisionPointCoordinator.ExecuteDoesNotRegeneratePresentationSnapshot`
+- `Wandbound.Runtime.DecisionPointCoordinator.SelectedActionHandoffHiddenDataExcluded`
+
+Existing decision-point refresh, turn interaction model, action-selection bridge, runtime facade, and visual runtime tests also pass in the full Wandbound automation run.
+
+### Exact Errors
+
+None.
+
+### Risks / Unknowns
+
+- Selected-action handoff intentionally leaves the current legal action list and presentation snapshot stale until the future runtime owner refreshes the decision point.
+- `bLastSelectedActionResolved` reports selected-id resolution, not final runtime apply success.
+- Future UI/input code still does not exist; this is C++ handoff only.
+- Pre-existing untracked `MaxHP` remains untouched.
+
 ## Runtime Decision-Point Coordinator Pass
 
 ### Scope

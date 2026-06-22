@@ -5,6 +5,17 @@
 
 namespace
 {
+FWBRuntimeActionSelectionExecutionResult MakeCoordinatorSelectionFailure(
+	const FString& SelectedActionId,
+	const FString& Reason)
+{
+	FWBRuntimeActionSelectionExecutionResult Result;
+	Result.Selection.bOk = false;
+	Result.Selection.SelectedActionId = SelectedActionId;
+	Result.Selection.Reason = Reason;
+	return Result;
+}
+
 FWBRuntimeDecisionPointStatus MakeDecisionPointStatus(
 	const FWBRuntimeInteractionRefreshResult& RefreshResult,
 	const FWBPublicBoardSummary& PublicBoardSummary,
@@ -33,6 +44,16 @@ FWBRuntimeDecisionPointStatus MakeFailedDecisionPointStatus(const FString& Reaso
 	FWBRuntimeDecisionPointStatus Status;
 	Status.LastRefreshReason = Reason;
 	return Status;
+}
+
+FString ReasonForSelectedActionResult(const FWBRuntimeActionSelectionExecutionResult& Result)
+{
+	if (!Result.Selection.bOk)
+	{
+		return Result.Selection.Reason;
+	}
+
+	return Result.Execution.RuntimeResult.ApplyResult.Reason;
 }
 }
 
@@ -82,6 +103,7 @@ FWBRuntimeInteractionRefreshResult UWBRuntimeDecisionPointCoordinatorComponent::
 	{
 		bHasCurrentDecisionPoint = false;
 		CurrentStatus = MakeFailedDecisionPointStatus(LastRefreshResult.Reason);
+		ClearLastSelectedActionExecution();
 		return LastRefreshResult;
 	}
 
@@ -90,6 +112,7 @@ FWBRuntimeInteractionRefreshResult UWBRuntimeDecisionPointCoordinatorComponent::
 		LastRefreshResult,
 		PublicBoardSummary,
 		TurnInteractionModel.Get());
+	ClearLastSelectedActionExecution();
 
 	return LastRefreshResult;
 }
@@ -99,6 +122,7 @@ void UWBRuntimeDecisionPointCoordinatorComponent::ClearDecisionPoint()
 	bHasCurrentDecisionPoint = false;
 	CurrentStatus = FWBRuntimeDecisionPointStatus();
 	LastRefreshResult = FWBRuntimeInteractionRefreshResult();
+	ClearLastSelectedActionExecution();
 
 	if (TurnInteractionModel != nullptr)
 	{
@@ -142,4 +166,61 @@ bool UWBRuntimeDecisionPointCoordinatorComponent::TryFindPresentationEntryByActi
 	}
 
 	return TurnInteractionModel->TryFindPresentationEntryByActionId(ActionId, OutEntry);
+}
+
+FWBRuntimeActionSelectionExecutionResult UWBRuntimeDecisionPointCoordinatorComponent::ExecuteSelectedActionId(
+	FWBGameStateData& State,
+	const FString& SelectedActionId,
+	FWBRuntimeTurnResolutionContext& RuntimeContext,
+	UWBRuntimeControllerFacadeComponent* RuntimeControllerFacade)
+{
+	if (!bHasCurrentDecisionPoint)
+	{
+		LastSelectedActionExecutionResult = MakeCoordinatorSelectionFailure(
+			SelectedActionId,
+			TEXT("no_current_decision_point"));
+	}
+	else if (TurnInteractionModel == nullptr)
+	{
+		LastSelectedActionExecutionResult = MakeCoordinatorSelectionFailure(
+			SelectedActionId,
+			TEXT("turn_interaction_model_missing"));
+	}
+	else
+	{
+		LastSelectedActionExecutionResult = TurnInteractionModel->ExecuteSelectedActionId(
+			State,
+			SelectedActionId,
+			RuntimeContext,
+			RuntimeControllerFacade);
+	}
+
+	bHasLastSelectedActionExecution = true;
+	CurrentStatus.bHasLastSelectedAction = true;
+	CurrentStatus.LastSelectedActionId = SelectedActionId;
+	CurrentStatus.bLastSelectedActionResolved = LastSelectedActionExecutionResult.Selection.bOk;
+	CurrentStatus.LastSelectedActionReason = ReasonForSelectedActionResult(LastSelectedActionExecutionResult);
+
+	return LastSelectedActionExecutionResult;
+}
+
+bool UWBRuntimeDecisionPointCoordinatorComponent::HasLastSelectedActionExecution() const
+{
+	return bHasLastSelectedActionExecution;
+}
+
+FWBRuntimeActionSelectionExecutionResult
+UWBRuntimeDecisionPointCoordinatorComponent::GetLastSelectedActionExecutionResult() const
+{
+	return LastSelectedActionExecutionResult;
+}
+
+void UWBRuntimeDecisionPointCoordinatorComponent::ClearLastSelectedActionExecution()
+{
+	LastSelectedActionExecutionResult = FWBRuntimeActionSelectionExecutionResult();
+	bHasLastSelectedActionExecution = false;
+	CurrentStatus.bHasLastSelectedAction = false;
+	CurrentStatus.LastSelectedActionId.Reset();
+	CurrentStatus.bLastSelectedActionResolved = false;
+	CurrentStatus.LastSelectedActionReason.Reset();
 }

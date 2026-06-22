@@ -101,3 +101,5 @@ Future UI/input code can present action IDs from a legal action list produced el
 `WBRuntimeLegalActionPresentation` can now sit upstream of this bridge. It consumes the same externally supplied legal action list plus a public board summary, then emits public labels and action IDs for future UI display before the chosen ID is passed back to this bridge.
 
 `UWBRuntimeTurnInteractionModelComponent` now calls this bridge when executing a selected action id from its stored interaction state. The bridge remains the only selected-id-to-action resolver in the runtime path.
+
+`UWBRuntimeDecisionPointCoordinatorComponent` can now reach this bridge indirectly through the turn interaction model. The coordinator does not call the bridge directly and does not implement selected-id resolution itself.

@@ -74,6 +74,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `UWBRuntimeDecisionPointCoordinatorComponent` now provides the C++-only read-only decision-point status surface. It wraps the refresh adapter, exposes current status and presentation entries for future UI, and still does not implement input/UI, generate actions, decide legality, execute actions, own state, inspect hidden information, or add camera/VFX/assets.
 
+`UWBRuntimeDecisionPointCoordinatorComponent` now also provides selected-action handoff to the existing turn interaction model execution path. The handoff is still C++-only, still requires externally supplied state/context/facade, and still does not implement input/UI, generate actions, decide legality, call `WBEffectRunner` directly, own state, inspect hidden information, or refresh legal actions automatically.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering
