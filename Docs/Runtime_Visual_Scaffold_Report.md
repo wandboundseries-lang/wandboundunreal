@@ -76,6 +76,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `UWBRuntimeDecisionPointCoordinatorComponent` now also provides selected-action handoff to the existing turn interaction model execution path. The handoff is still C++-only, still requires externally supplied state/context/facade, and still does not implement input/UI, generate actions, decide legality, call `WBEffectRunner` directly, own state, inspect hidden information, or refresh legal actions automatically.
 
+`FWBDecisionLoopTestHarness` now provides test-only automation coverage for refresh, selected-action handoff, explicit post-action refresh, and two decision points. It lives under `WandboundTests` only. Production runtime code does not include it and still does not generate legal actions.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

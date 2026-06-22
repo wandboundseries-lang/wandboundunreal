@@ -137,3 +137,7 @@ Future UI can:
 6. call `RefreshDecisionPoint` for the next decision point
 
 This pass remains C++-only and adds no input, UI widgets, camera behavior, animation, VFX, assets, Blueprints, UMG, `.uasset`, or `.umap` work.
+
+## Decision-Loop Harness Follow-Up
+
+The runtime decision-loop test harness now verifies the selected-action handoff in the larger refresh/execute/explicit-refresh flow. The harness lives under `WandboundTests` only, simulates an external rules owner there, and confirms production runtime still does not generate legal actions or automatically replace stale snapshots after execution.

@@ -103,6 +103,8 @@ After clear, `GetCurrentPresentationSnapshot` returns `nullptr` and presentation
 
 After selected-action handoff, the coordinator does not regenerate legal actions and does not rebuild the presentation snapshot. Current decision-point counts remain from the last refresh, and the caller must provide fresh legal actions and a public summary through `RefreshDecisionPoint`.
 
+The runtime decision-loop test harness now verifies this explicitly: after Move execution the previous presentation snapshot remains stale, and only a new `RefreshDecisionPoint` call with externally supplied legal actions and public summary replaces it.
+
 ## Hidden-Information Boundary
 
 The coordinator consumes only:

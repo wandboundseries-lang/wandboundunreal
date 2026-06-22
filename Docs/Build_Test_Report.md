@@ -2,6 +2,111 @@
 
 Date of check: 2026-06-21 (America/New_York)
 
+## Runtime Decision-Loop Test Harness Pass
+
+### Scope
+
+This pass added a test-only C++ decision-loop harness for runtime decision-point flow.
+
+Implemented:
+
+- `FWBDecisionLoopTestHarness` under `Source/WandboundTests/Private`
+- external legal action generation simulation in tests only
+- external public board summary simulation in tests only
+- refresh -> selected-action execution -> explicit refresh coverage
+- stale snapshot policy coverage
+- two-decision loop coverage
+- full EndTurn with deterministic MP roll coverage
+- visual refresh participation coverage
+- hidden data exclusion coverage across refresh and execution
+- production runtime source guards confirming no legal-action generation, no `WBRules`, no `WBEffectRunner`, and no test harness dependency in `WandboundRuntime`
+
+Not implemented:
+
+- gameplay rules
+- production runtime legal action generation
+- legality decisions in runtime code
+- runtime state ownership
+- automatic post-action refresh
+- input
+- UI widgets
+- camera behavior
+- animation
+- VFX
+- sound
+- Blueprints
+- UMG
+- `.uasset` edits
+- `.umap` edits
+- asset imports
+- marker visuals or hidden marker identity
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 11.70 seconds
+```
+
+The first build after adding the new harness files also succeeded:
+
+```text
+Result: Succeeded
+Total execution time: 32.64 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=468
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.DecisionLoopHarness.TestHelperIsTestOnly`
+- `Wandbound.Runtime.DecisionLoopHarness.RefreshExposesMove`
+- `Wandbound.Runtime.DecisionLoopHarness.ExecuteMoveLeavesStaleSnapshotUntilRefresh`
+- `Wandbound.Runtime.DecisionLoopHarness.ExplicitPostActionRefreshReplacesSnapshot`
+- `Wandbound.Runtime.DecisionLoopHarness.RefreshExecuteRefreshExecute`
+- `Wandbound.Runtime.DecisionLoopHarness.FullEndTurnWithMPRollRefreshesNextPlayer`
+- `Wandbound.Runtime.DecisionLoopHarness.VisualRefreshPathParticipates`
+- `Wandbound.Runtime.DecisionLoopHarness.HiddenDataExcludedAcrossLoop`
+- `Wandbound.Runtime.DecisionLoopHarness.ProductionRuntimeSourceGuard`
+
+Existing decision-point coordinator, turn interaction model, action-selection bridge, legal-action presentation, interaction refresh adapter, controller facade, selected-action visual harness, and visual controller tests also pass in the full Wandbound automation run.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+An initial automation run failed `Wandbound.Runtime.DecisionLoopHarness.RefreshExecuteRefreshExecute` because the test used the runtime context default full-transition EndTurn mode without an MP roll source. The test now explicitly uses basic EndTurn for the generic two-decision loop, while `FullEndTurnWithMPRollRefreshesNextPlayer` covers the full-transition path with a fixed roll.
+
+### Risks / Unknowns
+
+- The decision-loop helper is test-only; future production ownership for legal actions and public summaries still needs a real runtime owner.
+- The coordinator intentionally does not auto-refresh after action execution.
+- Hidden marker identity remains unmodeled and excluded.
+- Pre-existing untracked `MaxHP` remains untouched.
+
 ## Decision-Point Selected-Action Handoff Pass
 
 ### Scope

@@ -974,6 +974,17 @@
 - It does not inspect hidden deck, hand, discard, pending-choice, or marker identity data.
 - It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Runtime Decision-Loop Test Harness
+
+- Added a test-only C++ decision-loop harness under `WandboundTests`.
+- The harness simulates an external rules/runtime owner by generating legal actions and public summaries in tests only.
+- It verifies the refresh -> execute -> refresh loop across two decision points.
+- It proves stale legal action presentation remains stale after execution until an explicit `RefreshDecisionPoint` call replaces it.
+- It covers full EndTurn with deterministic MP roll, next-player refresh, visual refresh participation, and hidden data exclusion.
+- Production runtime still does not generate legal actions.
+- Production runtime still does not decide legality, call `WBRules`, call `WBEffectRunner` directly, own rules state, or inspect hidden state.
+- No input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art
