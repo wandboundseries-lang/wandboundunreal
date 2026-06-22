@@ -643,6 +643,68 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			}
 			break;
 		}
+		case EWBGenericEffectOp::DamageEffect:
+		{
+			const int32 RequestTargetUnitId = Request.Target.TargetUnitId;
+			if (RequestTargetUnitId == -1)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (Payload.DamageEffect.TargetUnitId != -1
+				&& Payload.DamageEffect.TargetUnitId != RequestTargetUnitId)
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_payload_target_mismatch"));
+			}
+
+			const FWBUnitState* TargetUnit = State.GetUnitById(RequestTargetUnitId);
+			if (TargetUnit == nullptr)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (TargetUnit->bDefeated || !TargetUnit->IsUnitOnBoard())
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_target_unit_removed"));
+			}
+
+			if (Payload.DamageEffect.Amount < 0)
+			{
+				return FWBActionQueryResult::Deny(TEXT("negative_damage_effect_amount"));
+			}
+			break;
+		}
+		case EWBGenericEffectOp::HealEffect:
+		{
+			const int32 RequestTargetUnitId = Request.Target.TargetUnitId;
+			if (RequestTargetUnitId == -1)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (Payload.HealEffect.TargetUnitId != -1
+				&& Payload.HealEffect.TargetUnitId != RequestTargetUnitId)
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_payload_target_mismatch"));
+			}
+
+			const FWBUnitState* TargetUnit = State.GetUnitById(RequestTargetUnitId);
+			if (TargetUnit == nullptr)
+			{
+				return FWBActionQueryResult::Deny(TEXT("missing_effect_target_unit"));
+			}
+
+			if (TargetUnit->bDefeated || !TargetUnit->IsUnitOnBoard())
+			{
+				return FWBActionQueryResult::Deny(TEXT("effect_target_unit_removed"));
+			}
+
+			if (Payload.HealEffect.Amount < 0)
+			{
+				return FWBActionQueryResult::Deny(TEXT("negative_heal_effect_amount"));
+			}
+			break;
+		}
 		default:
 			return FWBActionQueryResult::Deny(TEXT("unknown_effect_payload_operation"));
 		}

@@ -24,5 +24,7 @@ public:
 	static FWBApplyActionResult ApplyTurnStartResourceSetup(FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll);
 	static FWBApplyActionResult ApplyArmorEffect(FWBGameStateData& State, const FWBArmorEffectRequest& Request);
 	static FWBApplyActionResult ApplyStatusEffect(FWBGameStateData& State, const FWBStatusEffectRequest& Request);
+	static FWBApplyActionResult ApplyDamageEffect(FWBGameStateData& State, const FWBDamageEffectRequest& Request);
+	static FWBApplyActionResult ApplyHealEffect(FWBGameStateData& State, const FWBHealEffectRequest& Request);
 	static FWBEffectRequestResult ApplyEffectRequest(FWBGameStateData& State, const FWBEffectRequest& Request);
 };

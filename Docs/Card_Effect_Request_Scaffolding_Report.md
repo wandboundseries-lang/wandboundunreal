@@ -8,6 +8,8 @@ Implemented payload operations:
 
 - `armor_effect`
 - `status_effect`
+- `damage_effect`
+- `heal_effect`
 
 Not implemented:
 
@@ -49,7 +51,7 @@ Added:
 - target tile
 - target wall edge
 
-Only target unit id is used by the current `armor_effect` and `status_effect` payloads.
+Only target unit id is used by the current `armor_effect`, `status_effect`, `damage_effect`, and `heal_effect` payloads.
 
 ## Validation
 
@@ -69,6 +71,8 @@ Validation checks:
 - target unit exists and is not removed/defeated
 - armor operation and amount are valid
 - status operation, duration, and required status id are valid
+- damage target exists, matches the request target when supplied, and amount is non-negative
+- heal target exists, matches the request target when supplied, and amount is non-negative
 
 This is generic request validation, not player legal action validation. It does not validate hand/deck/card ownership, activation timing, response timing, or UI target selection.
 
@@ -90,12 +94,16 @@ Atomic behavior:
 
 `status_effect` payloads fill a missing `FWBStatusEffectRequest::TargetUnitId` from the request target, then route to `WBEffectRunner::ApplyStatusEffect`.
 
+`damage_effect` payloads fill missing target/source ids from the request shell, then route to `WBEffectRunner::ApplyDamageEffect`.
+
+`heal_effect` payloads fill missing target/source ids from the request shell, then route to `WBEffectRunner::ApplyHealEffect`.
+
 ## Trace Behavior
 
 Successful effect requests emit:
 
 1. `effect_request_resolved`
-2. child payload traces, such as `armor_modified` or `status_modified`
+2. child payload traces in payload order, such as `armor_modified`, `status_modified`, `damage_effect_resolved`, or `heal_effect_resolved`
 
 `effect_request_resolved` includes only safe fields:
 
@@ -162,6 +170,24 @@ Supported status operation strings are:
 - `cleanse_status`
 - `cleanse_all_statuses`
 
+Supported damage payload fields are:
+
+- `target_unit_id`
+- `source_unit_id`
+- `source_player_id`
+- `amount`
+- `bypass_armor`
+- `damage_cause`
+- `source_reason`
+
+Supported heal payload fields are:
+
+- `target_unit_id`
+- `source_unit_id`
+- `source_player_id`
+- `amount`
+- `source_reason`
+
 ## Fixtures
 
 Added GodotCanon fixtures:
@@ -180,6 +206,12 @@ Added GodotCanon fixtures:
 - `effect_request_armor_then_status_atomic_failure.json`
 - `runtime_result_serialization_after_status_effect_request.json`
 - `runtime_result_serialization_after_effect_request_armor.json`
+- `effect_request_damage_effect_basic.json`
+- `effect_request_heal_effect_basic.json`
+- `effect_request_damage_then_heal_atomic_success.json`
+- `effect_request_damage_then_heal_atomic_failure.json`
+- `effect_request_mixed_armor_status_damage_heal_atomic_success.json`
+- `runtime_result_serialization_after_damage_heal_effect_request.json`
 
 ## Tests
 
@@ -202,6 +234,9 @@ Added `WBEffectRequestScaffoldingTests.cpp`, covering:
 - runtime serialization fixture
 - status payload apply and cleanse coverage
 - mixed armor/status atomic success and failure
+- damage/heal payload dispatch
+- mixed armor/status/damage/heal atomic success
+- damage/heal atomic rollback on failure
 
 ## Hidden Information
 
@@ -227,4 +262,4 @@ Visible board unit card ids remain public under the existing public board summar
 - passives
 - wands
 - card-specific armor cards
-- broader generic effect payloads such as damage, heal, walls, and terrain
+- broader generic effect payloads such as walls and terrain

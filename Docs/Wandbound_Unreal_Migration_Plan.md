@@ -660,6 +660,37 @@
   - card-specific status effects
   - UI/Blueprint/3D runtime
 
+## Milestone - Damage/Heal Effect Request Scaffolding
+
+- Added deterministic generic damage effect scaffolding:
+  - `FWBDamageEffectRequest`
+  - `FWBDamageEffectResult`
+  - `WBDamageEffect::ApplyDamageEffect`
+- Added deterministic generic heal effect scaffolding:
+  - `FWBHealEffectRequest`
+  - `FWBHealEffectResult`
+  - `WBHealEffect::ApplyHealEffect`
+- Added `WBEffectRunner::ApplyDamageEffect`.
+- Added `WBEffectRunner::ApplyHealEffect`.
+- `damage_effect` uses `WBDamageResolution` with `DamageKind = Effect`.
+- Generic effect damage uses armor by default and can explicitly bypass armor through fixture-owned `bBypassArmor`.
+- Lethal damage effects run existing zero-HP cleanup through the EffectRunner wrapper.
+- `heal_effect` restores HP up to `MaxHP`, reports effective healing, does not change max HP, and does not revive removed/defeated units.
+- Extended `FWBEffectRequest` with `damage_effect` and `heal_effect` payload support alongside `armor_effect` and `status_effect`.
+- Mixed `armor_effect` / `status_effect` / `damage_effect` / `heal_effect` requests remain atomic through working-state dispatch.
+- Added `damage_effect_resolved` and `heal_effect_resolved` traces.
+- Added replay trace serialization for:
+  - `heal_amount`
+  - `effective_heal_amount`
+- Added fixture support for:
+  - `operation = apply_damage_effect`
+  - `operation = apply_heal_effect`
+  - `damage_effect` payloads inside `operation = apply_effect_request`
+  - `heal_effect` payloads inside `operation = apply_effect_request`
+- Legal action generation remains unchanged.
+- `WBActionCodec` action IDs remain unchanged.
+- No Godot CardDB import, card activation, target selection UI, response windows, effect negation, passives, wands, card-specific effects, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
 ## Milestone - Public Board Summary for Runtime Results
 
 - Added deterministic public board summaries:

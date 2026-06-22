@@ -1,6 +1,117 @@
 # Build/Test Report
 
-Date of check: 2026-06-21 (America/New_York)
+Date of check: 2026-06-22 (America/New_York)
+
+## Damage/Heal Effect Request Scaffolding Pass
+
+### Scope
+
+This pass added deterministic generic `damage_effect` and `heal_effect` scaffolding for Unreal-owned fixture data.
+
+Implemented:
+
+- `FWBDamageEffectRequest`, `FWBDamageEffectResult`, and `WBDamageEffect::ApplyDamageEffect`
+- `FWBHealEffectRequest`, `FWBHealEffectResult`, and `WBHealEffect::ApplyHealEffect`
+- `WBEffectRunner::ApplyDamageEffect`
+- `WBEffectRunner::ApplyHealEffect`
+- `damage_effect_resolved` and `heal_effect_resolved` traces
+- replay trace serialization for `heal_amount` and `effective_heal_amount`
+- `FWBEffectRequest` payload support for `damage_effect` and `heal_effect`
+- fixture parsing for standalone damage/heal effect operations and damage/heal effect request payloads
+- standalone and effect-request GodotCanon fixtures for damage/heal scaffolding
+
+Not implemented:
+
+- Godot CardDB import
+- JSON card database loading
+- real card activation timing
+- effect legal action generation
+- target-selection UI
+- response windows
+- effect negation
+- passives
+- wands
+- card-specific effects
+- UI, Blueprint, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 72.58 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=508
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.DamageHealEffectScaffolding.DamageBasicReducesHP`
+- `Wandbound.Core.DamageHealEffectScaffolding.DamageUsesArmor`
+- `Wandbound.Core.DamageHealEffectScaffolding.DamageBypassesArmor`
+- `Wandbound.Core.DamageHealEffectScaffolding.DamageLethalRunsZeroHPCleanup`
+- `Wandbound.Core.DamageHealEffectScaffolding.DamageZeroAmountNoop`
+- `Wandbound.Core.DamageHealEffectScaffolding.DamageMissingTargetFailsWithoutMutation`
+- `Wandbound.Core.DamageHealEffectScaffolding.DamageRemovedTargetFailsWithoutMutation`
+- `Wandbound.Core.DamageHealEffectScaffolding.HealBasicRestoresHP`
+- `Wandbound.Core.DamageHealEffectScaffolding.HealClampsToMaxHP`
+- `Wandbound.Core.DamageHealEffectScaffolding.HealZeroAmountNoop`
+- `Wandbound.Core.DamageHealEffectScaffolding.HealMissingTargetFailsWithoutMutation`
+- `Wandbound.Core.DamageHealEffectScaffolding.HealRemovedTargetFailsWithoutMutation`
+- `Wandbound.Core.DamageHealEffectScaffolding.EffectRequestDamagePayloadSucceeds`
+- `Wandbound.Core.DamageHealEffectScaffolding.EffectRequestHealPayloadSucceeds`
+- `Wandbound.Core.DamageHealEffectScaffolding.EffectRequestDamageThenHealAtomicSuccess`
+- `Wandbound.Core.DamageHealEffectScaffolding.EffectRequestDamageThenHealAtomicFailure`
+- `Wandbound.Core.DamageHealEffectScaffolding.MixedArmorStatusDamageHealAtomicSuccess`
+- `Wandbound.Core.DamageHealEffectScaffolding.HiddenDataExcludedFromRuntimeSerialization`
+- `Wandbound.Core.DamageHealEffectScaffolding.LegalGenerationUnchanged`
+- `Wandbound.Core.DamageHealEffectScaffolding.ActionCodecUnchanged`
+- `Wandbound.Core.DamageHealEffectScaffolding.FixtureScenarios`
+- `Wandbound.Core.DamageHealEffectScaffolding.RuntimeSerializationFixture`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- Generic effect damage uses the existing damage resolver and armor absorption by default.
+- `bBypassArmor` is fixture-owned scaffolding and does not import CardDB behavior.
+- Lethal damage effects run the existing zero-HP cleanup wrapper after the damage trace.
+- Generic healing clamps to `MaxHP`, does not change `MaxHP`, and does not revive removed/defeated units.
+- Mixed `armor_effect`, `status_effect`, `damage_effect`, and `heal_effect` requests remain atomic.
+- Legal action generation and `WBActionCodec` action IDs are unchanged.
+- Hidden deck/hand/discard/source-card/source-effect data remains excluded from traces and public runtime utility serialization.
+- `git diff --check` reported no whitespace errors, only LF-to-CRLF working-copy notices.
+- Pre-existing dirty entries remain untouched: `MaxHP`, `Docs/Runtime_Legal_Action_Presentation_Snapshot_Report.md`, and `Docs/Runtime_Visual_Controller_Shell_Report.md`.
+
+### Risks / Unknowns
+
+- Damage/heal effect requests are fixture-owned only; no card activation command or legal player action exists yet.
+- Card-specific damage/heal exceptions, effect negation, passives, wands, responses, prevention/replacement, and death triggers remain future work.
+- Godot source ignore/protection behaviors around incoming effect sources are not implemented in this generic Unreal scaffold.
 
 ## Runtime Decision-Point Owner Shell Pass
 

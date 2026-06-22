@@ -6,9 +6,11 @@
 #include "Serialization/JsonWriter.h"
 #include "WBActionCodec.h"
 #include "WBArmorEffect.h"
+#include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
 #include "WBEffectRequest.h"
 #include "WBEffectRunner.h"
+#include "WBHealEffect.h"
 #include "WBMPRollSource.h"
 #include "WBRuntimeResultSerializer.h"
 #include "WBRuntimeTurnResolutionAdapter.h"
@@ -1452,6 +1454,133 @@ bool ParseStatusEffectRequestFromFixture(
 	return true;
 }
 
+bool ParseDamageEffectRequestObject(
+	const TSharedPtr<FJsonObject>& DamageRequestObject,
+	FWBDamageEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	if (!DamageRequestObject.IsValid())
+	{
+		OutReason = TEXT("missing_damage_effect_payload");
+		return false;
+	}
+
+	OutRequest.TargetUnitId = ReadIntegerFieldOrDefault(DamageRequestObject, TEXT("target_unit_id"), -1);
+	OutRequest.SourceUnitId = ReadIntegerFieldOrDefault(DamageRequestObject, TEXT("source_unit_id"), -1);
+	OutRequest.SourcePlayerId = ReadIntegerFieldOrDefault(DamageRequestObject, TEXT("source_player_id"), -1);
+	if (!TryReadIntegerField(DamageRequestObject, TEXT("amount"), OutRequest.Amount))
+	{
+		OutReason = TEXT("malformed_damage_effect_payload");
+		return false;
+	}
+
+	DamageRequestObject->TryGetBoolField(TEXT("bypass_armor"), OutRequest.bBypassArmor);
+	FString DamageCause;
+	if (DamageRequestObject->TryGetStringField(TEXT("damage_cause"), DamageCause))
+	{
+		OutRequest.DamageCause = FName(*DamageCause);
+	}
+
+	FString SourceReason;
+	if (DamageRequestObject->TryGetStringField(TEXT("source_reason"), SourceReason))
+	{
+		OutRequest.SourceReason = FName(*SourceReason);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseDamageEffectRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBDamageEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* DamageRequestObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("damage_effect_request"), DamageRequestObject)
+		|| DamageRequestObject == nullptr
+		|| !DamageRequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_damage_effect_request");
+		return false;
+	}
+
+	if (!ParseDamageEffectRequestObject(*DamageRequestObject, OutRequest, OutReason))
+	{
+		return false;
+	}
+
+	if (OutRequest.TargetUnitId == -1)
+	{
+		OutReason = TEXT("malformed_damage_effect_request");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseHealEffectRequestObject(
+	const TSharedPtr<FJsonObject>& HealRequestObject,
+	FWBHealEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	if (!HealRequestObject.IsValid())
+	{
+		OutReason = TEXT("missing_heal_effect_payload");
+		return false;
+	}
+
+	OutRequest.TargetUnitId = ReadIntegerFieldOrDefault(HealRequestObject, TEXT("target_unit_id"), -1);
+	OutRequest.SourceUnitId = ReadIntegerFieldOrDefault(HealRequestObject, TEXT("source_unit_id"), -1);
+	OutRequest.SourcePlayerId = ReadIntegerFieldOrDefault(HealRequestObject, TEXT("source_player_id"), -1);
+	if (!TryReadIntegerField(HealRequestObject, TEXT("amount"), OutRequest.Amount))
+	{
+		OutReason = TEXT("malformed_heal_effect_payload");
+		return false;
+	}
+
+	FString SourceReason;
+	if (HealRequestObject->TryGetStringField(TEXT("source_reason"), SourceReason))
+	{
+		OutRequest.SourceReason = FName(*SourceReason);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseHealEffectRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBHealEffectRequest& OutRequest,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* HealRequestObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("heal_effect_request"), HealRequestObject)
+		|| HealRequestObject == nullptr
+		|| !HealRequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_heal_effect_request");
+		return false;
+	}
+
+	if (!ParseHealEffectRequestObject(*HealRequestObject, OutRequest, OutReason))
+	{
+		return false;
+	}
+
+	if (OutRequest.TargetUnitId == -1)
+	{
+		OutReason = TEXT("malformed_heal_effect_request");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 EWBGenericEffectOp ReadGenericEffectOperationOrDefault(const TSharedPtr<FJsonObject>& Object)
 {
 	FString OperationString;
@@ -1468,6 +1597,16 @@ EWBGenericEffectOp ReadGenericEffectOperationOrDefault(const TSharedPtr<FJsonObj
 	if (OperationString == TEXT("status_effect"))
 	{
 		return EWBGenericEffectOp::StatusEffect;
+	}
+
+	if (OperationString == TEXT("damage_effect"))
+	{
+		return EWBGenericEffectOp::DamageEffect;
+	}
+
+	if (OperationString == TEXT("heal_effect"))
+	{
+		return EWBGenericEffectOp::HealEffect;
 	}
 
 	return EWBGenericEffectOp::Unknown;
@@ -1566,6 +1705,34 @@ bool ParseGenericEffectPayload(
 		}
 
 		return ParseStatusEffectRequestObject(*StatusEffectObject, OutPayload.StatusEffect, OutReason);
+	}
+
+	if (OutPayload.Operation == EWBGenericEffectOp::DamageEffect)
+	{
+		const TSharedPtr<FJsonObject>* DamageEffectObject = nullptr;
+		if (!PayloadObject->TryGetObjectField(TEXT("damage_effect"), DamageEffectObject)
+			|| DamageEffectObject == nullptr
+			|| !DamageEffectObject->IsValid())
+		{
+			OutReason = FString::Printf(TEXT("missing_effect_request_payload_%d_damage_effect"), PayloadIndex);
+			return false;
+		}
+
+		return ParseDamageEffectRequestObject(*DamageEffectObject, OutPayload.DamageEffect, OutReason);
+	}
+
+	if (OutPayload.Operation == EWBGenericEffectOp::HealEffect)
+	{
+		const TSharedPtr<FJsonObject>* HealEffectObject = nullptr;
+		if (!PayloadObject->TryGetObjectField(TEXT("heal_effect"), HealEffectObject)
+			|| HealEffectObject == nullptr
+			|| !HealEffectObject->IsValid())
+		{
+			OutReason = FString::Printf(TEXT("missing_effect_request_payload_%d_heal_effect"), PayloadIndex);
+			return false;
+		}
+
+		return ParseHealEffectRequestObject(*HealEffectObject, OutPayload.HealEffect, OutReason);
 	}
 
 	OutReason.Reset();
@@ -1745,6 +1912,36 @@ bool ApplyFixtureOperation(
 		}
 
 		OutResult = WBEffectRunner::ApplyStatusEffect(State, StatusRequest);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_damage_effect"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyDamageEffect;
+		FWBDamageEffectRequest DamageRequest;
+		if (!ParseDamageEffectRequestFromFixture(Fixture, DamageRequest, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutResult = WBEffectRunner::ApplyDamageEffect(State, DamageRequest);
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_heal_effect"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyHealEffect;
+		FWBHealEffectRequest HealRequest;
+		if (!ParseHealEffectRequestFromFixture(Fixture, HealRequest, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutResult = WBEffectRunner::ApplyHealEffect(State, HealRequest);
 		OutReason.Reset();
 		return true;
 	}

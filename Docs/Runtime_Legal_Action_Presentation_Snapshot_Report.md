@@ -99,4 +99,6 @@ Future rules/runtime code can generate legal actions, build a public board summa
 
 `UWBRuntimeTurnInteractionModelComponent` now stores and exposes these snapshots for future UI consumption. The model owns no rules truth; it only caches externally supplied legal actions and public presentation data until a future owner refreshes them.
 
+`WBRuntimeInteractionRefreshAdapter` can now rebuild these snapshots at runtime decision points by feeding externally supplied legal actions and the current public board summary into the turn interaction model.
+
 This remains C++-only and does not add input, UI widgets, camera behavior, animation, VFX, assets, Blueprints, UMG, `.uasset`, or `.umap` work.

@@ -49,6 +49,8 @@ If no state applier is assigned, the component returns a default `FWBBoardViewRe
 
 If the state applier is set to manual apply and `bAutoApplyPublicBoardSummaries` is true, the controller explicitly calls `ApplyLatestPublicBoardSummary`.
 
+`WBRuntimeInteractionRefreshAdapter` can now call `ApplyPublicBoardSummary` at runtime decision points using the same public summary that refreshes the turn interaction model.
+
 ## Runtime Selected-Action Result Input
 
 `ApplyRuntimeSelectedActionResult` reads only `FWBRuntimeSelectedActionResult::FinalPublicBoardSummary` and then delegates to `ApplyPublicBoardSummary`.

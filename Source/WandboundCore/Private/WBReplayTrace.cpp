@@ -180,6 +180,16 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetStringField(TEXT("damage_cause"), Event.DamageCause.ToString());
 	}
 
+	if (Event.HealAmount != -1)
+	{
+		Object->SetNumberField(TEXT("heal_amount"), Event.HealAmount);
+	}
+
+	if (Event.EffectiveHealAmount != -1)
+	{
+		Object->SetNumberField(TEXT("effective_heal_amount"), Event.EffectiveHealAmount);
+	}
+
 	if (!Event.ArmorEffectOperation.IsNone())
 	{
 		Object->SetStringField(TEXT("armor_effect_operation"), Event.ArmorEffectOperation.ToString());

@@ -2,8 +2,10 @@
 
 #include "WBActionCodec.h"
 #include "WBArmorEffect.h"
+#include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
 #include "WBDeathResolution.h"
+#include "WBHealEffect.h"
 #include "WBStatusEffect.h"
 #include "WBRules.h"
 
@@ -275,6 +277,54 @@ void AppendStatusEffectRemovedTrace(
 	Event.StatusEffectOperation = WBStatusEffect::GetOperationName(StatusResult.Request.Operation);
 	Event.PreviousStatusTurns = StatusId == StatusResult.Request.StatusId ? StatusResult.PreviousDuration : -1;
 	Event.NewStatusTurns = 0;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendDamageEffectResolvedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBDamageEffectResult& DamageResult,
+	const FWBUnitState* Target)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("damage_effect_resolved"));
+	Event.TargetUnitId = DamageResult.Request.TargetUnitId;
+	Event.SourceUnitId = DamageResult.Request.SourceUnitId;
+	Event.PlayerId = FWBGameStateData::IsValidPlayerId(DamageResult.Request.SourcePlayerId)
+		? DamageResult.Request.SourcePlayerId
+		: (Target != nullptr ? Target->OwnerId : -1);
+	Event.DamageAmount = DamageResult.Request.Amount;
+	Event.PreviousHP = DamageResult.PreviousHP;
+	Event.NewHP = DamageResult.NewHP;
+	Event.PreviousArmor = DamageResult.PreviousArmor;
+	Event.NewArmor = DamageResult.NewArmor;
+	Event.ArmorAbsorbedAmount = DamageResult.ArmorAbsorbedAmount;
+	Event.bBypassedArmor = DamageResult.bBypassedArmor;
+	Event.HPDamageAmount = DamageResult.HPDamageAmount;
+	Event.DamageCause = DamageResult.Request.DamageCause.IsNone()
+		? FName(TEXT("Effect"))
+		: DamageResult.Request.DamageCause;
+	Event.bAtOrBelowZeroHP = DamageResult.bAtOrBelowZeroHP;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendHealEffectResolvedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBHealEffectResult& HealResult,
+	const FWBUnitState* Target)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("heal_effect_resolved"));
+	Event.TargetUnitId = HealResult.Request.TargetUnitId;
+	Event.SourceUnitId = HealResult.Request.SourceUnitId;
+	Event.PlayerId = FWBGameStateData::IsValidPlayerId(HealResult.Request.SourcePlayerId)
+		? HealResult.Request.SourcePlayerId
+		: (Target != nullptr ? Target->OwnerId : -1);
+	Event.PreviousHP = HealResult.PreviousHP;
+	Event.NewHP = HealResult.NewHP;
+	Event.HealAmount = HealResult.Request.Amount;
+	Event.EffectiveHealAmount = HealResult.EffectiveHealAmount;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -713,6 +763,53 @@ FWBApplyActionResult WBEffectRunner::ApplyStatusEffect(
 	return Result;
 }
 
+FWBApplyActionResult WBEffectRunner::ApplyDamageEffect(
+	FWBGameStateData& State,
+	const FWBDamageEffectRequest& Request)
+{
+	FWBApplyActionResult Result;
+	const FWBDamageEffectResult DamageResult = WBDamageEffect::ApplyDamageEffect(State, Request);
+	if (!DamageResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = DamageResult.Reason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	AppendDamageEffectResolvedTrace(Result.TraceEvents, DamageResult, State.GetUnitById(Request.TargetUnitId));
+	if (DamageResult.NewHP <= 0)
+	{
+		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
+		Result.TraceEvents.Append(CleanupResult.TraceEvents);
+		if (!CleanupResult.bOk && CleanupResult.Reason != TEXT("no_zero_hp_units"))
+		{
+			Result.bOk = false;
+			Result.Reason = CleanupResult.Reason;
+		}
+	}
+
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyHealEffect(
+	FWBGameStateData& State,
+	const FWBHealEffectRequest& Request)
+{
+	FWBApplyActionResult Result;
+	const FWBHealEffectResult HealResult = WBHealEffect::ApplyHealEffect(State, Request);
+	if (!HealResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = HealResult.Reason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	AppendHealEffectResolvedTrace(Result.TraceEvents, HealResult, State.GetUnitById(Request.TargetUnitId));
+	return Result;
+}
+
 FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 	FWBGameStateData& State,
 	const FWBEffectRequest& Request)
@@ -758,6 +855,44 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 			}
 
 			PayloadResult = ApplyStatusEffect(WorkingState, StatusRequest);
+			break;
+		}
+		case EWBGenericEffectOp::DamageEffect:
+		{
+			FWBDamageEffectRequest DamageRequest = Payload.DamageEffect;
+			if (DamageRequest.TargetUnitId == -1)
+			{
+				DamageRequest.TargetUnitId = Request.Target.TargetUnitId;
+			}
+			if (DamageRequest.SourceUnitId == -1)
+			{
+				DamageRequest.SourceUnitId = Request.Source.SourceUnitId;
+			}
+			if (DamageRequest.SourcePlayerId == -1)
+			{
+				DamageRequest.SourcePlayerId = Request.Source.PlayerId;
+			}
+
+			PayloadResult = ApplyDamageEffect(WorkingState, DamageRequest);
+			break;
+		}
+		case EWBGenericEffectOp::HealEffect:
+		{
+			FWBHealEffectRequest HealRequest = Payload.HealEffect;
+			if (HealRequest.TargetUnitId == -1)
+			{
+				HealRequest.TargetUnitId = Request.Target.TargetUnitId;
+			}
+			if (HealRequest.SourceUnitId == -1)
+			{
+				HealRequest.SourceUnitId = Request.Source.SourceUnitId;
+			}
+			if (HealRequest.SourcePlayerId == -1)
+			{
+				HealRequest.SourcePlayerId = Request.Source.PlayerId;
+			}
+
+			PayloadResult = ApplyHealEffect(WorkingState, HealRequest);
 			break;
 		}
 		default:
