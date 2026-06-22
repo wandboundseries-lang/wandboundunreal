@@ -985,6 +985,19 @@
 - Production runtime still does not decide legality, call `WBRules`, call `WBEffectRunner` directly, own rules state, or inspect hidden state.
 - No input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Decision-Point Owner Shell
+
+- Added `UWBRuntimeDecisionPointOwnerComponent` as a production C++ owner shell.
+- It accepts externally generated legal actions and public board summaries.
+- It refreshes `UWBRuntimeDecisionPointCoordinatorComponent`.
+- It executes selected action ids through the coordinator.
+- It supports explicit post-action refresh from externally supplied post-action data.
+- It does not generate actions.
+- It does not decide legality.
+- It does not call `WBRules` or `WBEffectRunner`.
+- It does not own or cache `FWBGameStateData`.
+- It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

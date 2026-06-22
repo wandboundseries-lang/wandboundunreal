@@ -141,4 +141,6 @@ Future runtime decision flow can use the coordinator as the read-only bridge bet
 - future UI submits the selected action id through coordinator `ExecuteSelectedActionId`
 - rules/runtime owner refreshes the coordinator after action resolution with fresh legal actions and a public summary
 
+`UWBRuntimeDecisionPointOwnerComponent` now sits upstream of the coordinator for production C++ runtime ownership. It coordinates refresh, selected-action execution, and explicit post-action refresh while preserving the coordinator's no-rules-generation boundary.
+
 This remains C++-only and adds no input, UI widgets, camera behavior, animation, VFX, assets, Blueprints, UMG, `.uasset`, or `.umap` work.

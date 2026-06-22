@@ -78,6 +78,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `FWBDecisionLoopTestHarness` now provides test-only automation coverage for refresh, selected-action handoff, explicit post-action refresh, and two decision points. It lives under `WandboundTests` only. Production runtime code does not include it and still does not generate legal actions.
 
+`UWBRuntimeDecisionPointOwnerComponent` now provides a production C++ owner shell around the decision-point coordinator. It accepts externally supplied legal actions/public summaries, delegates selected action ids through the coordinator, and supports explicit post-action refresh from caller-supplied data. It still adds no input, UI, camera behavior, VFX, audio, assets, Blueprints, UMG, `.uasset`, or `.umap` work.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

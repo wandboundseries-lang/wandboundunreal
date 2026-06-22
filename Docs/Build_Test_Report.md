@@ -2,6 +2,113 @@
 
 Date of check: 2026-06-21 (America/New_York)
 
+## Runtime Decision-Point Owner Shell Pass
+
+### Scope
+
+This pass added a production C++ decision-point owner shell for externally supplied runtime decision data.
+
+Implemented:
+
+- `UWBRuntimeDecisionPointOwnerComponent`
+- external-data refresh through `RefreshDecisionPointFromExternalData`
+- selected-action handoff through `ExecuteSelectedActionId`
+- combined execute-and-post-action-refresh through `ExecuteSelectedActionIdAndRefreshFromExternalData`
+- null/failure policies for missing coordinator, missing facade, and missing current decision point
+- stale-state policy: execute-only does not refresh or regenerate legal actions
+- success-only post-action refresh using caller-supplied post-action legal actions/public summary
+- source guards for no legal action generation, no `WBRules`, no `WBEffectRunner`, and no `FWBGameStateData` ownership
+- hidden data exclusion coverage
+
+Not implemented:
+
+- gameplay rules
+- legal action generation
+- legality decisions in runtime code
+- direct `WBEffectRunner` calls
+- runtime state ownership
+- automatic legal-action generation after execution
+- input
+- tile picking
+- unit selection
+- UI widgets, UMG, cards, response UI, hand UI, or action menus
+- camera logic
+- animations, VFX, or sound
+- Blueprints
+- `.uasset` or `.umap` edits
+- asset imports
+- CardDB import
+- marker visuals or hidden marker identity
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 8.10 seconds
+```
+
+The first build attempt failed in the new owner tests because test setup used const `GetPlayerById` where mutable `GetMutablePlayerById` was needed. Production code was unchanged; the test was corrected and the final rebuild succeeded.
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=486
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.DecisionPointOwner.ClassExists`
+- `Wandbound.Runtime.DecisionPointOwner.InitialState`
+- `Wandbound.Runtime.DecisionPointOwner.RefreshFromExternalDataSucceeds`
+- `Wandbound.Runtime.DecisionPointOwner.RefreshMissingCoordinatorFails`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteMissingCoordinatorFails`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteMissingFacadeFails`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteWithoutCurrentDecisionPointFails`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteMoveSucceeds`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteAndRefreshFromExternalDataSucceeds`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteAndRefreshUsesSuppliedPostData`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteAndRefreshSkipsRefreshOnFailure`
+- `Wandbound.Runtime.DecisionPointOwner.ExecuteAndRefreshStoresRefreshFailure`
+- `Wandbound.Runtime.DecisionPointOwner.FullEndTurnRefreshesNextPlayer`
+- `Wandbound.Runtime.DecisionPointOwner.NoActionGenerationSourceGuard`
+- `Wandbound.Runtime.DecisionPointOwner.NoEffectRunnerSourceGuard`
+- `Wandbound.Runtime.DecisionPointOwner.NoGameStateOwnershipSourceGuard`
+- `Wandbound.Runtime.DecisionPointOwner.HiddenDataExcluded`
+- `Wandbound.Runtime.DecisionPointOwner.ClearClearsLocalAndCoordinatorState`
+
+Existing decision-point coordinator, decision-loop harness, turn interaction model, interaction refresh adapter, action-selection bridge, legal-action presentation, visual/controller/facade, and core tests also pass in the full Wandbound automation run.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- The owner shell is not the future rules owner; another system must still generate legal actions and public summaries.
+- `ExecuteSelectedActionIdAndRefreshFromExternalData` trusts caller-supplied post-action data and does not validate that it matches mutated state.
+- The owner shell intentionally does not clear stale decision points after execute-only calls.
+- Hidden marker identity remains unmodeled and excluded.
+- Pre-existing untracked `MaxHP` remains untouched.
+
 ## Runtime Decision-Loop Test Harness Pass
 
 ### Scope

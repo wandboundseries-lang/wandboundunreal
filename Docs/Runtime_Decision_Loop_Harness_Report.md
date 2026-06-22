@@ -96,3 +96,7 @@ Future runtime/UI ownership can follow this tested shape:
 4. UI submits a selected action id
 5. coordinator executes the handoff
 6. rules/runtime owner explicitly refreshes the next decision point
+
+## Owner Shell Follow-Up
+
+`UWBRuntimeDecisionPointOwnerComponent` now mirrors this tested decision-loop pattern in production C++ without generating actions itself. It accepts externally supplied legal actions/public summaries, delegates selected action ids through the coordinator, and can apply an explicit post-action refresh from caller-supplied data.
