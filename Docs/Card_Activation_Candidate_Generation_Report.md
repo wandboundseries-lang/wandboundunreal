@@ -119,3 +119,9 @@ Candidate generation now honors fixture-driven `FWBCardActivationSourceGateDefin
 The gates cover fixture source zone metadata, normal-turn priority timing, source ownership, Stunned/Frozen policy, external cost-satisfied flags, and once-per-turn usage keys. Failed gates skip only that effect/source and preserve remaining source/effect/target order.
 
 Existing fixtures without explicit source gates keep their old behavior, including legacy Frozen source exclusion.
+
+## Follow-Up - Usage Commit Preservation
+
+Candidate generation now passes the evaluated `FWBCardActivationSourceGateContext` into `WBCardActivationExpansion`. Once-per-turn effects produce commands with `FWBCardActivationUsageCommit`, and `FWBCardActivationCandidate::Command` preserves that metadata for explicit future application.
+
+Generation remains read-only and does not mark usage.

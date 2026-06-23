@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBCardActivationCommand.h"
+#include "WBCardActivationSourceGate.h"
 #include "WBCardDefinition.h"
 
 struct WANDBOUNDCORE_API FWBCardActivationExpansionRequest
@@ -11,6 +12,7 @@ struct WANDBOUNDCORE_API FWBCardActivationExpansionRequest
 	FWBCardDefinition CardDefinition;
 	FString EffectId;
 	FWBEffectTargetRef Target;
+	FWBCardActivationSourceGateContext SourceGateContext;
 	FString DebugActivationId;
 };
 

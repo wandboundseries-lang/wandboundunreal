@@ -46,9 +46,12 @@ Not implemented:
 
 - activation source metadata
 - one externally supplied `FWBEffectRequest`
+- optional `FWBCardActivationUsageCommit`
 - debug activation id
 
 The effect request remains the only behavior payload.
+
+`FWBCardActivationUsageCommit` is fixture/scaffold metadata. When `bMarkUsageOnSuccess` is true, it identifies the player and internal usage key to mark after successful activation resolution.
 
 ## Definition Expansion Follow-Up
 
@@ -79,6 +82,7 @@ Validation intentionally does not check card ownership, hand/deck location, reso
 - validates first
 - fills missing effect-request source fields from the command source
 - applies the request through `ApplyEffectRequest` on a working state copy
+- marks requested usage on that working copy only after effect request success
 - commits only after the effect request succeeds
 - returns no success traces on validation or effect-request failure
 
@@ -87,6 +91,7 @@ Successful trace order:
 1. `card_activation_resolved`
 2. `effect_request_resolved`
 3. child effect traces in payload order
+4. `card_activation_usage_marked` when usage was marked
 
 ## Hidden Information
 
@@ -98,6 +103,8 @@ Successful trace order:
 - ok flag
 
 It excludes source card id, source effect id, debug activation id, deck contents, hand contents, discard contents, and pending private choice data.
+
+`card_activation_usage_marked` includes only player id and ok flag. It does not serialize the usage key.
 
 ## Fixtures
 

@@ -2621,5 +2621,64 @@ notRun=0
 - Production CardDB import remains future work.
 - Real hand/deck/discard/equipped zone legality remains future work.
 - Real RL/RR cost payment remains future work.
-- Real activation execution does not mark once-per-turn usage yet.
+- Production activation execution beyond fixture commands remains future work. Fixture card activation usage marking is covered by the later Card Activation Usage Marking pass.
 - Response windows, negation, passives, wands, and card-specific behavior remain future work.
+
+---
+
+# Card Activation Usage Marking Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 145.91 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=554
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added `FWBCardActivationUsageCommit`.
+- Activation expansion now populates usage commit metadata for once-per-turn fixture effects.
+- Candidate generation passes source-gate context into expansion.
+- Activation candidates and separate activation legal actions preserve usage commit metadata.
+- `WBRules::CanApplyCardActivationCommand` validates usage commits without mutating state.
+- `WBEffectRunner::ApplyCardActivationCommand` marks usage only after successful effect request resolution.
+- Failed activation does not mark usage.
+- Invalid usage commit fails atomically.
+- Already-used usage keys fail with `once_per_turn_already_used`.
+- Turn-start resource setup clears the player's activation usage keys.
+- Added 8 GodotCanon activation usage marking fixtures.
+- Added `Wandbound.Core.CardActivationUsageMarking.*` automation coverage.
+- Existing `WBRules::GenerateLegalActions` and `WBActionCodec` output remain unchanged.
+- No Godot CardDB import, production card zones/costs, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Remaining Risks/Unknowns
+
+- Godot has pending-response and negation semantics that this fixture scaffold intentionally does not model yet.
+- The Red Ledger deferred usage-marking special case remains future card-specific behavior.
+- Production card zones, costs, and CardDB import remain future work.

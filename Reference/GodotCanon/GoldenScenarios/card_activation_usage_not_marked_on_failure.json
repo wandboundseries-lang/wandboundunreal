@@ -1,0 +1,59 @@
+{
+  "id": "card_activation_usage_not_marked_on_failure",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd",
+    "scripts/sim/rules.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A failed mixed-payload activation command does not mark its once-per-turn usage key.",
+  "operation": "apply_card_activation_command",
+  "card_activation": {
+    "source": { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_usage_failure_card", "source_effect_id": "fixture_usage_failure" },
+    "debug_activation_id": "fixture_usage_failure",
+    "usage_commit": {
+      "mark_usage_on_success": true,
+      "player_id": 0,
+      "usage_key": "fixture_usage_failure_key"
+    },
+    "effect_request": {
+      "target": { "target_unit_id": 2 },
+      "payloads": [
+        {
+          "operation": "heal_effect",
+          "heal_effect": { "amount": 1, "source_reason": "fixture" }
+        },
+        {
+          "operation": "damage_effect",
+          "damage_effect": { "amount": -1, "bypass_armor": false, "damage_cause": "Effect", "source_reason": "fixture" }
+        }
+      ]
+    }
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 3, "max_hp": 6 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": false,
+    "reason_contains": "negative_damage_effect_amount",
+    "expected_trace_order": [],
+    "usage": { "player_id": 0, "usage_key": "fixture_usage_failure_key", "marked": false },
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 3, "max_hp": 6, "statuses": [] }
+    ]
+  }
+}

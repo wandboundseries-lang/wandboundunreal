@@ -114,6 +114,7 @@ Confirmed by tests:
 - `WBRules::GenerateLegalActions` output remains unchanged
 - `WBActionCodec` remains unchanged
 - activation source gates affect only the candidate set supplied to this family
+- activation legal actions preserve `FWBCardActivationUsageCommit` from their source candidates
 - applying activation remains explicit through `WBEffectRunner::ApplyCardActivationCommand`
 - generation emits no traces and mutates no state
 - hidden deck/hand/discard and debug activation metadata do not leak into trace serialization

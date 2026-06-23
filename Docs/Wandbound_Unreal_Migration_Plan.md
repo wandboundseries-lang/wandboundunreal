@@ -1107,6 +1107,24 @@
 - Existing `WBActionCodec` output remains unchanged.
 - No Godot CardDB import, production card zones, real cost payment, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Usage Marking
+
+- Added `FWBCardActivationUsageCommit`.
+- `FWBCardActivationCommand` can now carry optional usage-mark metadata.
+- Activation expansion populates usage commit metadata for once-per-turn source gates.
+- Candidate generation passes source-gate context into expansion.
+- Activation candidates and separate activation legal actions preserve usage commit metadata.
+- `WBRules::CanApplyCardActivationCommand` validates usage commits but does not mutate usage.
+- `WBEffectRunner::ApplyCardActivationCommand` marks usage only after successful effect request resolution.
+- Failed activation does not mark usage.
+- Invalid usage commit fails atomically without mutating original state.
+- Already-used activation commands fail with `once_per_turn_already_used`.
+- Usage resets through existing turn-start resource setup.
+- `card_activation_usage_marked` trace is safe and does not serialize usage keys.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No Godot CardDB import, production card zones, real costs/RL/RR payment, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

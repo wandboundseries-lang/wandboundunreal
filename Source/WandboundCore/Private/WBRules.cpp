@@ -584,6 +584,20 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 		return FWBActionQueryResult::Deny(TEXT("empty_effect_payloads"));
 	}
 
+	if (Command.UsageCommit.bMarkUsageOnSuccess)
+	{
+		if (!FWBGameStateData::IsValidPlayerId(Command.UsageCommit.PlayerId)
+			|| Command.UsageCommit.UsageKey.IsEmpty())
+		{
+			return FWBActionQueryResult::Deny(TEXT("usage_commit_invalid"));
+		}
+
+		if (State.HasActivationUsageKeyThisTurn(Command.UsageCommit.PlayerId, Command.UsageCommit.UsageKey))
+		{
+			return FWBActionQueryResult::Deny(TEXT("once_per_turn_already_used"));
+		}
+	}
+
 	FWBEffectRequest FilledRequest = Command.EffectRequest;
 	if (FilledRequest.Source.PlayerId == -1)
 	{

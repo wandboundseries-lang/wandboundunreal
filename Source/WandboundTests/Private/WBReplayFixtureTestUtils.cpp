@@ -1982,11 +1982,48 @@ bool ParseCardActivationSourceObject(
 	return true;
 }
 
+bool ParseOptionalCardActivationUsageCommitField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardActivationUsageCommit& OutUsageCommit,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* UsageCommitObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, UsageCommitObject)
+		|| UsageCommitObject == nullptr
+		|| !UsageCommitObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	OutUsageCommit.bMarkUsageOnSuccess = ReadBoolFieldOrDefault(
+		*UsageCommitObject,
+		TEXT("mark_usage_on_success"),
+		OutUsageCommit.bMarkUsageOnSuccess);
+	OutUsageCommit.PlayerId = ReadIntegerFieldOrDefault(
+		*UsageCommitObject,
+		TEXT("player_id"),
+		OutUsageCommit.PlayerId);
+	(*UsageCommitObject)->TryGetStringField(TEXT("usage_key"), OutUsageCommit.UsageKey);
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ParseCardActivationCommandFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBCardActivationCommand& OutCommand,
 	FString& OutReason)
 {
+	OutCommand = FWBCardActivationCommand();
+
 	const TSharedPtr<FJsonObject>* CardActivationObject = nullptr;
 	if (!Fixture.IsValid()
 		|| !Fixture->TryGetObjectField(TEXT("card_activation"), CardActivationObject)
@@ -2012,6 +2049,14 @@ bool ParseCardActivationCommandFromFixture(
 	}
 
 	(*CardActivationObject)->TryGetStringField(TEXT("debug_activation_id"), OutCommand.DebugActivationId);
+	if (!ParseOptionalCardActivationUsageCommitField(
+		*CardActivationObject,
+		TEXT("usage_commit"),
+		OutCommand.UsageCommit,
+		OutReason))
+	{
+		return false;
+	}
 
 	const TSharedPtr<FJsonObject>* EffectRequestObject = nullptr;
 	if (!(*CardActivationObject)->TryGetObjectField(TEXT("effect_request"), EffectRequestObject)
@@ -2419,6 +2464,16 @@ bool ParseActivationRequestObject(
 	OutRequest.SourceUnitId = ReadIntegerFieldOrDefault(ActivationRequestObject, TEXT("source_unit_id"), -1);
 	ActivationRequestObject->TryGetStringField(TEXT("effect_id"), OutRequest.EffectId);
 	ActivationRequestObject->TryGetStringField(TEXT("debug_activation_id"), OutRequest.DebugActivationId);
+	OutRequest.SourceGateContext.PlayerId = OutRequest.PlayerId;
+	OutRequest.SourceGateContext.SourceUnitId = OutRequest.SourceUnitId;
+	if (!ParseOptionalCardActivationSourceGateContextField(
+		ActivationRequestObject,
+		TEXT("source_gate_context"),
+		OutRequest.SourceGateContext,
+		OutReason))
+	{
+		return false;
+	}
 
 	return ParseOptionalActivationTargetRef(ActivationRequestObject, OutRequest.Target, OutReason);
 }

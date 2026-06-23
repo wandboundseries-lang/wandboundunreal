@@ -188,8 +188,9 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 				continue;
 			}
 
+			const FWBCardActivationSourceGateContext GateContext = BuildGateContext(Source, Effect);
 			const FWBCardActivationSourceGateResult GateResult =
-				WBCardActivationSourceGate::Evaluate(State, Effect.SourceGate, BuildGateContext(Source, Effect));
+				WBCardActivationSourceGate::Evaluate(State, Effect.SourceGate, GateContext);
 			if (!GateResult.bOk)
 			{
 				continue;
@@ -208,6 +209,7 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 				Request.CardDefinition = Source.CardDefinition;
 				Request.EffectId = Effect.EffectId;
 				Request.Target = Target;
+				Request.SourceGateContext = GateContext;
 
 				const FWBCardActivationExpansionResult ExpansionResult =
 					WBCardActivationExpansion::BuildActivationCommand(Request);

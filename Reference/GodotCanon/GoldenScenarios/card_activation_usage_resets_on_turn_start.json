@@ -1,0 +1,79 @@
+{
+  "id": "card_activation_usage_resets_on_turn_start",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd",
+    "scripts/sim/rules.gd"
+  ],
+  "intent": "A once-per-turn activation candidate returns after turn-start resource setup clears the player's usage keys.",
+  "operation": "generate_card_activation_candidates",
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "source_gate_context": {
+        "source_zone": "board",
+        "costs_satisfied_externally": true,
+        "activation_usage_key": "fixture_usage_reset_key"
+      },
+      "card_definition": {
+        "card_id": "fixture_usage_reset_card",
+        "public_name": "Fixture Usage Reset",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "heal_once",
+            "public_label": "Heal Once",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_source_unit": true,
+              "timing": "normal_turn_priority",
+              "once_per_turn": true
+            },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 1, "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 }
+      ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 2, "max_hp": 6 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 1,
+    "candidate_ids": [
+      "activate:p0:u1:cfixture_usage_reset_card:eheal_once:t2:x-1:y-1:wa-1,-1:wb-1,-1"
+    ],
+    "apply_candidate_index": 0,
+    "post_apply_candidate_count": 0,
+    "turn_start_player_id": 0,
+    "turn_start_mp_roll": 4,
+    "post_turn_start_candidate_count": 1,
+    "usage": { "player_id": 0, "usage_key": "fixture_usage_reset_key", "marked": false },
+    "expected_trace_order": [ "card_activation_resolved", "effect_request_resolved", "heal_effect_resolved", "card_activation_usage_marked" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 3, "max_hp": 6, "statuses": [] }
+    ]
+  }
+}

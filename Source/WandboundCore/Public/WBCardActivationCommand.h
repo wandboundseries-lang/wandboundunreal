@@ -12,10 +12,18 @@ struct WANDBOUNDCORE_API FWBCardActivationSource
 	FString SourceEffectId;
 };
 
+struct WANDBOUNDCORE_API FWBCardActivationUsageCommit
+{
+	bool bMarkUsageOnSuccess = false;
+	int32 PlayerId = -1;
+	FString UsageKey;
+};
+
 struct WANDBOUNDCORE_API FWBCardActivationCommand
 {
 	FWBCardActivationSource Source;
 	FWBEffectRequest EffectRequest;
+	FWBCardActivationUsageCommit UsageCommit;
 	FString DebugActivationId;
 };
 

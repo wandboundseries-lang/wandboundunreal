@@ -356,6 +356,17 @@ void AppendCardActivationResolvedTrace(
 	TraceEvents.Add(Event);
 }
 
+void AppendCardActivationUsageMarkedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const int32 PlayerId)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("card_activation_usage_marked"));
+	Event.PlayerId = PlayerId;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
 void AppendHeroDefeatedTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const FWBUnitState& Unit,
@@ -977,10 +988,38 @@ FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
 		return Result;
 	}
 
+	if (FilledCommand.UsageCommit.bMarkUsageOnSuccess)
+	{
+		if (!FWBGameStateData::IsValidPlayerId(FilledCommand.UsageCommit.PlayerId)
+			|| FilledCommand.UsageCommit.UsageKey.IsEmpty())
+		{
+			Result.bOk = false;
+			Result.Reason = TEXT("usage_commit_invalid");
+			return Result;
+		}
+
+		if (WorkingState.HasActivationUsageKeyThisTurn(
+			FilledCommand.UsageCommit.PlayerId,
+			FilledCommand.UsageCommit.UsageKey))
+		{
+			Result.bOk = false;
+			Result.Reason = TEXT("once_per_turn_already_used");
+			return Result;
+		}
+
+		WorkingState.MarkActivationUsageKeyForTest(
+			FilledCommand.UsageCommit.PlayerId,
+			FilledCommand.UsageCommit.UsageKey);
+	}
+
 	State = WorkingState;
 	Result.bOk = true;
 	AppendCardActivationResolvedTrace(Result.TraceEvents, FilledCommand);
 	Result.TraceEvents.Append(EffectResult.TraceEvents);
+	if (FilledCommand.UsageCommit.bMarkUsageOnSuccess)
+	{
+		AppendCardActivationUsageMarkedTrace(Result.TraceEvents, FilledCommand.UsageCommit.PlayerId);
+	}
 	return Result;
 }
 

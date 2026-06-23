@@ -71,6 +71,27 @@ bool DoesTargetMatchRequirement(
 		return false;
 	}
 }
+
+FString BuildUsageCommitKey(
+	const FWBCardActivationExpansionRequest& Request,
+	const FWBCardEffectDefinition& Effect)
+{
+	if (!Request.SourceGateContext.ActivationUsageKey.IsEmpty())
+	{
+		return Request.SourceGateContext.ActivationUsageKey;
+	}
+
+	if (!Effect.SourceGate.OncePerTurnKey.IsEmpty())
+	{
+		return Effect.SourceGate.OncePerTurnKey;
+	}
+
+	return WBCardActivationSourceGate::BuildDefaultUsageKey(
+		Request.PlayerId,
+		Request.SourceUnitId,
+		Request.CardDefinition.CardId,
+		Effect.EffectId);
+}
 }
 
 FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationCommand(
@@ -144,6 +165,16 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 	Result.Command.EffectRequest.Source.SourceEffectId = MatchingEffect->EffectId;
 	Result.Command.EffectRequest.Target = Request.Target;
 	Result.Command.EffectRequest.Payloads = MatchingEffect->Payloads;
+	if (MatchingEffect->SourceGate.bOncePerTurn)
+	{
+		Result.Command.UsageCommit.bMarkUsageOnSuccess = true;
+		Result.Command.UsageCommit.PlayerId = Request.PlayerId;
+		Result.Command.UsageCommit.UsageKey = BuildUsageCommitKey(Request, *MatchingEffect);
+		if (Result.Command.UsageCommit.UsageKey.IsEmpty())
+		{
+			return MakeExpansionFailure(Request, TEXT("usage_key_missing"));
+		}
+	}
 	Result.Command.DebugActivationId = Request.DebugActivationId;
 	Result.Reason.Reset();
 	return Result;
@@ -168,6 +199,8 @@ void WBCardActivationExpansion::BuildActivationCommandCandidates(
 			Request.CardDefinition = CardDefinition;
 			Request.EffectId = Effect.EffectId;
 			Request.Target = Target;
+			Request.SourceGateContext.PlayerId = PlayerId;
+			Request.SourceGateContext.SourceUnitId = SourceUnitId;
 
 			const FWBCardActivationExpansionResult Result = BuildActivationCommand(Request);
 			if (Result.bOk)

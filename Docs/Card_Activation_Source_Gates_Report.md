@@ -49,6 +49,12 @@ Fixture usage keys are stored on `FWBGameStateData` and are not exposed in publi
 
 Usage keys clear for the player when `ApplyTurnStartResourceSetupForPlayer` succeeds.
 
+## Follow-Up - Usage Marking
+
+Source gates now pair with activation command usage marking. When expansion builds a command for an effect whose source gate is `bOncePerTurn`, the command carries a fixture-owned usage commit. `WBEffectRunner::ApplyCardActivationCommand` marks that key only after successful effect resolution.
+
+The key remains internal and resets through the existing turn-start resource setup path.
+
 ## Fixture Support
 
 Added parser support for:
@@ -76,7 +82,6 @@ Confirmed unchanged:
 - production card database import
 - real hand/deck/discard/equipped zones
 - real RL/RR cost checks and payment
-- marking once-per-turn usage after successful real activation
 - response-window activation legality
 - effect negation
 - passives and wands
