@@ -2510,3 +2510,59 @@ Wandbound.Core.CardActivationCandidateGeneration
 - Production CardDB import remains future work.
 - Real activation legal actions, card zones, costs, timing, and once-per-turn gates remain future work.
 - Response windows, negation, passives, wands, and card-specific behavior remain future work.
+
+---
+
+# Card Activation Legal Action Family Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 45.74 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=545
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added `FWBCardActivationLegalAction`, action sets, generation result, and `WBCardActivationLegalActionGenerator`.
+- Added an activation-only presentation snapshot and deterministic lookup.
+- Added fixture operation `generate_card_activation_legal_actions`.
+- Added 8 GodotCanon activation legal action fixtures.
+- Added `Wandbound.Core.CardActivationLegalActionGeneration.*` automation coverage.
+- Activation legal actions remain separate from `FWBAction`.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- Activation application remains explicit through `WBEffectRunner::ApplyCardActivationCommand`.
+- No Godot CardDB import, production card loading, activation costs/zones, target UI, response windows, negation, passives, wands, card-specific behavior, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Remaining Risks/Unknowns
+
+- Production CardDB import remains future work.
+- Real activation legality still needs card zones, costs, timing, and once-per-turn gates.
+- Response windows, negation, passives, wands, and card-specific behavior remain future work.
+- This pass accepts non-`activate:` candidate ids because the candidate source owns this separate id namespace for now.

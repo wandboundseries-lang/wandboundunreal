@@ -9,6 +9,7 @@
 #include "WBCardActivationCandidateGenerator.h"
 #include "WBCardActivationCommand.h"
 #include "WBCardActivationExpansion.h"
+#include "WBCardActivationLegalActionGenerator.h"
 #include "WBCardDefinition.h"
 #include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
@@ -81,6 +82,136 @@ bool ReadOptionalStringArrayField(
 	}
 
 	return ReadStringArrayValues(*Values, FieldPath, OutStrings, OutReason);
+}
+
+bool TryReadIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue);
+
+bool TryGetExpectedObject(const TSharedPtr<FJsonObject>& Fixture, TSharedPtr<FJsonObject>& OutExpectedObject, FString& OutReason);
+
+TArray<FString> ActivationActionIdsFromSet(const FWBCardActivationLegalActionSet& ActionSet)
+{
+	TArray<FString> ActionIds;
+	ActionIds.Reserve(ActionSet.Actions.Num());
+	for (const FWBCardActivationLegalAction& Action : ActionSet.Actions)
+	{
+		ActionIds.Add(Action.ActivationActionId);
+	}
+
+	return ActionIds;
+}
+
+TArray<FString> ActivationActionLabelsFromSet(const FWBCardActivationLegalActionSet& ActionSet)
+{
+	TArray<FString> Labels;
+	Labels.Reserve(ActionSet.Actions.Num());
+	for (const FWBCardActivationLegalAction& Action : ActionSet.Actions)
+	{
+		Labels.Add(Action.PublicLabel);
+	}
+
+	return Labels;
+}
+
+bool ValidateOptionalIntegerExpectation(
+	const TSharedPtr<FJsonObject>& ExpectedObject,
+	const TCHAR* FieldName,
+	const int32 ActualValue,
+	FString& OutReason)
+{
+	if (!ExpectedObject.IsValid() || !ExpectedObject->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	int32 ExpectedValue = -1;
+	if (!TryReadIntegerField(ExpectedObject, FieldName, ExpectedValue))
+	{
+		OutReason = FString::Printf(TEXT("malformed_expected_%s"), FieldName);
+		return false;
+	}
+
+	if (ActualValue != ExpectedValue)
+	{
+		OutReason = FString::Printf(TEXT("expected_%s_mismatch"), FieldName);
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ValidateOptionalStringArrayExpectation(
+	const TSharedPtr<FJsonObject>& ExpectedObject,
+	const TCHAR* FieldName,
+	const FString& FieldPath,
+	const TArray<FString>& ActualValues,
+	FString& OutReason)
+{
+	if (!ExpectedObject.IsValid() || !ExpectedObject->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	TArray<FString> ExpectedValues;
+	if (!ReadOptionalStringArrayField(ExpectedObject, FieldName, FieldPath, ExpectedValues, OutReason))
+	{
+		return false;
+	}
+
+	if (ActualValues != ExpectedValues)
+	{
+		OutReason = FString::Printf(TEXT("expected_%s_mismatch"), FieldName);
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ValidateCardActivationLegalActionFixtureExpectations(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBCardActivationLegalActionGenerationResult& GenerationResult,
+	FString& OutReason)
+{
+	TSharedPtr<FJsonObject> ExpectedObject;
+	if (!TryGetExpectedObject(Fixture, ExpectedObject, OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalIntegerExpectation(
+		ExpectedObject,
+		TEXT("activation_action_count"),
+		GenerationResult.ActionSet.Actions.Num(),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("activation_action_ids"),
+		TEXT("expected.activation_action_ids"),
+		ActivationActionIdsFromSet(GenerationResult.ActionSet),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("public_labels"),
+		TEXT("expected.public_labels"),
+		ActivationActionLabelsFromSet(GenerationResult.ActionSet),
+		OutReason))
+	{
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
 }
 
 bool TryGetReplayLogObject(
@@ -2463,6 +2594,43 @@ bool ApplyFixtureOperation(
 		OutResult.bOk = GenerationResult.bOk;
 		OutResult.Reason = GenerationResult.Reason;
 		OutResult.TraceEvents.Reset();
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("generate_card_activation_legal_actions"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::GenerateCardActivationLegalActions;
+		TArray<FWBCardActivationCandidateSource> Sources;
+		if (!ParseCardActivationCandidateSourcesFromFixture(Fixture, Sources, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationCandidateGenerationResult CandidateResult =
+			WBCardActivationCandidateGenerator::GenerateCandidates(State, Sources);
+		if (!CandidateResult.bOk)
+		{
+			OutResult.bOk = false;
+			OutResult.Reason = CandidateResult.Reason;
+			OutResult.TraceEvents.Reset();
+			OutReason.Reset();
+			return true;
+		}
+
+		const FWBCardActivationLegalActionGenerationResult GenerationResult =
+			WBCardActivationLegalActionGenerator::GenerateFromCandidates(CandidateResult.Candidates);
+		OutResult.bOk = GenerationResult.bOk;
+		OutResult.Reason = GenerationResult.Reason;
+		OutResult.TraceEvents.Reset();
+		if (GenerationResult.bOk
+			&& !ValidateCardActivationLegalActionFixtureExpectations(Fixture, GenerationResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
 		OutReason.Reset();
 		return true;
 	}

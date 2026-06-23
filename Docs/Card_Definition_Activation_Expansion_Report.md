@@ -92,3 +92,13 @@ Tests cover:
 Card activation candidates can now be generated from fixture-owned `FWBCardDefinition` values and externally supplied candidate targets via `WBCardActivationCandidateGenerator`.
 
 The candidate generator wraps `FWBCardActivationCommand` values, preserves source/effect/target ordering, and keeps existing `FWBAction` legal generation and `WBActionCodec` unchanged.
+
+## Follow-Up - Activation Legal Action Family
+
+The fixture flow is now:
+
+```text
+FWBCardDefinition -> FWBCardActivationCandidate -> FWBCardActivationLegalAction
+```
+
+`WBCardActivationLegalActionGenerator` converts candidates into a separate activation legal action family for future UI/runtime selection while preserving explicit application through `WBEffectRunner::ApplyCardActivationCommand`.

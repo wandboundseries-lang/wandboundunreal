@@ -1079,6 +1079,20 @@
 - No Godot CardDB import, production card loading, real activation legal actions, card zones, costs, response windows, UI target selection, passives, wands, or card-specific behavior were added.
 - No input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Legal Action Family
+
+- Added `FWBCardActivationLegalAction`, `FWBCardActivationLegalActionSet`, and `FWBCardActivationLegalActionGenerationResult`.
+- Added `WBCardActivationLegalActionGenerator`.
+- Added activation-only presentation snapshot helpers.
+- Fixture-owned activation candidates can now be converted into a separate activation legal action family.
+- Activation action ids use candidate ids and are not `WBActionCodec` ids.
+- Public labels use candidate labels or `Activate` and reject raw internal operation/schema/hook names.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- Applying an activation still requires explicit `WBEffectRunner::ApplyCardActivationCommand`.
+- No Godot CardDB import, production card loading, `EWBActionType::Activate`, `FWBAction` activation, UI target selection, response windows, negation, passives, wands, or card-specific behavior were added.
+- No input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

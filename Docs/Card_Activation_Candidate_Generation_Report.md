@@ -99,10 +99,15 @@ notRun=0
 ## Remaining Work
 
 - production CardDB importer
-- card activation legal action generation
 - card ownership and zone checks
 - costs and RR/RL payments
 - timing and once-per-turn gates
 - target selection UI
 - response windows and effect negation
 - passives, wands, and card-specific effects
+
+## Follow-Up - Activation Legal Action Family
+
+Card activation candidates can now be converted into a separate activation legal action family through `WBCardActivationLegalActionGenerator`.
+
+That family preserves candidate ordering, uses candidate ids as activation action ids, carries clean public labels for future UI, and remains separate from `FWBAction`, `WBRules::GenerateLegalActions`, and `WBActionCodec`.
