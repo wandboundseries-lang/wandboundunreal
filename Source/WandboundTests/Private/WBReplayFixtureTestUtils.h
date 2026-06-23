@@ -8,6 +8,7 @@
 
 class FJsonObject;
 struct FWBCardActivationExpansionRequest;
+struct FWBCardActivationCandidateSource;
 
 namespace WandboundTest
 {
@@ -27,6 +28,7 @@ enum class EWBFixtureOperationKind : uint8
 	ApplyCardActivationCommand,
 	BuildCardActivationCommand,
 	BuildAndApplyCardActivationCommand,
+	GenerateCardActivationCandidates,
 	ApplyStartOfTurnStatusTicks,
 	ApplyEndOfTurnStatusTicks,
 	AttackDeclareThenDamage,
@@ -77,6 +79,11 @@ bool ApplyRuntimeSelectedActionWithResultAndSerializeFixture(
 bool ParseCardActivationExpansionRequestFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBCardActivationExpansionRequest& OutRequest,
+	FString& OutReason);
+
+bool ParseCardActivationCandidateSourcesFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	TArray<FWBCardActivationCandidateSource>& OutSources,
 	FString& OutReason);
 
 bool ApplyFixtureOperation(

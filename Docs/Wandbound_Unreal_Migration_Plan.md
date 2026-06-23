@@ -1066,6 +1066,19 @@
 - It does not call `WBRules`, `WBEffectRunner`, `GenerateLegalActions`, or `ApplyCardActivationCommand` from the expansion layer.
 - It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Card Activation Candidate Generation
+
+- Added `FWBCardActivationCandidate`, `FWBCardActivationCandidateSource`, and `FWBCardActivationCandidateGenerationResult`.
+- Added `WBCardActivationCandidateGenerator`.
+- Fixture-owned definitions can now produce deterministic activation candidates from externally supplied target refs.
+- Each candidate wraps an `FWBCardActivationCommand` for explicit later application.
+- Candidate order is source order, activated-effect order, then target order.
+- Dynamic invalid sources/targets are skipped; malformed fixture/card input fails clearly.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- `WBActionCodec` remains unchanged and does not encode activation candidate ids.
+- No Godot CardDB import, production card loading, real activation legal actions, card zones, costs, response windows, UI target selection, passives, wands, or card-specific behavior were added.
+- No input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

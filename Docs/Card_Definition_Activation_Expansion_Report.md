@@ -86,3 +86,9 @@ Tests cover:
 - unchanged legal action generation and action ids
 - fixture-driven build/build-and-apply scenarios
 - source metadata and hidden-zone card ids excluded from traces/runtime serialization
+
+## Follow-Up - Candidate Generation
+
+Card activation candidates can now be generated from fixture-owned `FWBCardDefinition` values and externally supplied candidate targets via `WBCardActivationCandidateGenerator`.
+
+The candidate generator wraps `FWBCardActivationCommand` values, preserves source/effect/target ordering, and keeps existing `FWBAction` legal generation and `WBActionCodec` unchanged.

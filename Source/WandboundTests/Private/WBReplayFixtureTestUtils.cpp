@@ -6,6 +6,7 @@
 #include "Serialization/JsonWriter.h"
 #include "WBActionCodec.h"
 #include "WBArmorEffect.h"
+#include "WBCardActivationCandidateGenerator.h"
 #include "WBCardActivationCommand.h"
 #include "WBCardActivationExpansion.h"
 #include "WBCardDefinition.h"
@@ -1961,27 +1962,24 @@ bool ParseCardEffectDefinitionObject(
 	return true;
 }
 
-bool ParseCardDefinitionFromFixture(
-	const TSharedPtr<FJsonObject>& Fixture,
+bool ParseCardDefinitionObject(
+	const TSharedPtr<FJsonObject>& CardDefinitionObject,
 	FWBCardDefinition& OutDefinition,
 	FString& OutReason)
 {
-	const TSharedPtr<FJsonObject>* CardDefinitionObject = nullptr;
-	if (!Fixture.IsValid()
-		|| !Fixture->TryGetObjectField(TEXT("card_definition"), CardDefinitionObject)
-		|| CardDefinitionObject == nullptr
-		|| !CardDefinitionObject->IsValid())
+	if (!CardDefinitionObject.IsValid())
 	{
 		OutReason = TEXT("missing_card_definition");
 		return false;
 	}
 
-	(*CardDefinitionObject)->TryGetStringField(TEXT("card_id"), OutDefinition.CardId);
-	(*CardDefinitionObject)->TryGetStringField(TEXT("public_name"), OutDefinition.PublicName);
-	OutDefinition.Kind = ReadCardDefinitionKindOrDefault(*CardDefinitionObject);
+	OutDefinition = FWBCardDefinition();
+	CardDefinitionObject->TryGetStringField(TEXT("card_id"), OutDefinition.CardId);
+	CardDefinitionObject->TryGetStringField(TEXT("public_name"), OutDefinition.PublicName);
+	OutDefinition.Kind = ReadCardDefinitionKindOrDefault(CardDefinitionObject);
 
 	const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
-	if (!(*CardDefinitionObject)->TryGetArrayField(TEXT("activated_effects"), EffectValues) || EffectValues == nullptr)
+	if (!CardDefinitionObject->TryGetArrayField(TEXT("activated_effects"), EffectValues) || EffectValues == nullptr)
 	{
 		OutReason = TEXT("missing_card_definition_activated_effects");
 		return false;
@@ -2003,6 +2001,24 @@ bool ParseCardDefinitionFromFixture(
 
 	OutReason.Reset();
 	return true;
+}
+
+bool ParseCardDefinitionFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBCardDefinition& OutDefinition,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CardDefinitionObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("card_definition"), CardDefinitionObject)
+		|| CardDefinitionObject == nullptr
+		|| !CardDefinitionObject->IsValid())
+	{
+		OutReason = TEXT("missing_card_definition");
+		return false;
+	}
+
+	return ParseCardDefinitionObject(*CardDefinitionObject, OutDefinition, OutReason);
 }
 
 bool ParseOptionalActivationTargetRef(
@@ -2076,6 +2092,115 @@ bool ParseCardActivationExpansionRequestFromFixture(
 	}
 
 	return ParseActivationRequestObject(*ActivationRequestObject, OutRequest, OutReason);
+}
+
+bool ParseActivationCandidateTargetRefObject(
+	const TSharedPtr<FJsonObject>& TargetObject,
+	const int32 TargetIndex,
+	FWBEffectTargetRef& OutTarget,
+	FString& OutReason)
+{
+	if (!TargetObject.IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_activation_candidate_target_%d"), TargetIndex);
+		return false;
+	}
+
+	OutTarget.TargetUnitId = ReadIntegerFieldOrDefault(TargetObject, TEXT("target_unit_id"), -1);
+	if (!ParseOptionalFixtureTileField(TargetObject, TEXT("target_tile"), OutTarget.TargetTile, OutReason)
+		|| !ParseOptionalWallEdgeField(TargetObject, TEXT("target_wall_edge"), OutTarget.TargetWallEdge, OutReason))
+	{
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseCardActivationCandidateSourceObject(
+	const TSharedPtr<FJsonObject>& SourceObject,
+	const int32 SourceIndex,
+	FWBCardActivationCandidateSource& OutSource,
+	FString& OutReason)
+{
+	if (!SourceObject.IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_activation_source_%d"), SourceIndex);
+		return false;
+	}
+
+	OutSource.PlayerId = ReadIntegerFieldOrDefault(SourceObject, TEXT("player_id"), -1);
+	OutSource.SourceUnitId = ReadIntegerFieldOrDefault(SourceObject, TEXT("source_unit_id"), -1);
+
+	const TSharedPtr<FJsonObject>* CardDefinitionObject = nullptr;
+	if (!SourceObject->TryGetObjectField(TEXT("card_definition"), CardDefinitionObject)
+		|| CardDefinitionObject == nullptr
+		|| !CardDefinitionObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("missing_activation_source_%d_card_definition"), SourceIndex);
+		return false;
+	}
+
+	if (!ParseCardDefinitionObject(*CardDefinitionObject, OutSource.CardDefinition, OutReason))
+	{
+		return false;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* CandidateTargetValues = nullptr;
+	if (!SourceObject->TryGetArrayField(TEXT("candidate_targets"), CandidateTargetValues) || CandidateTargetValues == nullptr)
+	{
+		OutReason = FString::Printf(TEXT("missing_activation_source_%d_candidate_targets"), SourceIndex);
+		return false;
+	}
+
+	for (int32 TargetIndex = 0; TargetIndex < CandidateTargetValues->Num(); ++TargetIndex)
+	{
+		const TSharedPtr<FJsonObject> TargetObject = (*CandidateTargetValues)[TargetIndex].IsValid()
+			? (*CandidateTargetValues)[TargetIndex]->AsObject()
+			: nullptr;
+		FWBEffectTargetRef Target;
+		if (!ParseActivationCandidateTargetRefObject(TargetObject, TargetIndex, Target, OutReason))
+		{
+			return false;
+		}
+
+		OutSource.CandidateTargets.Add(Target);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseCardActivationCandidateSourcesFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	TArray<FWBCardActivationCandidateSource>& OutSources,
+	FString& OutReason)
+{
+	OutSources.Reset();
+
+	const TArray<TSharedPtr<FJsonValue>>* SourceValues = nullptr;
+	if (!Fixture.IsValid() || !Fixture->TryGetArrayField(TEXT("activation_sources"), SourceValues) || SourceValues == nullptr)
+	{
+		OutReason = TEXT("missing_activation_sources");
+		return false;
+	}
+
+	for (int32 SourceIndex = 0; SourceIndex < SourceValues->Num(); ++SourceIndex)
+	{
+		const TSharedPtr<FJsonObject> SourceObject = (*SourceValues)[SourceIndex].IsValid()
+			? (*SourceValues)[SourceIndex]->AsObject()
+			: nullptr;
+		FWBCardActivationCandidateSource Source;
+		if (!ParseCardActivationCandidateSourceObject(SourceObject, SourceIndex, Source, OutReason))
+		{
+			return false;
+		}
+
+		OutSources.Add(Source);
+	}
+
+	OutReason.Reset();
+	return true;
 }
 
 bool ParseDamageRequestFromFixture(
@@ -2319,6 +2444,25 @@ bool ApplyFixtureOperation(
 		OutResult.bOk = CommandResult.bOk;
 		OutResult.Reason = CommandResult.Reason;
 		OutResult.TraceEvents = CommandResult.TraceEvents;
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("generate_card_activation_candidates"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::GenerateCardActivationCandidates;
+		TArray<FWBCardActivationCandidateSource> Sources;
+		if (!ParseCardActivationCandidateSourcesFromFixture(Fixture, Sources, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationCandidateGenerationResult GenerationResult =
+			WBCardActivationCandidateGenerator::GenerateCandidates(State, Sources);
+		OutResult.bOk = GenerationResult.bOk;
+		OutResult.Reason = GenerationResult.Reason;
+		OutResult.TraceEvents.Reset();
 		OutReason.Reset();
 		return true;
 	}

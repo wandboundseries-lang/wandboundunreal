@@ -2444,3 +2444,69 @@ Wandbound.Core.Movement.RootedUnitCannotMove logged one EOS datarouter retry war
 - Card ownership, costs, timing, once-per-turn gates, and legal activation player actions remain future work.
 - Godot CardDB import remains intentionally out of scope.
 - Current generic payload coverage is limited to armor, status, damage, and heal.
+
+---
+
+# Card Activation Candidate Generation Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 4.69 seconds
+```
+
+Initial full compile after adding source files also succeeded:
+
+```text
+Result: Succeeded
+Total execution time: 38.02 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=537
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+Focused candidate-generation automation also passed:
+
+```text
+Wandbound.Core.CardActivationCandidateGeneration
+```
+
+## Notes
+
+- Added deterministic fixture-driven card activation candidate generation.
+- Added `FWBCardActivationCandidate` and `WBCardActivationCandidateGenerator`.
+- Added `generate_card_activation_candidates` fixture operation support.
+- Added 10 GodotCanon golden candidate fixtures.
+- Added 9 `Wandbound.Core.CardActivationCandidateGeneration.*` automation tests.
+- Candidate generation is build-only, does not mutate state, and applies only when the caller explicitly runs the wrapped `FWBCardActivationCommand`.
+- Existing `WBRules::GenerateLegalActions` and `WBActionCodec` output are unchanged.
+- No Godot CardDB import, production card loading, activation legal actions, target UI, response windows, negation, passives, wands, card-specific behavior, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Remaining Risks/Unknowns
+
+- Production CardDB import remains future work.
+- Real activation legal actions, card zones, costs, timing, and once-per-turn gates remain future work.
+- Response windows, negation, passives, wands, and card-specific behavior remain future work.

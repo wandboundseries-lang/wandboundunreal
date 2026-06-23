@@ -169,3 +169,9 @@ Exact final errors: none.
 - wands
 - card-specific effects
 - UI and runtime activation presentation
+
+## Follow-Up - Candidate Generation
+
+`FWBCardActivationCandidate` now wraps card activation commands for fixture-driven candidate generation.
+
+Candidates remain separate from player `FWBAction` legal actions and are not encoded by `WBActionCodec`. Applying a candidate still requires an explicit caller-owned `WBEffectRunner::ApplyCardActivationCommand` step.

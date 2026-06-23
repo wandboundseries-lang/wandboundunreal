@@ -1,0 +1,72 @@
+{
+  "id": "card_activation_candidates_armor_effect",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd",
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A fixture-owned armor card definition generates one unit-targeted activation candidate without mutating state.",
+  "operation": "generate_card_activation_candidates",
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "card_definition": {
+        "card_id": "fixture_armor_card",
+        "public_name": "Fixture Armor",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "armor_2",
+            "public_label": "Restore Armor",
+            "target_requirement": "unit",
+            "payloads": [
+              {
+                "operation": "armor_effect",
+                "armor_effect": { "operation": "add_current_armor", "amount": 2, "source_reason": "fixture" }
+              }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 }
+      ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 1, "max_armor": 3 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 1,
+    "candidate_ids": [
+      "activate:p0:u1:cfixture_armor_card:earmor_2:t2:x-1:y-1:wa-1,-1:wb-1,-1"
+    ],
+    "public_labels": [ "Restore Armor" ],
+    "candidate_sources": [
+      { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_armor_card", "source_effect_id": "armor_2", "target_unit_id": 2 }
+    ],
+    "no_state_mutation": true,
+    "apply_candidate_index": 0,
+    "expected_trace_order": [ "card_activation_resolved", "effect_request_resolved", "armor_modified" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "statuses": [] },
+      { "id": 2, "x": 5, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 3, "max_armor": 3, "statuses": [] }
+    ]
+  }
+}
