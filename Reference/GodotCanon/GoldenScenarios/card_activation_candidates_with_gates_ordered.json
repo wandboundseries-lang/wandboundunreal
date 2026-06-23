@@ -1,0 +1,137 @@
+{
+  "id": "card_activation_candidates_with_gates_ordered",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:enumerate_player_actions",
+    "scripts/shared/action_schema.gd"
+  ],
+  "intent": "Activation candidate generation preserves source/effect/target order after source gates filter out failing effects.",
+  "operation": "generate_card_activation_candidates",
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "source_gate_context": {
+        "source_zone": "board",
+        "costs_satisfied_externally": true,
+        "activation_usage_key": "fixture_gate_card_a:heal_first"
+      },
+      "card_definition": {
+        "card_id": "fixture_gate_card_a",
+        "public_name": "Fixture Gate A",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "heal_first",
+            "public_label": "Heal First",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_source_unit": true,
+              "timing": "normal_turn_priority",
+              "requires_costs_satisfied_externally": true
+            },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 1, "source_reason": "fixture" } }
+            ]
+          },
+          {
+            "effect_id": "zone_blocked",
+            "public_label": "Zone Blocked",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "equipped",
+              "requires_source_unit": true
+            },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 1, "source_reason": "fixture" } }
+            ]
+          },
+          {
+            "effect_id": "heal_second",
+            "public_label": "Heal Second",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_source_unit": true,
+              "timing": "normal_turn_priority"
+            },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 1, "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 },
+        { "target_unit_id": 3 }
+      ]
+    },
+    {
+      "player_id": 0,
+      "source_unit_id": 4,
+      "source_gate_context": {
+        "source_zone": "board",
+        "costs_satisfied_externally": true
+      },
+      "card_definition": {
+        "card_id": "fixture_gate_card_b",
+        "public_name": "Fixture Gate B",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "burn_later",
+            "public_label": "Burn Later",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_source_unit": true
+            },
+            "payloads": [
+              { "operation": "status_effect", "status_effect": { "operation": "apply_status", "status_id": "Burn", "duration": 1, "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 }
+      ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source_a", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target_a", "x": 5, "y": 4, "hp": 3, "max_hp": 5 },
+      { "id": 3, "owner_id": 1, "card_id": "fixture_target_b", "x": 6, "y": 4, "hp": 4, "max_hp": 5 },
+      { "id": 4, "owner_id": 0, "card_id": "fixture_source_b", "x": 4, "y": 5, "hp": 5, "max_hp": 5 }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 5,
+    "candidate_ids": [
+      "activate:p0:u1:cfixture_gate_card_a:eheal_first:t2:x-1:y-1:wa-1,-1:wb-1,-1",
+      "activate:p0:u1:cfixture_gate_card_a:eheal_first:t3:x-1:y-1:wa-1,-1:wb-1,-1",
+      "activate:p0:u1:cfixture_gate_card_a:eheal_second:t2:x-1:y-1:wa-1,-1:wb-1,-1",
+      "activate:p0:u1:cfixture_gate_card_a:eheal_second:t3:x-1:y-1:wa-1,-1:wb-1,-1",
+      "activate:p0:u4:cfixture_gate_card_b:eburn_later:t2:x-1:y-1:wa-1,-1:wb-1,-1"
+    ],
+    "public_labels": [ "Heal First", "Heal First", "Heal Second", "Heal Second", "Burn Later" ],
+    "candidate_sources": [
+      { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_gate_card_a", "source_effect_id": "heal_first", "target_unit_id": 2 },
+      { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_gate_card_a", "source_effect_id": "heal_first", "target_unit_id": 3 },
+      { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_gate_card_a", "source_effect_id": "heal_second", "target_unit_id": 2 },
+      { "player_id": 0, "source_unit_id": 1, "source_card_id": "fixture_gate_card_a", "source_effect_id": "heal_second", "target_unit_id": 3 },
+      { "player_id": 0, "source_unit_id": 4, "source_card_id": "fixture_gate_card_b", "source_effect_id": "burn_later", "target_unit_id": 2 }
+    ],
+    "no_state_mutation": true
+  }
+}

@@ -99,9 +99,9 @@ notRun=0
 ## Remaining Work
 
 - production CardDB importer
-- card ownership and zone checks
+- production card ownership and real zone checks
 - costs and RR/RL payments
-- timing and once-per-turn gates
+- response-window activation timing
 - target selection UI
 - response windows and effect negation
 - passives, wands, and card-specific effects
@@ -111,3 +111,11 @@ notRun=0
 Card activation candidates can now be converted into a separate activation legal action family through `WBCardActivationLegalActionGenerator`.
 
 That family preserves candidate ordering, uses candidate ids as activation action ids, carries clean public labels for future UI, and remains separate from `FWBAction`, `WBRules::GenerateLegalActions`, and `WBActionCodec`.
+
+## Follow-Up - Source Gates
+
+Candidate generation now honors fixture-driven `FWBCardActivationSourceGateDefinition` checks before expanding each activated effect.
+
+The gates cover fixture source zone metadata, normal-turn priority timing, source ownership, Stunned/Frozen policy, external cost-satisfied flags, and once-per-turn usage keys. Failed gates skip only that effect/source and preserve remaining source/effect/target order.
+
+Existing fixtures without explicit source gates keep their old behavior, including legacy Frozen source exclusion.

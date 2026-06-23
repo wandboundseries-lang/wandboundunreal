@@ -1,0 +1,44 @@
+{
+  "id": "card_activation_gate_once_per_turn_reset_on_turn_start",
+  "schema_version": 1,
+  "godot_reference": [
+    "autoload/Game.gd:start_turn_impl",
+    "scripts/sim/rules.gd:_unit_activation_used_count"
+  ],
+  "intent": "A fixture once-per-turn key marked before turn start is cleared by Unreal turn-start resource setup.",
+  "initial_state": {
+    "current_player": 1,
+    "priority_player": 1,
+    "turn_number": 10,
+    "phase": "response",
+    "activation_usage_keys_this_turn": {
+      "0": [ "fixture_once_key" ]
+    },
+    "players": [
+      { "player_id": 0, "remaining_mp": 0, "last_mp_roll": 0 },
+      { "player_id": 1, "remaining_mp": 5, "last_mp_roll": 5 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 }
+    ]
+  },
+  "operation": {
+    "kind": "turn_start_resource_setup",
+    "player_id": 0,
+    "explicit_mp_roll": 4
+  },
+  "source_gate": {
+    "required_zone": "fixture",
+    "once_per_turn": true,
+    "once_per_turn_key": "fixture_once_key"
+  },
+  "source_gate_context": {
+    "player_id": 0,
+    "source_zone": "fixture",
+    "activation_usage_key": "fixture_once_key"
+  },
+  "expected": {
+    "ok_after_turn_start": true,
+    "usage_key": "fixture_once_key"
+  }
+}

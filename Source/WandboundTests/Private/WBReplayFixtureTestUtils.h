@@ -28,6 +28,7 @@ enum class EWBFixtureOperationKind : uint8
 	ApplyCardActivationCommand,
 	BuildCardActivationCommand,
 	BuildAndApplyCardActivationCommand,
+	EvaluateCardActivationSourceGate,
 	GenerateCardActivationCandidates,
 	GenerateCardActivationLegalActions,
 	ApplyStartOfTurnStatusTicks,

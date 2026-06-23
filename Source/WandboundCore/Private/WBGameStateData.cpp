@@ -361,6 +361,7 @@ bool FWBGameStateData::ApplyTurnStartResourceSetupForPlayer(
 	Phase = EWBGamePhase::NormalTurn;
 	Player->LastMPRoll = ExplicitMPRoll;
 	Player->RemainingMP = ExplicitMPRoll;
+	ClearActivationUsageKeysForPlayer(PlayerId);
 
 	if (!ResetActionResourcesForPlayer(PlayerId, OutReason))
 	{
@@ -369,6 +370,38 @@ bool FWBGameStateData::ApplyTurnStartResourceSetupForPlayer(
 
 	OutReason.Reset();
 	return true;
+}
+
+bool FWBGameStateData::HasActivationUsageKeyThisTurn(const int32 PlayerId, const FString& Key) const
+{
+	if (!IsValidPlayerId(PlayerId) || Key.IsEmpty())
+	{
+		return false;
+	}
+
+	const TSet<FString>* Keys = ActivationUsageKeysThisTurn.Find(PlayerId);
+	return Keys != nullptr && Keys->Contains(Key);
+}
+
+void FWBGameStateData::MarkActivationUsageKeyForTest(const int32 PlayerId, const FString& Key)
+{
+	if (!IsValidPlayerId(PlayerId) || Key.IsEmpty())
+	{
+		return;
+	}
+
+	TSet<FString>& Keys = ActivationUsageKeysThisTurn.FindOrAdd(PlayerId);
+	Keys.Add(Key);
+}
+
+void FWBGameStateData::ClearActivationUsageKeysForPlayer(const int32 PlayerId)
+{
+	if (!IsValidPlayerId(PlayerId))
+	{
+		return;
+	}
+
+	ActivationUsageKeysThisTurn.Remove(PlayerId);
 }
 
 bool FWBGameStateData::HasPendingAttack() const

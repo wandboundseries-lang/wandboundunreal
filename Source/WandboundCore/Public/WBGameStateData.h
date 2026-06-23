@@ -85,6 +85,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	TMap<int32, FName> TerrainByTileIndex;
 	TArray<FWBPlayerStateData> Players;
 	FWBPendingAttackState PendingAttack;
+	TMap<int32, TSet<FString>> ActivationUsageKeysThisTurn;
 
 	static bool IsValidPlayerId(int32 PlayerId);
 	static int32 TileToIndex(const FWBTile& Tile);
@@ -101,6 +102,9 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void AdvanceTurnBasic();
 	bool ResetActionResourcesForPlayer(int32 PlayerId, FString& OutReason);
 	bool ApplyTurnStartResourceSetupForPlayer(int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);
+	bool HasActivationUsageKeyThisTurn(int32 PlayerId, const FString& Key) const;
+	void MarkActivationUsageKeyForTest(int32 PlayerId, const FString& Key);
+	void ClearActivationUsageKeysForPlayer(int32 PlayerId);
 	bool HasPendingAttack() const;
 	void ClearPendingAttack();
 	void SetPendingAttackForTest(const FWBPendingAttackState& InPendingAttack);

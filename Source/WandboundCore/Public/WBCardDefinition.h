@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WBCardActivationSourceGate.h"
 #include "WBEffectRequest.h"
 
 enum class EWBCardDefinitionKind : uint8
@@ -28,6 +29,7 @@ struct WANDBOUNDCORE_API FWBCardEffectDefinition
 	FString PublicLabel;
 	EWBCardEffectTargetRequirement TargetRequirement = EWBCardEffectTargetRequirement::None;
 	TArray<FWBGenericEffectPayload> Payloads;
+	FWBCardActivationSourceGateDefinition SourceGate;
 };
 
 struct WANDBOUNDCORE_API FWBCardDefinition

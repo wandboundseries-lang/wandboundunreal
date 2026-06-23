@@ -87,7 +87,7 @@ Added fixture operation:
 The operation:
 
 - reuses activation source parsing
-- generates candidates through `WBCardActivationCandidateGenerator`
+- generates candidates through `WBCardActivationCandidateGenerator` after source gate filtering
 - converts them through `WBCardActivationLegalActionGenerator`
 - validates expected activation action ids and labels when present
 - does not mutate state
@@ -113,6 +113,7 @@ Confirmed by tests:
 - activation legal actions remain separate from `FWBAction`
 - `WBRules::GenerateLegalActions` output remains unchanged
 - `WBActionCodec` remains unchanged
+- activation source gates affect only the candidate set supplied to this family
 - applying activation remains explicit through `WBEffectRunner::ApplyCardActivationCommand`
 - generation emits no traces and mutates no state
 - hidden deck/hand/discard and debug activation metadata do not leak into trace serialization

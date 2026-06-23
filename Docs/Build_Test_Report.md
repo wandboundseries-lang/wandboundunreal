@@ -2566,3 +2566,60 @@ notRun=0
 - Real activation legality still needs card zones, costs, timing, and once-per-turn gates.
 - Response windows, negation, passives, wands, and card-specific behavior remain future work.
 - This pass accepts non-`activate:` candidate ids because the candidate source owns this separate id namespace for now.
+
+---
+
+# Card Activation Source Gates Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 96.61 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=550
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added `WBCardActivationSourceGate`.
+- Added source gate definitions to `FWBCardEffectDefinition`.
+- Added source gate contexts to `FWBCardActivationCandidateSource`.
+- Added fixture-only activation usage keys on `FWBGameStateData`.
+- Candidate generation now skips effects whose source gate fails.
+- Added `evaluate_card_activation_source_gate` fixture operation.
+- Added 12 GodotCanon source-gate fixtures.
+- Added `Wandbound.Core.CardActivationSourceGate.*` automation coverage.
+- Existing `WBRules::GenerateLegalActions` and `WBActionCodec` output remain unchanged.
+- No Godot CardDB import, production card loading, real zones/cost payment, response windows, negation, passives, wands, card-specific behavior, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Remaining Risks/Unknowns
+
+- Production CardDB import remains future work.
+- Real hand/deck/discard/equipped zone legality remains future work.
+- Real RL/RR cost payment remains future work.
+- Real activation execution does not mark once-per-turn usage yet.
+- Response windows, negation, passives, wands, and card-specific behavior remain future work.

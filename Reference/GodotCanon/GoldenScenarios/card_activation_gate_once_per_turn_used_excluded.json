@@ -1,0 +1,39 @@
+{
+  "id": "card_activation_gate_once_per_turn_used_excluded",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:_unit_activation_used_count",
+    "scripts/sim/rules.gd:_mark_unit_activation_used"
+  ],
+  "intent": "A once-per-turn source gate fails when the fixture usage key has already been marked for the player.",
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "activation_usage_keys_this_turn": {
+      "0": [ "fixture_once_key" ]
+    },
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ]
+  },
+  "operation": {
+    "kind": "evaluate_card_activation_source_gate",
+    "source_gate": {
+      "required_zone": "fixture",
+      "once_per_turn": true,
+      "once_per_turn_key": "fixture_once_key"
+    },
+    "source_gate_context": {
+      "player_id": 0,
+      "source_zone": "fixture",
+      "activation_usage_key": "fixture_once_key"
+    }
+  },
+  "expected": {
+    "ok": false,
+    "reason_contains": "once_per_turn_already_used"
+  }
+}

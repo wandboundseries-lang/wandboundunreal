@@ -10,6 +10,7 @@
 #include "WBCardActivationCommand.h"
 #include "WBCardActivationExpansion.h"
 #include "WBCardActivationLegalActionGenerator.h"
+#include "WBCardActivationSourceGate.h"
 #include "WBCardDefinition.h"
 #include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
@@ -1027,6 +1028,46 @@ bool ApplyFixturePendingAttack(const TSharedPtr<FJsonObject>& StateObject, FWBGa
 	return true;
 }
 
+bool ApplyFixtureActivationUsageKeys(const TSharedPtr<FJsonObject>& StateObject, FWBGameStateData& OutState, FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* UsageObject = nullptr;
+	if (!StateObject->TryGetObjectField(TEXT("activation_usage_keys_this_turn"), UsageObject)
+		|| UsageObject == nullptr
+		|| !UsageObject->IsValid())
+	{
+		return true;
+	}
+
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& PlayerUsagePair : (*UsageObject)->Values)
+	{
+		const int32 PlayerId = FCString::Atoi(*PlayerUsagePair.Key);
+		const TSharedPtr<FJsonValue>& UsageValue = PlayerUsagePair.Value;
+		if (!UsageValue.IsValid() || UsageValue->Type != EJson::Array)
+		{
+			OutReason = FString::Printf(TEXT("malformed_initial_state_activation_usage_keys_%s"), *PlayerUsagePair.Key);
+			return false;
+		}
+
+		TArray<FString> UsageKeys;
+		if (!ReadStringArrayValues(
+			UsageValue->AsArray(),
+			FString::Printf(TEXT("initial_state.activation_usage_keys_this_turn.%s"), *PlayerUsagePair.Key),
+			UsageKeys,
+			OutReason))
+		{
+			return false;
+		}
+
+		for (const FString& UsageKey : UsageKeys)
+		{
+			OutState.MarkActivationUsageKeyForTest(PlayerId, UsageKey);
+		}
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ReadExpectedFinalIntegerField(
 	const TSharedPtr<FJsonObject>& ExpectedObject,
 	const TCHAR* FieldName,
@@ -1123,7 +1164,8 @@ bool BuildGameStateFromFixture(
 		|| !ApplyFixtureUnits(*InitialStateObject, OutState, OutReason)
 		|| !ApplyFixtureWalls(*InitialStateObject, OutState, OutReason)
 		|| !ApplyFixtureTerrain(*InitialStateObject, OutState, OutReason)
-		|| !ApplyFixturePendingAttack(*InitialStateObject, OutState, OutReason))
+		|| !ApplyFixturePendingAttack(*InitialStateObject, OutState, OutReason)
+		|| !ApplyFixtureActivationUsageKeys(*InitialStateObject, OutState, OutReason))
 	{
 		return false;
 	}
@@ -2052,6 +2094,177 @@ EWBCardEffectTargetRequirement ReadCardEffectTargetRequirementOrDefault(const TS
 	return EWBCardEffectTargetRequirement::None;
 }
 
+EWBCardActivationSourceZone ReadCardActivationSourceZoneOrDefault(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const EWBCardActivationSourceZone DefaultValue)
+{
+	FString ZoneString;
+	if (!Object.IsValid() || !Object->TryGetStringField(FieldName, ZoneString))
+	{
+		return DefaultValue;
+	}
+
+	if (ZoneString == TEXT("fixture"))
+	{
+		return EWBCardActivationSourceZone::Fixture;
+	}
+
+	if (ZoneString == TEXT("hand"))
+	{
+		return EWBCardActivationSourceZone::Hand;
+	}
+
+	if (ZoneString == TEXT("board"))
+	{
+		return EWBCardActivationSourceZone::Board;
+	}
+
+	if (ZoneString == TEXT("equipped"))
+	{
+		return EWBCardActivationSourceZone::Equipped;
+	}
+
+	if (ZoneString == TEXT("discard"))
+	{
+		return EWBCardActivationSourceZone::Discard;
+	}
+
+	if (ZoneString == TEXT("deck"))
+	{
+		return EWBCardActivationSourceZone::Deck;
+	}
+
+	return EWBCardActivationSourceZone::Unknown;
+}
+
+EWBCardActivationTimingRequirement ReadCardActivationTimingOrDefault(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const EWBCardActivationTimingRequirement DefaultValue)
+{
+	FString TimingString;
+	if (!Object.IsValid() || !Object->TryGetStringField(FieldName, TimingString))
+	{
+		return DefaultValue;
+	}
+
+	if (TimingString == TEXT("any"))
+	{
+		return EWBCardActivationTimingRequirement::Any;
+	}
+
+	if (TimingString == TEXT("normal_turn_priority"))
+	{
+		return EWBCardActivationTimingRequirement::NormalTurnPriority;
+	}
+
+	if (TimingString == TEXT("response_window"))
+	{
+		return EWBCardActivationTimingRequirement::ResponseWindow;
+	}
+
+	return EWBCardActivationTimingRequirement::Unknown;
+}
+
+bool ParseOptionalCardActivationSourceGateDefinitionField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardActivationSourceGateDefinition& OutGate,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* GateObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, GateObject)
+		|| GateObject == nullptr
+		|| !GateObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	OutGate.RequiredZone = ReadCardActivationSourceZoneOrDefault(
+		*GateObject,
+		TEXT("required_zone"),
+		OutGate.RequiredZone);
+	OutGate.Timing = ReadCardActivationTimingOrDefault(
+		*GateObject,
+		TEXT("timing"),
+		OutGate.Timing);
+	OutGate.bRequiresSourceUnit = ReadBoolFieldOrDefault(
+		*GateObject,
+		TEXT("requires_source_unit"),
+		OutGate.bRequiresSourceUnit);
+	OutGate.bRequiresSourceUnitOwnership = ReadBoolFieldOrDefault(
+		*GateObject,
+		TEXT("requires_source_unit_ownership"),
+		OutGate.bRequiresSourceUnitOwnership);
+	OutGate.bBlockedByStunned = ReadBoolFieldOrDefault(
+		*GateObject,
+		TEXT("blocked_by_stunned"),
+		OutGate.bBlockedByStunned);
+	OutGate.bBlockedByFrozen = ReadBoolFieldOrDefault(
+		*GateObject,
+		TEXT("blocked_by_frozen"),
+		OutGate.bBlockedByFrozen);
+	OutGate.bRequiresCostsSatisfiedExternally = ReadBoolFieldOrDefault(
+		*GateObject,
+		TEXT("requires_costs_satisfied_externally"),
+		OutGate.bRequiresCostsSatisfiedExternally);
+	OutGate.bOncePerTurn = ReadBoolFieldOrDefault(
+		*GateObject,
+		TEXT("once_per_turn"),
+		OutGate.bOncePerTurn);
+	(*GateObject)->TryGetStringField(TEXT("once_per_turn_key"), OutGate.OncePerTurnKey);
+	OutGate.bHasExplicitSourceGate = true;
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseOptionalCardActivationSourceGateContextField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardActivationSourceGateContext& OutContext,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* ContextObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, ContextObject)
+		|| ContextObject == nullptr
+		|| !ContextObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	OutContext.PlayerId = ReadIntegerFieldOrDefault(*ContextObject, TEXT("player_id"), OutContext.PlayerId);
+	OutContext.SourceUnitId = ReadIntegerFieldOrDefault(*ContextObject, TEXT("source_unit_id"), OutContext.SourceUnitId);
+	OutContext.SourceZone = ReadCardActivationSourceZoneOrDefault(
+		*ContextObject,
+		TEXT("source_zone"),
+		OutContext.SourceZone);
+	OutContext.bCostsSatisfiedExternally = ReadBoolFieldOrDefault(
+		*ContextObject,
+		TEXT("costs_satisfied_externally"),
+		OutContext.bCostsSatisfiedExternally);
+	(*ContextObject)->TryGetStringField(TEXT("activation_usage_key"), OutContext.ActivationUsageKey);
+	OutContext.bHasExplicitSourceGateContext = true;
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ParseCardEffectDefinitionObject(
 	const TSharedPtr<FJsonObject>& EffectObject,
 	const int32 EffectIndex,
@@ -2067,6 +2280,14 @@ bool ParseCardEffectDefinitionObject(
 	EffectObject->TryGetStringField(TEXT("effect_id"), OutEffect.EffectId);
 	EffectObject->TryGetStringField(TEXT("public_label"), OutEffect.PublicLabel);
 	OutEffect.TargetRequirement = ReadCardEffectTargetRequirementOrDefault(EffectObject);
+	if (!ParseOptionalCardActivationSourceGateDefinitionField(
+		EffectObject,
+		TEXT("source_gate"),
+		OutEffect.SourceGate,
+		OutReason))
+	{
+		return false;
+	}
 
 	const TArray<TSharedPtr<FJsonValue>>* PayloadValues = nullptr;
 	if (!EffectObject->TryGetArrayField(TEXT("payloads"), PayloadValues) || PayloadValues == nullptr)
@@ -2262,6 +2483,16 @@ bool ParseCardActivationCandidateSourceObject(
 
 	OutSource.PlayerId = ReadIntegerFieldOrDefault(SourceObject, TEXT("player_id"), -1);
 	OutSource.SourceUnitId = ReadIntegerFieldOrDefault(SourceObject, TEXT("source_unit_id"), -1);
+	OutSource.SourceGateContext.PlayerId = OutSource.PlayerId;
+	OutSource.SourceGateContext.SourceUnitId = OutSource.SourceUnitId;
+	if (!ParseOptionalCardActivationSourceGateContextField(
+		SourceObject,
+		TEXT("source_gate_context"),
+		OutSource.SourceGateContext,
+		OutReason))
+	{
+		return false;
+	}
 
 	const TSharedPtr<FJsonObject>* CardDefinitionObject = nullptr;
 	if (!SourceObject->TryGetObjectField(TEXT("card_definition"), CardDefinitionObject)
@@ -2575,6 +2806,40 @@ bool ApplyFixtureOperation(
 		OutResult.bOk = CommandResult.bOk;
 		OutResult.Reason = CommandResult.Reason;
 		OutResult.TraceEvents = CommandResult.TraceEvents;
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("evaluate_card_activation_source_gate"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::EvaluateCardActivationSourceGate;
+		FWBCardActivationSourceGateDefinition Gate;
+		if (!ParseOptionalCardActivationSourceGateDefinitionField(
+			OperationObject,
+			TEXT("source_gate"),
+			Gate,
+			OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		FWBCardActivationSourceGateContext Context;
+		if (!ParseOptionalCardActivationSourceGateContextField(
+			OperationObject,
+			TEXT("source_gate_context"),
+			Context,
+			OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationSourceGateResult GateResult =
+			WBCardActivationSourceGate::Evaluate(State, Gate, Context);
+		OutResult.bOk = GateResult.bOk;
+		OutResult.Reason = GateResult.Reason;
+		OutResult.TraceEvents.Reset();
 		OutReason.Reset();
 		return true;
 	}

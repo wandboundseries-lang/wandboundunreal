@@ -1093,6 +1093,20 @@
 - No Godot CardDB import, production card loading, `EWBActionType::Activate`, `FWBAction` activation, UI target selection, response windows, negation, passives, wands, or card-specific behavior were added.
 - No input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Source Gates
+
+- Added `FWBCardActivationSourceGateDefinition`.
+- Added `FWBCardActivationSourceGateContext`.
+- Added pure C++ `WBCardActivationSourceGate::Evaluate`.
+- Added fixture-only activation usage keys on `FWBGameStateData`.
+- Source gates check fixture source zones, normal-turn priority timing, source unit ownership, Stunned/Frozen policy, externally satisfied cost flags, and once-per-turn usage.
+- Candidate generation filters activated effects through source gates before creating candidates.
+- Legacy default candidate filtering remains compatible with old fixtures.
+- Usage keys clear during turn-start resource setup.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No Godot CardDB import, production card zones, real cost payment, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

@@ -1,6 +1,7 @@
 #include "WBCardActivationCandidateGenerator.h"
 
 #include "WBCardActivationExpansion.h"
+#include "WBCardActivationSourceGate.h"
 
 namespace
 {
@@ -17,6 +18,43 @@ bool IsDynamicSourceExcluded(const FWBUnitState& Unit)
 		|| Unit.bDefeated
 		|| Unit.HasStatus(FName(TEXT("Stunned")))
 		|| Unit.HasStatus(FName(TEXT("Frozen")));
+}
+
+bool ShouldApplyLegacyDynamicSourceExclusion(
+	const FWBCardActivationCandidateSource& Source,
+	const FWBCardEffectDefinition& Effect)
+{
+	return !Source.SourceGateContext.bHasExplicitSourceGateContext
+		&& !Effect.SourceGate.bHasExplicitSourceGate;
+}
+
+FWBCardActivationSourceGateContext BuildGateContext(
+	const FWBCardActivationCandidateSource& Source,
+	const FWBCardEffectDefinition& Effect)
+{
+	FWBCardActivationSourceGateContext Context = Source.SourceGateContext;
+	if (!FWBGameStateData::IsValidPlayerId(Context.PlayerId))
+	{
+		Context.PlayerId = Source.PlayerId;
+	}
+
+	if (Context.SourceUnitId == -1)
+	{
+		Context.SourceUnitId = Source.SourceUnitId;
+	}
+
+	if (Effect.SourceGate.bOncePerTurn
+		&& Context.ActivationUsageKey.IsEmpty()
+		&& Effect.SourceGate.OncePerTurnKey.IsEmpty())
+	{
+		Context.ActivationUsageKey = WBCardActivationSourceGate::BuildDefaultUsageKey(
+			Context.PlayerId,
+			Context.SourceUnitId,
+			Source.CardDefinition.CardId,
+			Effect.EffectId);
+	}
+
+	return Context;
 }
 
 bool IsDynamicTargetExcluded(
@@ -131,11 +169,6 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 			{
 				return MakeGenerationFailure(TEXT("source_unit_owner_mismatch"));
 			}
-
-			if (IsDynamicSourceExcluded(*SourceUnit))
-			{
-				continue;
-			}
 		}
 
 		if (Source.CandidateTargets.IsEmpty())
@@ -145,6 +178,23 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 
 		for (const FWBCardEffectDefinition& Effect : Source.CardDefinition.ActivatedEffects)
 		{
+			const FWBUnitState* SourceUnit = Source.SourceUnitId != -1
+				? State.GetUnitById(Source.SourceUnitId)
+				: nullptr;
+			if (SourceUnit != nullptr
+				&& ShouldApplyLegacyDynamicSourceExclusion(Source, Effect)
+				&& IsDynamicSourceExcluded(*SourceUnit))
+			{
+				continue;
+			}
+
+			const FWBCardActivationSourceGateResult GateResult =
+				WBCardActivationSourceGate::Evaluate(State, Effect.SourceGate, BuildGateContext(Source, Effect));
+			if (!GateResult.bOk)
+			{
+				continue;
+			}
+
 			for (const FWBEffectTargetRef& Target : Source.CandidateTargets)
 			{
 				if (IsDynamicTargetExcluded(State, Effect, Target))
