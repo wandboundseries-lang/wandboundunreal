@@ -53,6 +53,8 @@ Added:
 
 Only target unit id is used by the current `armor_effect`, `status_effect`, `damage_effect`, and `heal_effect` payloads.
 
+`WBCardActivationExpansion` now authors this request shape from fixture-owned `FWBCardDefinition` activated effects. It leaves payload source/target ids unchanged, so missing ids continue to be filled by the dispatcher and card activation command path described below.
+
 ## Validation
 
 Added:

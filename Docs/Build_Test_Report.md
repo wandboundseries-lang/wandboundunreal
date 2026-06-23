@@ -2375,3 +2375,72 @@ notRun=0
 - Future runtime/input code still needs to supply a selected legal action.
 - The harness currently refreshes placeholder public board counts only through the existing visual controller path.
 - Real input, UI, camera, VFX, assets, marker visuals, and network replay remain future work.
+
+---
+
+# Card Definition Activation Expansion Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex
+```
+
+Result:
+
+```text
+Result: Succeeded
+Total execution time: 10.93 seconds
+```
+
+Earlier full compile after adding the new source files also succeeded:
+
+```text
+Result: Succeeded
+Total execution time: 136.62 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=527
+succeededWithWarnings=1
+failed=0
+notRun=0
+```
+
+Warning detail:
+
+```text
+Wandbound.Core.Movement.RootedUnitCannotMove logged one EOS datarouter retry warning.
+```
+
+## Notes
+
+- Added fixture-owned card definition and activated-effect structs.
+- Added `WBCardActivationExpansion` to build `FWBCardActivationCommand` values from fixture definitions.
+- Added deterministic candidate generation in effect order then target order.
+- Added fixture operations for build-only and build-and-apply card definition activation flows.
+- Added fixture-driven golden scenarios for build, apply, failure, and hidden metadata exclusion.
+- The expansion layer does not import Godot CardDB, production-load card JSON, generate legal actions, call rules, call effect runner, or add UI/runtime activation windows.
+- No input, UI, camera, animation, VFX, sound, Blueprints, UMG, `.uasset`, `.umap`, asset import, marker visual, hidden marker identity, network replay, or AI work was added.
+
+## New Tests Added
+
+- `Wandbound.Core.CardDefinitionActivationExpansion.*`
+
+## Remaining Risks/Unknowns
+
+- Card ownership, costs, timing, once-per-turn gates, and legal activation player actions remain future work.
+- Godot CardDB import remains intentionally out of scope.
+- Current generic payload coverage is limited to armor, status, damage, and heal.

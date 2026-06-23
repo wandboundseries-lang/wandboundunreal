@@ -7,6 +7,7 @@
 #include "WBTurnController.h"
 
 class FJsonObject;
+struct FWBCardActivationExpansionRequest;
 
 namespace WandboundTest
 {
@@ -24,6 +25,8 @@ enum class EWBFixtureOperationKind : uint8
 	ApplyHealEffect,
 	ApplyEffectRequest,
 	ApplyCardActivationCommand,
+	BuildCardActivationCommand,
+	BuildAndApplyCardActivationCommand,
 	ApplyStartOfTurnStatusTicks,
 	ApplyEndOfTurnStatusTicks,
 	AttackDeclareThenDamage,
@@ -69,6 +72,11 @@ bool ApplyRuntimeSelectedActionWithResultAndSerializeFixture(
 	FWBRuntimeSelectedActionResult& OutEnvelope,
 	FString& OutSerializedJson,
 	int32& OutRollSourceRemainingCount,
+	FString& OutReason);
+
+bool ParseCardActivationExpansionRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBCardActivationExpansionRequest& OutRequest,
 	FString& OutReason);
 
 bool ApplyFixtureOperation(

@@ -50,6 +50,10 @@ Not implemented:
 
 The effect request remains the only behavior payload.
 
+## Definition Expansion Follow-Up
+
+`WBCardActivationExpansion` now builds `FWBCardActivationCommand` values from fixture-owned `FWBCardDefinition` data. That layer does not import Godot CardDB, generate legal actions, check ownership/cost/timing, or call rules/effect runner code. It only expands a requested fixture effect id and target into the command shape described here.
+
 ## Validation
 
 `WBRules::CanApplyCardActivationCommand` checks:

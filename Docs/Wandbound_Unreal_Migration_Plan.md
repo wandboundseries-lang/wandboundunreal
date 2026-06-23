@@ -1052,6 +1052,20 @@
 - It does not own or cache `FWBGameStateData`.
 - It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+## Milestone - Fixture Card Definition Activation Expansion
+
+- Added fixture-owned `FWBCardDefinition` and `FWBCardEffectDefinition` scaffolding.
+- Added `WBCardActivationExpansion` to expand a requested fixture card effect plus target into `FWBCardActivationCommand`.
+- It supports armor/status/damage/heal generic payload definitions.
+- It can build candidates deterministically by effect order then supplied target order.
+- It can drive fixture-only build and build-and-apply golden scenarios.
+- It does not import Godot CardDB.
+- It does not production-load external card JSON.
+- It does not generate legal card activation actions.
+- It does not decide card ownership, costs, timing, response windows, passives, wands, or card-specific behavior.
+- It does not call `WBRules`, `WBEffectRunner`, `GenerateLegalActions`, or `ApplyCardActivationCommand` from the expansion layer.
+- It does not add input, UI widgets, camera behavior, animation, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 ## Phase 12 - Asset Migration
 
 - card art

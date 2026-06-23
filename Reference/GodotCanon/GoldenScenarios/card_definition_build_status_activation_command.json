@@ -1,0 +1,64 @@
+{
+  "id": "card_definition_build_status_activation_command",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/data/CardDB/",
+    "autoload/Game.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A fixture-owned card definition can expand a unit-targeted status activation into a card activation command.",
+  "operation": "build_card_activation_command",
+  "card_definition": {
+    "card_id": "fixture_status_card",
+    "public_name": "Fixture Status",
+    "kind": "fixture",
+    "activated_effects": [
+      {
+        "effect_id": "burn_2",
+        "public_label": "Burn 2",
+        "target_requirement": "unit",
+        "payloads": [
+          {
+            "operation": "status_effect",
+            "status_effect": { "operation": "apply_status", "status_id": "Burn", "duration": 2, "source_reason": "fixture" }
+          }
+        ]
+      }
+    ]
+  },
+  "activation_request": {
+    "player_id": 0,
+    "source_unit_id": 1,
+    "effect_id": "burn_2",
+    "target": { "target_unit_id": 2 },
+    "debug_activation_id": "fixture_status_activation"
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 5, "max_hp": 5 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "built_command": {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "source_card_id": "fixture_status_card",
+      "source_effect_id": "burn_2",
+      "target_unit_id": 2,
+      "payload_operations": [ "status_effect" ],
+      "debug_activation_id": "fixture_status_activation"
+    }
+  }
+}
