@@ -23,6 +23,48 @@ bool IsUnsupportedSourceZone(const EWBCardActivationSourceZone SourceZone)
 		|| SourceZone == EWBCardActivationSourceZone::Deck
 		|| SourceZone == EWBCardActivationSourceZone::Discard;
 }
+
+FWBCardActivationSourceGateResult EvaluateCostGate(
+	const FWBCardActivationCostGateDefinition& CostGate,
+	const FWBCardActivationCostGateContext& CostContext)
+{
+	if (CostGate.RequiredRR < 0
+		|| CostContext.SuppliedRequiredRR < 0
+		|| CostContext.SuppliedAvailableRL < 0)
+	{
+		return MakeSourceGateFailure(TEXT("invalid_cost_requirement"));
+	}
+
+	if (!CostGate.bRequiresExternalAffordability)
+	{
+		return MakeSourceGateSuccess();
+	}
+
+	if (!CostContext.bHasExternalAffordability)
+	{
+		return MakeSourceGateFailure(TEXT("cost_affordability_missing"));
+	}
+
+	if (!CostContext.bExternallyAffordable)
+	{
+		return MakeSourceGateFailure(TEXT("cost_not_affordable"));
+	}
+
+	if (CostGate.RequiredRR > 0
+		&& CostContext.SuppliedRequiredRR > 0
+		&& CostGate.RequiredRR != CostContext.SuppliedRequiredRR)
+	{
+		return MakeSourceGateFailure(TEXT("cost_requirement_mismatch"));
+	}
+
+	if (CostContext.SuppliedRequiredRR > 0
+		&& CostContext.SuppliedAvailableRL < CostContext.SuppliedRequiredRR)
+	{
+		return MakeSourceGateFailure(TEXT("cost_not_affordable"));
+	}
+
+	return MakeSourceGateSuccess();
+}
 }
 
 FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
@@ -108,6 +150,12 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 	if (Gate.bRequiresCostsSatisfiedExternally && !Context.bCostsSatisfiedExternally)
 	{
 		return MakeSourceGateFailure(TEXT("costs_not_satisfied"));
+	}
+
+	const FWBCardActivationSourceGateResult CostGateResult = EvaluateCostGate(Gate.CostGate, Context.CostContext);
+	if (!CostGateResult.bOk)
+	{
+		return CostGateResult;
 	}
 
 	if (Gate.bOncePerTurn)

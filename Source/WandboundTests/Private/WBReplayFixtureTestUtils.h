@@ -7,6 +7,7 @@
 #include "WBTurnController.h"
 
 class FJsonObject;
+struct FWBCardActivationAffordabilityRequest;
 struct FWBCardActivationExpansionRequest;
 struct FWBCardActivationCandidateSource;
 
@@ -29,6 +30,7 @@ enum class EWBFixtureOperationKind : uint8
 	BuildCardActivationCommand,
 	BuildAndApplyCardActivationCommand,
 	EvaluateCardActivationSourceGate,
+	QueryCardActivationAffordability,
 	GenerateCardActivationCandidates,
 	GenerateCardActivationLegalActions,
 	ApplyStartOfTurnStatusTicks,
@@ -86,6 +88,11 @@ bool ParseCardActivationExpansionRequestFromFixture(
 bool ParseCardActivationCandidateSourcesFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	TArray<FWBCardActivationCandidateSource>& OutSources,
+	FString& OutReason);
+
+bool ParseCardActivationAffordabilityRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBCardActivationAffordabilityRequest& OutRequest,
 	FString& OutReason);
 
 bool ApplyFixtureOperation(

@@ -22,6 +22,24 @@ enum class EWBCardActivationTimingRequirement : uint8
 	ResponseWindow
 };
 
+struct WANDBOUNDCORE_API FWBCardActivationCostGateDefinition
+{
+	bool bRequiresExternalAffordability = false;
+	int32 RequiredRR = 0;
+
+	// Optional fixture metadata only. This pass does not pay costs.
+	FName CostKind;
+};
+
+struct WANDBOUNDCORE_API FWBCardActivationCostGateContext
+{
+	bool bHasExternalAffordability = false;
+	bool bExternallyAffordable = false;
+	int32 SuppliedRequiredRR = 0;
+	int32 SuppliedAvailableRL = 0;
+	FName CostKind;
+};
+
 struct WANDBOUNDCORE_API FWBCardActivationSourceGateDefinition
 {
 	EWBCardActivationSourceZone RequiredZone = EWBCardActivationSourceZone::Fixture;
@@ -33,6 +51,7 @@ struct WANDBOUNDCORE_API FWBCardActivationSourceGateDefinition
 	bool bBlockedByFrozen = false;
 
 	bool bRequiresCostsSatisfiedExternally = false;
+	FWBCardActivationCostGateDefinition CostGate;
 	bool bOncePerTurn = false;
 
 	FString OncePerTurnKey;
@@ -48,6 +67,7 @@ struct WANDBOUNDCORE_API FWBCardActivationSourceGateContext
 
 	EWBCardActivationSourceZone SourceZone = EWBCardActivationSourceZone::Fixture;
 	bool bCostsSatisfiedExternally = true;
+	FWBCardActivationCostGateContext CostContext;
 
 	FString ActivationUsageKey;
 

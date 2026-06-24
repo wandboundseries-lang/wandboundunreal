@@ -28,6 +28,7 @@ struct WANDBOUNDCORE_API FWBCardActivationCandidateSource
 	FWBCardDefinition CardDefinition;
 	TArray<FWBEffectTargetRef> CandidateTargets;
 	FWBCardActivationSourceGateContext SourceGateContext;
+	TMap<FString, FWBCardActivationSourceGateContext> EffectIdToSourceGateContext;
 };
 
 struct WANDBOUNDCORE_API FWBCardActivationCandidateGenerationResult

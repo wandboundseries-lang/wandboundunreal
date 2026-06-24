@@ -125,3 +125,15 @@ Existing fixtures without explicit source gates keep their old behavior, includi
 Candidate generation now passes the evaluated `FWBCardActivationSourceGateContext` into `WBCardActivationExpansion`. Once-per-turn effects produce commands with `FWBCardActivationUsageCommit`, and `FWBCardActivationCandidate::Command` preserves that metadata for explicit future application.
 
 Generation remains read-only and does not mark usage.
+
+## Follow-Up - Cost Gate Filtering
+
+Candidate generation now filters fixture effects through detailed source-gate cost affordability when supplied by `source_gate.cost_gate` and `source_gate_context.cost_context`.
+
+The generator still does not pay costs, mutate `RLUsed`, trigger overflow, import CardDB, call `WBEffectRunner`, call `WBRules::GenerateLegalActions`, or emit `FWBAction` activation entries. It simply skips effects whose source gate reports `cost_affordability_missing`, `cost_not_affordable`, `cost_requirement_mismatch`, or `invalid_cost_requirement`.
+
+## Follow-Up - Affordability-Prepared Sources
+
+Candidate sources can now be prepared with `WBCardActivationAffordability::BuildCandidateSourceWithAffordability` before generation. The helper copies the source, queries read-only affordability for effects that require external affordability, and stores effect-specific source-gate contexts in `EffectIdToSourceGateContext`.
+
+Candidate generation consumes the effect-specific context when present and otherwise falls back to the source-level context. This supports multiple activated effects with different RR costs while preserving the generator's read-only, no-payment boundary.

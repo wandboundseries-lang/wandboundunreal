@@ -55,14 +55,26 @@ Source gates now pair with activation command usage marking. When expansion buil
 
 The key remains internal and resets through the existing turn-start resource setup path.
 
+## Follow-Up - Detailed Cost Gates
+
+Source gates now support `FWBCardActivationCostGateDefinition` and `FWBCardActivationCostGateContext` for fixture-owned externally supplied RR/RL affordability.
+
+The detailed gate is read-only and filters candidate generation only. It does not inspect production zones, pay costs, mutate `RLUsed`, trigger overflow, or destroy wands. If the legacy external cost-satisfied flag and the detailed gate are both present, both must pass.
+
+## Follow-Up - Affordability Query Consumer
+
+Source gates remain the consumer boundary for affordability context. `WBCardActivationAffordability` can compute and project read-only RL/RR affordability into source-gate contexts, but source gates still only validate supplied context and never pay costs or mutate state.
+
 ## Fixture Support
 
 Added parser support for:
 
 - `source_gate`
 - `source_gate_context`
+- `effect_source_gate_contexts`
 - `initial_state.activation_usage_keys_this_turn`
 - `operation.kind = evaluate_card_activation_source_gate`
+- `operation = query_card_activation_affordability`
 
 Added GodotCanon source-gate fixtures covering ownership, Stunned/Frozen policy, zones, timing, external costs, once-per-turn usage, turn-start reset, and ordered candidate filtering.
 
@@ -81,7 +93,7 @@ Confirmed unchanged:
 
 - production card database import
 - real hand/deck/discard/equipped zones
-- real RL/RR cost checks and payment
+- production RL/RR affordability ownership and payment
 - response-window activation legality
 - effect negation
 - passives and wands

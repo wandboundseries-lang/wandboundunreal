@@ -32,7 +32,11 @@ FWBCardActivationSourceGateContext BuildGateContext(
 	const FWBCardActivationCandidateSource& Source,
 	const FWBCardEffectDefinition& Effect)
 {
-	FWBCardActivationSourceGateContext Context = Source.SourceGateContext;
+	const FWBCardActivationSourceGateContext* EffectContext =
+		Source.EffectIdToSourceGateContext.Find(Effect.EffectId);
+	FWBCardActivationSourceGateContext Context = EffectContext != nullptr
+		? *EffectContext
+		: Source.SourceGateContext;
 	if (!FWBGameStateData::IsValidPlayerId(Context.PlayerId))
 	{
 		Context.PlayerId = Source.PlayerId;

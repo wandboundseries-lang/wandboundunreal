@@ -1,0 +1,80 @@
+{
+  "id": "card_activation_cost_gate_no_payment_mutation",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:available_rl",
+    "scripts/sim/game_state.gd:equip_wand_to_unit"
+  ],
+  "intent": "Cost-gated candidate generation never pays RR, mutates RLUsed, or changes armor/HP.",
+  "operation": "generate_card_activation_candidates",
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "source_gate_context": {
+        "source_zone": "board",
+        "cost_context": {
+          "has_external_affordability": true,
+          "externally_affordable": true,
+          "supplied_required_rr": 2,
+          "supplied_available_rl": 3,
+          "cost_kind": "RR"
+        }
+      },
+      "card_definition": {
+        "card_id": "fixture_cost_no_payment",
+        "public_name": "Fixture Cost No Payment",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "heal_1",
+            "public_label": "Heal 1 HP",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_source_unit": true,
+              "cost_gate": {
+                "requires_external_affordability": true,
+                "required_rr": 2,
+                "cost_kind": "RR"
+              }
+            },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 1, "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 }
+      ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "rl_total": 5, "rl_used": 2, "current_armor": 1, "max_armor": 2 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 3, "max_hp": 5, "rl_total": 4, "rl_used": 1, "current_armor": 1, "max_armor": 3 }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 1,
+    "candidate_ids": [
+      "activate:p0:u1:cfixture_cost_no_payment:eheal_1:t2:x-1:y-1:wa-1,-1:wb-1,-1"
+    ],
+    "public_labels": [ "Heal 1 HP" ],
+    "final_units": [
+      { "id": 1, "x": 4, "y": 4, "hp": 5, "max_hp": 5, "current_armor": 1, "max_armor": 2, "rl_total": 5, "rl_used": 2 },
+      { "id": 2, "x": 5, "y": 4, "hp": 3, "max_hp": 5, "current_armor": 1, "max_armor": 3, "rl_total": 4, "rl_used": 1 }
+    ],
+    "no_state_mutation": true
+  }
+}

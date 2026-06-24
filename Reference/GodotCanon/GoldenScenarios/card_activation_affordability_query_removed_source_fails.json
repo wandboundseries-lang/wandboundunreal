@@ -1,0 +1,34 @@
+{
+  "id": "card_activation_affordability_query_removed_source_fails",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:available_rl"
+  ],
+  "intent": "Read-only affordability query fails clearly when the source unit has left the board.",
+  "operation": "query_card_activation_affordability",
+  "affordability_request": {
+    "player_id": 0,
+    "source_unit_id": 1,
+    "source_card_id": "fixture_affordability",
+    "source_effect_id": "effect_1",
+    "required_rr": 2,
+    "cost_kind": "RR"
+  },
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 9,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 0, "max_hp": 5, "rl_total": 3, "rl_used": 1, "defeated": true, "removed_from_board": true }
+    ]
+  },
+  "expected": {
+    "ok": false,
+    "reason": "source_unit_removed"
+  }
+}

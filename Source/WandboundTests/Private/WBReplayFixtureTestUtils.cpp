@@ -5,6 +5,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "WBActionCodec.h"
+#include "WBCardActivationAffordability.h"
 #include "WBArmorEffect.h"
 #include "WBCardActivationCandidateGenerator.h"
 #include "WBCardActivationCommand.h"
@@ -2212,6 +2213,181 @@ EWBCardActivationTimingRequirement ReadCardActivationTimingOrDefault(
 	return EWBCardActivationTimingRequirement::Unknown;
 }
 
+bool TryReadOptionalBoolField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& FieldPath,
+	bool& OutValue,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonValue>* Value = Object.IsValid()
+		? Object->Values.Find(FieldName)
+		: nullptr;
+	if (Value == nullptr)
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Value->IsValid() || (*Value)->Type != EJson::Boolean)
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), *FieldPath);
+		return false;
+	}
+
+	OutValue = (*Value)->AsBool();
+	OutReason.Reset();
+	return true;
+}
+
+bool TryReadOptionalIntegerField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& FieldPath,
+	int32& OutValue,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonValue>* Value = Object.IsValid()
+		? Object->Values.Find(FieldName)
+		: nullptr;
+	if (Value == nullptr)
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Value->IsValid() || (*Value)->Type != EJson::Number)
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), *FieldPath);
+		return false;
+	}
+
+	OutValue = static_cast<int32>((*Value)->AsNumber());
+	OutReason.Reset();
+	return true;
+}
+
+bool TryReadOptionalFNameField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& FieldPath,
+	FName& OutValue,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonValue>* Value = Object.IsValid()
+		? Object->Values.Find(FieldName)
+		: nullptr;
+	if (Value == nullptr)
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Value->IsValid() || (*Value)->Type != EJson::String)
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), *FieldPath);
+		return false;
+	}
+
+	OutValue = FName(*(*Value)->AsString());
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseOptionalCardActivationCostGateDefinitionField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardActivationCostGateDefinition& OutCostGate,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CostGateObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, CostGateObject)
+		|| CostGateObject == nullptr
+		|| !CostGateObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	return TryReadOptionalBoolField(
+			*CostGateObject,
+			TEXT("requires_external_affordability"),
+			TEXT("source_gate.cost_gate.requires_external_affordability"),
+			OutCostGate.bRequiresExternalAffordability,
+			OutReason)
+		&& TryReadOptionalIntegerField(
+			*CostGateObject,
+			TEXT("required_rr"),
+			TEXT("source_gate.cost_gate.required_rr"),
+			OutCostGate.RequiredRR,
+			OutReason)
+		&& TryReadOptionalFNameField(
+			*CostGateObject,
+			TEXT("cost_kind"),
+			TEXT("source_gate.cost_gate.cost_kind"),
+			OutCostGate.CostKind,
+			OutReason);
+}
+
+bool ParseOptionalCardActivationCostGateContextField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardActivationCostGateContext& OutCostContext,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CostContextObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, CostContextObject)
+		|| CostContextObject == nullptr
+		|| !CostContextObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	return TryReadOptionalBoolField(
+			*CostContextObject,
+			TEXT("has_external_affordability"),
+			TEXT("source_gate_context.cost_context.has_external_affordability"),
+			OutCostContext.bHasExternalAffordability,
+			OutReason)
+		&& TryReadOptionalBoolField(
+			*CostContextObject,
+			TEXT("externally_affordable"),
+			TEXT("source_gate_context.cost_context.externally_affordable"),
+			OutCostContext.bExternallyAffordable,
+			OutReason)
+		&& TryReadOptionalIntegerField(
+			*CostContextObject,
+			TEXT("supplied_required_rr"),
+			TEXT("source_gate_context.cost_context.supplied_required_rr"),
+			OutCostContext.SuppliedRequiredRR,
+			OutReason)
+		&& TryReadOptionalIntegerField(
+			*CostContextObject,
+			TEXT("supplied_available_rl"),
+			TEXT("source_gate_context.cost_context.supplied_available_rl"),
+			OutCostContext.SuppliedAvailableRL,
+			OutReason)
+		&& TryReadOptionalFNameField(
+			*CostContextObject,
+			TEXT("cost_kind"),
+			TEXT("source_gate_context.cost_context.cost_kind"),
+			OutCostContext.CostKind,
+			OutReason);
+}
+
 bool ParseOptionalCardActivationSourceGateDefinitionField(
 	const TSharedPtr<FJsonObject>& Object,
 	const TCHAR* FieldName,
@@ -2261,6 +2437,14 @@ bool ParseOptionalCardActivationSourceGateDefinitionField(
 		*GateObject,
 		TEXT("requires_costs_satisfied_externally"),
 		OutGate.bRequiresCostsSatisfiedExternally);
+	if (!ParseOptionalCardActivationCostGateDefinitionField(
+		*GateObject,
+		TEXT("cost_gate"),
+		OutGate.CostGate,
+		OutReason))
+	{
+		return false;
+	}
 	OutGate.bOncePerTurn = ReadBoolFieldOrDefault(
 		*GateObject,
 		TEXT("once_per_turn"),
@@ -2303,6 +2487,14 @@ bool ParseOptionalCardActivationSourceGateContextField(
 		*ContextObject,
 		TEXT("costs_satisfied_externally"),
 		OutContext.bCostsSatisfiedExternally);
+	if (!ParseOptionalCardActivationCostGateContextField(
+		*ContextObject,
+		TEXT("cost_context"),
+		OutContext.CostContext,
+		OutReason))
+	{
+		return false;
+	}
 	(*ContextObject)->TryGetStringField(TEXT("activation_usage_key"), OutContext.ActivationUsageKey);
 	OutContext.bHasExplicitSourceGateContext = true;
 
@@ -2501,6 +2693,117 @@ bool ParseCardActivationExpansionRequestFromFixture(
 	return ParseActivationRequestObject(*ActivationRequestObject, OutRequest, OutReason);
 }
 
+bool ParseCardActivationAffordabilityRequestObject(
+	const TSharedPtr<FJsonObject>& RequestObject,
+	FWBCardActivationAffordabilityRequest& OutRequest,
+	FString& OutReason)
+{
+	if (!RequestObject.IsValid())
+	{
+		OutReason = TEXT("missing_affordability_request");
+		return false;
+	}
+
+	OutRequest = FWBCardActivationAffordabilityRequest();
+	if (!TryReadIntegerField(RequestObject, TEXT("player_id"), OutRequest.PlayerId)
+		|| !TryReadIntegerField(RequestObject, TEXT("source_unit_id"), OutRequest.SourceUnitId)
+		|| !TryReadIntegerField(RequestObject, TEXT("required_rr"), OutRequest.RequiredRR))
+	{
+		OutReason = TEXT("malformed_affordability_request");
+		return false;
+	}
+
+	RequestObject->TryGetStringField(TEXT("source_card_id"), OutRequest.SourceCardId);
+	RequestObject->TryGetStringField(TEXT("source_effect_id"), OutRequest.SourceEffectId);
+	FString CostKind;
+	if (RequestObject->TryGetStringField(TEXT("cost_kind"), CostKind))
+	{
+		OutRequest.CostKind = FName(*CostKind);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseEffectSourceGateContextsObject(
+	const TSharedPtr<FJsonObject>& SourceObject,
+	const int32 SourceIndex,
+	FWBCardActivationCandidateSource& OutSource,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* ContextsObject = nullptr;
+	if (!SourceObject.IsValid() || !SourceObject->HasField(TEXT("effect_source_gate_contexts")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!SourceObject->TryGetObjectField(TEXT("effect_source_gate_contexts"), ContextsObject)
+		|| ContextsObject == nullptr
+		|| !ContextsObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_activation_source_%d_effect_source_gate_contexts"), SourceIndex);
+		return false;
+	}
+
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*ContextsObject)->Values)
+	{
+		const TSharedPtr<FJsonObject> ContextObject = Pair.Value.IsValid()
+			? Pair.Value->AsObject()
+			: nullptr;
+		if (!ContextObject.IsValid())
+		{
+			OutReason = FString::Printf(
+				TEXT("malformed_activation_source_%d_effect_source_gate_contexts_%s"),
+				SourceIndex,
+				*Pair.Key);
+			return false;
+		}
+
+		TSharedPtr<FJsonObject> WrapperObject = MakeShared<FJsonObject>();
+		WrapperObject->SetObjectField(TEXT("source_gate_context"), ContextObject);
+
+		FWBCardActivationSourceGateContext Context;
+		Context.PlayerId = OutSource.PlayerId;
+		Context.SourceUnitId = OutSource.SourceUnitId;
+		if (!ParseOptionalCardActivationSourceGateContextField(
+			WrapperObject,
+			TEXT("source_gate_context"),
+			Context,
+			OutReason))
+		{
+			OutReason = FString::Printf(
+				TEXT("malformed_activation_source_%d_effect_source_gate_contexts_%s"),
+				SourceIndex,
+				*Pair.Key);
+			return false;
+		}
+
+		OutSource.EffectIdToSourceGateContext.Add(Pair.Key, Context);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseCardActivationAffordabilityRequestFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	FWBCardActivationAffordabilityRequest& OutRequest,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* RequestObject = nullptr;
+	if (!Fixture.IsValid()
+		|| !Fixture->TryGetObjectField(TEXT("affordability_request"), RequestObject)
+		|| RequestObject == nullptr
+		|| !RequestObject->IsValid())
+	{
+		OutReason = TEXT("missing_affordability_request");
+		return false;
+	}
+
+	return ParseCardActivationAffordabilityRequestObject(*RequestObject, OutRequest, OutReason);
+}
+
 bool ParseActivationCandidateTargetRefObject(
 	const TSharedPtr<FJsonObject>& TargetObject,
 	const int32 TargetIndex,
@@ -2559,6 +2862,11 @@ bool ParseCardActivationCandidateSourceObject(
 	}
 
 	if (!ParseCardDefinitionObject(*CardDefinitionObject, OutSource.CardDefinition, OutReason))
+	{
+		return false;
+	}
+
+	if (!ParseEffectSourceGateContextsObject(SourceObject, SourceIndex, OutSource, OutReason))
 	{
 		return false;
 	}
@@ -2899,6 +3207,25 @@ bool ApplyFixtureOperation(
 		return true;
 	}
 
+	if (OperationKind == TEXT("query_card_activation_affordability"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::QueryCardActivationAffordability;
+		FWBCardActivationAffordabilityRequest Request;
+		if (!ParseCardActivationAffordabilityRequestFromFixture(Fixture, Request, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationAffordabilityResult QueryResult =
+			WBCardActivationAffordability::QueryFromUnitRL(State, Request);
+		OutResult.bOk = QueryResult.bOk;
+		OutResult.Reason = QueryResult.Reason;
+		OutResult.TraceEvents.Reset();
+		OutReason.Reset();
+		return true;
+	}
+
 	if (OperationKind == TEXT("generate_card_activation_candidates"))
 	{
 		OutOperationKind = EWBFixtureOperationKind::GenerateCardActivationCandidates;
@@ -3226,6 +3553,8 @@ bool ExpectUnitStatusSummary(
 			|| Unit->MaxHP != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("max_hp"), Unit->MaxHP)
 			|| Unit->GetCurrentArmor() != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("current_armor"), Unit->GetCurrentArmor())
 			|| Unit->GetMaxArmor() != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("max_armor"), Unit->GetMaxArmor())
+			|| Unit->RLTotal != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("rl_total"), Unit->RLTotal)
+			|| Unit->RLUsed != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("rl_used"), Unit->RLUsed)
 			|| Unit->AttacksLeft != ReadIntegerFieldOrDefault(FinalUnitObject, TEXT("attacks_left"), Unit->AttacksLeft)
 			|| Unit->bDefeated != ReadBoolFieldOrDefault(FinalUnitObject, TEXT("defeated"), Unit->bDefeated)
 			|| Unit->bRemovedFromBoard != ReadBoolFieldOrDefault(FinalUnitObject, TEXT("removed_from_board"), Unit->bRemovedFromBoard))

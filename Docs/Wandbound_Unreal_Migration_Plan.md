@@ -1125,6 +1125,34 @@
 - Existing `WBActionCodec` output remains unchanged.
 - No Godot CardDB import, production card zones, real costs/RL/RR payment, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Cost Gates
+
+- Added fixture-driven `FWBCardActivationCostGateDefinition`.
+- Added fixture-driven `FWBCardActivationCostGateContext`.
+- Source gates can now require externally supplied RR/RL affordability before activation candidates are generated.
+- Candidate generation filters unaffordable activations through the existing source-gate path.
+- Added validation for missing affordability, unaffordable results, RR requirement mismatches, negative cost data, and supplied available RL lower than supplied RR.
+- Existing `bRequiresCostsSatisfiedExternally` remains in place; when both simple and detailed cost gates are present, both must pass.
+- Candidate generation and explicit activation application do not pay costs or mutate `RLUsed`.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No Godot CardDB import, production card zones, real RR/RL payment, overflow, wand destruction, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Milestone - Card Activation Affordability Query
+
+- Added `FWBCardActivationAffordabilityRequest`.
+- Added `FWBCardActivationAffordabilityResult`.
+- Added `IWBCardActivationAffordabilityProvider`.
+- Added deterministic `FWBFixedCardActivationAffordabilityProvider` for fixture/test use.
+- Added `WBCardActivationAffordability::QueryFromUnitRL`.
+- Available RL is computed as `max(0, RLTotal - RLUsed)` while current Unreal state still uses `RLTotal` as current RL.
+- Affordability queries are read-only and report `bOk = true` even when the activation is not affordable.
+- Affordability results can be projected into source-gate cost contexts.
+- Candidate sources can be copied and prepared with effect-specific source-gate contexts for effects with different RR costs.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No cost payment, `RLUsed` mutation, overflow, wand destruction, CardDB import, production zones, activation `FWBAction`, response windows, UI, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

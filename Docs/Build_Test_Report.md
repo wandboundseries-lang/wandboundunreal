@@ -1,6 +1,222 @@
 # Build/Test Report
 
-Date of check: 2026-06-22 (America/New_York)
+Date of check: 2026-06-24 (America/New_York)
+
+## Card Activation Affordability Query Pass
+
+### Scope
+
+This pass added read-only card activation affordability query scaffolding that computes external RR/RL affordability context for source gates.
+
+Implemented:
+
+- `FWBCardActivationAffordabilityRequest`
+- `FWBCardActivationAffordabilityResult`
+- `IWBCardActivationAffordabilityProvider`
+- `FWBFixedCardActivationAffordabilityProvider`
+- `WBCardActivationAffordability::QueryFromUnitRL`
+- `WBCardActivationAffordability::ApplyResultToSourceGateContext`
+- `WBCardActivationAffordability::BuildCandidateSourceWithAffordability`
+- per-effect source-gate contexts on `FWBCardActivationCandidateSource`
+- fixture operation `query_card_activation_affordability`
+- fixture parser support for `effect_source_gate_contexts`
+
+Not implemented:
+
+- cost payment
+- `RLUsed` mutation
+- overflow or wand destruction
+- production CardDB import
+- production card zones
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- response windows
+- effect negation
+- passives
+- wands
+- card-specific behavior
+- UI, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 126.26 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=565
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.CardActivationAffordability.QueryFromUnitRL`
+- `Wandbound.Core.CardActivationAffordability.ContextPreparationAndCandidateFiltering`
+- `Wandbound.Core.CardActivationAffordability.FixedProviderAndPerEffectContexts`
+- `Wandbound.Core.CardActivationAffordability.FixtureScenarios`
+- `Wandbound.Core.CardActivationAffordability.SeparateFromPaymentLegalActionsEffectRunnerAndCodec`
+
+### New Golden Scenarios Added
+
+- `card_activation_affordability_query_affordable.json`
+- `card_activation_affordability_query_unaffordable.json`
+- `card_activation_affordability_query_zero_rr.json`
+- `card_activation_affordability_query_missing_source_fails.json`
+- `card_activation_affordability_query_removed_source_fails.json`
+- `card_activation_affordability_query_owner_mismatch_fails.json`
+- `card_activation_affordability_context_feeds_cost_gate_success.json`
+- `card_activation_affordability_context_feeds_cost_gate_excluded.json`
+- `card_activation_affordability_does_not_mutate_rl.json`
+- `card_activation_affordability_per_effect_costs_if_supported.json`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- `QueryFromUnitRL` treats current Unreal `RLTotal` as current RL until a base/current RL split exists.
+- Available RL is computed as `max(0, RLTotal - RLUsed)`.
+- Successful queries use `bOk = true` even when `bAffordable = false`.
+- Affordability results can prepare source-gate cost context without payment.
+- Candidate sources can now carry effect-specific source-gate contexts for different per-effect RR costs.
+- Legal action generation and `WBActionCodec` remain unchanged.
+- `git diff --check` reported no whitespace errors, only LF-to-CRLF working-copy notices.
+- Pre-existing untracked `MaxHP` remains untouched.
+
+### Risks / Unknowns
+
+- Production affordability ownership is still future work.
+- Actual RR/RL payment, `RLUsed` mutation, overflow, equipped wand fallout, and CardDB import remain deferred.
+- Response windows, effect negation, passives, wands, and card-specific costs remain future work.
+
+## Card Activation Cost Gates Pass
+
+### Scope
+
+This pass added fixture-driven card activation cost-gate scaffolding using externally supplied RR/RL affordability only.
+
+Implemented:
+
+- `FWBCardActivationCostGateDefinition`
+- `FWBCardActivationCostGateContext`
+- detailed cost-gate evaluation in `WBCardActivationSourceGate::Evaluate`
+- fixture parser support for `source_gate.cost_gate`
+- fixture parser support for `source_gate_context.cost_context`
+- candidate filtering through the existing source-gate path
+- fixture assertions that generation does not mutate RL/RLUsed
+- source guards confirming candidate/source-gate layers do not call `WBEffectRunner`, `WBRules::GenerateLegalActions`, or `WBActionCodec`
+
+Not implemented:
+
+- real RR/RL payment
+- `RLUsed` mutation
+- overflow or wand destruction
+- production card zones
+- CardDB import
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- response windows
+- effect negation
+- passives
+- wands
+- card-specific behavior
+- UI, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 61.63 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=560
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.CardActivationCostGate.EvaluationReasons`
+- `Wandbound.Core.CardActivationCostGate.SimpleAndDetailedBothRequired`
+- `Wandbound.Core.CardActivationCostGate.CandidateFilteringAndOrder`
+- `Wandbound.Core.CardActivationCostGate.NoPaymentMutationAndOnceUsage`
+- `Wandbound.Core.CardActivationCostGate.FixtureScenarios`
+- `Wandbound.Core.CardActivationCostGate.SeparateFromLegalActionsEffectRunnerAndCodec`
+
+### New Golden Scenarios Added
+
+- `card_activation_cost_gate_affordable_success.json`
+- `card_activation_cost_gate_missing_affordability_excluded.json`
+- `card_activation_cost_gate_not_affordable_excluded.json`
+- `card_activation_cost_gate_requirement_mismatch_excluded.json`
+- `card_activation_cost_gate_available_rl_insufficient_excluded.json`
+- `card_activation_cost_gate_zero_rr_success.json`
+- `card_activation_cost_gate_simple_flag_and_detailed_gate_both_required.json`
+- `card_activation_cost_gate_no_payment_mutation.json`
+- `card_activation_cost_gate_order_preserved.json`
+- `card_activation_cost_gate_with_once_per_turn_usage.json`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- External affordability is fixture-owned; the source gate does not compute real payment.
+- `RequiredRR`, `SuppliedRequiredRR`, and `SuppliedAvailableRL` must be non-negative.
+- If supplied available RL is lower than supplied required RR, the gate fails with `cost_not_affordable` even when the external boolean says affordable.
+- The legacy `bRequiresCostsSatisfiedExternally` flag remains supported and composes with detailed cost gates.
+- Candidate generation remains read-only and does not mark usage or mutate RL/RLUsed.
+- Legal action generation and `WBActionCodec` remain unchanged.
+- Pre-existing untracked `MaxHP` remains untouched.
+
+### Risks / Unknowns
+
+- Production affordability ownership is still future work.
+- Actual RR/RL payment, `RLUsed` mutation, overflow, equipped wand fallout, and CardDB import remain deferred.
+- Response windows, effect negation, passives, wands, and card-specific costs remain future work.
 
 ## Card Activation Command Scaffolding Pass
 
