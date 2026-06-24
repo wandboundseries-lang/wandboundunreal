@@ -442,7 +442,7 @@ bool FWBCardActivationCostGateCandidateFilteringTest::RunTest(const FString& Par
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardActivationCostGateNoPaymentAndOnceTest, "Wandbound.Core.CardActivationCostGate.NoPaymentMutationAndOnceUsage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardActivationCostGateNoPaymentAndOnceTest, "Wandbound.Core.CardActivationCostGate.GenerationReadOnlyAndOnceUsagePayment", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBCardActivationCostGateNoPaymentAndOnceTest::RunTest(const FString& Parameters)
 {
 	FWBGameStateData State = MakeCostGateState();
@@ -472,7 +472,7 @@ bool FWBCardActivationCostGateNoPaymentAndOnceTest::RunTest(const FString& Param
 		WBEffectRunner::ApplyCardActivationCommand(State, Result.Candidates[0].Command);
 	TestTrue(TEXT("Explicit activation apply succeeds"), ApplyResult.bOk);
 	TestEqual(TEXT("Source RLTotal unchanged after apply"), State.GetUnitById(1)->RLTotal, SourceRLTotalBefore);
-	TestEqual(TEXT("Source RLUsed unchanged after apply"), State.GetUnitById(1)->RLUsed, SourceRLUsedBefore);
+	TestEqual(TEXT("Source RLUsed paid after apply"), State.GetUnitById(1)->RLUsed, SourceRLUsedBefore + 2);
 	TestEqual(TEXT("Target RLTotal unchanged after apply"), State.GetUnitById(2)->RLTotal, TargetRLTotalBefore);
 	TestEqual(TEXT("Target RLUsed unchanged after apply"), State.GetUnitById(2)->RLUsed, TargetRLUsedBefore);
 
@@ -493,7 +493,7 @@ bool FWBCardActivationCostGateNoPaymentAndOnceTest::RunTest(const FString& Param
 	TestEqual(TEXT("Cost plus once initial candidate count"), OnceBeforeResult.Candidates.Num(), 1);
 	TestTrue(TEXT("Cost plus once apply succeeds"), WBEffectRunner::ApplyCardActivationCommand(OnceState, OnceBeforeResult.Candidates[0].Command).bOk);
 	TestTrue(TEXT("Usage marked after explicit apply"), OnceState.HasActivationUsageKeyThisTurn(0, TEXT("fixture_cost_once")));
-	TestEqual(TEXT("Once source RLUsed unchanged"), OnceState.GetUnitById(1)->RLUsed, SourceRLUsedBefore);
+	TestEqual(TEXT("Once source RLUsed paid"), OnceState.GetUnitById(1)->RLUsed, SourceRLUsedBefore + 2);
 
 	const FWBCardActivationCandidateGenerationResult OnceAfterResult =
 		WBCardActivationCandidateGenerator::GenerateCandidates(

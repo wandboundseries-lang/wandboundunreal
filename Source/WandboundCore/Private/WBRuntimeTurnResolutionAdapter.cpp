@@ -5,7 +5,7 @@
 
 namespace
 {
-FWBApplyActionResult MakeFailureResult(const FString& Reason)
+FWBApplyActionResult MakeRuntimeResolutionFailureResult(const FString& Reason)
 {
 	FWBApplyActionResult Result;
 	Result.bOk = false;
@@ -61,7 +61,7 @@ FWBRuntimeSelectedActionResult WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelec
 
 	if (Context.MPRollSource == nullptr)
 	{
-		Envelope.ApplyResult = MakeFailureResult(TEXT("missing_mp_roll_source"));
+		Envelope.ApplyResult = MakeRuntimeResolutionFailureResult(TEXT("missing_mp_roll_source"));
 		BuildFinalPublicSummaries(State, Envelope);
 		return Envelope;
 	}
@@ -71,7 +71,7 @@ FWBRuntimeSelectedActionResult WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelec
 	FString RollReason;
 	if (!Context.MPRollSource->TryGetNextMPRoll(NextPlayerId, NextPlayerExplicitMPRoll, RollReason))
 	{
-		Envelope.ApplyResult = MakeFailureResult(RollReason);
+		Envelope.ApplyResult = MakeRuntimeResolutionFailureResult(RollReason);
 		BuildFinalPublicSummaries(State, Envelope);
 		return Envelope;
 	}

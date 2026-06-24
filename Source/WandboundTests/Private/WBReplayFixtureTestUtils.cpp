@@ -2018,6 +2018,54 @@ bool ParseOptionalCardActivationUsageCommitField(
 	return true;
 }
 
+bool ParseOptionalCardActivationCostPaymentCommitField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardActivationCostPaymentCommit& OutCostPaymentCommit,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CostPaymentCommitObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, CostPaymentCommitObject)
+		|| CostPaymentCommitObject == nullptr
+		|| !CostPaymentCommitObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	OutCostPaymentCommit.bPayCostOnSuccess = ReadBoolFieldOrDefault(
+		*CostPaymentCommitObject,
+		TEXT("pay_cost_on_success"),
+		OutCostPaymentCommit.bPayCostOnSuccess);
+	OutCostPaymentCommit.PlayerId = ReadIntegerFieldOrDefault(
+		*CostPaymentCommitObject,
+		TEXT("player_id"),
+		OutCostPaymentCommit.PlayerId);
+	OutCostPaymentCommit.SourceUnitId = ReadIntegerFieldOrDefault(
+		*CostPaymentCommitObject,
+		TEXT("source_unit_id"),
+		OutCostPaymentCommit.SourceUnitId);
+	OutCostPaymentCommit.RequiredRR = ReadIntegerFieldOrDefault(
+		*CostPaymentCommitObject,
+		TEXT("required_rr"),
+		OutCostPaymentCommit.RequiredRR);
+
+	FString CostKind;
+	if ((*CostPaymentCommitObject)->TryGetStringField(TEXT("cost_kind"), CostKind))
+	{
+		OutCostPaymentCommit.CostKind = FName(*CostKind);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ParseCardActivationCommandFromFixture(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBCardActivationCommand& OutCommand,
@@ -2050,6 +2098,15 @@ bool ParseCardActivationCommandFromFixture(
 	}
 
 	(*CardActivationObject)->TryGetStringField(TEXT("debug_activation_id"), OutCommand.DebugActivationId);
+	if (!ParseOptionalCardActivationCostPaymentCommitField(
+		*CardActivationObject,
+		TEXT("cost_payment_commit"),
+		OutCommand.CostPaymentCommit,
+		OutReason))
+	{
+		return false;
+	}
+
 	if (!ParseOptionalCardActivationUsageCommitField(
 		*CardActivationObject,
 		TEXT("usage_commit"),

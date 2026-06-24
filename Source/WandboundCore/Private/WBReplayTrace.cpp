@@ -190,6 +190,36 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("effective_heal_amount"), Event.EffectiveHealAmount);
 	}
 
+	if (Event.CostAmount != -1)
+	{
+		Object->SetNumberField(TEXT("cost_amount"), Event.CostAmount);
+	}
+
+	if (Event.PreviousRLUsed != -1)
+	{
+		Object->SetNumberField(TEXT("previous_rl_used"), Event.PreviousRLUsed);
+	}
+
+	if (Event.NewRLUsed != -1)
+	{
+		Object->SetNumberField(TEXT("new_rl_used"), Event.NewRLUsed);
+	}
+
+	if (Event.AvailableRLBefore != -1)
+	{
+		Object->SetNumberField(TEXT("available_rl_before"), Event.AvailableRLBefore);
+	}
+
+	if (Event.AvailableRLAfter != -1)
+	{
+		Object->SetNumberField(TEXT("available_rl_after"), Event.AvailableRLAfter);
+	}
+
+	if (!Event.CostKind.IsNone())
+	{
+		Object->SetStringField(TEXT("cost_kind"), Event.CostKind.ToString());
+	}
+
 	if (!Event.ArmorEffectOperation.IsNone())
 	{
 		Object->SetStringField(TEXT("armor_effect_operation"), Event.ArmorEffectOperation.ToString());

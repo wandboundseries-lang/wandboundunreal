@@ -165,6 +165,15 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 	Result.Command.EffectRequest.Source.SourceEffectId = MatchingEffect->EffectId;
 	Result.Command.EffectRequest.Target = Request.Target;
 	Result.Command.EffectRequest.Payloads = MatchingEffect->Payloads;
+	if (MatchingEffect->SourceGate.CostGate.bRequiresExternalAffordability
+		|| MatchingEffect->SourceGate.CostGate.RequiredRR > 0)
+	{
+		Result.Command.CostPaymentCommit.bPayCostOnSuccess = true;
+		Result.Command.CostPaymentCommit.PlayerId = Request.PlayerId;
+		Result.Command.CostPaymentCommit.SourceUnitId = Request.SourceUnitId;
+		Result.Command.CostPaymentCommit.RequiredRR = MatchingEffect->SourceGate.CostGate.RequiredRR;
+		Result.Command.CostPaymentCommit.CostKind = MatchingEffect->SourceGate.CostGate.CostKind;
+	}
 	if (MatchingEffect->SourceGate.bOncePerTurn)
 	{
 		Result.Command.UsageCommit.bMarkUsageOnSuccess = true;

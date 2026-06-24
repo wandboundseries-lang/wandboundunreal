@@ -43,6 +43,12 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FName DamageCause;
 	int32 HealAmount = -1;
 	int32 EffectiveHealAmount = -1;
+	int32 CostAmount = -1;
+	int32 PreviousRLUsed = -1;
+	int32 NewRLUsed = -1;
+	int32 AvailableRLBefore = -1;
+	int32 AvailableRLAfter = -1;
+	FName CostKind;
 	FName ArmorEffectOperation;
 	int32 ArmorEffectAmount = -1;
 	FName StatusEffectOperation;

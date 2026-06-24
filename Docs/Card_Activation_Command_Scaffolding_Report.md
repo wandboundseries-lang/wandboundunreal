@@ -53,6 +53,12 @@ The effect request remains the only behavior payload.
 
 `FWBCardActivationUsageCommit` is fixture/scaffold metadata. When `bMarkUsageOnSuccess` is true, it identifies the player and internal usage key to mark after successful activation resolution.
 
+## Cost Payment Follow-Up
+
+`FWBCardActivationCommand` can now also carry `FWBCardActivationCostPaymentCommit`. When `bPayCostOnSuccess` is true, `WBRules::CanApplyCardActivationCommand` validates affordability and `WBEffectRunner::ApplyCardActivationCommand` increases source `RLUsed` on a working copy before effect resolution.
+
+Payment commits only when the full activation succeeds. Failed payment, failed effect validation, and failed effect resolution leave original `RLUsed` unchanged. This remains fixture-owned scaffolding and does not add CardDB import, production zones, activation `FWBAction`, or `WBActionCodec` activation ids.
+
 ## Definition Expansion Follow-Up
 
 `WBCardActivationExpansion` now builds `FWBCardActivationCommand` values from fixture-owned `FWBCardDefinition` data. That layer does not import Godot CardDB, generate legal actions, check ownership/cost/timing, or call rules/effect runner code. It only expands a requested fixture effect id and target into the command shape described here.

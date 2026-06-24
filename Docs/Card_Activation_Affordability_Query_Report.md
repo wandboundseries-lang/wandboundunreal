@@ -61,6 +61,10 @@ When the query succeeds, it also synchronizes the legacy simple flag by setting 
 
 `FWBFixedCardActivationAffordabilityProvider` returns deterministic fixture/test results and fills unset player/source/RR/cost-kind fields from the request. It does not mutate state and is not a payment system.
 
+## Follow-Up - Cost Payment Scaffolding
+
+Affordability query results now feed both source-gate filtering and payment validation scaffolding. The query itself remains read-only: it does not pay RR, mutate `RLUsed`, open response windows, import CardDB, or decide production card playability.
+
 ## Fixture Support
 
 Added fixture operation:
@@ -84,8 +88,8 @@ Added optional activation source parser support for:
 
 This pass does not:
 
-- pay RR/RL costs
-- mutate `RLUsed`
+- directly pay RR/RL costs from the affordability query
+- directly mutate `RLUsed` from the affordability query
 - mutate rules state
 - destroy or overflow wands
 - import Godot CardDB
@@ -100,7 +104,7 @@ Source card/effect ids remain metadata for the query and are not emitted in trac
 
 ## Deferred
 
-- actual payment
+- production payment ownership
 - `RLUsed` mutation
 - overflow
 - equipped wand fallout

@@ -1133,7 +1133,7 @@
 - Candidate generation filters unaffordable activations through the existing source-gate path.
 - Added validation for missing affordability, unaffordable results, RR requirement mismatches, negative cost data, and supplied available RL lower than supplied RR.
 - Existing `bRequiresCostsSatisfiedExternally` remains in place; when both simple and detailed cost gates are present, both must pass.
-- Candidate generation and explicit activation application do not pay costs or mutate `RLUsed`.
+- Candidate generation does not pay costs or mutate `RLUsed`; later fixture payment scaffolding lets explicit activation application pay only through command-owned payment metadata.
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - Existing `WBActionCodec` output remains unchanged.
 - No Godot CardDB import, production card zones, real RR/RL payment, overflow, wand destruction, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
@@ -1151,7 +1151,24 @@
 - Candidate sources can be copied and prepared with effect-specific source-gate contexts for effects with different RR costs.
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - Existing `WBActionCodec` output remains unchanged.
-- No cost payment, `RLUsed` mutation, overflow, wand destruction, CardDB import, production zones, activation `FWBAction`, response windows, UI, Blueprints, `.uasset`, or `.umap` work was added.
+- No payment from the affordability query itself, overflow, wand destruction, CardDB import, production zones, activation `FWBAction`, response windows, UI, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Milestone - Card Activation Cost Payment Scaffolding
+
+- Added `FWBCardActivationCostPaymentCommit` to activation commands.
+- Added pure C++ `WBCardActivationCostPayment`.
+- `CanPayCost` validates fixture-owned RR payment without mutation.
+- `PayCost` mutates only source unit `RLUsed`.
+- Activation expansion populates payment commits from source-gate cost metadata.
+- Candidate generation and activation legal action generation preserve payment commits.
+- `WBRules::CanApplyCardActivationCommand` re-checks payment affordability.
+- `WBEffectRunner::ApplyCardActivationCommand` pays on a working copy and commits payment only after successful activation resolution.
+- Failed payment, failed effect validation, and failed effect resolution do not mutate original `RLUsed`.
+- Payment plus usage marking remains atomic: failed activation marks neither payment nor usage.
+- Added `card_activation_cost_paid` trace fields for cost amount and RL before/after values.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No overflow, wand destruction, CardDB import, production zones, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Phase 12 - Asset Migration
 

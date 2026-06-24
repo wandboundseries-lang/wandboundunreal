@@ -19,10 +19,20 @@ struct WANDBOUNDCORE_API FWBCardActivationUsageCommit
 	FString UsageKey;
 };
 
+struct WANDBOUNDCORE_API FWBCardActivationCostPaymentCommit
+{
+	bool bPayCostOnSuccess = false;
+	int32 PlayerId = -1;
+	int32 SourceUnitId = -1;
+	int32 RequiredRR = 0;
+	FName CostKind;
+};
+
 struct WANDBOUNDCORE_API FWBCardActivationCommand
 {
 	FWBCardActivationSource Source;
 	FWBEffectRequest EffectRequest;
+	FWBCardActivationCostPaymentCommit CostPaymentCommit;
 	FWBCardActivationUsageCommit UsageCommit;
 	FString DebugActivationId;
 };

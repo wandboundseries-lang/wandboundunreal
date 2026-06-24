@@ -27,7 +27,7 @@ struct WANDBOUNDCORE_API FWBCardActivationCostGateDefinition
 	bool bRequiresExternalAffordability = false;
 	int32 RequiredRR = 0;
 
-	// Optional fixture metadata only. This pass does not pay costs.
+	// Optional fixture metadata for affordability and activation payment scaffolding.
 	FName CostKind;
 };
 

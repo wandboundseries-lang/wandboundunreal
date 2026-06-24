@@ -49,9 +49,11 @@ The existing `bRequiresCostsSatisfiedExternally` flag remains intact. If both th
 - detailed affordability false fails with a detailed cost reason
 - both true passes
 
-## No Payment Policy
+## Follow-Up - Cost Payment Scaffolding
 
-This pass does not pay RR/RL costs, mutate `RLUsed`, destroy or overflow wands, emit cost-payment traces, inspect real card zones, or decide production card playability. Tests verify candidate generation and explicit activation application leave RL totals and used RL unchanged.
+Cost gates still filter candidates only. They do not pay RR/RL costs, mutate `RLUsed`, destroy or overflow wands, inspect real card zones, or decide production card playability.
+
+Activation expansion now converts cost-gated effects into commands with `FWBCardActivationCostPaymentCommit`. Explicit `WBEffectRunner::ApplyCardActivationCommand` can pay that fixture-owned commit after rules validation and only when activation succeeds. Candidate generation remains read-only.
 
 ## Hidden Information Policy
 
@@ -59,8 +61,8 @@ Cost gate failure reasons are stable public-safe strings and do not include deck
 
 ## Deferred
 
-- real RR/RL payment
-- `RLUsed` mutation
+- production RR/RL payment ownership
+- production `RLUsed` ownership outside fixture activation commands
 - overflow
 - equipped wand fallout
 - production CardDB import

@@ -3,6 +3,7 @@
 #include "WBActionCodec.h"
 #include "WBArmorEffect.h"
 #include "WBCardActivationCommand.h"
+#include "WBCardActivationCostPayment.h"
 #include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
 #include "WBDeathResolution.h"
@@ -363,6 +364,24 @@ void AppendCardActivationUsageMarkedTrace(
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("card_activation_usage_marked"));
 	Event.PlayerId = PlayerId;
+	Event.bOk = true;
+	TraceEvents.Add(Event);
+}
+
+void AppendCardActivationCostPaidTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBCardActivationCostPaymentResult& PaymentResult)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("card_activation_cost_paid"));
+	Event.PlayerId = PaymentResult.Request.PlayerId;
+	Event.SourceUnitId = PaymentResult.Request.SourceUnitId;
+	Event.CostAmount = PaymentResult.Request.RequiredRR;
+	Event.PreviousRLUsed = PaymentResult.PreviousRLUsed;
+	Event.NewRLUsed = PaymentResult.NewRLUsed;
+	Event.AvailableRLBefore = PaymentResult.AvailableRLBefore;
+	Event.AvailableRLAfter = PaymentResult.AvailableRLAfter;
+	Event.CostKind = PaymentResult.Request.CostKind;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -978,6 +997,28 @@ FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
 	}
 
 	FWBGameStateData WorkingState = State;
+	FWBCardActivationCostPaymentResult PaymentResult;
+	bool bPaidCost = false;
+	if (FilledCommand.CostPaymentCommit.bPayCostOnSuccess)
+	{
+		FWBCardActivationCostPaymentRequest PaymentRequest;
+		PaymentRequest.PlayerId = FilledCommand.CostPaymentCommit.PlayerId;
+		PaymentRequest.SourceUnitId = FilledCommand.CostPaymentCommit.SourceUnitId;
+		PaymentRequest.RequiredRR = FilledCommand.CostPaymentCommit.RequiredRR;
+		PaymentRequest.CostKind = FilledCommand.CostPaymentCommit.CostKind;
+
+		PaymentResult = WBCardActivationCostPayment::PayCost(WorkingState, PaymentRequest);
+		if (!PaymentResult.bOk)
+		{
+			Result.bOk = false;
+			Result.Reason = PaymentResult.Reason;
+			Result.Command = FilledCommand;
+			return Result;
+		}
+
+		bPaidCost = true;
+	}
+
 	const FWBEffectRequestResult EffectResult = ApplyEffectRequest(WorkingState, FilledCommand.EffectRequest);
 	Result.Command = FilledCommand;
 	Result.EffectResult = EffectResult;
@@ -1015,6 +1056,10 @@ FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
 	State = WorkingState;
 	Result.bOk = true;
 	AppendCardActivationResolvedTrace(Result.TraceEvents, FilledCommand);
+	if (bPaidCost)
+	{
+		AppendCardActivationCostPaidTrace(Result.TraceEvents, PaymentResult);
+	}
 	Result.TraceEvents.Append(EffectResult.TraceEvents);
 	if (FilledCommand.UsageCommit.bMarkUsageOnSuccess)
 	{

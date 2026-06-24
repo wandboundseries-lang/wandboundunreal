@@ -2898,3 +2898,63 @@ notRun=0
 - Godot has pending-response and negation semantics that this fixture scaffold intentionally does not model yet.
 - The Red Ledger deferred usage-marking special case remains future card-specific behavior.
 - Production card zones, costs, and CardDB import remain future work.
+
+---
+
+# Card Activation Cost Payment Scaffolding Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 12.65 seconds
+```
+
+An initial build surfaced a unity-build helper-name collision between existing private `MakeFailureResult` helpers in `WBTurnController.cpp` and `WBRuntimeTurnResolutionAdapter.cpp`. The runtime adapter helper was renamed to `MakeRuntimeResolutionFailureResult`; the final build succeeded.
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=570
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added fixture-owned activation cost payment commit metadata.
+- Added `WBCardActivationCostPayment::CanPayCost` and `PayCost`.
+- Payment validates source, ownership, source board/defeat state, nonnegative RR, and available RL.
+- `WBEffectRunner::ApplyCardActivationCommand` pays on a working copy and commits payment only after activation success.
+- Failed payment and failed effects leave original `RLUsed` unchanged.
+- Payment plus usage marking is atomic with successful activation.
+- Added safe `card_activation_cost_paid` trace fields.
+- Added 10 GodotCanon cost payment fixtures.
+- Added `Wandbound.Core.CardActivationCostPayment.*` automation coverage.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No overflow, wand destruction, CardDB import, production zones, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Remaining Risks/Unknowns
+
+- Godot response/negation timing remains future work.
+- Production CardDB import and card-zone legality remain future work.
+- Real payment ownership for production hand/equipped zones remains future work.
+- Overflow and equipped wand fallout remain future work.

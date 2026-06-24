@@ -44,6 +44,10 @@ Rules validation does not mutate usage.
 
 If effect resolution fails, usage is not marked. If the usage commit is invalid, activation fails and the original state is not mutated. If the usage key is already marked, activation fails with `once_per_turn_already_used`.
 
+## Follow-Up - Cost Payment Interaction
+
+Activation payment and usage marking now share the same working-copy transaction. A command with both `CostPaymentCommit` and `UsageCommit` pays RR first on the working copy, resolves effects, then marks usage after successful effects. If payment fails or effects fail, neither `RLUsed` nor usage keys are committed.
+
 ## Trace Policy
 
 Successful usage marking emits a safe trace:
@@ -73,7 +77,7 @@ Added `WBCardActivationUsageMarkingTests.cpp`, covering direct fixture applicati
 
 - production CardDB
 - real card zones
-- real costs and RL/RR payments
+- production costs and RR/RL payment ownership
 - response windows
 - negation
 - passives

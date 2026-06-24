@@ -1,6 +1,7 @@
 #include "WBRules.h"
 
 #include "WBCardActivationCommand.h"
+#include "WBCardActivationCostPayment.h"
 #include "WBEffectRequest.h"
 #include "WBStatusEffect.h"
 
@@ -582,6 +583,22 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 	if (Command.EffectRequest.Payloads.Num() == 0)
 	{
 		return FWBActionQueryResult::Deny(TEXT("empty_effect_payloads"));
+	}
+
+	if (Command.CostPaymentCommit.bPayCostOnSuccess)
+	{
+		FWBCardActivationCostPaymentRequest PaymentRequest;
+		PaymentRequest.PlayerId = Command.CostPaymentCommit.PlayerId;
+		PaymentRequest.SourceUnitId = Command.CostPaymentCommit.SourceUnitId;
+		PaymentRequest.RequiredRR = Command.CostPaymentCommit.RequiredRR;
+		PaymentRequest.CostKind = Command.CostPaymentCommit.CostKind;
+
+		const FWBCardActivationCostPaymentResult PaymentResult =
+			WBCardActivationCostPayment::CanPayCost(State, PaymentRequest);
+		if (!PaymentResult.bOk)
+		{
+			return FWBActionQueryResult::Deny(*PaymentResult.Reason);
+		}
 	}
 
 	if (Command.UsageCommit.bMarkUsageOnSuccess)
