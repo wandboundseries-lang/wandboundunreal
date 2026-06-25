@@ -103,4 +103,6 @@ Future rules/runtime code can generate legal actions, build a public board summa
 
 Activation legal action presentation remains separate. Board-source activation presentation snapshots are built by `WBCardActivationLegalActionPresentation` from activation legal action sets and public board summaries, without adding activation to `FWBAction`, `WBRuntimeLegalActionPresentation`, or `WBActionCodec`.
 
+Activation target-selection presentation also remains separate. `WBCardActivationTargetPresentation` builds read-only target-choice entries from externally supplied activation legal actions and public board summaries, classifying only the already-generated target refs as none, unit, tile, wall edge, or unknown. It does not generate targets, decide legality, mutate state, or add real UI picking.
+
 This remains C++-only and does not add input, UI widgets, camera behavior, animation, VFX, assets, Blueprints, UMG, `.uasset`, or `.umap` work.

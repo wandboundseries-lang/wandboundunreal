@@ -6,6 +6,8 @@ This pass adds fixture-only Board-source activation legal action presentation sn
 
 It proves future UI can display externally supplied activation legal actions without adding activation to `FWBAction`, `EWBActionType`, `WBActionCodec`, or `WBRules::GenerateLegalActions`.
 
+A later target-selection presentation pass adds `WBCardActivationTargetPresentation` for already-generated activation legal actions. That target snapshot is separate from this flat Board-source activation action presentation and still consumes only activation legal actions plus public board summary data.
+
 ## Snapshot Fields
 
 `FWBCardActivationLegalActionPresentationEntry` now exposes:
@@ -72,6 +74,14 @@ Added the test-only fixture operation:
 ```
 
 The operation parses externally supplied activation sources, generates candidates, generates activation legal actions, builds the presentation snapshot, validates expected presentation fields, and does not apply activation commands.
+
+Target-selection presentation fixtures use the separate operation:
+
+```json
+"operation": "build_card_activation_target_presentation_snapshot"
+```
+
+That operation validates target kind, target labels, and public source/target CardIds without adding real UI target picking.
 
 Out of scope remains:
 

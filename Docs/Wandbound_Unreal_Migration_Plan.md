@@ -1248,6 +1248,20 @@
 - Existing `WBActionCodec` output remains unchanged.
 - No production zones, CardDB import, UI target selection, response windows, effect negation, passives, wands, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Activation Target Selection Presentation Snapshot
+
+- Added fixture-only activation target-selection presentation scaffolding.
+- `WBCardActivationTargetPresentation` builds read-only entries from externally supplied activation legal actions and `FWBPublicBoardSummary`.
+- Target refs are classified as None, Unit, Tile, WallEdge, or Unknown.
+- Public activation labels fall back to `Activate`.
+- Public target labels use `Activate`, `Choose Unit`, `Choose Tile`, `Choose Wall`, or `Choose Target`.
+- Source public CardIds and unit-target public CardIds come only from public board summary units.
+- Missing public units leave CardIds empty and do not fail snapshot construction.
+- Duplicate activation action ids make target-presentation lookup fail.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No real target picking, target legality generation, activation `FWBAction`, production zones, CardDB import, UI, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

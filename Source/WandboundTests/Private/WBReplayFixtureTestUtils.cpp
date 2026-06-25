@@ -14,6 +14,7 @@
 #include "WBCardActivationExpansion.h"
 #include "WBCardActivationLegalActionGenerator.h"
 #include "WBCardActivationSourceGate.h"
+#include "WBCardActivationTargetPresentation.h"
 #include "WBCardDefinition.h"
 #include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
@@ -213,6 +214,120 @@ FString ActivationPresentationPublicTextFromSnapshot(
 	for (const FWBCardActivationLegalActionPresentationEntry& Entry : Snapshot.Entries)
 	{
 		Text += Entry.PublicLabel;
+		Text += TEXT("|");
+		Text += Entry.SourcePublicCardId;
+		Text += TEXT("|");
+		Text += Entry.TargetPublicCardId;
+		Text += TEXT("|");
+	}
+
+	return Text;
+}
+
+FString TargetPresentationKindToString(const EWBCardActivationTargetPresentationKind TargetKind)
+{
+	switch (TargetKind)
+	{
+	case EWBCardActivationTargetPresentationKind::None:
+		return TEXT("none");
+	case EWBCardActivationTargetPresentationKind::Unit:
+		return TEXT("unit");
+	case EWBCardActivationTargetPresentationKind::Tile:
+		return TEXT("tile");
+	case EWBCardActivationTargetPresentationKind::WallEdge:
+		return TEXT("wall_edge");
+	default:
+		return TEXT("unknown");
+	}
+}
+
+TArray<FString> ActivationTargetPresentationActionIdsFromSnapshot(
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot)
+{
+	TArray<FString> ActionIds;
+	ActionIds.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationTargetPresentationEntry& Entry : Snapshot.Entries)
+	{
+		ActionIds.Add(Entry.ActivationActionId);
+	}
+
+	return ActionIds;
+}
+
+TArray<FString> ActivationTargetPresentationActivationLabelsFromSnapshot(
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot)
+{
+	TArray<FString> Labels;
+	Labels.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationTargetPresentationEntry& Entry : Snapshot.Entries)
+	{
+		Labels.Add(Entry.PublicActivationLabel);
+	}
+
+	return Labels;
+}
+
+TArray<FString> ActivationTargetPresentationTargetLabelsFromSnapshot(
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot)
+{
+	TArray<FString> Labels;
+	Labels.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationTargetPresentationEntry& Entry : Snapshot.Entries)
+	{
+		Labels.Add(Entry.PublicTargetLabel);
+	}
+
+	return Labels;
+}
+
+TArray<FString> ActivationTargetPresentationKindsFromSnapshot(
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot)
+{
+	TArray<FString> Kinds;
+	Kinds.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationTargetPresentationEntry& Entry : Snapshot.Entries)
+	{
+		Kinds.Add(TargetPresentationKindToString(Entry.TargetKind));
+	}
+
+	return Kinds;
+}
+
+TArray<FString> ActivationTargetPresentationSourcePublicCardIdsFromSnapshot(
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot)
+{
+	TArray<FString> CardIds;
+	CardIds.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationTargetPresentationEntry& Entry : Snapshot.Entries)
+	{
+		CardIds.Add(Entry.SourcePublicCardId);
+	}
+
+	return CardIds;
+}
+
+TArray<FString> ActivationTargetPresentationTargetPublicCardIdsFromSnapshot(
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot)
+{
+	TArray<FString> CardIds;
+	CardIds.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationTargetPresentationEntry& Entry : Snapshot.Entries)
+	{
+		CardIds.Add(Entry.TargetPublicCardId);
+	}
+
+	return CardIds;
+}
+
+FString ActivationTargetPresentationPublicTextFromSnapshot(
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot)
+{
+	FString Text;
+	for (const FWBCardActivationTargetPresentationEntry& Entry : Snapshot.Entries)
+	{
+		Text += Entry.PublicActivationLabel;
+		Text += TEXT("|");
+		Text += Entry.PublicTargetLabel;
 		Text += TEXT("|");
 		Text += Entry.SourcePublicCardId;
 		Text += TEXT("|");
@@ -846,6 +961,143 @@ bool ValidateCardActivationPresentationFixtureExpectations(
 		FWBCardActivationLegalActionPresentationEntry Entry;
 		const bool bActualLookupFound =
 			WBCardActivationLegalActionPresentation::TryFindEntryByActivationActionId(
+				Snapshot,
+				LookupActivationActionId,
+				Entry);
+		if (bActualLookupFound != bExpectedLookupFound)
+		{
+			OutReason = TEXT("expected_lookup_found_mismatch");
+			return false;
+		}
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ValidateCardActivationTargetPresentationFixtureExpectations(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBCardActivationTargetPresentationSnapshot& Snapshot,
+	FString& OutReason)
+{
+	TSharedPtr<FJsonObject> ExpectedObject;
+	if (!TryGetExpectedObject(Fixture, ExpectedObject, OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalIntegerExpectation(
+		ExpectedObject,
+		TEXT("target_presentation_entry_count"),
+		Snapshot.Entries.Num(),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("activation_action_ids"),
+		TEXT("expected.activation_action_ids"),
+		ActivationTargetPresentationActionIdsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("public_activation_labels"),
+		TEXT("expected.public_activation_labels"),
+		ActivationTargetPresentationActivationLabelsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("public_target_labels"),
+		TEXT("expected.public_target_labels"),
+		ActivationTargetPresentationTargetLabelsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("target_kinds"),
+		TEXT("expected.target_kinds"),
+		ActivationTargetPresentationKindsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("source_public_card_ids"),
+		TEXT("expected.source_public_card_ids"),
+		ActivationTargetPresentationSourcePublicCardIdsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("target_public_card_ids"),
+		TEXT("expected.target_public_card_ids"),
+		ActivationTargetPresentationTargetPublicCardIdsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (ExpectedObject->HasField(TEXT("forbidden_substrings")))
+	{
+		TArray<FString> ForbiddenSubstrings;
+		if (!ReadOptionalStringArrayField(
+			ExpectedObject,
+			TEXT("forbidden_substrings"),
+			TEXT("expected.forbidden_substrings"),
+			ForbiddenSubstrings,
+			OutReason))
+		{
+			return false;
+		}
+
+		const FString PublicText = ActivationTargetPresentationPublicTextFromSnapshot(Snapshot);
+		for (const FString& Forbidden : ForbiddenSubstrings)
+		{
+			if (PublicText.Contains(Forbidden, ESearchCase::IgnoreCase))
+			{
+				OutReason = FString::Printf(TEXT("target_presentation_contains_forbidden_substring:%s"), *Forbidden);
+				return false;
+			}
+		}
+	}
+
+	if (ExpectedObject->HasField(TEXT("lookup_activation_action_id")))
+	{
+		FString LookupActivationActionId;
+		if (!ExpectedObject->TryGetStringField(TEXT("lookup_activation_action_id"), LookupActivationActionId))
+		{
+			OutReason = TEXT("malformed_expected_lookup_activation_action_id");
+			return false;
+		}
+
+		bool bExpectedLookupFound = false;
+		if (!ExpectedObject->TryGetBoolField(TEXT("lookup_found"), bExpectedLookupFound))
+		{
+			OutReason = TEXT("malformed_expected_lookup_found");
+			return false;
+		}
+
+		FWBCardActivationTargetPresentationEntry Entry;
+		const bool bActualLookupFound =
+			WBCardActivationTargetPresentation::TryFindEntryByActivationActionId(
 				Snapshot,
 				LookupActivationActionId,
 				Entry);
@@ -4347,6 +4599,75 @@ bool ApplyFixtureOperation(
 				GenerationResult.ActionSet,
 				PublicBoardSummary);
 		if (!ValidateCardActivationPresentationFixtureExpectations(Fixture, Snapshot, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("build_card_activation_target_presentation_snapshot"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::BuildCardActivationTargetPresentationSnapshot;
+		TArray<FWBCardActivationCandidateSource> Sources;
+		if (!ParseCardActivationCandidateSourcesFromFixture(Fixture, Sources, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationCandidateGenerationResult CandidateResult =
+			WBCardActivationCandidateGenerator::GenerateCandidates(State, Sources);
+		if (!CandidateResult.bOk)
+		{
+			OutResult.bOk = false;
+			OutResult.Reason = CandidateResult.Reason;
+			OutResult.TraceEvents.Reset();
+			OutReason.Reset();
+			return true;
+		}
+
+		if (!ValidateCardActivationCandidateFixtureExpectations(Fixture, CandidateResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationLegalActionGenerationResult GenerationResult =
+			WBCardActivationLegalActionGenerator::GenerateFromCandidates(CandidateResult.Candidates);
+		OutResult.bOk = GenerationResult.bOk;
+		OutResult.Reason = GenerationResult.Reason;
+		OutResult.TraceEvents.Reset();
+		if (!GenerationResult.bOk)
+		{
+			OutReason.Reset();
+			return true;
+		}
+
+		if (!ValidateCardActivationLegalActionFixtureExpectations(Fixture, GenerationResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		FWBPublicBoardSummary PublicBoardSummary;
+		if (!BuildActivationPresentationPublicBoardSummaryFromFixture(
+			Fixture,
+			State,
+			PublicBoardSummary,
+			OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationTargetPresentationSnapshot Snapshot =
+			WBCardActivationTargetPresentation::BuildSnapshot(
+				GenerationResult.ActionSet,
+				PublicBoardSummary);
+		if (!ValidateCardActivationTargetPresentationFixtureExpectations(Fixture, Snapshot, OutReason))
 		{
 			OutResult = MakeFixtureFailure(OutReason);
 			return false;

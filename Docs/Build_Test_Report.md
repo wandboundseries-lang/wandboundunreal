@@ -2,6 +2,115 @@
 
 Date of check: 2026-06-25 (America/New_York)
 
+## Card Activation Target Selection Presentation Pass
+
+### Scope
+
+This pass added fixture-only activation target-selection presentation scaffolding for externally supplied activation legal actions.
+
+Implemented:
+
+- `WBCardActivationTargetPresentation`
+- `EWBCardActivationTargetPresentationKind`
+- read-only target presentation entries/snapshots
+- target classification for none, unit, tile, wall edge, and unknown targets
+- public activation labels and target labels
+- public source/target CardId lookup from `FWBPublicBoardSummary` only
+- fixture operation `build_card_activation_target_presentation_snapshot`
+- 10 GodotCanon target-presentation fixtures
+
+Not implemented:
+
+- production zones
+- CardDB import
+- real target picking
+- target legality generation
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- response windows
+- effect negation
+- passives
+- wands
+- card-specific behavior
+- UI, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 1.76 seconds
+Target is up to date
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=620
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.CardActivationTargetPresentation.UnitTarget`
+- `Wandbound.Core.CardActivationTargetPresentation.MissingPublicTarget`
+- `Wandbound.Core.CardActivationTargetPresentation.NoneTileWallKinds`
+- `Wandbound.Core.CardActivationTargetPresentation.OrderingAndLookup`
+- `Wandbound.Core.CardActivationTargetPresentation.HiddenMetadataAndNoMutation`
+- `Wandbound.Core.CardActivationTargetPresentation.SourceGuardsAndSeparation`
+- `Wandbound.Core.CardActivationTargetPresentation.FixtureScenarios`
+
+### New Golden Scenarios Added
+
+- `card_activation_target_presentation_unit_target.json`
+- `card_activation_target_presentation_missing_public_target.json`
+- `card_activation_target_presentation_none_target.json`
+- `card_activation_target_presentation_tile_target.json`
+- `card_activation_target_presentation_wall_edge_target.json`
+- `card_activation_target_presentation_ordered.json`
+- `card_activation_target_presentation_clean_labels.json`
+- `card_activation_target_presentation_public_card_ids_only.json`
+- `card_activation_target_presentation_duplicate_lookup_fails.json`
+- `card_activation_target_presentation_hidden_metadata_excluded.json`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+An interim fixture run caught `card_activation_target_presentation_wall_edge_target.json` using `{ "a": ..., "b": ... }` for initial-state walls. The fixture now uses the existing canonical initial-state wall schema: `{ "between": [tile, tile] }`.
+
+### Notes
+
+- Target presentation consumes only `FWBCardActivationLegalActionSet` and `FWBPublicBoardSummary`.
+- Source public CardIds and unit-target public CardIds are copied only from public board unit summaries.
+- Hidden fixture metadata, source effect ids, usage keys, debug activation ids, and cost metadata are excluded from public target presentation fields.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- All 10 new `card_activation_target_presentation_*.json` fixtures parsed successfully with `ConvertFrom-Json`.
+
+### Risks / Unknowns
+
+- Production CardDB import and real card-zone legality remain future work.
+- Activation `FWBAction` / codec integration remains future work.
+- Real UI target picking, response windows, effect negation, passives, wands, and card-specific behavior remain future work.
+
 ## Card Activation Board Source Legal Action Coverage Pass
 
 ### Scope
