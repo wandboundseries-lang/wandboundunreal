@@ -2,6 +2,123 @@
 
 Date of check: 2026-06-24 (America/New_York)
 
+## Card Activation Source-Zone Ownership Gates Pass
+
+### Scope
+
+This pass added fixture-only activation source-zone ownership scaffolding for Hand, Equipped, and Discard references, based on a read-only Godot audit.
+
+Implemented:
+
+- `FWBCardActivationFixtureZoneEntry`
+- `FWBCardActivationFixtureZoneContext`
+- `FWBCardActivationSourceGateDefinition::bRequiresFixtureZoneOwnership`
+- `FWBCardActivationSourceGateContext::SourceCardId`
+- `FWBCardActivationSourceGateContext::FixtureZoneContext`
+- `WBCardActivationSourceGate::EvaluateFixtureZoneOwnership`
+- fixture parser support for `source_gate.requires_fixture_zone_ownership`
+- fixture parser support for `source_gate_context.source_card_id`
+- fixture parser support for `source_gate_context.fixture_zone_context.entries`
+- candidate-generation inheritance of source card id and source-level fixture zone context
+
+Not implemented:
+
+- production card zones
+- CardDB import
+- real zone mutation
+- card activation `FWBAction`
+- `WBActionCodec` activation ids
+- response windows
+- effect negation
+- passives
+- wands or equip mechanics
+- UI, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 73.85 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=592
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.CardActivationSourceZoneOwnership.Hand`
+- `Wandbound.Core.CardActivationSourceZoneOwnership.Equipped`
+- `Wandbound.Core.CardActivationSourceZoneOwnership.DiscardDeckFixture`
+- `Wandbound.Core.CardActivationSourceZoneOwnership.Composition`
+- `Wandbound.Core.CardActivationSourceZoneOwnership.InheritanceAndAmbiguity`
+- `Wandbound.Core.CardActivationSourceZoneOwnership.NoMutationAndHiddenMetadata`
+- `Wandbound.Core.CardActivationSourceZoneOwnership.LegalGenerationAndCodecUnchanged`
+- `Wandbound.Core.CardActivationSourceZoneOwnership.FixtureScenarios`
+
+### New Golden Scenarios Added
+
+- `card_activation_zone_hand_owned_success.json`
+- `card_activation_zone_hand_wrong_owner_excluded.json`
+- `card_activation_zone_hand_missing_card_excluded.json`
+- `card_activation_zone_equipped_owned_to_source_success.json`
+- `card_activation_zone_equipped_wrong_unit_excluded.json`
+- `card_activation_zone_equipped_removed_source_excluded.json`
+- `card_activation_zone_discard_owned_success.json`
+- `card_activation_zone_discard_wrong_owner_excluded.json`
+- `card_activation_zone_deck_not_supported_excluded.json`
+- `card_activation_zone_fixture_default_legacy_success.json`
+- `card_activation_zone_combines_with_cost_usage.json`
+- `card_activation_zone_hidden_metadata_excluded.json`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- The Godot audit found `hands`, `decks`, and `discards` in `game_state.gd`; board units remain separate, and equipped wands are represented on unit dictionaries.
+- `ActionSchema.make_activate_action` carries player, source unit, card id, activation index, requirements, and picks.
+- Hand, Equipped, and Discard fixture zones now validate card id, owner, and zone.
+- Equipped entries additionally validate the equipped-to source unit.
+- Deck entries are intentionally rejected with `source_zone_deck_not_supported`.
+- Fixture `source_card_id` may be inherited from the candidate card definition.
+- Fixture zone gates compose with timing, source unit state, external cost gates, and once-per-turn usage.
+- Fixture generation does not mutate real `Hand`, `Deck`, or `Discard` arrays.
+- Hidden metadata is excluded from trace/public-summary assertions; the candidate id may still contain fixture card id as external selection metadata.
+- Legal action generation and `WBActionCodec` remain unchanged.
+- All 12 new `card_activation_zone_*.json` files parsed successfully with `ConvertFrom-Json`.
+- `git diff --check` reported no whitespace errors, only LF-to-CRLF working-copy notices.
+- Pre-existing untracked `MaxHP` remains untouched.
+
+### Risks / Unknowns
+
+- Production zone ownership, CardDB import, and real activation actions remain deferred.
+- Board-source card identity parity is not modeled yet.
+- Deck activations are explicitly unsupported until a production rule owner exists.
+- Response windows, effect negation, passives, wands, and card-specific behavior remain future work.
+
 ## Card Activation Affordability Query Pass
 
 ### Scope

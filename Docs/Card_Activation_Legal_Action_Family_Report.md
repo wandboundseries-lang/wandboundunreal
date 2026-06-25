@@ -122,7 +122,7 @@ Confirmed by tests:
 - activation legal actions remain separate from `FWBAction`
 - `WBRules::GenerateLegalActions` output remains unchanged
 - `WBActionCodec` remains unchanged
-- activation source gates affect only the candidate set supplied to this family
+- activation source gates, including fixture source-zone ownership gates, affect only the candidate set supplied to this family
 - activation legal actions preserve `FWBCardActivationUsageCommit` from their source candidates
 - activation legal actions preserve `FWBCardActivationCostPaymentCommit` from their source candidates
 - activation legal action ids can be selected and replayed through test-only verifier fixtures

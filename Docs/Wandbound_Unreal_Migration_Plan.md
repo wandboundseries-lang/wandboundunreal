@@ -1195,6 +1195,19 @@
 - Existing `WBActionCodec` output remains unchanged.
 - No gameplay, runtime, UI, Blueprint, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Source-Zone Ownership Gates
+
+- Added fixture-only `FWBCardActivationFixtureZoneEntry` and `FWBCardActivationFixtureZoneContext`.
+- Source gates can now require fixture source-zone ownership for Hand, Equipped, and Discard activation candidates.
+- Equipped fixture ownership requires the card to be equipped to the selected source unit.
+- Deck activation is explicitly unsupported in this scaffold.
+- Candidate generation inherits `SourceCardId` from card definitions and inherits source-level fixture zone context into effect-specific source-gate contexts where missing.
+- Existing Fixture-zone behavior remains backward-compatible.
+- Candidate generation remains read-only and does not mutate production `Deck`, `Hand`, or `Discard` arrays.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No production zones, CardDB import, activation `FWBAction`, UI target selection, response windows, effect negation, passives, wands, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

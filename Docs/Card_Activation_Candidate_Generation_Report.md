@@ -137,3 +137,11 @@ The generator still does not pay costs, mutate `RLUsed`, trigger overflow, impor
 Candidate sources can now be prepared with `WBCardActivationAffordability::BuildCandidateSourceWithAffordability` before generation. The helper copies the source, queries read-only affordability for effects that require external affordability, and stores effect-specific source-gate contexts in `EffectIdToSourceGateContext`.
 
 Candidate generation consumes the effect-specific context when present and otherwise falls back to the source-level context. This supports multiple activated effects with different RR costs while preserving the generator's read-only, no-payment boundary.
+
+## Follow-Up - Fixture Source-Zone Ownership
+
+Candidate generation now filters through fixture-only source-zone ownership gates when an effect source gate requests them.
+
+The generator supplies `SourceCardId` from `FWBCardDefinition::CardId` when fixture context omits it. Effect-specific source-gate contexts inherit the source-level player id, source unit id, source card id, source zone, and fixture zone context where missing.
+
+This supports fixture Hand, Equipped, and Discard ownership tests without reading or mutating production `Deck`, `Hand`, or `Discard` arrays.

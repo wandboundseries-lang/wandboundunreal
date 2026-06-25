@@ -2729,6 +2729,33 @@ bool TryReadOptionalFNameField(
 	return true;
 }
 
+bool TryReadOptionalStringField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& FieldPath,
+	FString& OutValue,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonValue>* Value = Object.IsValid()
+		? Object->Values.Find(FieldName)
+		: nullptr;
+	if (Value == nullptr)
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Value->IsValid() || (*Value)->Type != EJson::String)
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), *FieldPath);
+		return false;
+	}
+
+	OutValue = (*Value)->AsString();
+	OutReason.Reset();
+	return true;
+}
+
 bool ParseOptionalCardActivationCostGateDefinitionField(
 	const TSharedPtr<FJsonObject>& Object,
 	const TCHAR* FieldName,
@@ -2823,6 +2850,102 @@ bool ParseOptionalCardActivationCostGateContextField(
 			OutReason);
 }
 
+bool ParseOptionalCardActivationFixtureZoneContextField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardActivationFixtureZoneContext& OutFixtureZoneContext,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* FixtureZoneContextObject = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetObjectField(FieldName, FixtureZoneContextObject)
+		|| FixtureZoneContextObject == nullptr
+		|| !FixtureZoneContextObject->IsValid())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* EntryValues = nullptr;
+	if (!(*FixtureZoneContextObject)->TryGetArrayField(TEXT("entries"), EntryValues) || EntryValues == nullptr)
+	{
+		OutReason = TEXT("malformed_source_gate_context.fixture_zone_context.entries");
+		return false;
+	}
+
+	OutFixtureZoneContext.Entries.Reset();
+	for (int32 EntryIndex = 0; EntryIndex < EntryValues->Num(); ++EntryIndex)
+	{
+		const TSharedPtr<FJsonObject> EntryObject = (*EntryValues)[EntryIndex].IsValid()
+			? (*EntryValues)[EntryIndex]->AsObject()
+			: nullptr;
+		if (!EntryObject.IsValid())
+		{
+			OutReason = FString::Printf(
+				TEXT("malformed_source_gate_context.fixture_zone_context.entries[%d]"),
+				EntryIndex);
+			return false;
+		}
+
+		FWBCardActivationFixtureZoneEntry Entry;
+		if (!TryReadOptionalStringField(
+				EntryObject,
+				TEXT("card_id"),
+				FString::Printf(TEXT("source_gate_context.fixture_zone_context.entries[%d].card_id"), EntryIndex),
+				Entry.CardId,
+				OutReason)
+			|| Entry.CardId.IsEmpty())
+		{
+			if (OutReason.IsEmpty())
+			{
+				OutReason = FString::Printf(
+					TEXT("malformed_source_gate_context.fixture_zone_context.entries[%d].card_id"),
+					EntryIndex);
+			}
+			return false;
+		}
+
+		if (!TryReadOptionalIntegerField(
+				EntryObject,
+				TEXT("owner_player_id"),
+				FString::Printf(TEXT("source_gate_context.fixture_zone_context.entries[%d].owner_player_id"), EntryIndex),
+				Entry.OwnerPlayerId,
+				OutReason))
+		{
+			return false;
+		}
+
+		Entry.Zone = ReadCardActivationSourceZoneOrDefault(EntryObject, TEXT("zone"), Entry.Zone);
+		if (Entry.Zone == EWBCardActivationSourceZone::Unknown)
+		{
+			OutReason = FString::Printf(
+				TEXT("malformed_source_gate_context.fixture_zone_context.entries[%d].zone"),
+				EntryIndex);
+			return false;
+		}
+
+		if (!TryReadOptionalIntegerField(
+				EntryObject,
+				TEXT("equipped_to_unit_id"),
+				FString::Printf(TEXT("source_gate_context.fixture_zone_context.entries[%d].equipped_to_unit_id"), EntryIndex),
+				Entry.EquippedToUnitId,
+				OutReason))
+		{
+			return false;
+		}
+
+		OutFixtureZoneContext.Entries.Add(Entry);
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ParseOptionalCardActivationSourceGateDefinitionField(
 	const TSharedPtr<FJsonObject>& Object,
 	const TCHAR* FieldName,
@@ -2852,6 +2975,10 @@ bool ParseOptionalCardActivationSourceGateDefinitionField(
 		*GateObject,
 		TEXT("timing"),
 		OutGate.Timing);
+	OutGate.bRequiresFixtureZoneOwnership = ReadBoolFieldOrDefault(
+		*GateObject,
+		TEXT("requires_fixture_zone_ownership"),
+		OutGate.bRequiresFixtureZoneOwnership);
 	OutGate.bRequiresSourceUnit = ReadBoolFieldOrDefault(
 		*GateObject,
 		TEXT("requires_source_unit"),
@@ -2918,6 +3045,23 @@ bool ParseOptionalCardActivationSourceGateContextField(
 		*ContextObject,
 		TEXT("source_zone"),
 		OutContext.SourceZone);
+	if (!TryReadOptionalStringField(
+		*ContextObject,
+		TEXT("source_card_id"),
+		TEXT("source_gate_context.source_card_id"),
+		OutContext.SourceCardId,
+		OutReason))
+	{
+		return false;
+	}
+	if (!ParseOptionalCardActivationFixtureZoneContextField(
+		*ContextObject,
+		TEXT("fixture_zone_context"),
+		OutContext.FixtureZoneContext,
+		OutReason))
+	{
+		return false;
+	}
 	OutContext.bCostsSatisfiedExternally = ReadBoolFieldOrDefault(
 		*ContextObject,
 		TEXT("costs_satisfied_externally"),

@@ -65,6 +65,14 @@ The detailed gate is read-only and filters candidate generation only. It does no
 
 Source gates remain the consumer boundary for affordability context. `WBCardActivationAffordability` can compute and project read-only RL/RR affordability into source-gate contexts, but source gates still only validate supplied context and never pay costs or mutate state.
 
+## Follow-Up - Fixture Source-Zone Ownership
+
+Source gates now support fixture-only zone ownership checks through `FWBCardActivationFixtureZoneEntry` and `FWBCardActivationFixtureZoneContext`.
+
+When `bRequiresFixtureZoneOwnership` is set, the gate requires exactly one fixture entry matching `SourceCardId`, player id, and required zone. Hand and Discard entries validate fixture ownership only. Equipped entries also require `EquippedToUnitId` to match the source unit id, while existing source-unit checks validate ownership, removal, and status.
+
+Deck activation is explicitly unsupported in this scaffold with `source_zone_deck_not_supported`. Legacy `Fixture` source behavior remains compatible without fixture zone metadata.
+
 ## Fixture Support
 
 Added parser support for:

@@ -40,10 +40,27 @@ struct WANDBOUNDCORE_API FWBCardActivationCostGateContext
 	FName CostKind;
 };
 
+struct WANDBOUNDCORE_API FWBCardActivationFixtureZoneEntry
+{
+	FString CardId;
+	int32 OwnerPlayerId = -1;
+	EWBCardActivationSourceZone Zone = EWBCardActivationSourceZone::Unknown;
+
+	// Fixture-only metadata for Equipped sources. This is not production zone state.
+	int32 EquippedToUnitId = -1;
+};
+
+struct WANDBOUNDCORE_API FWBCardActivationFixtureZoneContext
+{
+	TArray<FWBCardActivationFixtureZoneEntry> Entries;
+};
+
 struct WANDBOUNDCORE_API FWBCardActivationSourceGateDefinition
 {
 	EWBCardActivationSourceZone RequiredZone = EWBCardActivationSourceZone::Fixture;
 	EWBCardActivationTimingRequirement Timing = EWBCardActivationTimingRequirement::Any;
+
+	bool bRequiresFixtureZoneOwnership = false;
 
 	bool bRequiresSourceUnit = false;
 	bool bRequiresSourceUnitOwnership = true;
@@ -65,7 +82,9 @@ struct WANDBOUNDCORE_API FWBCardActivationSourceGateContext
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
 
+	FString SourceCardId;
 	EWBCardActivationSourceZone SourceZone = EWBCardActivationSourceZone::Fixture;
+	FWBCardActivationFixtureZoneContext FixtureZoneContext;
 	bool bCostsSatisfiedExternally = true;
 	FWBCardActivationCostGateContext CostContext;
 
@@ -86,6 +105,10 @@ class WANDBOUNDCORE_API WBCardActivationSourceGate
 public:
 	static FWBCardActivationSourceGateResult Evaluate(
 		const FWBGameStateData& State,
+		const FWBCardActivationSourceGateDefinition& Gate,
+		const FWBCardActivationSourceGateContext& Context);
+
+	static FWBCardActivationSourceGateResult EvaluateFixtureZoneOwnership(
 		const FWBCardActivationSourceGateDefinition& Gate,
 		const FWBCardActivationSourceGateContext& Context);
 

@@ -47,6 +47,25 @@ FWBCardActivationSourceGateContext BuildGateContext(
 		Context.SourceUnitId = Source.SourceUnitId;
 	}
 
+	if (Context.SourceCardId.IsEmpty())
+	{
+		Context.SourceCardId = !Source.SourceGateContext.SourceCardId.IsEmpty()
+			? Source.SourceGateContext.SourceCardId
+			: Source.CardDefinition.CardId;
+	}
+
+	if (Context.SourceZone == EWBCardActivationSourceZone::Fixture
+		&& Source.SourceGateContext.SourceZone != EWBCardActivationSourceZone::Fixture)
+	{
+		Context.SourceZone = Source.SourceGateContext.SourceZone;
+	}
+
+	if (Context.FixtureZoneContext.Entries.IsEmpty()
+		&& !Source.SourceGateContext.FixtureZoneContext.Entries.IsEmpty())
+	{
+		Context.FixtureZoneContext = Source.SourceGateContext.FixtureZoneContext;
+	}
+
 	if (Effect.SourceGate.bOncePerTurn
 		&& Context.ActivationUsageKey.IsEmpty()
 		&& Effect.SourceGate.OncePerTurnKey.IsEmpty())

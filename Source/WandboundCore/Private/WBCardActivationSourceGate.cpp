@@ -65,6 +65,50 @@ FWBCardActivationSourceGateResult EvaluateCostGate(
 
 	return MakeSourceGateSuccess();
 }
+
+FWBCardActivationSourceGateResult EvaluateSourceUnitState(
+	const FWBGameStateData& State,
+	const FWBCardActivationSourceGateDefinition& Gate,
+	const FWBCardActivationSourceGateContext& Context)
+{
+	if (Gate.bRequiresSourceUnit && Context.SourceUnitId == -1)
+	{
+		return MakeSourceGateFailure(TEXT("source_unit_required"));
+	}
+
+	if (Context.SourceUnitId == -1)
+	{
+		return MakeSourceGateSuccess();
+	}
+
+	const FWBUnitState* SourceUnit = State.GetUnitById(Context.SourceUnitId);
+	if (SourceUnit == nullptr)
+	{
+		return MakeSourceGateFailure(TEXT("source_unit_missing"));
+	}
+
+	if (!SourceUnit->IsUnitOnBoard())
+	{
+		return MakeSourceGateFailure(TEXT("source_unit_removed"));
+	}
+
+	if (Gate.bRequiresSourceUnitOwnership && SourceUnit->OwnerId != Context.PlayerId)
+	{
+		return MakeSourceGateFailure(TEXT("source_unit_owner_mismatch"));
+	}
+
+	if (Gate.bBlockedByStunned && SourceUnit->HasStatus(FName(TEXT("Stunned"))))
+	{
+		return MakeSourceGateFailure(TEXT("source_unit_stunned"));
+	}
+
+	if (Gate.bBlockedByFrozen && SourceUnit->HasStatus(FName(TEXT("Frozen"))))
+	{
+		return MakeSourceGateFailure(TEXT("source_unit_frozen"));
+	}
+
+	return MakeSourceGateSuccess();
+}
 }
 
 FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
@@ -82,8 +126,11 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 		return MakeSourceGateFailure(TEXT("game_over"));
 	}
 
-	if (IsUnsupportedSourceZone(Context.SourceZone)
-		|| Gate.RequiredZone == EWBCardActivationSourceZone::Unknown)
+	const bool bUnsupportedSourceZone = IsUnsupportedSourceZone(Context.SourceZone);
+	if (bUnsupportedSourceZone
+		&& !(Gate.bRequiresFixtureZoneOwnership
+			&& (Context.SourceZone == EWBCardActivationSourceZone::Discard
+				|| Context.SourceZone == EWBCardActivationSourceZone::Deck)))
 	{
 		return MakeSourceGateFailure(TEXT("source_zone_mismatch"));
 	}
@@ -92,6 +139,16 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 		&& Gate.RequiredZone != Context.SourceZone)
 	{
 		return MakeSourceGateFailure(TEXT("source_zone_mismatch"));
+	}
+
+	if (Gate.bRequiresFixtureZoneOwnership)
+	{
+		const FWBCardActivationSourceGateResult FixtureZoneResult =
+			EvaluateFixtureZoneOwnership(Gate, Context);
+		if (!FixtureZoneResult.bOk)
+		{
+			return FixtureZoneResult;
+		}
 	}
 
 	if (Gate.Timing == EWBCardActivationTimingRequirement::ResponseWindow)
@@ -112,39 +169,11 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 		return MakeSourceGateFailure(TEXT("timing_not_normal_turn_priority"));
 	}
 
-	if (Gate.bRequiresSourceUnit && Context.SourceUnitId == -1)
+	const FWBCardActivationSourceGateResult SourceUnitResult =
+		EvaluateSourceUnitState(State, Gate, Context);
+	if (!SourceUnitResult.bOk)
 	{
-		return MakeSourceGateFailure(TEXT("source_unit_required"));
-	}
-
-	const FWBUnitState* SourceUnit = nullptr;
-	if (Context.SourceUnitId != -1)
-	{
-		SourceUnit = State.GetUnitById(Context.SourceUnitId);
-		if (SourceUnit == nullptr)
-		{
-			return MakeSourceGateFailure(TEXT("source_unit_missing"));
-		}
-
-		if (!SourceUnit->IsUnitOnBoard())
-		{
-			return MakeSourceGateFailure(TEXT("source_unit_removed"));
-		}
-
-		if (Gate.bRequiresSourceUnitOwnership && SourceUnit->OwnerId != Context.PlayerId)
-		{
-			return MakeSourceGateFailure(TEXT("source_unit_owner_mismatch"));
-		}
-
-		if (Gate.bBlockedByStunned && SourceUnit->HasStatus(FName(TEXT("Stunned"))))
-		{
-			return MakeSourceGateFailure(TEXT("source_unit_stunned"));
-		}
-
-		if (Gate.bBlockedByFrozen && SourceUnit->HasStatus(FName(TEXT("Frozen"))))
-		{
-			return MakeSourceGateFailure(TEXT("source_unit_frozen"));
-		}
+		return SourceUnitResult;
 	}
 
 	if (Gate.bRequiresCostsSatisfiedExternally && !Context.bCostsSatisfiedExternally)
@@ -171,6 +200,74 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 		if (State.HasActivationUsageKeyThisTurn(Context.PlayerId, UsageKey))
 		{
 			return MakeSourceGateFailure(TEXT("once_per_turn_already_used"));
+		}
+	}
+
+	return MakeSourceGateSuccess();
+}
+
+FWBCardActivationSourceGateResult WBCardActivationSourceGate::EvaluateFixtureZoneOwnership(
+	const FWBCardActivationSourceGateDefinition& Gate,
+	const FWBCardActivationSourceGateContext& Context)
+{
+	if (!Gate.bRequiresFixtureZoneOwnership)
+	{
+		return MakeSourceGateSuccess();
+	}
+
+	if (Context.SourceCardId.IsEmpty())
+	{
+		return MakeSourceGateFailure(TEXT("source_card_id_missing"));
+	}
+
+	if (Gate.RequiredZone == EWBCardActivationSourceZone::Unknown)
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_unknown"));
+	}
+
+	if (Gate.RequiredZone == EWBCardActivationSourceZone::Fixture)
+	{
+		return MakeSourceGateSuccess();
+	}
+
+	int32 MatchingEntryCount = 0;
+	FWBCardActivationFixtureZoneEntry MatchingEntry;
+	for (const FWBCardActivationFixtureZoneEntry& Entry : Context.FixtureZoneContext.Entries)
+	{
+		if (Entry.CardId == Context.SourceCardId
+			&& Entry.OwnerPlayerId == Context.PlayerId
+			&& Entry.Zone == Gate.RequiredZone)
+		{
+			++MatchingEntryCount;
+			MatchingEntry = Entry;
+		}
+	}
+
+	if (MatchingEntryCount == 0)
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_card_not_found"));
+	}
+
+	if (MatchingEntryCount > 1)
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_card_ambiguous"));
+	}
+
+	if (Gate.RequiredZone == EWBCardActivationSourceZone::Deck)
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_deck_not_supported"));
+	}
+
+	if (Gate.RequiredZone == EWBCardActivationSourceZone::Equipped)
+	{
+		if (Context.SourceUnitId == -1)
+		{
+			return MakeSourceGateFailure(TEXT("equipped_source_unit_required"));
+		}
+
+		if (MatchingEntry.EquippedToUnitId != Context.SourceUnitId)
+		{
+			return MakeSourceGateFailure(TEXT("equipped_source_unit_mismatch"));
 		}
 	}
 

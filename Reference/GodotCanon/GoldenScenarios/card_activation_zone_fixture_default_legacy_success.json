@@ -1,0 +1,48 @@
+{
+  "id": "card_activation_zone_fixture_default_legacy_success",
+  "schema_version": 1,
+  "godot_reference": [ "Reference/GodotCanon/GoldenScenarios/card_activation_candidates_damage_effect.json" ],
+  "intent": "Legacy Fixture-zone activation candidates still generate without fixture zone ownership metadata.",
+  "operation": "generate_card_activation_candidates",
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": -1,
+      "card_definition": {
+        "card_id": "fixture_legacy_zone_card",
+        "public_name": "Fixture Legacy Zone Card",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "heal_1",
+            "public_label": "Heal 1 HP",
+            "target_requirement": "unit",
+            "source_gate": { "required_zone": "fixture" },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 1, "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [ { "target_unit_id": 2 } ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 11,
+    "phase": "normal_turn",
+    "players": [ { "player_id": 0, "remaining_mp": 2 }, { "player_id": 1, "remaining_mp": 0 } ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_source", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_target", "x": 5, "y": 4, "hp": 4, "max_hp": 5 }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 1,
+    "candidate_ids": [ "activate:p0:u-1:cfixture_legacy_zone_card:eheal_1:t2:x-1:y-1:wa-1,-1:wb-1,-1" ],
+    "public_labels": [ "Heal 1 HP" ],
+    "no_state_mutation": true
+  }
+}
