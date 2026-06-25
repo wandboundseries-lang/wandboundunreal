@@ -29,7 +29,7 @@ Added:
 - Hand: requires a matching fixture entry for source card, player, and Hand.
 - Equipped: requires a matching fixture entry and matching source unit id.
 - Discard: requires a matching fixture entry for source card, player, and Discard.
-- Board: supported as fixture metadata, but real board/card relationships remain future work.
+- Board: supported through visible source unit `CardId` parity. Board does not require `FixtureZoneContext` entries.
 - Deck: explicitly unsupported for activation in this scaffold and fails with `source_zone_deck_not_supported` when ownership metadata otherwise matches.
 
 ## Gate Behavior
@@ -62,6 +62,12 @@ Fixture zone ownership composes with:
 - detailed cost gate affordability
 - once-per-turn activation usage
 - activation legal action family generation after candidate filtering
+
+## Follow-Up - Board Source Parity
+
+Board-source ownership now uses the public board unit record rather than fixture zone entries. For `RequiredZone = Board` with fixture ownership enabled, the gate requires a valid source unit and matches `FWBUnitState::CardId` against the inherited or supplied `SourceCardId`.
+
+This preserves the current hidden-information boundary: visible board unit `CardId` is public, while Hand, Equipped, and Discard fixture metadata remains private scaffold data.
 
 ## Hidden Information
 

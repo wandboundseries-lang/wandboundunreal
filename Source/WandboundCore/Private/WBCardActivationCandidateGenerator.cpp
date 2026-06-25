@@ -28,6 +28,26 @@ bool ShouldApplyLegacyDynamicSourceExclusion(
 		&& !Effect.SourceGate.bHasExplicitSourceGate;
 }
 
+bool ShouldDeferSourceUnitValidationToSourceGates(const FWBCardActivationCandidateSource& Source)
+{
+	if (Source.CardDefinition.ActivatedEffects.IsEmpty())
+	{
+		return false;
+	}
+
+	for (const FWBCardEffectDefinition& Effect : Source.CardDefinition.ActivatedEffects)
+	{
+		if (!Effect.SourceGate.bHasExplicitSourceGate
+			|| Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Board
+			|| !Effect.SourceGate.bRequiresFixtureZoneOwnership)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 FWBCardActivationSourceGateContext BuildGateContext(
 	const FWBCardActivationCandidateSource& Source,
 	const FWBCardEffectDefinition& Effect)
@@ -180,7 +200,7 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 			return MakeGenerationFailure(TEXT("missing_card_id"));
 		}
 
-		if (Source.SourceUnitId != -1)
+		if (Source.SourceUnitId != -1 && !ShouldDeferSourceUnitValidationToSourceGates(Source))
 		{
 			const FWBUnitState* SourceUnit = State.GetUnitById(Source.SourceUnitId);
 			if (SourceUnit == nullptr)

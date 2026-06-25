@@ -112,6 +112,11 @@ public:
 		const FWBCardActivationSourceGateDefinition& Gate,
 		const FWBCardActivationSourceGateContext& Context);
 
+	static FWBCardActivationSourceGateResult EvaluateBoardSourceParity(
+		const FWBGameStateData& State,
+		const FWBCardActivationSourceGateDefinition& Gate,
+		const FWBCardActivationSourceGateContext& Context);
+
 	static FString BuildDefaultUsageKey(
 		int32 PlayerId,
 		int32 SourceUnitId,

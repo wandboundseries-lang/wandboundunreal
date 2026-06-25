@@ -1208,6 +1208,19 @@
 - Existing `WBActionCodec` output remains unchanged.
 - No production zones, CardDB import, activation `FWBAction`, UI target selection, response windows, effect negation, passives, wands, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Board Source Parity
+
+- Added fixture-only Board-source activation parity.
+- Board-source gates now require the source unit's visible `CardId` to match the supplied or inherited `SourceCardId`.
+- `SourceCardId` can inherit from `FWBCardDefinition::CardId`.
+- Effect-specific source-gate contexts inherit Board source card id, unit, player, source zone, and fixture context as needed.
+- Board source parity uses the visible board unit as source of truth and does not require `FixtureZoneContext`.
+- Hand, Equipped, Discard, Deck unsupported, and Fixture legacy source-zone behavior remain unchanged.
+- Candidate generation filters explicit Board fixture-ownership sources through the source gate.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No production zones, CardDB import, activation `FWBAction`, UI target selection, response windows, effect negation, passives, wands, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

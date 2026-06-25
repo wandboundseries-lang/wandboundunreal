@@ -2,6 +2,118 @@
 
 Date of check: 2026-06-24 (America/New_York)
 
+## Card Activation Board Source Parity Pass
+
+### Scope
+
+This pass added fixture-only Board-source activation unit/card-id parity.
+
+Implemented:
+
+- `WBCardActivationSourceGate::EvaluateBoardSourceParity`
+- Board-source parity integration in `WBCardActivationSourceGate::Evaluate`
+- Board-source candidate filtering through visible source unit `CardId`
+- source-card-id inheritance coverage for source-level and effect-specific contexts
+- Board policy that does not require `FixtureZoneContext`
+- GodotCanon Board-source parity fixtures
+
+Not implemented:
+
+- production card zones
+- CardDB import
+- real zone mutation
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- equip mechanics
+- wands
+- response windows
+- effect negation
+- passives
+- UI, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 24.92 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=601
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.CardActivationBoardSourceParity.GateReasons`
+- `Wandbound.Core.CardActivationBoardSourceParity.CandidateGeneration`
+- `Wandbound.Core.CardActivationBoardSourceParity.StatusPolicy`
+- `Wandbound.Core.CardActivationBoardSourceParity.EffectContextInheritance`
+- `Wandbound.Core.CardActivationBoardSourceParity.NoFixtureZoneContextRequired`
+- `Wandbound.Core.CardActivationBoardSourceParity.ExistingZonesUnchanged`
+- `Wandbound.Core.CardActivationBoardSourceParity.CostAndUsageComposition`
+- `Wandbound.Core.CardActivationBoardSourceParity.NoMutationHiddenAndSeparation`
+- `Wandbound.Core.CardActivationBoardSourceParity.FixtureScenarios`
+
+### New Golden Scenarios Added
+
+- `card_activation_board_source_owned_card_match_success.json`
+- `card_activation_board_source_card_id_inherited_success.json`
+- `card_activation_board_source_card_id_mismatch_excluded.json`
+- `card_activation_board_source_missing_unit_excluded.json`
+- `card_activation_board_source_removed_unit_excluded.json`
+- `card_activation_board_source_not_on_board_excluded.json`
+- `card_activation_board_source_wrong_owner_excluded.json`
+- `card_activation_board_source_stunned_excluded.json`
+- `card_activation_board_source_effect_specific_context_inherits_card_id.json`
+- `card_activation_board_source_no_fixture_zone_context_required.json`
+- `card_activation_board_source_composes_with_cost_usage.json`
+- `card_activation_board_source_hidden_metadata_excluded.json`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- Godot board source activations use the unit dictionary `card_id`; equipped activations use `equipped_wands`.
+- Unreal Board source parity uses visible `FWBUnitState::CardId`.
+- Board source parity does not require `FixtureZoneContext`.
+- Hand, Equipped, Discard, Deck unsupported, and Fixture legacy source-zone behavior remain unchanged.
+- Candidate generation now lets explicit Board fixture-ownership source gates filter missing/wrong-owner source units.
+- Fixture generation does not mutate real `Hand`, `Deck`, or `Discard` arrays.
+- Hidden fixture metadata is excluded from trace/public-summary assertions.
+- Visible board unit `CardId` remains public by current public board summary policy.
+- Legal action generation and `WBActionCodec` remain unchanged.
+- All 12 new `card_activation_board_source_*.json` files parsed successfully with `ConvertFrom-Json`.
+- Pre-existing untracked `MaxHP` remains untouched.
+
+### Risks / Unknowns
+
+- Production CardDB import and real card-zone ownership remain deferred.
+- Real activation `FWBAction` and `WBActionCodec` activation ids remain deferred.
+- Board-source parity does not model equip/wand behavior, response windows, effect negation, passives, or card-specific behavior.
+
 ## Card Activation Source-Zone Ownership Gates Pass
 
 ### Scope

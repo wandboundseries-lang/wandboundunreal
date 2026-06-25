@@ -145,3 +145,11 @@ Candidate generation now filters through fixture-only source-zone ownership gate
 The generator supplies `SourceCardId` from `FWBCardDefinition::CardId` when fixture context omits it. Effect-specific source-gate contexts inherit the source-level player id, source unit id, source card id, source zone, and fixture zone context where missing.
 
 This supports fixture Hand, Equipped, and Discard ownership tests without reading or mutating production `Deck`, `Hand`, or `Discard` arrays.
+
+## Follow-Up - Board Source Parity
+
+Candidate generation now filters explicit Board-source activation candidates by visible unit `CardId` parity. Board sources use `FWBUnitState::CardId` rather than `FixtureZoneContext` entries.
+
+`SourceCardId` inheritance applies to Board sources as well: effect-specific context, source-level context, then `FWBCardDefinition::CardId`. Effect-specific overrides can intentionally fail parity when they do not match the visible source unit card id.
+
+For sources whose effects are all explicit Board fixture-ownership gates, missing or wrong-owner source units are handled by source gates as candidate filtering. Generic non-Board malformed-source behavior remains unchanged.

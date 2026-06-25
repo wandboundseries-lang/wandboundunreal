@@ -73,6 +73,12 @@ When `bRequiresFixtureZoneOwnership` is set, the gate requires exactly one fixtu
 
 Deck activation is explicitly unsupported in this scaffold with `source_zone_deck_not_supported`. Legacy `Fixture` source behavior remains compatible without fixture zone metadata.
 
+## Follow-Up - Board Source Parity
+
+Source gates now support Board-source unit/card-id parity. When `RequiredZone = Board` and fixture ownership is enabled, `WBCardActivationSourceGate::EvaluateBoardSourceParity` validates the source unit, ownership policy, on-board state, and visible unit `CardId` against the source activation card id.
+
+Board-source parity uses `FWBUnitState::CardId` as the source of truth and does not require `FixtureZoneContext` entries. Hand, Equipped, Discard, Deck unsupported, and legacy Fixture behavior remain unchanged.
+
 ## Fixture Support
 
 Added parser support for:

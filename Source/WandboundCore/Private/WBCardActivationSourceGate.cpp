@@ -143,11 +143,13 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 
 	if (Gate.bRequiresFixtureZoneOwnership)
 	{
-		const FWBCardActivationSourceGateResult FixtureZoneResult =
-			EvaluateFixtureZoneOwnership(Gate, Context);
-		if (!FixtureZoneResult.bOk)
+		const FWBCardActivationSourceGateResult SourceZoneResult =
+			Gate.RequiredZone == EWBCardActivationSourceZone::Board
+				? EvaluateBoardSourceParity(State, Gate, Context)
+				: EvaluateFixtureZoneOwnership(Gate, Context);
+		if (!SourceZoneResult.bOk)
 		{
-			return FixtureZoneResult;
+			return SourceZoneResult;
 		}
 	}
 
@@ -269,6 +271,61 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::EvaluateFixtureZon
 		{
 			return MakeSourceGateFailure(TEXT("equipped_source_unit_mismatch"));
 		}
+	}
+
+	return MakeSourceGateSuccess();
+}
+
+FWBCardActivationSourceGateResult WBCardActivationSourceGate::EvaluateBoardSourceParity(
+	const FWBGameStateData& State,
+	const FWBCardActivationSourceGateDefinition& Gate,
+	const FWBCardActivationSourceGateContext& Context)
+{
+	if (Gate.RequiredZone != EWBCardActivationSourceZone::Board
+		|| !Gate.bRequiresFixtureZoneOwnership)
+	{
+		return MakeSourceGateSuccess();
+	}
+
+	if (Context.SourceUnitId == -1)
+	{
+		return MakeSourceGateFailure(TEXT("board_source_unit_required"));
+	}
+
+	if (Context.SourceCardId.IsEmpty())
+	{
+		return MakeSourceGateFailure(TEXT("board_source_card_id_missing"));
+	}
+
+	const FWBUnitState* SourceUnit = State.GetUnitById(Context.SourceUnitId);
+	if (SourceUnit == nullptr)
+	{
+		return MakeSourceGateFailure(TEXT("board_source_unit_missing"));
+	}
+
+	if (SourceUnit->bDefeated || SourceUnit->bRemovedFromBoard)
+	{
+		return MakeSourceGateFailure(TEXT("board_source_unit_removed"));
+	}
+
+	if (!SourceUnit->IsUnitOnBoard())
+	{
+		return MakeSourceGateFailure(TEXT("board_source_unit_not_on_board"));
+	}
+
+	if (Gate.bRequiresSourceUnitOwnership && SourceUnit->OwnerId != Context.PlayerId)
+	{
+		return MakeSourceGateFailure(TEXT("board_source_owner_mismatch"));
+	}
+
+	if (SourceUnit->CardId.IsEmpty())
+	{
+		return MakeSourceGateFailure(TEXT("board_source_unit_card_id_missing"));
+	}
+
+	if (SourceUnit->CardId != Context.SourceCardId)
+	{
+		return MakeSourceGateFailure(TEXT("board_source_card_id_mismatch"));
 	}
 
 	return MakeSourceGateSuccess();
