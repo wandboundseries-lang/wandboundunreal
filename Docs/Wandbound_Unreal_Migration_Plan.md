@@ -1180,6 +1180,21 @@
 - Confirmed payment remains outside core `FWBAction` and `WBActionCodec`.
 - No gameplay, runtime, UI, Blueprint, `.uasset`, or `.umap` work was added.
 
+## Milestone - Activation Legal Action Replay Verifier
+
+- Added test-only `FWBCardActivationLegalActionReplayVerifier` helpers under `WandboundTests`.
+- Selected activation action ids can be resolved from externally generated activation legal action sets.
+- Missing selected activation ids fail with `activation_action_id_not_found` before mutation.
+- Duplicate selected activation ids fail with `activation_action_id_ambiguous` before mutation.
+- Added fixture operation `apply_card_activation_legal_action_by_id`.
+- Selected activation action ids now cover cost payment trace parity and final `RLUsed` / Available RL parity.
+- Selected activation action ids cover payment plus usage trace order.
+- Hidden metadata exclusion is covered through selected-id replay traces.
+- Activation remains separate from `FWBAction`.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No gameplay, runtime, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

@@ -9,6 +9,7 @@
 #include "WBArmorEffect.h"
 #include "WBCardActivationCandidateGenerator.h"
 #include "WBCardActivationCommand.h"
+#include "WBCardActivationLegalActionReplayVerifier.h"
 #include "WBCardActivationCostPaymentVerifier.h"
 #include "WBCardActivationExpansion.h"
 #include "WBCardActivationLegalActionGenerator.h"
@@ -496,6 +497,97 @@ bool ValidateCardActivationLegalActionFixtureExpectations(
 		{
 			return false;
 		}
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool TryReadStringFieldFromObject(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FString& OutValue,
+	FString& OutReason)
+{
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		return false;
+	}
+
+	if (!Object->TryGetStringField(FieldName, OutValue) || OutValue.IsEmpty())
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), FieldName);
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ParseSelectedActivationActionId(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const TSharedPtr<FJsonObject>& OperationObject,
+	FString& OutSelectedActivationActionId,
+	FString& OutReason)
+{
+	if (TryReadStringFieldFromObject(
+		OperationObject,
+		TEXT("selected_activation_action_id"),
+		OutSelectedActivationActionId,
+		OutReason))
+	{
+		return true;
+	}
+
+	if (!OutReason.IsEmpty())
+	{
+		return false;
+	}
+
+	if (TryReadStringFieldFromObject(
+		Fixture,
+		TEXT("selected_activation_action_id"),
+		OutSelectedActivationActionId,
+		OutReason))
+	{
+		return true;
+	}
+
+	if (!OutReason.IsEmpty())
+	{
+		return false;
+	}
+
+	OutReason = TEXT("missing_selected_activation_action_id");
+	return false;
+}
+
+bool ValidateSelectedActivationActionIdExpectation(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FString& SelectedActivationActionId,
+	FString& OutReason)
+{
+	TSharedPtr<FJsonObject> ExpectedObject;
+	if (!TryGetOptionalExpectedObject(Fixture, ExpectedObject)
+		|| !ExpectedObject.IsValid()
+		|| !ExpectedObject->HasField(TEXT("selected_activation_action_id")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	FString ExpectedSelectedActivationActionId;
+	if (!ExpectedObject->TryGetStringField(TEXT("selected_activation_action_id"), ExpectedSelectedActivationActionId)
+		|| ExpectedSelectedActivationActionId.IsEmpty())
+	{
+		OutReason = TEXT("malformed_expected_selected_activation_action_id");
+		return false;
+	}
+
+	if (ExpectedSelectedActivationActionId != SelectedActivationActionId)
+	{
+		OutReason = TEXT("expected_selected_activation_action_id_mismatch");
+		return false;
 	}
 
 	OutReason.Reset();
@@ -3638,6 +3730,71 @@ bool ApplyFixtureOperation(
 			OutResult = MakeFixtureFailure(OutReason);
 			return false;
 		}
+
+		if (!ExpectActivationCostPaymentVerifierExpectations(Fixture, State, OutResult.TraceEvents, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("apply_card_activation_legal_action_by_id"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::ApplyCardActivationLegalActionById;
+		TArray<FWBCardActivationCandidateSource> Sources;
+		if (!ParseCardActivationCandidateSourcesFromFixture(Fixture, Sources, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		FString SelectedActivationActionId;
+		if (!ParseSelectedActivationActionId(Fixture, OperationObject, SelectedActivationActionId, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationCandidateGenerationResult CandidateResult =
+			WBCardActivationCandidateGenerator::GenerateCandidates(State, Sources);
+		if (!CandidateResult.bOk)
+		{
+			OutResult.bOk = false;
+			OutResult.Reason = CandidateResult.Reason;
+			OutResult.TraceEvents.Reset();
+			OutReason.Reset();
+			return true;
+		}
+
+		const FWBCardActivationLegalActionGenerationResult GenerationResult =
+			WBCardActivationLegalActionGenerator::GenerateFromCandidates(CandidateResult.Candidates);
+		if (!GenerationResult.bOk)
+		{
+			OutResult.bOk = false;
+			OutResult.Reason = GenerationResult.Reason;
+			OutResult.TraceEvents.Reset();
+			OutReason.Reset();
+			return true;
+		}
+
+		if (!ValidateCardActivationLegalActionFixtureExpectations(Fixture, GenerationResult, OutReason)
+			|| !ValidateSelectedActivationActionIdExpectation(Fixture, SelectedActivationActionId, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationLegalActionReplayResult ReplayResult =
+			FWBCardActivationLegalActionReplayVerifier::ApplySelectedActivationActionId(
+				State,
+				GenerationResult.ActionSet,
+				SelectedActivationActionId);
+		OutResult.bOk = ReplayResult.ActivationResult.bOk;
+		OutResult.Reason = ReplayResult.ActivationResult.Reason;
+		OutResult.TraceEvents = ReplayResult.ActivationResult.TraceEvents;
 
 		if (!ExpectActivationCostPaymentVerifierExpectations(Fixture, State, OutResult.TraceEvents, OutReason))
 		{

@@ -69,6 +69,7 @@ Added replay verifier fixtures:
 - Usage order: successful payment traces precede effect traces, and usage marking follows effect success.
 - Hidden metadata: trace JSON excludes hidden source card/effect/debug/usage-key strings.
 - Legal generation: activation legal actions preserve payment commits without paying costs.
+- Selected activation action ids can now drive replay verification through the activation legal action family.
 - Codec boundary: payment remains outside `FWBAction` and `WBActionCodec`; core legal action ids still do not include activation ids.
 
 ## Out Of Scope

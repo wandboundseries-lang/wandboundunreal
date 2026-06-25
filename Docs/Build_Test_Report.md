@@ -3013,3 +3013,55 @@ notRun=0
 - Production CardDB import and card-zone legality remain future work.
 - Response windows, effect negation, passives, wands, and card-specific costs remain future work.
 - Overflow and equipped wand fallout remain future work.
+
+---
+
+# Card Activation Legal Action Replay Verifier Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 31.52 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result:
+
+```text
+succeeded=584
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added test-only `FWBCardActivationLegalActionReplayVerifier`.
+- Added fixture operation `apply_card_activation_legal_action_by_id`.
+- Added 8 GodotCanon selected activation action id replay fixtures.
+- Added 9 `Wandbound.Core.CardActivationLegalActionReplayVerifier.*` automation tests.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No gameplay, runtime, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
+## Remaining Risks/Unknowns
+
+- Production CardDB import and card-zone legality remain future work.
+- Response windows, effect negation, passives, wands, and card-specific costs remain future work.
+- Overflow and equipped wand fallout remain future work.

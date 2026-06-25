@@ -94,6 +94,14 @@ The operation:
 - does not mutate state
 - does not add entries to `FWBAction` legal actions
 
+A later verifier-only fixture operation can select activation legal action ids from this family and replay the wrapped activation command through the existing EffectRunner path:
+
+```json
+"operation": "apply_card_activation_legal_action_by_id"
+```
+
+This replay path is test-only and keeps activation ids outside `FWBAction` and `WBActionCodec`.
+
 ## Golden Scenarios
 
 Added:
@@ -117,6 +125,7 @@ Confirmed by tests:
 - activation source gates affect only the candidate set supplied to this family
 - activation legal actions preserve `FWBCardActivationUsageCommit` from their source candidates
 - activation legal actions preserve `FWBCardActivationCostPaymentCommit` from their source candidates
+- activation legal action ids can be selected and replayed through test-only verifier fixtures
 - applying activation remains explicit through `WBEffectRunner::ApplyCardActivationCommand`
 - generation emits no traces and mutates no state
 - hidden deck/hand/discard and debug activation metadata do not leak into trace serialization
