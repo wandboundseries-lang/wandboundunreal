@@ -1276,6 +1276,21 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production zones, CardDB import, activation `FWBAction`, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Selection Resolver
+
+- Added `WBRuntimeActivationSelectionResolver`.
+- Selected activation action ids can resolve from stored runtime activation presentation state.
+- Successful resolution returns the matching internal `FWBCardActivationLegalAction`.
+- Successful resolution also returns public activation and target presentation entries when available.
+- Missing ids fail with `activation_action_id_not_found`.
+- Duplicate ids fail with `activation_action_id_ambiguous`.
+- Model, coordinator, and owner convenience methods delegate to the resolver.
+- The resolver does not execute activation commands.
+- Activation remains separate from normal `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production zones, CardDB import, activation `FWBAction`, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

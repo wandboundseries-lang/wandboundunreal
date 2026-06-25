@@ -23,6 +23,8 @@ It stores:
 
 Lookup helpers delegate to the existing core presentation helpers and fail when action ids are missing or duplicated.
 
+`WBRuntimeActivationSelectionResolver` can now resolve selected activation action ids from this stored state and return the matching internal activation legal action plus public activation and target presentation entries.
+
 ## Target Presentation Snapshot Storage
 
 The runtime model stores the activation target presentation snapshot produced by `WBCardActivationTargetPresentation`.

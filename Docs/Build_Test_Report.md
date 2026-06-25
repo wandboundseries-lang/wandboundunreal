@@ -2,6 +2,99 @@
 
 Date of check: 2026-06-25 (America/New_York)
 
+## Runtime Activation Selection Resolver Pass
+
+### Scope
+
+This pass added read-only activation action id resolution from the runtime activation presentation model.
+
+Implemented:
+
+- `WBRuntimeActivationSelectionResolver`
+- `FWBRuntimeActivationSelectionResolution`
+- model convenience method for selected activation id resolution
+- coordinator delegate for selected activation id resolution
+- owner-shell delegate for selected activation id resolution
+- missing and ambiguous selected-id policies
+- automation coverage for no execution, hidden metadata boundaries, and `FWBAction` separation
+
+Not implemented:
+
+- activation execution
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- activation candidate generation
+- activation legal action generation
+- `FWBGameStateData` inspection by the resolver
+- production zones
+- CardDB import
+- target-picking UI
+- response windows
+- effect negation
+- passives
+- wands
+- UI widgets, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 15.92 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=656
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.ActivationSelectionResolver.*`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- Resolver scans only `UWBRuntimeActivationPresentationModelComponent::GetCurrentActivationActionSet()`.
+- Missing ids fail with `activation_action_id_not_found`.
+- Duplicate ids fail with `activation_action_id_ambiguous`.
+- Missing activation model fails with `activation_presentation_model_missing`.
+- Missing owner coordinator fails with `decision_point_coordinator_missing`.
+- Successful resolution returns the internal activation legal action plus public presentation entries.
+- Internal command metadata may remain on the returned activation legal action.
+- Public presentation entries still exclude hidden source effect, usage, debug, and cost metadata.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+
+### Risks / Unknowns
+
+- Activation execution handoff remains future work.
+- Production CardDB import and real card-zone legality remain future work.
+- Activation `FWBAction` / codec integration remains future work.
+- Real UI target picking, response windows, effect negation, passives, wands, and card-specific behavior remain future work.
+
 ## Runtime Activation Presentation Handoff Pass
 
 ### Scope

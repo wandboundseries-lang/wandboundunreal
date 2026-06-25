@@ -83,3 +83,12 @@ bool UWBRuntimeActivationPresentationModelComponent::TryFindTargetPresentationEn
 		ActivationActionId,
 		OutEntry);
 }
+
+FWBRuntimeActivationSelectionResolution
+UWBRuntimeActivationPresentationModelComponent::ResolveSelectedActivationActionId(
+	const FString& SelectedActivationActionId) const
+{
+	return WBRuntimeActivationSelectionResolver::ResolveSelectedActivationActionId(
+		this,
+		SelectedActivationActionId);
+}

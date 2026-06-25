@@ -151,6 +151,15 @@ UWBRuntimeDecisionPointCoordinatorComponent::RefreshActivationPresentationFromEx
 	return Result;
 }
 
+FWBRuntimeActivationSelectionResolution
+UWBRuntimeDecisionPointCoordinatorComponent::ResolveSelectedActivationActionId(
+	const FString& SelectedActivationActionId) const
+{
+	return WBRuntimeActivationSelectionResolver::ResolveSelectedActivationActionId(
+		ActivationPresentationModel.Get(),
+		SelectedActivationActionId);
+}
+
 void UWBRuntimeDecisionPointCoordinatorComponent::ClearDecisionPoint()
 {
 	bHasCurrentDecisionPoint = false;

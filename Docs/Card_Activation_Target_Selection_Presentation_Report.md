@@ -87,6 +87,8 @@ Focused tests confirm:
 
 The runtime handoff still consumes externally supplied activation legal actions and `FWBPublicBoardSummary` only. It does not execute activations, generate targets, add activation to `FWBAction`, or add activation ids to `WBActionCodec`.
 
+`WBRuntimeActivationSelectionResolver` can now resolve a selected activation action id and return the matching target presentation entry from the stored runtime activation presentation state. This remains read-only and still does not execute activations or implement target-picking widgets.
+
 ## Out Of Scope
 
 - production zones

@@ -20,6 +20,17 @@ FWBRuntimeActivationPresentationRefreshResult MakeOwnerActivationRefreshFailure(
 	return Result;
 }
 
+FWBRuntimeActivationSelectionResolution MakeOwnerActivationSelectionFailure(
+	const FString& SelectedActivationActionId,
+	const FString& Reason)
+{
+	FWBRuntimeActivationSelectionResolution Result;
+	Result.bOk = false;
+	Result.SelectedActivationActionId = SelectedActivationActionId;
+	Result.Reason = Reason;
+	return Result;
+}
+
 FWBRuntimeDecisionPointStatus MakeOwnerFailedStatus(const FString& Reason)
 {
 	FWBRuntimeDecisionPointStatus Status;
@@ -125,6 +136,21 @@ UWBRuntimeDecisionPointOwnerComponent::RefreshActivationPresentationFromExternal
 	CurrentStatus = DecisionPointCoordinator->GetCurrentStatus();
 	bHasCurrentDecisionPoint = DecisionPointCoordinator->HasCurrentDecisionPoint();
 	return Result;
+}
+
+FWBRuntimeActivationSelectionResolution
+UWBRuntimeDecisionPointOwnerComponent::ResolveSelectedActivationActionId(
+	const FString& SelectedActivationActionId) const
+{
+	if (DecisionPointCoordinator == nullptr)
+	{
+		return MakeOwnerActivationSelectionFailure(
+			SelectedActivationActionId,
+			TEXT("decision_point_coordinator_missing"));
+	}
+
+	return DecisionPointCoordinator->ResolveSelectedActivationActionId(
+		SelectedActivationActionId);
 }
 
 FWBRuntimeActionSelectionExecutionResult

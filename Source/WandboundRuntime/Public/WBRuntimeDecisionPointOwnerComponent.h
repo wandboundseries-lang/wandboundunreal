@@ -35,6 +35,9 @@ public:
 		const FWBCardActivationLegalActionSet& ActivationActionSet,
 		const FWBPublicBoardSummary& PublicBoardSummary);
 
+	FWBRuntimeActivationSelectionResolution ResolveSelectedActivationActionId(
+		const FString& SelectedActivationActionId) const;
+
 	FWBRuntimeActionSelectionExecutionResult ExecuteSelectedActionId(
 		FWBGameStateData& State,
 		const FString& SelectedActionId,

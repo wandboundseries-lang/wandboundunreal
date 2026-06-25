@@ -5,6 +5,7 @@
 #include "WBCardActivationLegalAction.h"
 #include "WBCardActivationTargetPresentation.h"
 #include "WBPublicBoardSummary.h"
+#include "WBRuntimeActivationSelectionResolver.h"
 #include "WBRuntimeActivationPresentationModelComponent.generated.h"
 
 struct WANDBOUNDRUNTIME_API FWBRuntimeActivationPresentationStatus
@@ -45,6 +46,9 @@ public:
 	bool TryFindTargetPresentationEntryByActionId(
 		const FString& ActivationActionId,
 		FWBCardActivationTargetPresentationEntry& OutEntry) const;
+
+	FWBRuntimeActivationSelectionResolution ResolveSelectedActivationActionId(
+		const FString& SelectedActivationActionId) const;
 
 private:
 	FWBCardActivationLegalActionSet CurrentActivationActionSet;

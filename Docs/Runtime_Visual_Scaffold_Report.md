@@ -82,6 +82,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `UWBRuntimeActivationPresentationModelComponent` now provides an optional runtime handoff/storage layer for externally supplied activation legal actions, activation presentation snapshots, and activation target presentation snapshots. `WBRuntimeActivationPresentationRefreshAdapter`, the decision-point coordinator, and the owner shell can refresh this activation presentation from external activation action sets and public summaries. This remains display/selection scaffolding only: it adds no UI widgets, input, target picking, activation execution, rules generation, response windows, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+`WBRuntimeActivationSelectionResolver` now provides a C++-only selected activation id resolver over the stored runtime activation presentation model. It returns the matching internal activation legal action and public presentation entries, but still performs no activation execution, input handling, UI target picking, rules generation, response-window behavior, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

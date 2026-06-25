@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "WBRuntimeActionSelectionBridge.h"
 #include "WBRuntimeActivationPresentationRefreshAdapter.h"
+#include "WBRuntimeActivationSelectionResolver.h"
 #include "WBRuntimeInteractionRefreshAdapter.h"
 #include "WBRuntimeLegalActionPresentation.h"
 #include "WBRuntimeDecisionPointCoordinatorComponent.generated.h"
@@ -70,6 +71,9 @@ public:
 	FWBRuntimeActivationPresentationRefreshResult RefreshActivationPresentationFromExternalData(
 		const FWBCardActivationLegalActionSet& ActivationActionSet,
 		const FWBPublicBoardSummary& PublicBoardSummary);
+
+	FWBRuntimeActivationSelectionResolution ResolveSelectedActivationActionId(
+		const FString& SelectedActivationActionId) const;
 
 	void ClearDecisionPoint();
 	void ClearActivationPresentation();
