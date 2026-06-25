@@ -1,5 +1,6 @@
 #include "WBRuntimeDecisionPointCoordinatorComponent.h"
 
+#include "WBRuntimeActivationPresentationModelComponent.h"
 #include "WBRuntimeTurnInteractionModelComponent.h"
 #include "WBRuntimeVisualControllerComponent.h"
 
@@ -84,6 +85,18 @@ UWBRuntimeVisualControllerComponent* UWBRuntimeDecisionPointCoordinatorComponent
 	return VisualController.Get();
 }
 
+void UWBRuntimeDecisionPointCoordinatorComponent::SetActivationPresentationModel(
+	UWBRuntimeActivationPresentationModelComponent* InModel)
+{
+	ActivationPresentationModel = InModel;
+}
+
+UWBRuntimeActivationPresentationModelComponent*
+UWBRuntimeDecisionPointCoordinatorComponent::GetActivationPresentationModel() const
+{
+	return ActivationPresentationModel.Get();
+}
+
 FWBRuntimeInteractionRefreshResult UWBRuntimeDecisionPointCoordinatorComponent::RefreshDecisionPoint(
 	const TArray<FWBAction>& PrecomputedLegalActions,
 	const FWBPublicBoardSummary& PublicBoardSummary)
@@ -117,6 +130,27 @@ FWBRuntimeInteractionRefreshResult UWBRuntimeDecisionPointCoordinatorComponent::
 	return LastRefreshResult;
 }
 
+FWBRuntimeActivationPresentationRefreshResult
+UWBRuntimeDecisionPointCoordinatorComponent::RefreshActivationPresentationFromExternalData(
+	const FWBCardActivationLegalActionSet& ActivationActionSet,
+	const FWBPublicBoardSummary& PublicBoardSummary)
+{
+	const FWBRuntimeActivationPresentationRefreshResult Result =
+		WBRuntimeActivationPresentationRefreshAdapter::RefreshActivationPresentation(
+			ActivationActionSet,
+			PublicBoardSummary,
+			ActivationPresentationModel.Get());
+
+	if (Result.bOk)
+	{
+		CurrentStatus.ActivationActionCount = Result.ActivationActionCount;
+		CurrentStatus.ActivationPresentationEntryCount = Result.ActivationPresentationEntryCount;
+		CurrentStatus.ActivationTargetPresentationEntryCount = Result.TargetPresentationEntryCount;
+	}
+
+	return Result;
+}
+
 void UWBRuntimeDecisionPointCoordinatorComponent::ClearDecisionPoint()
 {
 	bHasCurrentDecisionPoint = false;
@@ -127,6 +161,18 @@ void UWBRuntimeDecisionPointCoordinatorComponent::ClearDecisionPoint()
 	if (TurnInteractionModel != nullptr)
 	{
 		TurnInteractionModel->ClearCurrentInteractionState();
+	}
+}
+
+void UWBRuntimeDecisionPointCoordinatorComponent::ClearActivationPresentation()
+{
+	CurrentStatus.ActivationActionCount = 0;
+	CurrentStatus.ActivationPresentationEntryCount = 0;
+	CurrentStatus.ActivationTargetPresentationEntryCount = 0;
+
+	if (ActivationPresentationModel != nullptr)
+	{
+		ActivationPresentationModel->ClearCurrentActivationPresentationState();
 	}
 }
 

@@ -1262,6 +1262,20 @@
 - Existing `WBActionCodec` output remains unchanged.
 - No real target picking, target legality generation, activation `FWBAction`, production zones, CardDB import, UI, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Presentation Handoff
+
+- Added `UWBRuntimeActivationPresentationModelComponent`.
+- Runtime can now store externally supplied activation legal action sets.
+- Runtime can build and store activation legal action presentation snapshots.
+- Runtime can build and store activation target presentation snapshots for future UI.
+- Added `WBRuntimeActivationPresentationRefreshAdapter`.
+- `UWBRuntimeDecisionPointCoordinatorComponent` can optionally refresh activation presentation from external activation legal action sets and public summaries.
+- `UWBRuntimeDecisionPointOwnerComponent` can delegate activation presentation refresh and explicit activation presentation clear.
+- Activation presentation remains separate from normal `FWBAction` decision-point presentation.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production zones, CardDB import, activation `FWBAction`, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

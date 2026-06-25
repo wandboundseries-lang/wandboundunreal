@@ -81,6 +81,12 @@ Focused tests confirm:
 - duplicate activation action ids make lookup fail
 - hidden fixture metadata is excluded from public target presentation fields
 
+## Runtime Handoff
+
+`UWBRuntimeActivationPresentationModelComponent` now stores activation legal-action presentation snapshots and activation target presentation snapshots for future UI/runtime code.
+
+The runtime handoff still consumes externally supplied activation legal actions and `FWBPublicBoardSummary` only. It does not execute activations, generate targets, add activation to `FWBAction`, or add activation ids to `WBActionCodec`.
+
 ## Out Of Scope
 
 - production zones

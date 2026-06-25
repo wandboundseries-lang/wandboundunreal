@@ -80,6 +80,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `UWBRuntimeDecisionPointOwnerComponent` now provides a production C++ owner shell around the decision-point coordinator. It accepts externally supplied legal actions/public summaries, delegates selected action ids through the coordinator, and supports explicit post-action refresh from caller-supplied data. It still adds no input, UI, camera behavior, VFX, audio, assets, Blueprints, UMG, `.uasset`, or `.umap` work.
 
+`UWBRuntimeActivationPresentationModelComponent` now provides an optional runtime handoff/storage layer for externally supplied activation legal actions, activation presentation snapshots, and activation target presentation snapshots. `WBRuntimeActivationPresentationRefreshAdapter`, the decision-point coordinator, and the owner shell can refresh this activation presentation from external activation action sets and public summaries. This remains display/selection scaffolding only: it adds no UI widgets, input, target picking, activation execution, rules generation, response windows, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

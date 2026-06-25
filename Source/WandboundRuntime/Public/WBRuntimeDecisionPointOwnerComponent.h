@@ -31,6 +31,10 @@ public:
 		const TArray<FWBAction>& PrecomputedLegalActions,
 		const FWBPublicBoardSummary& PublicBoardSummary);
 
+	FWBRuntimeActivationPresentationRefreshResult RefreshActivationPresentationFromExternalData(
+		const FWBCardActivationLegalActionSet& ActivationActionSet,
+		const FWBPublicBoardSummary& PublicBoardSummary);
+
 	FWBRuntimeActionSelectionExecutionResult ExecuteSelectedActionId(
 		FWBGameStateData& State,
 		const FString& SelectedActionId,
@@ -48,6 +52,7 @@ public:
 	FWBRuntimeInteractionRefreshResult GetLastRefreshResult() const;
 	bool HasLastExecutionResult() const;
 	FWBRuntimeActionSelectionExecutionResult GetLastExecutionResult() const;
+	void ClearActivationPresentation();
 	void Clear();
 
 private:

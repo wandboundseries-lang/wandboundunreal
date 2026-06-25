@@ -3,10 +3,12 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "WBRuntimeActionSelectionBridge.h"
+#include "WBRuntimeActivationPresentationRefreshAdapter.h"
 #include "WBRuntimeInteractionRefreshAdapter.h"
 #include "WBRuntimeLegalActionPresentation.h"
 #include "WBRuntimeDecisionPointCoordinatorComponent.generated.h"
 
+class UWBRuntimeActivationPresentationModelComponent;
 class UWBRuntimeTurnInteractionModelComponent;
 class UWBRuntimeVisualControllerComponent;
 
@@ -16,6 +18,9 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeDecisionPointStatus
 	bool bHasActions = false;
 	int32 LegalActionCount = 0;
 	int32 PresentationEntryCount = 0;
+	int32 ActivationActionCount = 0;
+	int32 ActivationPresentationEntryCount = 0;
+	int32 ActivationTargetPresentationEntryCount = 0;
 	int32 PublicUnitCount = 0;
 	int32 PublicWallCount = 0;
 	int32 PublicTerrainCount = 0;
@@ -41,6 +46,9 @@ public:
 	TObjectPtr<UWBRuntimeVisualControllerComponent> VisualController;
 
 	UPROPERTY(EditAnywhere, Category = "Runtime Decision Point")
+	TObjectPtr<UWBRuntimeActivationPresentationModelComponent> ActivationPresentationModel;
+
+	UPROPERTY(EditAnywhere, Category = "Runtime Decision Point")
 	bool bRefreshVisualController = true;
 
 	UPROPERTY(EditAnywhere, Category = "Runtime Decision Point")
@@ -52,11 +60,19 @@ public:
 	void SetVisualController(UWBRuntimeVisualControllerComponent* InVisualController);
 	UWBRuntimeVisualControllerComponent* GetVisualController() const;
 
+	void SetActivationPresentationModel(UWBRuntimeActivationPresentationModelComponent* InModel);
+	UWBRuntimeActivationPresentationModelComponent* GetActivationPresentationModel() const;
+
 	FWBRuntimeInteractionRefreshResult RefreshDecisionPoint(
 		const TArray<FWBAction>& PrecomputedLegalActions,
 		const FWBPublicBoardSummary& PublicBoardSummary);
 
+	FWBRuntimeActivationPresentationRefreshResult RefreshActivationPresentationFromExternalData(
+		const FWBCardActivationLegalActionSet& ActivationActionSet,
+		const FWBPublicBoardSummary& PublicBoardSummary);
+
 	void ClearDecisionPoint();
+	void ClearActivationPresentation();
 
 	bool HasCurrentDecisionPoint() const;
 	FWBRuntimeDecisionPointStatus GetCurrentStatus() const;

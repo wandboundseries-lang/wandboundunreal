@@ -12,6 +12,14 @@ FWBRuntimeInteractionRefreshResult MakeOwnerRefreshFailure(const FString& Reason
 	return Result;
 }
 
+FWBRuntimeActivationPresentationRefreshResult MakeOwnerActivationRefreshFailure(const FString& Reason)
+{
+	FWBRuntimeActivationPresentationRefreshResult Result;
+	Result.bOk = false;
+	Result.Reason = Reason;
+	return Result;
+}
+
 FWBRuntimeDecisionPointStatus MakeOwnerFailedStatus(const FString& Reason)
 {
 	FWBRuntimeDecisionPointStatus Status;
@@ -98,6 +106,25 @@ UWBRuntimeDecisionPointOwnerComponent::RefreshDecisionPointFromExternalData(
 	bHasCurrentDecisionPoint = DecisionPointCoordinator->HasCurrentDecisionPoint();
 	CurrentStatus = DecisionPointCoordinator->GetCurrentStatus();
 	return LastRefreshResult;
+}
+
+FWBRuntimeActivationPresentationRefreshResult
+UWBRuntimeDecisionPointOwnerComponent::RefreshActivationPresentationFromExternalData(
+	const FWBCardActivationLegalActionSet& ActivationActionSet,
+	const FWBPublicBoardSummary& PublicBoardSummary)
+{
+	if (DecisionPointCoordinator == nullptr)
+	{
+		return MakeOwnerActivationRefreshFailure(TEXT("decision_point_coordinator_missing"));
+	}
+
+	const FWBRuntimeActivationPresentationRefreshResult Result =
+		DecisionPointCoordinator->RefreshActivationPresentationFromExternalData(
+		ActivationActionSet,
+		PublicBoardSummary);
+	CurrentStatus = DecisionPointCoordinator->GetCurrentStatus();
+	bHasCurrentDecisionPoint = DecisionPointCoordinator->HasCurrentDecisionPoint();
+	return Result;
 }
 
 FWBRuntimeActionSelectionExecutionResult
@@ -201,6 +228,14 @@ UWBRuntimeDecisionPointOwnerComponent::GetLastExecutionResult() const
 	return LastExecutionResult;
 }
 
+void UWBRuntimeDecisionPointOwnerComponent::ClearActivationPresentation()
+{
+	if (DecisionPointCoordinator != nullptr)
+	{
+		DecisionPointCoordinator->ClearActivationPresentation();
+	}
+}
+
 void UWBRuntimeDecisionPointOwnerComponent::Clear()
 {
 	bHasCurrentDecisionPoint = false;
@@ -212,5 +247,6 @@ void UWBRuntimeDecisionPointOwnerComponent::Clear()
 	if (DecisionPointCoordinator != nullptr)
 	{
 		DecisionPointCoordinator->ClearDecisionPoint();
+		DecisionPointCoordinator->ClearActivationPresentation();
 	}
 }

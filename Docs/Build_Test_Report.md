@@ -2,6 +2,101 @@
 
 Date of check: 2026-06-25 (America/New_York)
 
+## Runtime Activation Presentation Handoff Pass
+
+### Scope
+
+This pass added runtime handoff/storage for externally supplied activation legal actions and their public presentation snapshots.
+
+Implemented:
+
+- `UWBRuntimeActivationPresentationModelComponent`
+- `FWBRuntimeActivationPresentationStatus`
+- `WBRuntimeActivationPresentationRefreshAdapter`
+- optional activation presentation model wiring on `UWBRuntimeDecisionPointCoordinatorComponent`
+- activation presentation refresh and explicit clear on the coordinator
+- activation presentation refresh and explicit clear delegation on `UWBRuntimeDecisionPointOwnerComponent`
+- automation coverage for model, adapter, coordinator, and owner stale-state behavior
+
+Not implemented:
+
+- production zones
+- CardDB import
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- activation execution from the runtime presentation layer
+- target-picking UI
+- response windows
+- effect negation
+- passives
+- wands
+- UI widgets, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 13.42 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=642
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.ActivationPresentationModel.*`
+- `Wandbound.Runtime.ActivationPresentationRefreshAdapter.*`
+- `Wandbound.Runtime.DecisionPointCoordinatorActivationPresentation.*`
+- `Wandbound.Runtime.DecisionPointOwnerActivationPresentation.*`
+
+### Fixtures
+
+No new runtime-facing GodotCanon fixtures were added. The current fixture utilities exercise data-level operations; this pass adds transient Unreal runtime components and is covered by C++ automation tests.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+An interim build exposed a Unity-build private helper name collision between `WBCardActivationTargetPresentation.cpp` and `WBCardActivationLegalAction.cpp`. The target-presentation helper was renamed from `FindPublicUnitById` to `FindTargetPresentationPublicUnitById`; behavior is unchanged.
+
+### Notes
+
+- Runtime activation presentation consumes externally supplied `FWBCardActivationLegalActionSet` and `FWBPublicBoardSummary`.
+- The runtime activation model stores both activation legal-action presentation snapshots and activation target presentation snapshots.
+- Normal `FWBAction` decision-point refresh does not require activation presentation storage.
+- Activation presentation refresh does not mutate normal `FWBAction` presentation snapshots.
+- Activation presentation remains stale after normal action execution until explicit activation refresh or clear.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+
+### Risks / Unknowns
+
+- Production CardDB import and real card-zone legality remain future work.
+- Activation `FWBAction` / codec integration remains future work.
+- Activation execution, real UI target picking, response windows, effect negation, passives, wands, and card-specific behavior remain future work.
+
 ## Card Activation Target Selection Presentation Pass
 
 ### Scope
