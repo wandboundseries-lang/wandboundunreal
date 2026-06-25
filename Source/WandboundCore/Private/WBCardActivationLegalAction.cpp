@@ -1,7 +1,33 @@
 #include "WBCardActivationLegalAction.h"
 
+#include "WBPublicBoardSummary.h"
+
+namespace
+{
+const FWBPublicUnitBoardSummary* FindPublicUnitById(
+	const FWBPublicBoardSummary& PublicBoardSummary,
+	const int32 UnitId)
+{
+	if (UnitId == -1)
+	{
+		return nullptr;
+	}
+
+	for (const FWBPublicUnitBoardSummary& Unit : PublicBoardSummary.Units)
+	{
+		if (Unit.UnitId == UnitId)
+		{
+			return &Unit;
+		}
+	}
+
+	return nullptr;
+}
+}
+
 FWBCardActivationLegalActionPresentationSnapshot WBCardActivationLegalActionPresentation::BuildSnapshot(
-	const FWBCardActivationLegalActionSet& ActionSet)
+	const FWBCardActivationLegalActionSet& ActionSet,
+	const FWBPublicBoardSummary& PublicBoardSummary)
 {
 	FWBCardActivationLegalActionPresentationSnapshot Snapshot;
 	Snapshot.Entries.Reserve(ActionSet.Actions.Num());
@@ -10,12 +36,23 @@ FWBCardActivationLegalActionPresentationSnapshot WBCardActivationLegalActionPres
 	{
 		FWBCardActivationLegalActionPresentationEntry Entry;
 		Entry.ActivationActionId = Action.ActivationActionId;
-		Entry.PublicLabel = Action.PublicLabel;
+		Entry.PublicLabel = Action.PublicLabel.IsEmpty() ? FString(TEXT("Activate")) : Action.PublicLabel;
 		Entry.PlayerId = Action.PlayerId;
 		Entry.SourceUnitId = Action.SourceUnitId;
 		Entry.TargetUnitId = Action.Target.TargetUnitId;
-		Entry.SourceCardId = Action.Candidate.SourceCardId;
-		Entry.SourceEffectId = Action.Candidate.SourceEffectId;
+
+		if (const FWBPublicUnitBoardSummary* SourceUnit = FindPublicUnitById(PublicBoardSummary, Action.SourceUnitId))
+		{
+			Entry.bHasPublicSourceUnit = true;
+			Entry.SourcePublicCardId = SourceUnit->CardId;
+		}
+
+		if (const FWBPublicUnitBoardSummary* TargetUnit = FindPublicUnitById(PublicBoardSummary, Action.Target.TargetUnitId))
+		{
+			Entry.bHasPublicTargetUnit = true;
+			Entry.TargetPublicCardId = TargetUnit->CardId;
+		}
+
 		Snapshot.Entries.Add(Entry);
 	}
 

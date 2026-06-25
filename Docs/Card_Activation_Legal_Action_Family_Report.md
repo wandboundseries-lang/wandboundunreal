@@ -72,7 +72,7 @@ Added activation-only presentation helpers:
 
 This snapshot is separate from `WBRuntimeLegalActionPresentation` for `FWBAction`.
 
-`SourceCardId` and `SourceEffectId` are fixture-visible metadata in this activation-only snapshot. They are not trace/public-board/runtime-public-summary fields.
+The activation snapshot now consumes `FWBPublicBoardSummary`. Source and target public CardIds are copied only from public board unit entries. Fixture `SourceCardId`, `SourceEffectId`, usage keys, debug activation ids, cost metadata, and fixture zone context are not presentation fields.
 
 Duplicate activation ids make lookup fail so future UI selection cannot silently pick an ambiguous entry.
 
@@ -93,6 +93,14 @@ The operation:
 - validates expected payment commit metadata when `expected.cost_payment_commit` is present
 - does not mutate state
 - does not add entries to `FWBAction` legal actions
+
+Added fixture operation:
+
+```json
+"operation": "build_card_activation_presentation_snapshot"
+```
+
+The operation generates candidates, converts them to activation legal actions, builds an activation-only presentation snapshot from a public board summary, validates public labels and public CardIds, and does not apply activation commands.
 
 A later verifier-only fixture operation can select activation legal action ids from this family and replay the wrapped activation command through the existing EffectRunner path:
 
@@ -115,7 +123,7 @@ Added:
 - `card_activation_legal_actions_malformed_candidate_fails.json`
 - `card_activation_legal_actions_separate_from_fwbaction.json`
 
-Follow-up Board-source coverage added focused fixtures for damage, status, armor, heal, deterministic ordering, cost commit preservation, usage commit preservation, selected-id replay, card mismatch failure, `FWBAction` separation, action-id stability, and hidden metadata exclusion.
+Follow-up Board-source coverage added focused fixtures for damage, status, armor, heal, deterministic ordering, cost commit preservation, usage commit preservation, selected-id replay, card mismatch failure, `FWBAction` separation, action-id stability, hidden metadata exclusion, and activation-only presentation snapshots.
 
 ## Guardrails
 
@@ -128,6 +136,7 @@ Confirmed by tests:
 - activation legal actions preserve `FWBCardActivationUsageCommit` from their source candidates
 - activation legal actions preserve `FWBCardActivationCostPaymentCommit` from their source candidates
 - activation legal action ids can be selected and replayed through test-only verifier fixtures
+- activation presentation snapshots support Board-source entries without merging into `FWBAction`
 - applying activation remains explicit through `WBEffectRunner::ApplyCardActivationCommand`
 - generation emits no traces and mutates no state
 - hidden deck/hand/discard and debug activation metadata do not leak into trace serialization

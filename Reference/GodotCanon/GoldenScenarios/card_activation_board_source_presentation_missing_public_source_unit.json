@@ -1,0 +1,78 @@
+{
+  "id": "card_activation_board_source_presentation_missing_public_source_unit",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:enumerate_player_actions",
+    "scripts/shared/action_schema.gd"
+  ],
+  "intent": "Presentation leaves source public CardId empty when the source unit is absent from the supplied public board summary.",
+  "operation": "build_card_activation_presentation_snapshot",
+  "presentation_public_summary_excluded_unit_ids": [ 1 ],
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "source_gate_context": {
+        "source_zone": "board",
+        "source_card_id": "fixture_board_present_missing_source_card"
+      },
+      "card_definition": {
+        "card_id": "fixture_board_present_missing_source_card",
+        "public_name": "Fixture Board Missing Public Source",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "deal_2",
+            "public_label": "Deal 2 damage",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_fixture_zone_ownership": true,
+              "requires_source_unit": true,
+              "requires_source_unit_ownership": true,
+              "blocked_by_stunned": true
+            },
+            "payloads": [
+              { "operation": "damage_effect", "damage_effect": { "amount": 2, "bypass_armor": true, "damage_cause": "Effect", "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 }
+      ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 15,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_board_present_missing_source_card", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_missing_public_target", "x": 5, "y": 4, "hp": 5, "max_hp": 6 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 1,
+    "activation_action_count": 1,
+    "presentation_entry_count": 1,
+    "activation_action_ids": [
+      "activate:p0:u1:cfixture_board_present_missing_source_card:edeal_2:t2:x-1:y-1:wa-1,-1:wb-1,-1"
+    ],
+    "public_labels": [ "Deal 2 damage" ],
+    "source_public_card_ids": [ "" ],
+    "target_public_card_ids": [ "fixture_missing_public_target" ],
+    "lookup_activation_action_id": "activate:p0:u1:cfixture_board_present_missing_source_card:edeal_2:t2:x-1:y-1:wa-1,-1:wb-1,-1",
+    "lookup_found": true,
+    "forbidden_substrings": [ "fixture_board_present_missing_source_card" ],
+    "no_state_mutation": true
+  }
+}

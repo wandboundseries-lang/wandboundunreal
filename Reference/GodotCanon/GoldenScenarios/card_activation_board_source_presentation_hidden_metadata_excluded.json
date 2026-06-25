@@ -1,0 +1,100 @@
+{
+  "id": "card_activation_board_source_presentation_hidden_metadata_excluded",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:enumerate_player_actions",
+    "scripts/shared/action_schema.gd"
+  ],
+  "intent": "Board-source activation presentation excludes hidden fixture zone metadata, usage keys, and cost metadata from public presentation fields.",
+  "operation": "build_card_activation_presentation_snapshot",
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "source_gate_context": {
+        "source_zone": "board",
+        "source_card_id": "visible_board_presentation_card",
+        "activation_usage_key": "SECRET_USAGE_KEY_DO_NOT_LEAK",
+        "costs_satisfied_externally": true,
+        "cost_context": {
+          "has_external_affordability": true,
+          "externally_affordable": true,
+          "supplied_required_rr": 2,
+          "supplied_available_rl": 4,
+          "cost_kind": "SECRET_COST_KIND_DO_NOT_LEAK"
+        },
+        "fixture_zone_context": {
+          "entries": [
+            { "card_id": "SECRET_ZONE_CARD_DO_NOT_LEAK", "owner_player_id": 0, "zone": "hand" }
+          ]
+        }
+      },
+      "card_definition": {
+        "card_id": "visible_board_presentation_card",
+        "public_name": "Visible Board Presentation Card",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "clean_heal",
+            "public_label": "Heal 1 HP",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_fixture_zone_ownership": true,
+              "requires_source_unit": true,
+              "requires_source_unit_ownership": true,
+              "blocked_by_stunned": true,
+              "requires_costs_satisfied_externally": true,
+              "once_per_turn": true
+            },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 1, "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 }
+      ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 15,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "visible_board_presentation_card", "x": 4, "y": 4, "hp": 5, "max_hp": 5, "rl_total": 5, "rl_used": 1 },
+      { "id": 2, "owner_id": 1, "card_id": "visible_target_presentation_card", "x": 5, "y": 4, "hp": 4, "max_hp": 6 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 1,
+    "activation_action_count": 1,
+    "presentation_entry_count": 1,
+    "activation_action_ids": [
+      "activate:p0:u1:cvisible_board_presentation_card:eclean_heal:t2:x-1:y-1:wa-1,-1:wb-1,-1"
+    ],
+    "public_labels": [ "Heal 1 HP" ],
+    "source_public_card_ids": [ "visible_board_presentation_card" ],
+    "target_public_card_ids": [ "visible_target_presentation_card" ],
+    "forbidden_substrings": [
+      "SECRET_USAGE_KEY_DO_NOT_LEAK",
+      "SECRET_COST_KIND_DO_NOT_LEAK",
+      "SECRET_ZONE_CARD_DO_NOT_LEAK",
+      "UsageKey",
+      "DebugActivationId",
+      "SourceEffectId",
+      "CostKind",
+      "fixture_zone_context"
+    ],
+    "no_state_mutation": true
+  }
+}

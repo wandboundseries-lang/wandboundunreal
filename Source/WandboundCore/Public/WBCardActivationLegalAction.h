@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "WBCardActivationCandidate.h"
 
+struct FWBPublicBoardSummary;
+
 struct WANDBOUNDCORE_API FWBCardActivationLegalAction
 {
 	FString ActivationActionId;
@@ -38,8 +40,11 @@ struct WANDBOUNDCORE_API FWBCardActivationLegalActionPresentationEntry
 	int32 SourceUnitId = -1;
 	int32 TargetUnitId = -1;
 
-	FString SourceCardId;
-	FString SourceEffectId;
+	bool bHasPublicSourceUnit = false;
+	bool bHasPublicTargetUnit = false;
+
+	FString SourcePublicCardId;
+	FString TargetPublicCardId;
 };
 
 struct WANDBOUNDCORE_API FWBCardActivationLegalActionPresentationSnapshot
@@ -51,7 +56,8 @@ class WANDBOUNDCORE_API WBCardActivationLegalActionPresentation
 {
 public:
 	static FWBCardActivationLegalActionPresentationSnapshot BuildSnapshot(
-		const FWBCardActivationLegalActionSet& ActionSet);
+		const FWBCardActivationLegalActionSet& ActionSet,
+		const FWBPublicBoardSummary& PublicBoardSummary);
 
 	static bool TryFindEntryByActivationActionId(
 		const FWBCardActivationLegalActionPresentationSnapshot& Snapshot,

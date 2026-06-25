@@ -48,6 +48,14 @@ Confirmed unchanged:
 - `WBActionCodec`
 - existing Move, Attack, EndTurn, Pass, and PassResponse action ids
 
+## Presentation Coverage
+
+Board-source activation legal actions now have focused presentation snapshot coverage.
+
+The activation-only presentation snapshot uses activation action ids, clean public labels, source/target unit ids, and source/target public CardIds copied only from `FWBPublicBoardSummary`. It does not expose fixture `SourceEffectId`, usage keys, debug activation ids, cost metadata, or fixture zone context.
+
+This presentation path remains separate from `WBRuntimeLegalActionPresentation` for `FWBAction`.
+
 ## Hidden Information
 
 Visible board unit `CardId` remains public under current public board summary policy. Fixture zone metadata, usage keys, hand/deck/discard scaffolding, and debug activation metadata are excluded from trace serialization and public board assertions.

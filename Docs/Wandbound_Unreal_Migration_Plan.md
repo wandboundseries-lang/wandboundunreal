@@ -1235,6 +1235,19 @@
 - Fixture trace coverage confirms hidden fixture zone, usage, hand, deck, and discard metadata stay out of replay traces.
 - No production zones, CardDB import, activation `FWBAction`, activation codec ids, UI target selection, response windows, effect negation, passives, wands, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Board-Source Activation Presentation Snapshot
+
+- Added fixture-only Board-source activation legal action presentation snapshot coverage.
+- Entries use activation action ids and clean public labels.
+- Source and target public CardIds come from `FWBPublicBoardSummary` only.
+- Missing public source/target units leave flags false and CardIds empty.
+- Hidden fixture metadata, usage keys, debug activation ids, cost metadata, and fixture zone context are excluded from public presentation fields.
+- Duplicate activation action ids make presentation lookup fail instead of selecting ambiguously.
+- Activation remains separate from `FWBAction`.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No production zones, CardDB import, UI target selection, response windows, effect negation, passives, wands, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

@@ -21,6 +21,7 @@
 #include "WBEffectRunner.h"
 #include "WBHealEffect.h"
 #include "WBMPRollSource.h"
+#include "WBPublicBoardSummary.h"
 #include "WBRuntimeResultSerializer.h"
 #include "WBRuntimeTurnResolutionAdapter.h"
 #include "WBStatusEffect.h"
@@ -88,6 +89,43 @@ bool ReadOptionalStringArrayField(
 	return ReadStringArrayValues(*Values, FieldPath, OutStrings, OutReason);
 }
 
+bool ReadOptionalIntegerArrayField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& FieldPath,
+	TArray<int32>& OutIntegers,
+	FString& OutReason)
+{
+	OutIntegers.Reset();
+	const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!Object->TryGetArrayField(FieldName, Values) || Values == nullptr)
+	{
+		OutReason = FString::Printf(TEXT("malformed_%s"), *FieldPath);
+		return false;
+	}
+
+	for (int32 Index = 0; Index < Values->Num(); ++Index)
+	{
+		const TSharedPtr<FJsonValue>& Value = (*Values)[Index];
+		if (!Value.IsValid() || Value->Type != EJson::Number)
+		{
+			OutReason = FString::Printf(TEXT("malformed_%s[%d]"), *FieldPath, Index);
+			return false;
+		}
+
+		OutIntegers.Add(static_cast<int32>(Value->AsNumber()));
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool TryReadIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue);
 
 bool TryGetExpectedObject(const TSharedPtr<FJsonObject>& Fixture, TSharedPtr<FJsonObject>& OutExpectedObject, FString& OutReason);
@@ -114,6 +152,75 @@ TArray<FString> ActivationActionLabelsFromSet(const FWBCardActivationLegalAction
 	}
 
 	return Labels;
+}
+
+TArray<FString> ActivationPresentationActionIdsFromSnapshot(
+	const FWBCardActivationLegalActionPresentationSnapshot& Snapshot)
+{
+	TArray<FString> ActionIds;
+	ActionIds.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationLegalActionPresentationEntry& Entry : Snapshot.Entries)
+	{
+		ActionIds.Add(Entry.ActivationActionId);
+	}
+
+	return ActionIds;
+}
+
+TArray<FString> ActivationPresentationLabelsFromSnapshot(
+	const FWBCardActivationLegalActionPresentationSnapshot& Snapshot)
+{
+	TArray<FString> Labels;
+	Labels.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationLegalActionPresentationEntry& Entry : Snapshot.Entries)
+	{
+		Labels.Add(Entry.PublicLabel);
+	}
+
+	return Labels;
+}
+
+TArray<FString> ActivationPresentationSourcePublicCardIdsFromSnapshot(
+	const FWBCardActivationLegalActionPresentationSnapshot& Snapshot)
+{
+	TArray<FString> CardIds;
+	CardIds.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationLegalActionPresentationEntry& Entry : Snapshot.Entries)
+	{
+		CardIds.Add(Entry.SourcePublicCardId);
+	}
+
+	return CardIds;
+}
+
+TArray<FString> ActivationPresentationTargetPublicCardIdsFromSnapshot(
+	const FWBCardActivationLegalActionPresentationSnapshot& Snapshot)
+{
+	TArray<FString> CardIds;
+	CardIds.Reserve(Snapshot.Entries.Num());
+	for (const FWBCardActivationLegalActionPresentationEntry& Entry : Snapshot.Entries)
+	{
+		CardIds.Add(Entry.TargetPublicCardId);
+	}
+
+	return CardIds;
+}
+
+FString ActivationPresentationPublicTextFromSnapshot(
+	const FWBCardActivationLegalActionPresentationSnapshot& Snapshot)
+{
+	FString Text;
+	for (const FWBCardActivationLegalActionPresentationEntry& Entry : Snapshot.Entries)
+	{
+		Text += Entry.PublicLabel;
+		Text += TEXT("|");
+		Text += Entry.SourcePublicCardId;
+		Text += TEXT("|");
+		Text += Entry.TargetPublicCardId;
+		Text += TEXT("|");
+	}
+
+	return Text;
 }
 
 TArray<FString> ActivationCandidateIdsFromResult(const FWBCardActivationCandidateGenerationResult& GenerationResult)
@@ -628,6 +735,123 @@ bool ValidateCardActivationLegalActionFixtureExpectations(
 			GenerationResult.ActionSet.Actions[0].Command.UsageCommit,
 			OutReason))
 		{
+			return false;
+		}
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ValidateCardActivationPresentationFixtureExpectations(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBCardActivationLegalActionPresentationSnapshot& Snapshot,
+	FString& OutReason)
+{
+	TSharedPtr<FJsonObject> ExpectedObject;
+	if (!TryGetExpectedObject(Fixture, ExpectedObject, OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalIntegerExpectation(
+		ExpectedObject,
+		TEXT("presentation_entry_count"),
+		Snapshot.Entries.Num(),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("activation_action_ids"),
+		TEXT("expected.activation_action_ids"),
+		ActivationPresentationActionIdsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("public_labels"),
+		TEXT("expected.public_labels"),
+		ActivationPresentationLabelsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("source_public_card_ids"),
+		TEXT("expected.source_public_card_ids"),
+		ActivationPresentationSourcePublicCardIdsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("target_public_card_ids"),
+		TEXT("expected.target_public_card_ids"),
+		ActivationPresentationTargetPublicCardIdsFromSnapshot(Snapshot),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (ExpectedObject->HasField(TEXT("forbidden_substrings")))
+	{
+		TArray<FString> ForbiddenSubstrings;
+		if (!ReadOptionalStringArrayField(
+			ExpectedObject,
+			TEXT("forbidden_substrings"),
+			TEXT("expected.forbidden_substrings"),
+			ForbiddenSubstrings,
+			OutReason))
+		{
+			return false;
+		}
+
+		const FString PublicText = ActivationPresentationPublicTextFromSnapshot(Snapshot);
+		for (const FString& Forbidden : ForbiddenSubstrings)
+		{
+			if (PublicText.Contains(Forbidden, ESearchCase::IgnoreCase))
+			{
+				OutReason = FString::Printf(TEXT("presentation_contains_forbidden_substring:%s"), *Forbidden);
+				return false;
+			}
+		}
+	}
+
+	if (ExpectedObject->HasField(TEXT("lookup_activation_action_id")))
+	{
+		FString LookupActivationActionId;
+		if (!ExpectedObject->TryGetStringField(TEXT("lookup_activation_action_id"), LookupActivationActionId))
+		{
+			OutReason = TEXT("malformed_expected_lookup_activation_action_id");
+			return false;
+		}
+
+		bool bExpectedLookupFound = false;
+		if (!ExpectedObject->TryGetBoolField(TEXT("lookup_found"), bExpectedLookupFound))
+		{
+			OutReason = TEXT("malformed_expected_lookup_found");
+			return false;
+		}
+
+		FWBCardActivationLegalActionPresentationEntry Entry;
+		const bool bActualLookupFound =
+			WBCardActivationLegalActionPresentation::TryFindEntryByActivationActionId(
+				Snapshot,
+				LookupActivationActionId,
+				Entry);
+		if (bActualLookupFound != bExpectedLookupFound)
+		{
+			OutReason = TEXT("expected_lookup_found_mismatch");
 			return false;
 		}
 	}
@@ -3676,6 +3900,38 @@ bool ParseDamageRequestFromFixture(
 	return true;
 }
 
+bool BuildActivationPresentationPublicBoardSummaryFromFixture(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBGameStateData& State,
+	FWBPublicBoardSummary& OutSummary,
+	FString& OutReason)
+{
+	OutSummary = WBPublicBoardSummary::Build(State);
+
+	TArray<int32> ExcludedUnitIds;
+	if (!ReadOptionalIntegerArrayField(
+		Fixture,
+		TEXT("presentation_public_summary_excluded_unit_ids"),
+		TEXT("presentation_public_summary_excluded_unit_ids"),
+		ExcludedUnitIds,
+		OutReason))
+	{
+		return false;
+	}
+
+	if (ExcludedUnitIds.Num() > 0)
+	{
+		OutSummary.Units.RemoveAll(
+			[&ExcludedUnitIds](const FWBPublicUnitBoardSummary& Unit)
+			{
+				return ExcludedUnitIds.Contains(Unit.UnitId);
+			});
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ApplyFixtureOperation(
 	const TSharedPtr<FJsonObject>& Fixture,
 	FWBGameStateData& State,
@@ -4022,6 +4278,75 @@ bool ApplyFixtureOperation(
 		}
 
 		if (!ExpectActivationCostPaymentVerifierExpectations(Fixture, State, OutResult.TraceEvents, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		OutReason.Reset();
+		return true;
+	}
+
+	if (OperationKind == TEXT("build_card_activation_presentation_snapshot"))
+	{
+		OutOperationKind = EWBFixtureOperationKind::BuildCardActivationPresentationSnapshot;
+		TArray<FWBCardActivationCandidateSource> Sources;
+		if (!ParseCardActivationCandidateSourcesFromFixture(Fixture, Sources, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationCandidateGenerationResult CandidateResult =
+			WBCardActivationCandidateGenerator::GenerateCandidates(State, Sources);
+		if (!CandidateResult.bOk)
+		{
+			OutResult.bOk = false;
+			OutResult.Reason = CandidateResult.Reason;
+			OutResult.TraceEvents.Reset();
+			OutReason.Reset();
+			return true;
+		}
+
+		if (!ValidateCardActivationCandidateFixtureExpectations(Fixture, CandidateResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationLegalActionGenerationResult GenerationResult =
+			WBCardActivationLegalActionGenerator::GenerateFromCandidates(CandidateResult.Candidates);
+		OutResult.bOk = GenerationResult.bOk;
+		OutResult.Reason = GenerationResult.Reason;
+		OutResult.TraceEvents.Reset();
+		if (!GenerationResult.bOk)
+		{
+			OutReason.Reset();
+			return true;
+		}
+
+		if (!ValidateCardActivationLegalActionFixtureExpectations(Fixture, GenerationResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		FWBPublicBoardSummary PublicBoardSummary;
+		if (!BuildActivationPresentationPublicBoardSummaryFromFixture(
+			Fixture,
+			State,
+			PublicBoardSummary,
+			OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		const FWBCardActivationLegalActionPresentationSnapshot Snapshot =
+			WBCardActivationLegalActionPresentation::BuildSnapshot(
+				GenerationResult.ActionSet,
+				PublicBoardSummary);
+		if (!ValidateCardActivationPresentationFixtureExpectations(Fixture, Snapshot, OutReason))
 		{
 			OutResult = MakeFixtureFailure(OutReason);
 			return false;

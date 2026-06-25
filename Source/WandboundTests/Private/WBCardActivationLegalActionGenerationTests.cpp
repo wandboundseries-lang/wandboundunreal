@@ -10,6 +10,7 @@
 #include "WBCardActivationLegalActionGenerator.h"
 #include "WBEffectRunner.h"
 #include "WBGameStateData.h"
+#include "WBPublicBoardSummary.h"
 #include "WBReplayFixtureTestUtils.h"
 #include "WBReplayTrace.h"
 #include "WBRules.h"
@@ -545,15 +546,17 @@ bool FWBCardActivationLegalActionPresentationTest::RunTest(const FString& Parame
 	TestTrue(TEXT("Presentation source generation ok"), Result.bOk);
 
 	const FWBCardActivationLegalActionPresentationSnapshot Snapshot =
-		WBCardActivationLegalActionPresentation::BuildSnapshot(Result.ActionSet);
+		WBCardActivationLegalActionPresentation::BuildSnapshot(Result.ActionSet, WBPublicBoardSummary::Build(State));
 	TestEqual(TEXT("Snapshot entry count"), Snapshot.Entries.Num(), 1);
 	TestEqual(TEXT("Snapshot id"), Snapshot.Entries[0].ActivationActionId, Result.ActionSet.Actions[0].ActivationActionId);
 	TestEqual(TEXT("Snapshot label"), Snapshot.Entries[0].PublicLabel, FString(TEXT("Deal 2 damage")));
 	TestEqual(TEXT("Snapshot player"), Snapshot.Entries[0].PlayerId, 0);
 	TestEqual(TEXT("Snapshot source"), Snapshot.Entries[0].SourceUnitId, 1);
 	TestEqual(TEXT("Snapshot target"), Snapshot.Entries[0].TargetUnitId, 2);
-	TestEqual(TEXT("Snapshot source card metadata"), Snapshot.Entries[0].SourceCardId, FString(TEXT("fixture_presentation_card")));
-	TestEqual(TEXT("Snapshot source effect metadata"), Snapshot.Entries[0].SourceEffectId, FString(TEXT("deal_2")));
+	TestTrue(TEXT("Snapshot has public source unit"), Snapshot.Entries[0].bHasPublicSourceUnit);
+	TestTrue(TEXT("Snapshot has public target unit"), Snapshot.Entries[0].bHasPublicTargetUnit);
+	TestEqual(TEXT("Snapshot source public card id"), Snapshot.Entries[0].SourcePublicCardId, FString(TEXT("fixture_unit_1")));
+	TestEqual(TEXT("Snapshot target public card id"), Snapshot.Entries[0].TargetPublicCardId, FString(TEXT("fixture_unit_2")));
 
 	FWBCardActivationLegalActionPresentationEntry FoundEntry;
 	TestTrue(TEXT("Lookup existing id succeeds"), WBCardActivationLegalActionPresentation::TryFindEntryByActivationActionId(Snapshot, Result.ActionSet.Actions[0].ActivationActionId, FoundEntry));
@@ -563,7 +566,7 @@ bool FWBCardActivationLegalActionPresentationTest::RunTest(const FString& Parame
 	FWBCardActivationLegalActionSet DuplicateSet = Result.ActionSet;
 	DuplicateSet.Actions.Add(Result.ActionSet.Actions[0]);
 	const FWBCardActivationLegalActionPresentationSnapshot DuplicateSnapshot =
-		WBCardActivationLegalActionPresentation::BuildSnapshot(DuplicateSet);
+		WBCardActivationLegalActionPresentation::BuildSnapshot(DuplicateSet, WBPublicBoardSummary::Build(State));
 	TestFalse(TEXT("Duplicate lookup fails"), WBCardActivationLegalActionPresentation::TryFindEntryByActivationActionId(DuplicateSnapshot, Result.ActionSet.Actions[0].ActivationActionId, FoundEntry));
 
 	return true;

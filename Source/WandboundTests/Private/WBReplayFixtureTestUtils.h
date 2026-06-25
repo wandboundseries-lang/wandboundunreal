@@ -33,6 +33,7 @@ enum class EWBFixtureOperationKind : uint8
 	QueryCardActivationAffordability,
 	GenerateCardActivationCandidates,
 	GenerateCardActivationLegalActions,
+	BuildCardActivationPresentationSnapshot,
 	ApplyCardActivationLegalActionById,
 	ApplyStartOfTurnStatusTicks,
 	ApplyEndOfTurnStatusTicks,

@@ -1,0 +1,76 @@
+{
+  "id": "card_activation_board_source_presentation_heal",
+  "schema_version": 1,
+  "godot_reference": [
+    "scripts/sim/rules.gd:enumerate_player_actions",
+    "scripts/shared/action_schema.gd",
+    "scripts/sim/effect_runner.gd"
+  ],
+  "intent": "A Board-source heal activation legal action builds a public presentation entry without mutating state.",
+  "operation": "build_card_activation_presentation_snapshot",
+  "activation_sources": [
+    {
+      "player_id": 0,
+      "source_unit_id": 1,
+      "source_gate_context": {
+        "source_zone": "board",
+        "source_card_id": "fixture_board_present_heal_card"
+      },
+      "card_definition": {
+        "card_id": "fixture_board_present_heal_card",
+        "public_name": "Fixture Board Presentation Heal",
+        "kind": "fixture",
+        "activated_effects": [
+          {
+            "effect_id": "heal_2",
+            "public_label": "Heal 2 HP",
+            "target_requirement": "unit",
+            "source_gate": {
+              "required_zone": "board",
+              "requires_fixture_zone_ownership": true,
+              "requires_source_unit": true,
+              "requires_source_unit_ownership": true,
+              "blocked_by_stunned": true
+            },
+            "payloads": [
+              { "operation": "heal_effect", "heal_effect": { "amount": 2, "source_reason": "fixture" } }
+            ]
+          }
+        ]
+      },
+      "candidate_targets": [
+        { "target_unit_id": 2 }
+      ]
+    }
+  ],
+  "initial_state": {
+    "current_player": 0,
+    "priority_player": 0,
+    "turn_number": 15,
+    "phase": "normal_turn",
+    "players": [
+      { "player_id": 0, "remaining_mp": 2 },
+      { "player_id": 1, "remaining_mp": 0 }
+    ],
+    "units": [
+      { "id": 1, "owner_id": 0, "card_id": "fixture_board_present_heal_card", "x": 4, "y": 4, "hp": 5, "max_hp": 5 },
+      { "id": 2, "owner_id": 1, "card_id": "fixture_present_target", "x": 5, "y": 4, "hp": 3, "max_hp": 6 }
+    ],
+    "walls": [],
+    "statuses_by_unit": {}
+  },
+  "expected": {
+    "ok": true,
+    "candidate_count": 1,
+    "activation_action_count": 1,
+    "presentation_entry_count": 1,
+    "activation_action_ids": [
+      "activate:p0:u1:cfixture_board_present_heal_card:eheal_2:t2:x-1:y-1:wa-1,-1:wb-1,-1"
+    ],
+    "public_labels": [ "Heal 2 HP" ],
+    "source_public_card_ids": [ "fixture_board_present_heal_card" ],
+    "target_public_card_ids": [ "fixture_present_target" ],
+    "forbidden_substrings": [ "heal_effect", "EffectRunner", "Rules", "schema", "hook" ],
+    "no_state_mutation": true
+  }
+}

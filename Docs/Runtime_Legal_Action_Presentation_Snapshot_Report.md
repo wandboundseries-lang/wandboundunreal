@@ -101,4 +101,6 @@ Future rules/runtime code can generate legal actions, build a public board summa
 
 `WBRuntimeInteractionRefreshAdapter` can now rebuild these snapshots at runtime decision points by feeding externally supplied legal actions and the current public board summary into the turn interaction model.
 
+Activation legal action presentation remains separate. Board-source activation presentation snapshots are built by `WBCardActivationLegalActionPresentation` from activation legal action sets and public board summaries, without adding activation to `FWBAction`, `WBRuntimeLegalActionPresentation`, or `WBActionCodec`.
+
 This remains C++-only and does not add input, UI widgets, camera behavior, animation, VFX, assets, Blueprints, UMG, `.uasset`, or `.umap` work.
