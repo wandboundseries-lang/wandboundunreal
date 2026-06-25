@@ -93,3 +93,7 @@ Not added:
 ## Fixtures
 
 Added GodotCanon scenarios for Board card-id match, inherited card id, card-id mismatch, missing/removed/off-board/wrong-owner/Stunned sources, effect-specific context inheritance, no fixture zone context, cost/usage composition, and hidden metadata exclusion.
+
+## Follow-Up: Legal Action Family Coverage
+
+Focused Board-source legal action coverage now verifies that Board-source candidates convert through the existing separate activation legal action family, preserve cost and usage commits, replay by selected activation action id through the test-only verifier, and keep `FWBAction`, `WBRules::GenerateLegalActions`, and `WBActionCodec` unchanged.

@@ -116,6 +116,30 @@ TArray<FString> ActivationActionLabelsFromSet(const FWBCardActivationLegalAction
 	return Labels;
 }
 
+TArray<FString> ActivationCandidateIdsFromResult(const FWBCardActivationCandidateGenerationResult& GenerationResult)
+{
+	TArray<FString> CandidateIds;
+	CandidateIds.Reserve(GenerationResult.Candidates.Num());
+	for (const FWBCardActivationCandidate& Candidate : GenerationResult.Candidates)
+	{
+		CandidateIds.Add(Candidate.ActivationCandidateId);
+	}
+
+	return CandidateIds;
+}
+
+TArray<FString> ActivationCandidateLabelsFromResult(const FWBCardActivationCandidateGenerationResult& GenerationResult)
+{
+	TArray<FString> Labels;
+	Labels.Reserve(GenerationResult.Candidates.Num());
+	for (const FWBCardActivationCandidate& Candidate : GenerationResult.Candidates)
+	{
+		Labels.Add(Candidate.PublicLabel);
+	}
+
+	return Labels;
+}
+
 bool ValidateOptionalIntegerExpectation(
 	const TSharedPtr<FJsonObject>& ExpectedObject,
 	const TCHAR* FieldName,
@@ -270,6 +294,53 @@ bool ValidateExpectedCostPaymentCommit(
 		&& Commit.CostKind != FName(*ExpectedCostKind))
 	{
 		OutReason = TEXT("expected_cost_payment_commit_cost_kind_mismatch");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ValidateExpectedUsageCommit(
+	const TSharedPtr<FJsonObject>& ExpectedObject,
+	const FWBCardActivationUsageCommit& Commit,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CommitObject = nullptr;
+	if (!ExpectedObject.IsValid() || !ExpectedObject->HasField(TEXT("command_usage_commit")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!ExpectedObject->TryGetObjectField(TEXT("command_usage_commit"), CommitObject)
+		|| CommitObject == nullptr
+		|| !CommitObject->IsValid())
+	{
+		OutReason = TEXT("malformed_expected_command_usage_commit");
+		return false;
+	}
+
+	bool bExpectedMarkUsage = Commit.bMarkUsageOnSuccess;
+	if ((*CommitObject)->TryGetBoolField(TEXT("mark_usage_on_success"), bExpectedMarkUsage)
+		&& Commit.bMarkUsageOnSuccess != bExpectedMarkUsage)
+	{
+		OutReason = TEXT("expected_command_usage_commit_mark_usage_mismatch");
+		return false;
+	}
+
+	int32 ExpectedPlayerId = -1;
+	if (TryReadIntegerField(*CommitObject, TEXT("player_id"), ExpectedPlayerId) && Commit.PlayerId != ExpectedPlayerId)
+	{
+		OutReason = TEXT("expected_command_usage_commit_player_id_mismatch");
+		return false;
+	}
+
+	FString ExpectedUsageKey;
+	if ((*CommitObject)->TryGetStringField(TEXT("usage_key"), ExpectedUsageKey)
+		&& Commit.UsageKey != ExpectedUsageKey)
+	{
+		OutReason = TEXT("expected_command_usage_commit_usage_key_mismatch");
 		return false;
 	}
 
@@ -442,6 +513,51 @@ bool ValidateForbiddenTraceSubstrings(
 		OutReason);
 }
 
+bool ValidateCardActivationCandidateFixtureExpectations(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBCardActivationCandidateGenerationResult& GenerationResult,
+	FString& OutReason)
+{
+	TSharedPtr<FJsonObject> ExpectedObject;
+	if (!TryGetOptionalExpectedObject(Fixture, ExpectedObject))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!ValidateOptionalIntegerExpectation(
+		ExpectedObject,
+		TEXT("candidate_count"),
+		GenerationResult.Candidates.Num(),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("candidate_ids"),
+		TEXT("expected.candidate_ids"),
+		ActivationCandidateIdsFromResult(GenerationResult),
+		OutReason))
+	{
+		return false;
+	}
+
+	if (!ValidateOptionalStringArrayExpectation(
+		ExpectedObject,
+		TEXT("public_labels"),
+		TEXT("expected.public_labels"),
+		ActivationCandidateLabelsFromResult(GenerationResult),
+		OutReason))
+	{
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
 bool ValidateCardActivationLegalActionFixtureExpectations(
 	const TSharedPtr<FJsonObject>& Fixture,
 	const FWBCardActivationLegalActionGenerationResult& GenerationResult,
@@ -493,6 +609,23 @@ bool ValidateCardActivationLegalActionFixtureExpectations(
 		if (!ValidateExpectedCostPaymentCommit(
 			ExpectedObject,
 			GenerationResult.ActionSet.Actions[0].Command.CostPaymentCommit,
+			OutReason))
+		{
+			return false;
+		}
+	}
+
+	if (ExpectedObject.IsValid() && ExpectedObject->HasField(TEXT("command_usage_commit")))
+	{
+		if (GenerationResult.ActionSet.Actions.Num() <= 0)
+		{
+			OutReason = TEXT("expected_command_usage_commit_missing_action");
+			return false;
+		}
+
+		if (!ValidateExpectedUsageCommit(
+			ExpectedObject,
+			GenerationResult.ActionSet.Actions[0].Command.UsageCommit,
 			OutReason))
 		{
 			return false;
@@ -3838,6 +3971,13 @@ bool ApplyFixtureOperation(
 		OutResult.bOk = GenerationResult.bOk;
 		OutResult.Reason = GenerationResult.Reason;
 		OutResult.TraceEvents.Reset();
+		if (GenerationResult.bOk
+			&& !ValidateCardActivationCandidateFixtureExpectations(Fixture, GenerationResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
 		OutReason.Reset();
 		return true;
 	}
@@ -3861,6 +4001,12 @@ bool ApplyFixtureOperation(
 			OutResult.TraceEvents.Reset();
 			OutReason.Reset();
 			return true;
+		}
+
+		if (!ValidateCardActivationCandidateFixtureExpectations(Fixture, CandidateResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
 		}
 
 		const FWBCardActivationLegalActionGenerationResult GenerationResult =
@@ -3911,6 +4057,12 @@ bool ApplyFixtureOperation(
 			OutResult.TraceEvents.Reset();
 			OutReason.Reset();
 			return true;
+		}
+
+		if (!ValidateCardActivationCandidateFixtureExpectations(Fixture, CandidateResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
 		}
 
 		const FWBCardActivationLegalActionGenerationResult GenerationResult =

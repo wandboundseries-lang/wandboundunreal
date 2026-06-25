@@ -115,6 +115,8 @@ Added:
 - `card_activation_legal_actions_malformed_candidate_fails.json`
 - `card_activation_legal_actions_separate_from_fwbaction.json`
 
+Follow-up Board-source coverage added focused fixtures for damage, status, armor, heal, deterministic ordering, cost commit preservation, usage commit preservation, selected-id replay, card mismatch failure, `FWBAction` separation, action-id stability, and hidden metadata exclusion.
+
 ## Guardrails
 
 Confirmed by tests:
@@ -129,6 +131,7 @@ Confirmed by tests:
 - applying activation remains explicit through `WBEffectRunner::ApplyCardActivationCommand`
 - generation emits no traces and mutates no state
 - hidden deck/hand/discard and debug activation metadata do not leak into trace serialization
+- Board-source activation candidates use the same generic legal action conversion path without Board-specific generator code
 
 ## Out Of Scope
 

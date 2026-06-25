@@ -63,6 +63,9 @@ Added coverage for:
 - hidden metadata exclusion from serialized trace JSON.
 - activation ids remaining outside `FWBAction` and `WBActionCodec`.
 - production core/runtime source guard for the test-only replay verifier.
+- Board-source selected activation action ids resolving through the same test-only replay verifier path.
+- Board-source card-id mismatch producing no selectable activation legal action.
+- Board-source hidden usage/fixture-zone metadata staying out of selected-id replay traces.
 
 ## Confirmations
 
@@ -71,6 +74,7 @@ Added coverage for:
 - Activation ids remain external activation-family ids.
 - The replay verifier helper lives under `WandboundTests` only.
 - No Godot CardDB import, production zones, response windows, negation, passives, wands, UI, Blueprints, `.uasset`, or `.umap` work was added.
+- Board-source selected-id replay remains fixture-only and still applies only through the existing `WBEffectRunner::ApplyCardActivationCommand` path after unique id selection.
 
 ## Out Of Scope
 

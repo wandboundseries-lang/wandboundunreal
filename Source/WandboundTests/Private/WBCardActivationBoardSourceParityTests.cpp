@@ -599,7 +599,11 @@ bool FWBCardActivationBoardSourceParityFixtureScenariosTest::RunTest(const FStri
 		TestTrue(
 			*FString::Printf(TEXT("%s applies fixture operation: %s"), *FixtureName, *OperationReason),
 			ApplyFixtureOperation(Fixture, State, OperationResult, OperationKind, OperationReason));
-		TestEqual(*FString::Printf(TEXT("%s operation kind"), *FixtureName), OperationKind, EWBFixtureOperationKind::GenerateCardActivationCandidates);
+		const bool bExpectedOperationKind =
+			OperationKind == EWBFixtureOperationKind::GenerateCardActivationCandidates
+			|| (FixtureName == TEXT("card_activation_board_source_hidden_metadata_excluded.json")
+				&& OperationKind == EWBFixtureOperationKind::ApplyCardActivationLegalActionById);
+		TestTrue(*FString::Printf(TEXT("%s operation kind"), *FixtureName), bExpectedOperationKind);
 		TestEqual(*FString::Printf(TEXT("%s operation ok"), *FixtureName), OperationResult.bOk, Result.bOk);
 
 		const TSharedPtr<FJsonObject> ExpectedObject = GetBoardParityExpectedObject(Fixture);

@@ -1,6 +1,115 @@
 # Build/Test Report
 
-Date of check: 2026-06-24 (America/New_York)
+Date of check: 2026-06-25 (America/New_York)
+
+## Card Activation Board Source Legal Action Coverage Pass
+
+### Scope
+
+This pass added fixture-only Board-source activation legal action generation and selected-id replay coverage.
+
+Implemented:
+
+- focused Board-source activation legal action automation tests
+- Board-source legal action GoldenScenarios for damage, status, armor, heal, ordering, cost commit preservation, usage commit preservation, selected-id replay, card mismatch failure, `FWBAction` separation, action-id stability, and hidden metadata exclusion
+- optional fixture validation for generated activation candidate counts/ids/labels when expected fields are present
+- optional fixture validation for command usage commit preservation when `expected.command_usage_commit` is present
+- compatibility in the Board-source parity fixture test for the hidden-metadata fixture now exercising selected-id replay while still validating raw Board-source candidates
+
+Not implemented:
+
+- production card zones
+- CardDB import
+- real card zone mutation
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- real target-selection UI
+- response windows
+- effect negation
+- passives
+- wands
+- card-specific behavior
+- UI, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 10.45 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=607
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Core.CardActivationBoardSourceLegalAction.EffectFamilies`
+- `Wandbound.Core.CardActivationBoardSourceLegalAction.OrderingAndIdStability`
+- `Wandbound.Core.CardActivationBoardSourceLegalAction.CostAndUsageCommitPreservation`
+- `Wandbound.Core.CardActivationBoardSourceLegalAction.SelectedIdReplay`
+- `Wandbound.Core.CardActivationBoardSourceLegalAction.BoundariesAndHiddenMetadata`
+- `Wandbound.Core.CardActivationBoardSourceLegalAction.FixtureScenarios`
+
+### New Golden Scenarios Added / Updated
+
+- `card_activation_board_source_legal_action_damage.json`
+- `card_activation_board_source_legal_action_status.json`
+- `card_activation_board_source_legal_action_armor.json`
+- `card_activation_board_source_legal_action_heal.json`
+- `card_activation_board_source_legal_action_ordered.json`
+- `card_activation_board_source_legal_action_preserves_cost_commit.json`
+- `card_activation_board_source_legal_action_preserves_usage_commit.json`
+- `card_activation_board_source_replay_selected_id_success.json`
+- `card_activation_board_source_replay_card_mismatch_no_action.json`
+- `card_activation_board_source_legal_action_separate_from_fwbaction.json`
+- `card_activation_board_source_action_id_stability.json`
+- `card_activation_board_source_hidden_metadata_excluded.json`
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+An interim automation run caught that `card_activation_board_source_hidden_metadata_excluded.json` had moved from candidate generation to selected-id replay while the older Board-source parity fixture test still expected only `GenerateCardActivationCandidates`. The parity test now accepts this one hidden-metadata replay fixture while still validating the raw candidate generation result.
+
+### Notes
+
+- Generic `WBCardActivationLegalActionGenerator` already handled Board-source candidates without special-case code.
+- Board-source activation action ids still come from candidate ids and remain outside `WBActionCodec`.
+- Cost payment commits and usage commits are preserved by legal action generation.
+- Selected-id replay applies only through the test-only replay verifier and existing `WBEffectRunner::ApplyCardActivationCommand`.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Hidden fixture zone, usage, hand, deck, and discard metadata are excluded from replay traces.
+- All 12 focused Board-source legal action JSON fixtures parsed successfully with `ConvertFrom-Json`.
+- `git diff --check` reported no whitespace errors, only LF-to-CRLF working-copy notices.
+- Pre-existing untracked `MaxHP` and `Docs/Card_Activation_Cost_Gates_Audit.md` remain untouched.
+
+### Risks / Unknowns
+
+- Production card zones, CardDB import, and activation `FWBAction` remain deferred.
+- `WBActionCodec` activation ids remain deferred.
+- Real UI target selection, response windows, effect negation, passives, wands, and card-specific behavior remain future work.
 
 ## Card Activation Board Source Parity Pass
 
