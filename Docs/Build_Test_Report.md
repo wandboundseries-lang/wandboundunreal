@@ -2958,3 +2958,58 @@ notRun=0
 - Production CardDB import and card-zone legality remain future work.
 - Real payment ownership for production hand/equipped zones remains future work.
 - Overflow and equipped wand fallout remain future work.
+
+---
+
+# Card Activation Cost Payment Replay Verifier Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 12.27 seconds
+```
+
+An initial build exposed existing anonymous helper name collisions in `WBReplayTrace.cpp` under Unity compilation. The replay-trace private helpers were renamed locally; the final build succeeded.
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result:
+
+```text
+succeeded=575
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added `FWBExpectedActivationCostPaymentState`.
+- Added test-only `FWBCardActivationCostPaymentVerifier`.
+- Extended replay fixture utilities with optional RL state, cost-paid trace, forbidden trace substring, and payment commit checks.
+- Added 8 GodotCanon cost-payment replay verifier fixtures.
+- Added `Wandbound.Core.CardActivationCostPaymentReplayVerifier.*` automation coverage.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No gameplay, runtime, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
+## Remaining Risks/Unknowns
+
+- Production CardDB import and card-zone legality remain future work.
+- Response windows, effect negation, passives, wands, and card-specific costs remain future work.
+- Overflow and equipped wand fallout remain future work.

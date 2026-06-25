@@ -117,6 +117,12 @@ bool ExpectUnitStatusSummary(
 	const FWBGameStateData& State,
 	FString& OutReason);
 
+bool ExpectActivationCostPaymentVerifierExpectations(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBGameStateData& State,
+	const TArray<FWBTraceEvent>& TraceEvents,
+	FString& OutReason);
+
 bool ExpectFinalTurnState(
 	const TSharedPtr<FJsonObject>& Fixture,
 	const FWBGameStateData& State,

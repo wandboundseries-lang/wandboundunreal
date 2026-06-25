@@ -1170,6 +1170,16 @@
 - Existing `WBActionCodec` output remains unchanged.
 - No overflow, wand destruction, CardDB import, production zones, activation `FWBAction`, response windows, negation, passives, wands, card-specific behavior, UI, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Card Activation Cost Payment Replay Verifier
+
+- Added test-only `FWBCardActivationCostPaymentVerifier` helpers under `WandboundTests`.
+- Added fixture utility support for optional `expected.rl_state`, `expected.cost_paid_trace`, and `expected.forbidden_trace_substrings`.
+- Added fixture utility validation for activation legal action `expected.cost_payment_commit`.
+- Added GodotCanon replay fixtures for cost trace parity, final RL parity, failure no-payment, effect-failure rollback, payment/usage trace order, hidden metadata exclusion, legal action payment commit preservation, and the `FWBAction`/`WBActionCodec` boundary.
+- Confirmed legal activation generation preserves payment commits without paying costs or mutating `RLUsed`.
+- Confirmed payment remains outside core `FWBAction` and `WBActionCodec`.
+- No gameplay, runtime, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

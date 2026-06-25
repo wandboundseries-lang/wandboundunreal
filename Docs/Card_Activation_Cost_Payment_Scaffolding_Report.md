@@ -77,6 +77,12 @@ Payment is atomic with activation:
 
 Payment traces do not serialize source card id, source effect id, debug activation id, deck, hand, discard, private choices, or usage keys.
 
+## Replay Verifier Coverage
+
+Added a follow-up verifier-only pass for cost payment replay fixtures. `WBReplayFixtureTestUtils` now supports optional fixture expectations for final RL state, `card_activation_cost_paid` trace fields, forbidden trace substrings, and activation legal action payment commit preservation.
+
+The verifier helpers live under `WandboundTests` only and do not change gameplay behavior, legal action generation, `FWBAction`, or `WBActionCodec`.
+
 ## Out Of Scope
 
 - production payment ownership

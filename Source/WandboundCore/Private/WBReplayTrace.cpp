@@ -10,7 +10,7 @@
 
 namespace
 {
-bool IsSetTile(const FWBTile& Tile)
+bool IsReplayTraceSetTile(const FWBTile& Tile)
 {
 	return Tile.X != -1 || Tile.Y != -1;
 }
@@ -286,12 +286,12 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetBoolField(TEXT("at_or_below_zero_hp"), Event.bAtOrBelowZeroHP);
 	}
 
-	if (IsSetTile(Event.FromTile))
+	if (IsReplayTraceSetTile(Event.FromTile))
 	{
 		Object->SetObjectField(TEXT("from_tile"), TileToJsonObject(Event.FromTile));
 	}
 
-	if (IsSetTile(Event.ToTile))
+	if (IsReplayTraceSetTile(Event.ToTile))
 	{
 		Object->SetObjectField(TEXT("to_tile"), TileToJsonObject(Event.ToTile));
 	}
@@ -304,7 +304,7 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	return Object;
 }
 
-TArray<TSharedPtr<FJsonValue>> TraceEventsToJsonValues(const TArray<FWBTraceEvent>& Events)
+TArray<TSharedPtr<FJsonValue>> ReplayTraceEventsToJsonValues(const TArray<FWBTraceEvent>& Events)
 {
 	TArray<TSharedPtr<FJsonValue>> Values;
 	Values.Reserve(Events.Num());
@@ -316,7 +316,7 @@ TArray<TSharedPtr<FJsonValue>> TraceEventsToJsonValues(const TArray<FWBTraceEven
 	return Values;
 }
 
-TSharedRef<FJsonObject> ActionToJsonObject(const FWBAction& Action)
+TSharedRef<FJsonObject> ReplayTraceActionToJsonObject(const FWBAction& Action)
 {
 	TSharedPtr<FJsonObject> Object;
 	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(WBActionCodec::SerializeAction(Action));
@@ -333,7 +333,7 @@ TSharedRef<FJsonObject> ReplayDecisionToJsonObject(const FWBReplayDecisionRecord
 	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 	Object->SetNumberField(TEXT("decision_index"), Record.DecisionIndex);
 	Object->SetStringField(TEXT("chosen_action_id"), Record.ChosenActionId);
-	Object->SetObjectField(TEXT("chosen_action"), ActionToJsonObject(Record.ChosenAction));
+	Object->SetObjectField(TEXT("chosen_action"), ReplayTraceActionToJsonObject(Record.ChosenAction));
 
 	TArray<TSharedPtr<FJsonValue>> LegalActionIds;
 	LegalActionIds.Reserve(Record.LegalActionIds.Num());
@@ -342,11 +342,11 @@ TSharedRef<FJsonObject> ReplayDecisionToJsonObject(const FWBReplayDecisionRecord
 		LegalActionIds.Add(MakeShared<FJsonValueString>(ActionId));
 	}
 	Object->SetArrayField(TEXT("legal_action_ids"), MoveTemp(LegalActionIds));
-	Object->SetArrayField(TEXT("trace_events"), TraceEventsToJsonValues(Record.TraceEvents));
+	Object->SetArrayField(TEXT("trace_events"), ReplayTraceEventsToJsonValues(Record.TraceEvents));
 	return Object;
 }
 
-bool TryGetIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue)
+bool TryGetReplayTraceIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue)
 {
 	if (!Object.IsValid())
 	{
@@ -521,7 +521,7 @@ FString WBReplayTrace::SerializeEvents(const TArray<FWBTraceEvent>& Events)
 {
 	FString Output;
 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Output);
-	FJsonSerializer::Serialize(TraceEventsToJsonValues(Events), Writer);
+	FJsonSerializer::Serialize(ReplayTraceEventsToJsonValues(Events), Writer);
 	return Output;
 }
 
@@ -604,7 +604,7 @@ FWBReplayVerificationResult WBReplayVerifier::Verify(
 		}
 
 		int32 DecisionIndex = -1;
-		if (!TryGetIntegerField(Decision, TEXT("decision_index"), DecisionIndex))
+		if (!TryGetReplayTraceIntegerField(Decision, TEXT("decision_index"), DecisionIndex))
 		{
 			return VerificationFailure(TEXT("missing_decision_index"), DecisionArrayIndex, VerifiedDecisionCount);
 		}

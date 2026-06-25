@@ -9,6 +9,7 @@
 #include "WBArmorEffect.h"
 #include "WBCardActivationCandidateGenerator.h"
 #include "WBCardActivationCommand.h"
+#include "WBCardActivationCostPaymentVerifier.h"
 #include "WBCardActivationExpansion.h"
 #include "WBCardActivationLegalActionGenerator.h"
 #include "WBCardActivationSourceGate.h"
@@ -172,6 +173,274 @@ bool ValidateOptionalStringArrayExpectation(
 	return true;
 }
 
+bool TryGetOptionalExpectedObject(const TSharedPtr<FJsonObject>& Fixture, TSharedPtr<FJsonObject>& OutExpectedObject)
+{
+	OutExpectedObject.Reset();
+
+	const TSharedPtr<FJsonObject>* ExpectedObject = nullptr;
+	if (Fixture.IsValid()
+		&& Fixture->TryGetObjectField(TEXT("expected"), ExpectedObject)
+		&& ExpectedObject != nullptr
+		&& ExpectedObject->IsValid())
+	{
+		OutExpectedObject = *ExpectedObject;
+		return true;
+	}
+
+	const TSharedPtr<FJsonObject>* ExpectObject = nullptr;
+	if (Fixture.IsValid()
+		&& Fixture->TryGetObjectField(TEXT("expect"), ExpectObject)
+		&& ExpectObject != nullptr
+		&& ExpectObject->IsValid())
+	{
+		OutExpectedObject = *ExpectObject;
+		return true;
+	}
+
+	return false;
+}
+
+bool TryReadRequiredIntegerField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const TCHAR* MalformedReason,
+	int32& OutValue,
+	FString& OutReason)
+{
+	if (!TryReadIntegerField(Object, FieldName, OutValue))
+	{
+		OutReason = MalformedReason;
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ValidateExpectedCostPaymentCommit(
+	const TSharedPtr<FJsonObject>& ExpectedObject,
+	const FWBCardActivationCostPaymentCommit& Commit,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CommitObject = nullptr;
+	if (!ExpectedObject.IsValid() || !ExpectedObject->HasField(TEXT("cost_payment_commit")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!ExpectedObject->TryGetObjectField(TEXT("cost_payment_commit"), CommitObject)
+		|| CommitObject == nullptr
+		|| !CommitObject->IsValid())
+	{
+		OutReason = TEXT("malformed_expected_cost_payment_commit");
+		return false;
+	}
+
+	bool bExpectedPayCost = Commit.bPayCostOnSuccess;
+	if ((*CommitObject)->TryGetBoolField(TEXT("pay_cost_on_success"), bExpectedPayCost)
+		&& Commit.bPayCostOnSuccess != bExpectedPayCost)
+	{
+		OutReason = TEXT("expected_cost_payment_commit_pay_cost_mismatch");
+		return false;
+	}
+
+	int32 ExpectedInteger = -1;
+	if (TryReadIntegerField(*CommitObject, TEXT("player_id"), ExpectedInteger) && Commit.PlayerId != ExpectedInteger)
+	{
+		OutReason = TEXT("expected_cost_payment_commit_player_id_mismatch");
+		return false;
+	}
+
+	if (TryReadIntegerField(*CommitObject, TEXT("source_unit_id"), ExpectedInteger) && Commit.SourceUnitId != ExpectedInteger)
+	{
+		OutReason = TEXT("expected_cost_payment_commit_source_unit_id_mismatch");
+		return false;
+	}
+
+	if (TryReadIntegerField(*CommitObject, TEXT("required_rr"), ExpectedInteger) && Commit.RequiredRR != ExpectedInteger)
+	{
+		OutReason = TEXT("expected_cost_payment_commit_required_rr_mismatch");
+		return false;
+	}
+
+	FString ExpectedCostKind;
+	if ((*CommitObject)->TryGetStringField(TEXT("cost_kind"), ExpectedCostKind)
+		&& Commit.CostKind != FName(*ExpectedCostKind))
+	{
+		OutReason = TEXT("expected_cost_payment_commit_cost_kind_mismatch");
+		return false;
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ValidateExpectedRLState(
+	const TSharedPtr<FJsonObject>& ExpectedObject,
+	const FWBGameStateData& State,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* RLStateObject = nullptr;
+	if (!ExpectedObject.IsValid() || !ExpectedObject->HasField(TEXT("rl_state")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!ExpectedObject->TryGetObjectField(TEXT("rl_state"), RLStateObject)
+		|| RLStateObject == nullptr
+		|| !RLStateObject->IsValid())
+	{
+		OutReason = TEXT("malformed_expected_rl_state");
+		return false;
+	}
+
+	FWBExpectedActivationCostPaymentState ExpectedState;
+	if (!TryReadRequiredIntegerField(
+			*RLStateObject,
+			TEXT("source_unit_id"),
+			TEXT("malformed_expected_rl_state"),
+			ExpectedState.SourceUnitId,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*RLStateObject,
+			TEXT("rl_total"),
+			TEXT("malformed_expected_rl_state"),
+			ExpectedState.ExpectedRLTotal,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*RLStateObject,
+			TEXT("rl_used"),
+			TEXT("malformed_expected_rl_state"),
+			ExpectedState.ExpectedRLUsed,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*RLStateObject,
+			TEXT("available_rl"),
+			TEXT("malformed_expected_rl_state"),
+			ExpectedState.ExpectedAvailableRL,
+			OutReason))
+	{
+		return false;
+	}
+
+	return FWBCardActivationCostPaymentVerifier::VerifyUnitRLState(State, ExpectedState, OutReason);
+}
+
+bool ValidateExpectedCostPaidTrace(
+	const TSharedPtr<FJsonObject>& ExpectedObject,
+	const TArray<FWBTraceEvent>& TraceEvents,
+	FString& OutReason)
+{
+	const TSharedPtr<FJsonObject>* CostPaidTraceObject = nullptr;
+	if (!ExpectedObject.IsValid() || !ExpectedObject->HasField(TEXT("cost_paid_trace")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!ExpectedObject->TryGetObjectField(TEXT("cost_paid_trace"), CostPaidTraceObject)
+		|| CostPaidTraceObject == nullptr
+		|| !CostPaidTraceObject->IsValid())
+	{
+		OutReason = TEXT("malformed_expected_cost_paid_trace");
+		return false;
+	}
+
+	int32 ExpectedPlayerId = -1;
+	int32 ExpectedSourceUnitId = -1;
+	int32 ExpectedCostAmount = -1;
+	int32 ExpectedPreviousRLUsed = -1;
+	int32 ExpectedNewRLUsed = -1;
+	int32 ExpectedAvailableRLBefore = -1;
+	int32 ExpectedAvailableRLAfter = -1;
+	if (!TryReadRequiredIntegerField(
+			*CostPaidTraceObject,
+			TEXT("player_id"),
+			TEXT("malformed_expected_cost_paid_trace"),
+			ExpectedPlayerId,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*CostPaidTraceObject,
+			TEXT("source_unit_id"),
+			TEXT("malformed_expected_cost_paid_trace"),
+			ExpectedSourceUnitId,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*CostPaidTraceObject,
+			TEXT("cost_amount"),
+			TEXT("malformed_expected_cost_paid_trace"),
+			ExpectedCostAmount,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*CostPaidTraceObject,
+			TEXT("previous_rl_used"),
+			TEXT("malformed_expected_cost_paid_trace"),
+			ExpectedPreviousRLUsed,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*CostPaidTraceObject,
+			TEXT("new_rl_used"),
+			TEXT("malformed_expected_cost_paid_trace"),
+			ExpectedNewRLUsed,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*CostPaidTraceObject,
+			TEXT("available_rl_before"),
+			TEXT("malformed_expected_cost_paid_trace"),
+			ExpectedAvailableRLBefore,
+			OutReason)
+		|| !TryReadRequiredIntegerField(
+			*CostPaidTraceObject,
+			TEXT("available_rl_after"),
+			TEXT("malformed_expected_cost_paid_trace"),
+			ExpectedAvailableRLAfter,
+			OutReason))
+	{
+		return false;
+	}
+
+	return FWBCardActivationCostPaymentVerifier::VerifyCostPaidTrace(
+		TraceEvents,
+		ExpectedPlayerId,
+		ExpectedSourceUnitId,
+		ExpectedCostAmount,
+		ExpectedPreviousRLUsed,
+		ExpectedNewRLUsed,
+		ExpectedAvailableRLBefore,
+		ExpectedAvailableRLAfter,
+		OutReason);
+}
+
+bool ValidateForbiddenTraceSubstrings(
+	const TSharedPtr<FJsonObject>& ExpectedObject,
+	const TArray<FWBTraceEvent>& TraceEvents,
+	FString& OutReason)
+{
+	if (!ExpectedObject.IsValid() || !ExpectedObject->HasField(TEXT("forbidden_trace_substrings")))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	TArray<FString> ForbiddenSubstrings;
+	if (!ReadOptionalStringArrayField(
+		ExpectedObject,
+		TEXT("forbidden_trace_substrings"),
+		TEXT("expected.forbidden_trace_substrings"),
+		ForbiddenSubstrings,
+		OutReason))
+	{
+		return false;
+	}
+
+	return FWBCardActivationCostPaymentVerifier::TraceJsonExcludesForbiddenSubstrings(
+		TraceEvents,
+		ForbiddenSubstrings,
+		OutReason);
+}
+
 bool ValidateCardActivationLegalActionFixtureExpectations(
 	const TSharedPtr<FJsonObject>& Fixture,
 	const FWBCardActivationLegalActionGenerationResult& GenerationResult,
@@ -210,6 +479,23 @@ bool ValidateCardActivationLegalActionFixtureExpectations(
 		OutReason))
 	{
 		return false;
+	}
+
+	if (ExpectedObject.IsValid() && ExpectedObject->HasField(TEXT("cost_payment_commit")))
+	{
+		if (GenerationResult.ActionSet.Actions.Num() <= 0)
+		{
+			OutReason = TEXT("expected_cost_payment_commit_missing_action");
+			return false;
+		}
+
+		if (!ValidateExpectedCostPaymentCommit(
+			ExpectedObject,
+			GenerationResult.ActionSet.Actions[0].Command.CostPaymentCommit,
+			OutReason))
+		{
+			return false;
+		}
 	}
 
 	OutReason.Reset();
@@ -3178,6 +3464,12 @@ bool ApplyFixtureOperation(
 		OutResult.bOk = CommandResult.bOk;
 		OutResult.Reason = CommandResult.Reason;
 		OutResult.TraceEvents = CommandResult.TraceEvents;
+		if (!ExpectActivationCostPaymentVerifierExpectations(Fixture, State, OutResult.TraceEvents, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
 		OutReason.Reset();
 		return true;
 	}
@@ -3216,6 +3508,12 @@ bool ApplyFixtureOperation(
 			OutResult.bOk = false;
 			OutResult.Reason = ExpansionResult.Reason;
 			OutResult.TraceEvents.Reset();
+			if (!ExpectActivationCostPaymentVerifierExpectations(Fixture, State, OutResult.TraceEvents, OutReason))
+			{
+				OutResult = MakeFixtureFailure(OutReason);
+				return false;
+			}
+
 			OutReason.Reset();
 			return true;
 		}
@@ -3226,6 +3524,12 @@ bool ApplyFixtureOperation(
 		OutResult.bOk = CommandResult.bOk;
 		OutResult.Reason = CommandResult.Reason;
 		OutResult.TraceEvents = CommandResult.TraceEvents;
+		if (!ExpectActivationCostPaymentVerifierExpectations(Fixture, State, OutResult.TraceEvents, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
 		OutReason.Reset();
 		return true;
 	}
@@ -3330,6 +3634,12 @@ bool ApplyFixtureOperation(
 		OutResult.TraceEvents.Reset();
 		if (GenerationResult.bOk
 			&& !ValidateCardActivationLegalActionFixtureExpectations(Fixture, GenerationResult, OutReason))
+		{
+			OutResult = MakeFixtureFailure(OutReason);
+			return false;
+		}
+
+		if (!ExpectActivationCostPaymentVerifierExpectations(Fixture, State, OutResult.TraceEvents, OutReason))
 		{
 			OutResult = MakeFixtureFailure(OutReason);
 			return false;
@@ -3661,6 +3971,30 @@ bool ExpectUnitStatusSummary(
 				}
 			}
 		}
+	}
+
+	OutReason.Reset();
+	return true;
+}
+
+bool ExpectActivationCostPaymentVerifierExpectations(
+	const TSharedPtr<FJsonObject>& Fixture,
+	const FWBGameStateData& State,
+	const TArray<FWBTraceEvent>& TraceEvents,
+	FString& OutReason)
+{
+	TSharedPtr<FJsonObject> ExpectedObject;
+	if (!TryGetOptionalExpectedObject(Fixture, ExpectedObject))
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	if (!ValidateExpectedRLState(ExpectedObject, State, OutReason)
+		|| !ValidateExpectedCostPaidTrace(ExpectedObject, TraceEvents, OutReason)
+		|| !ValidateForbiddenTraceSubstrings(ExpectedObject, TraceEvents, OutReason))
+	{
+		return false;
 	}
 
 	OutReason.Reset();

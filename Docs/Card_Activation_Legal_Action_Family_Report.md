@@ -90,6 +90,7 @@ The operation:
 - generates candidates through `WBCardActivationCandidateGenerator` after source gate filtering
 - converts them through `WBCardActivationLegalActionGenerator`
 - validates expected activation action ids and labels when present
+- validates expected payment commit metadata when `expected.cost_payment_commit` is present
 - does not mutate state
 - does not add entries to `FWBAction` legal actions
 
@@ -115,6 +116,7 @@ Confirmed by tests:
 - `WBActionCodec` remains unchanged
 - activation source gates affect only the candidate set supplied to this family
 - activation legal actions preserve `FWBCardActivationUsageCommit` from their source candidates
+- activation legal actions preserve `FWBCardActivationCostPaymentCommit` from their source candidates
 - applying activation remains explicit through `WBEffectRunner::ApplyCardActivationCommand`
 - generation emits no traces and mutates no state
 - hidden deck/hand/discard and debug activation metadata do not leak into trace serialization
