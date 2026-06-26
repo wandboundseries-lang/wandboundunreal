@@ -56,6 +56,12 @@ The facade may mutate the supplied `FWBGameStateData&` only through this existin
 
 The tests cover execute plus external post-action refresh, once-per-turn action removal and reappearance after turn-start setup, RR-cost affordability refresh, explicit stale-state replacement, failure refresh policy, hidden metadata exclusion, and production runtime no-generation source guards.
 
+## Provider Adapter Coverage
+
+`WBRuntimeActivationDataProviderAdapter` can now feed external provider output into the activation decision-session facade. The adapter refreshes a session from provider-supplied current decision data and can execute an activation with provider-supplied post-activation refresh data.
+
+The adapter does not generate legal actions, activation candidates, activation action sets, or public summaries. It only forwards provider output into the existing facade methods.
+
 ## Status Fields
 
 `FWBRuntimeActivationDecisionSessionStatus` reports:

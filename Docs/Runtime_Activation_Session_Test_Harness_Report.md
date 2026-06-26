@@ -27,6 +27,12 @@ These calls remain test-only. Production runtime still receives precomputed data
 
 It does not modify the state.
 
+## Provider Interface Shell
+
+`IWBRuntimeActivationDataProvider` and `WBRuntimeActivationDataProviderAdapter` now mirror the external-data pattern verified by this harness for production runtime seams. The interface returns the same session refresh input shape, while the adapter forwards provider output into the existing facade.
+
+The provider shell does not implement a real provider and does not generate rules data.
+
 ## One-Decision Flow
 
 The harness refreshes the runtime activation decision-session facade from external data, selects the first activation action matching a public label, previews post-action data on a cloned state for test-only sequencing, executes the real activation through the facade/owner/sequencer path, and verifies the real state mutation plus post-refresh status.

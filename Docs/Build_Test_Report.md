@@ -4194,3 +4194,54 @@ notRun=0
 ## Interim Issue Fixed
 
 - First automation run reported one failed assertion in `Wandbound.Runtime.ActivationSessionHarness.TwoConsecutiveDecisionSessions`: the test expected the second target to be damaged, but deterministic generator ordering selected the second effect on the first target. The assertion was corrected to reflect generator ordering, and the final suite passed.
+
+---
+
+# Runtime Activation Data Provider Interface Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 12.50 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=735
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added `IWBRuntimeActivationDataProvider`.
+- Added `WBRuntimeActivationDataProviderAdapter`.
+- Added test-only `FWBRuntimeActivationFixedDataProviderForTests`.
+- Added 12 `Wandbound.Runtime.ActivationDataProvider.*` automation tests.
+- Provider results carry externally supplied normal legal actions, activation legal actions, and public summaries.
+- Adapter refreshes sessions from provider output and can execute selected activations with provider-supplied post-activation output.
+- Production runtime source guards confirm no provider adapter normal legal generation, activation candidate generation, activation legal action generation, public summary build from state, direct `WBEffectRunner`, or `WBActionCodec` calls.
+- Provider interface source guard confirms no `FWBGameStateData` parameter in the provider interface.
+- Hidden metadata remains excluded from public activation presentation.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No production provider implementation, CardDB import, production zones, UI widgets, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.

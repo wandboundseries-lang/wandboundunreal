@@ -94,6 +94,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `FWBActivationSessionTestHarness` now provides test-only automation coverage for the activation session facade. It lives under `WandboundTests` only and simulates an external rules owner for normal legal actions, activation legal action sets, and public summaries. Production runtime code does not include it and still does not generate legal actions, activation candidates, activation action sets, or public summaries.
 
+`IWBRuntimeActivationDataProvider` and `WBRuntimeActivationDataProviderAdapter` now provide a production-safe C++ shell for receiving external activation decision data. The adapter can refresh the activation decision-session facade and execute selected activations with provider-supplied post-action data. It still adds no runtime rules generation, activation generation, public-summary building from state, UI/input, target picking, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

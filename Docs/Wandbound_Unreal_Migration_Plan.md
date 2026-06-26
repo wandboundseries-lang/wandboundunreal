@@ -1361,6 +1361,21 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production CardDB, production zones, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Data Provider Interface
+
+- Added `IWBRuntimeActivationDataProvider`.
+- Provider results carry externally supplied normal legal actions, activation legal actions, and public board summaries.
+- Added `WBRuntimeActivationDataProviderAdapter`.
+- The adapter can refresh the activation decision-session facade from provider output.
+- The adapter can execute a selected activation and refresh from provider-supplied post-activation output.
+- Added fixed test-only provider coverage under `WandboundTests`.
+- Runtime still does not generate legal actions, activation candidates, activation action sets, or public summaries from state.
+- Runtime still does not own or cache rules state through the provider shell.
+- Activation remains separate from `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art
