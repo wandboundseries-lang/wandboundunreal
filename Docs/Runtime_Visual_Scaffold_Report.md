@@ -90,6 +90,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `WBRuntimePostActivationRefreshSequencer` now provides explicit post-activation refresh sequencing. It executes a selected activation id through the owner path, then refreshes normal decision-point presentation and activation presentation from externally supplied post-action data. It still adds no input, UI, target picking, legal action generation, activation action generation, public summary building from state, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
 
+`UWBRuntimeActivationDecisionSessionFacadeComponent` now provides a C++ runtime activation session facade for future UI integration. It sequences external-data refresh, activation selection resolution, handoff creation, activation execution through the owner/sequencer path, and post-action external-data refresh. It still adds no UI/input widgets, target picking, rules generation, activation action generation, public summary building from state, direct `WBEffectRunner` calls, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

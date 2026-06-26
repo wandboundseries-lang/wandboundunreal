@@ -83,6 +83,8 @@ The future runtime owner must refresh activation presentation with a fresh exter
 
 The runtime post-activation refresh sequencer can now perform this explicit activation presentation refresh after activation execution, using only externally supplied post-action activation legal actions and public summaries.
 
+The runtime activation decision-session facade can refresh activation presentation alongside normal decision presentation for future UI-facing session state. It still consumes externally supplied activation legal actions and public summaries only.
+
 ## Hidden Metadata Exclusions
 
 Runtime activation presentation snapshots expose public labels and CardIds only through existing core presentation snapshots.

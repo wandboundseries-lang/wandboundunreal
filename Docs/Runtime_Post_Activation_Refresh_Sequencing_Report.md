@@ -92,6 +92,8 @@ Tests cover hidden source effect ids, usage keys, debug activation ids, and cost
 
 The owner still stores the activation execution result through its existing activation execution path. Normal refresh status is stored through existing owner refresh storage. Activation refresh updates the existing activation status counts.
 
+The later runtime activation decision-session facade wraps this sequencer path for future UI integration. The facade still receives all normal legal actions, activation legal actions, and public summaries externally.
+
 ## Separation From FWBAction
 
 Activation legal actions remain a separate action family.

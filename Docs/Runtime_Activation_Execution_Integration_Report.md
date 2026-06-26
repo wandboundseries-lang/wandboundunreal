@@ -68,6 +68,8 @@ No visual refresh is triggered by activation execution in this pass.
 
 The later runtime post-activation refresh sequencing pass adds an explicit external-data refresh helper that can run after successful activation execution. It refreshes normal decision-point presentation and activation presentation only from caller-supplied post-action legal actions, activation legal actions, and public summaries.
 
+The runtime activation decision-session facade now provides a higher-level external-data session flow over refresh, selection, handoff, execution, and post-action refresh. It still delegates execution through the existing owner/sequencer path and does not call `WBEffectRunner` directly.
+
 ## Hidden-Information Policy
 
 The bridge carries internal activation command data only as execution input and result data. Public presentation remains the safe display surface.

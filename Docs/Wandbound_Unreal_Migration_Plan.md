@@ -1335,6 +1335,20 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Decision-Session Facade
+
+- Added `UWBRuntimeActivationDecisionSessionFacadeComponent`.
+- The facade consumes external normal legal actions, activation legal actions, and public summaries.
+- It sequences session refresh, activation selection resolution, handoff creation, activation execution, and post-action refresh.
+- It does not generate legal actions.
+- It does not generate activation action sets.
+- It does not build public summaries from state.
+- It does not call `WBEffectRunner` directly.
+- Activation remains separate from `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

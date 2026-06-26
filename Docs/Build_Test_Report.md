@@ -2,6 +2,94 @@
 
 Date of check: 2026-06-26 (America/New_York)
 
+## Runtime Activation Decision-Session Facade Pass
+
+### Scope
+
+This pass added a thin C++ runtime activation decision-session facade over the existing owner, activation presentation, selection resolver, execution handoff, activation execution bridge, and post-activation refresh sequencer.
+
+Implemented:
+
+- `UWBRuntimeActivationDecisionSessionFacadeComponent`
+- `FWBRuntimeActivationDecisionSessionRefreshInput`
+- `FWBRuntimeActivationDecisionSessionStatus`
+- `FWBRuntimeActivationDecisionSessionRefreshResult`
+- `FWBRuntimeActivationDecisionSessionExecutionResult`
+- automation coverage for component construction, initial state, missing owner failure, external-data session refresh, source guards, activation id resolution, missing activation ids, handoff creation, execute plus post-action refresh, failed execution no-refresh default, failure-refresh options, supplied-summary policy, facade-only clear, hidden metadata exclusion, and `FWBAction` separation
+
+Not implemented:
+
+- legal action generation inside runtime
+- activation candidate generation inside runtime
+- activation legal action generation inside runtime
+- public summary building from runtime state
+- direct facade calls to `WBEffectRunner`
+- activation `FWBAction`
+- activation `WBActionCodec` ids
+- production zones
+- CardDB import
+- UI target picking, response windows, effect negation, passives, wands, card-specific behavior
+- UI widgets, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 11.59 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=713
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.ActivationDecisionSessionFacade.*`
+
+New test count: 15.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- The facade refreshes normal and activation presentation from externally supplied data.
+- The facade resolves selected activation ids through the owner/resolver path.
+- The facade creates handoffs through the owner/handoff path.
+- The facade executes activations through the owner/post-activation sequencer path.
+- `ClearSession` clears facade-local state only and does not clear owner/coordinator/model state.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+
+### Risks / Unknowns
+
+- Future UI still needs to supply fresh normal legal actions, activation legal actions, and public summaries.
+- The facade intentionally does not own or cache `FWBGameStateData`.
+- Production CardDB import and real card-zone legality remain future work.
+- Real UI target picking, response windows, effect negation, passives, wands, overflow handling, and card-specific behavior remain future work.
+
 ## Runtime Post-Activation Refresh Sequencing Pass
 
 ### Scope
