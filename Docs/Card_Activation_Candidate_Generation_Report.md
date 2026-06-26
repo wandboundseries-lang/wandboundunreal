@@ -153,3 +153,9 @@ Candidate generation now filters explicit Board-source activation candidates by 
 `SourceCardId` inheritance applies to Board sources as well: effect-specific context, source-level context, then `FWBCardDefinition::CardId`. Effect-specific overrides can intentionally fail parity when they do not match the visible source unit card id.
 
 For sources whose effects are all explicit Board fixture-ownership gates, missing or wrong-owner source units are handled by source gates as candidate filtering. Generic non-Board malformed-source behavior remains unchanged.
+
+## Follow-Up - Unreal CardDB Schema Planning
+
+Future CardDB schema source gates and target requirements feed candidate generation through the existing `FWBCardActivationSourceGateDefinition` and `EWBCardEffectTargetRequirement` fields.
+
+Candidate generation should continue to consume externally supplied candidate targets and source-gate context. The schema may declare what kind of target is required, but real target picking and zone observation remain future provider/UI work.

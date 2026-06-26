@@ -4351,3 +4351,56 @@ No whitespace errors. Git reported only LF-to-CRLF working-copy notices.
 - No CardDB import was added.
 - No production zones were added.
 - No UI, response windows, source files, Blueprints, `.uasset`, or `.umap` files were changed.
+
+---
+
+# Unreal CardDB Schema Documentation Pass
+
+## Scope
+
+Documentation-only pass.
+
+## Build
+
+Not run. No source code changes were intended or made.
+
+## Wandbound Automation Tests
+
+Not run. Existing automation baseline remains:
+
+```text
+succeeded=756
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Validation
+
+Commands used:
+
+```powershell
+git status --short
+git diff --check
+```
+
+Final `git diff --check` result:
+
+```text
+No whitespace errors. Git reported only LF-to-CRLF working-copy notices.
+```
+
+## Notes
+
+- Added `Docs/CardDB_Unreal_Schema_Audit.md`.
+- Added `Docs/CardDB_Unreal_Schema_Plan.md`.
+- Added `Docs/CardDB_Unreal_Schema_Examples.md`.
+- Updated activation schema, provider planning, migration, and build/test docs.
+- Documented supported payload mapping for armor, status, damage, and heal.
+- Documented source gate, cost gate, usage gate, target binding, public label, and hidden-information policy.
+- Documented fail-closed unsupported effect diagnostics.
+- No importer was implemented.
+- No source code was changed.
+- No production CardDB loader was added.
+- No production zones were added.
+- No UI, response windows, Blueprints, `.uasset`, or `.umap` files were changed.

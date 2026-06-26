@@ -269,6 +269,12 @@ Runtime/public serialization after an effect request or card activation command 
 
 Visible board unit card ids remain public under the existing public board summary policy.
 
+## Follow-Up - Unreal CardDB Schema Planning
+
+Future schema payloads map into `FWBGenericEffectPayload` and the existing armor, status, damage, and heal request structs.
+
+Unsupported payload types or operations should fail closed during schema validation. Import mapping must not silently downgrade unsupported card text into no-op effects, and player-facing labels should use card-language terms rather than internal payload names.
+
 ## Remaining Work
 
 - Godot CardDB importer

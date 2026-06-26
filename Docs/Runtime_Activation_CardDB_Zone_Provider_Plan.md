@@ -238,6 +238,18 @@ Future provider contract categories:
 - post-activation provider refresh after cost/usage mutation
 - response-window pending activation once implemented
 
+## Unreal CardDB Schema Planning
+
+Unreal-owned CardDB schema planning docs now exist:
+
+- `Docs/CardDB_Unreal_Schema_Audit.md`
+- `Docs/CardDB_Unreal_Schema_Plan.md`
+- `Docs/CardDB_Unreal_Schema_Examples.md`
+
+Future production providers should consume card definitions only after importer work maps validated schema data into Unreal-owned `FWBCardDefinition` and `FWBCardEffectDefinition` values.
+
+The provider remains an external-data boundary. It should consume already-loaded definitions, zone observations, normal legal actions, activation legal actions, and public summaries; it should not import CardDB data, mutate rules state, generate legal action families internally, or expose hidden card identity.
+
 ## Implementation Sequence Recommendation
 
 1. Draft Unreal-owned CardDB schema docs only.

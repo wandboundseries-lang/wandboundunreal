@@ -102,3 +102,9 @@ FWBCardDefinition -> FWBCardActivationCandidate -> FWBCardActivationLegalAction
 ```
 
 `WBCardActivationLegalActionGenerator` converts candidates into a separate activation legal action family for future UI/runtime selection while preserving explicit application through `WBEffectRunner::ApplyCardActivationCommand`.
+
+## Follow-Up - Unreal CardDB Schema Planning
+
+The future Unreal-owned CardDB schema maps imported card records into `FWBCardDefinition` and imported activated effects into `FWBCardEffectDefinition`.
+
+Schema validation should occur before expansion. Unsupported card kinds, target requirements, payload types, or payload operations must fail closed instead of producing partial activation commands.

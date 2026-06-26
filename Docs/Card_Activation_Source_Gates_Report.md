@@ -79,6 +79,12 @@ Source gates now support Board-source unit/card-id parity. When `RequiredZone = 
 
 Board-source parity uses `FWBUnitState::CardId` as the source of truth and does not require `FixtureZoneContext` entries. Hand, Equipped, Discard, Deck unsupported, and legacy Fixture behavior remain unchanged.
 
+## Follow-Up - Unreal CardDB Schema Planning
+
+The future CardDB schema defines the authoring shape for `source_gate`.
+
+Schema fields should map into `FWBCardActivationSourceGateDefinition`: required zone, timing, source-unit ownership, status blockers, cost gate, fixture ownership, once-per-turn policy, and usage key. Unsupported source zones or timings must fail closed during schema validation.
+
 ## Fixture Support
 
 Added parser support for:

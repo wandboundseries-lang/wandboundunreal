@@ -1403,6 +1403,21 @@
 - No UI or response windows were added.
 - No source code was changed.
 
+## Milestone - Unreal CardDB Schema Documentation
+
+- Added Unreal-owned CardDB schema planning docs.
+- Documented the supported payload mapping for armor, status, damage, and heal effects.
+- Documented source gate, cost gate, usage gate, target binding, public label, and hidden-information policy.
+- Documented fail-closed diagnostics for unsupported card kinds, timings, target requirements, payload types, and payload operations.
+- Activation remains separate from `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No importer was implemented.
+- No production CardDB loader was added.
+- No production zones were added.
+- No UI, target picking, or response windows were added.
+- No source code was changed.
+
 ## Phase 12 - Asset Migration
 
 - card art
