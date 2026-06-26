@@ -73,6 +73,10 @@ Runtime production code still does not:
 - own or cache rules state through the provider shell
 - inspect hidden zones
 
+## Future Provider Guidance
+
+`Docs/Runtime_Activation_CardDB_Zone_Provider_Plan.md` now records how this contract should guide future CardDB/zone-backed provider implementations. Future providers should extend the same request/result and hidden-information expectations before adding production zones or CardDB import.
+
 ## Fixtures
 
 No GodotCanon fixtures were added. This pass verifies C++ provider-interface behavior, transient component refresh behavior, and adapter failure policy. C++ automation is the clearer format for this contract-level surface.

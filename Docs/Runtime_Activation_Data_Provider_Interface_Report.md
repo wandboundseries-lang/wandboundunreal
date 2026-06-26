@@ -93,6 +93,10 @@ Provider output must remain public/runtime-safe. Tests verify activation present
 
 The verifier and contract provider variants live under `WandboundTests` only and are not included by production runtime.
 
+## CardDB/Zone Provider Planning
+
+`Docs/Runtime_Activation_CardDB_Zone_Provider_Plan.md` now defines the future CardDB/zone-backed provider plan. The production provider is still not implemented, and runtime remains a consumer of externally supplied normal legal actions, activation legal actions, and public summaries.
+
 ## Action Family Boundary
 
 Activation legal actions remain separate from `FWBAction`.

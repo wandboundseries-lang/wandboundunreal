@@ -1389,6 +1389,20 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production provider, CardDB import, production zones, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation CardDB/Zone Provider Planning
+
+- Added planning-only provider documents.
+- Defined future provider inputs and outputs.
+- Defined zone ownership and hidden-information boundaries.
+- Defined CardDB import boundaries.
+- Defined fixture strategy and provider contract extension categories.
+- Recommended a staged implementation sequence before production provider work.
+- No production provider was added.
+- No CardDB import was added.
+- No production zones were added.
+- No UI or response windows were added.
+- No source code was changed.
+
 ## Phase 12 - Asset Migration
 
 - card art

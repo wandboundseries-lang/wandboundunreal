@@ -4299,3 +4299,55 @@ notRun=0
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - Existing `WBActionCodec` output remains unchanged.
 - No production provider implementation, CardDB import, production zones, UI widgets, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Runtime Activation CardDB/Zone Provider Planning Pass
+
+## Scope
+
+Documentation-only pass.
+
+## Build
+
+Not run. No source code changes were intended or made.
+
+## Wandbound Automation Tests
+
+Not run. Existing automation baseline remains:
+
+```text
+succeeded=756
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Validation
+
+Commands used:
+
+```powershell
+git status --short
+git diff --check
+```
+
+Final `git diff --check` result:
+
+```text
+No whitespace errors. Git reported only LF-to-CRLF working-copy notices.
+```
+
+## Notes
+
+- Added `Docs/Runtime_Activation_CardDB_Zone_Provider_Planning_Audit.md`.
+- Added `Docs/Runtime_Activation_CardDB_Zone_Provider_Plan.md`.
+- Updated provider interface, provider contract, migration, and build/test docs.
+- Defined future provider inputs and outputs.
+- Defined zone ownership and hidden-information boundaries.
+- Defined CardDB import boundaries.
+- Defined fixture and provider contract extension strategy.
+- No production provider was implemented.
+- No CardDB import was added.
+- No production zones were added.
+- No UI, response windows, source files, Blueprints, `.uasset`, or `.umap` files were changed.
