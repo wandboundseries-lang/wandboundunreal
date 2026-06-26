@@ -62,6 +62,12 @@ The tests cover execute plus external post-action refresh, once-per-turn action 
 
 The adapter does not generate legal actions, activation candidates, activation action sets, or public summaries. It only forwards provider output into the existing facade methods.
 
+## Provider Contract Coverage
+
+Provider contract tests now exercise facade refresh and execute-and-refresh flows through contract-valid provider output. They also verify failing provider output stops before session refresh or activation execution.
+
+This keeps the facade as an external-data consumer and confirms future providers must supply normal legal actions, activation legal actions, and public summaries without moving generation into runtime.
+
 ## Status Fields
 
 `FWBRuntimeActivationDecisionSessionStatus` reports:

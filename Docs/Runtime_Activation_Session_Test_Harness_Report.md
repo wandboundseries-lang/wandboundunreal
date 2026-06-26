@@ -33,6 +33,12 @@ It does not modify the state.
 
 The provider shell does not implement a real provider and does not generate rules data.
 
+## Provider Contract Tests
+
+The runtime activation data provider contract suite complements this harness by verifying provider output shape directly. It covers required request/result fields, current-decision and post-activation shapes, deterministic output, hidden-token rejection, failure policy, and adapter behavior with valid or failing provider data.
+
+The contract verifier and provider variants remain test-only.
+
 ## One-Decision Flow
 
 The harness refreshes the runtime activation decision-session facade from external data, selects the first activation action matching a public label, previews post-action data on a cloned state for test-only sequencing, executes the real activation through the facade/owner/sequencer path, and verifies the real state mutation plus post-refresh status.

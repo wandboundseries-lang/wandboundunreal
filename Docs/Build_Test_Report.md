@@ -4245,3 +4245,57 @@ notRun=0
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - Existing `WBActionCodec` output remains unchanged.
 - No production provider implementation, CardDB import, production zones, UI widgets, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Runtime Activation Data Provider Contract Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 10.33 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=756
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added test-only `FWBRuntimeActivationDataProviderContractVerifier`.
+- Added deterministic, failing, hidden-token, and changing test provider variants.
+- Added 21 `Wandbound.Runtime.ActivationDataProviderContract.*` automation tests.
+- Covered valid current-decision and post-activation result shapes.
+- Covered missing request identity fields: player id, decision point id, and post-activation selected activation id.
+- Covered missing normal actions, missing activation actions, missing public summary units, empty activation action ids, unknown request kind, and hidden-token rejection.
+- Covered deterministic provider output and intentionally changing provider output.
+- Covered adapter refresh/execute behavior with valid and failing provider output.
+- Runtime source guards confirm no contract verifier or contract test provider includes in `Source/WandboundRuntime`.
+- Runtime source guards confirm no normal legal generation, activation candidate generation, or activation legal action generation in `Source/WandboundRuntime`.
+- Provider interface source guard confirms no `FWBGameStateData` parameter in the provider interface.
+- Activation remains separate from `FWBAction`.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No production provider implementation, CardDB import, production zones, UI widgets, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.

@@ -87,6 +87,12 @@ The provider shell does not:
 
 Provider output must remain public/runtime-safe. Tests verify activation presentation refreshed from provider data excludes internal source effect ids, usage keys, debug activation ids, and cost metadata.
 
+## Provider Contract
+
+`FWBRuntimeActivationDataProviderContractVerifier` now defines test-only expectations for future provider implementations. The contract covers accepted request kinds, required normal legal actions, activation legal actions, public board summary units, non-empty activation action ids, deterministic output, hidden-token exclusion, and provider failure policy.
+
+The verifier and contract provider variants live under `WandboundTests` only and are not included by production runtime.
+
 ## Action Family Boundary
 
 Activation legal actions remain separate from `FWBAction`.

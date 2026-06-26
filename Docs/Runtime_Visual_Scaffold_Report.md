@@ -96,6 +96,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `IWBRuntimeActivationDataProvider` and `WBRuntimeActivationDataProviderAdapter` now provide a production-safe C++ shell for receiving external activation decision data. The adapter can refresh the activation decision-session facade and execute selected activations with provider-supplied post-action data. It still adds no runtime rules generation, activation generation, public-summary building from state, UI/input, target picking, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
 
+`FWBRuntimeActivationDataProviderContractVerifier` and contract provider variants now provide test-only coverage for future activation data providers. The contract suite verifies current-decision and post-activation provider result shape, deterministic output, hidden-token exclusion, failure policy, and adapter refresh/execute behavior. These helpers live under `WandboundTests` only and add no production provider, runtime rules generation, UI/input, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

@@ -1376,6 +1376,19 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Data Provider Contract
+
+- Added test-only provider contract verifier coverage under `WandboundTests`.
+- Future providers must return normal legal actions, activation legal actions, and public summaries for current-decision and post-activation requests.
+- Deterministic ordering and hidden-information exclusion are covered.
+- Provider failure policy is covered for refresh and execute-and-refresh adapter flows.
+- Runtime still does not generate normal legal actions, activation candidates, activation action sets, or public summaries from state.
+- Runtime still does not own or cache rules state through the provider shell.
+- Activation remains separate from `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production provider, CardDB import, production zones, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art
