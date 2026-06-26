@@ -66,6 +66,8 @@ The runtime presentation model, coordinator, and owner keep their existing stale
 
 No visual refresh is triggered by activation execution in this pass.
 
+The later runtime post-activation refresh sequencing pass adds an explicit external-data refresh helper that can run after successful activation execution. It refreshes normal decision-point presentation and activation presentation only from caller-supplied post-action legal actions, activation legal actions, and public summaries.
+
 ## Hidden-Information Policy
 
 The bridge carries internal activation command data only as execution input and result data. Public presentation remains the safe display surface.

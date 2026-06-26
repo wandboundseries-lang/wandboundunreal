@@ -1,6 +1,7 @@
 #include "WBRuntimeDecisionPointOwnerComponent.h"
 
 #include "WBRuntimeControllerFacadeComponent.h"
+#include "WBRuntimePostActivationRefreshSequencer.h"
 
 namespace
 {
@@ -214,6 +215,21 @@ UWBRuntimeDecisionPointOwnerComponent::ExecuteActivationActionId(
 		SelectedActivationActionId);
 	bHasLastActivationExecutionResult = true;
 	return LastActivationExecutionResult;
+}
+
+FWBRuntimePostActivationRefreshResult
+UWBRuntimeDecisionPointOwnerComponent::ExecuteActivationActionIdAndRefreshFromExternalData(
+	FWBGameStateData& State,
+	const FString& SelectedActivationActionId,
+	const FWBRuntimePostActivationRefreshInput& PostActionRefreshInput,
+	const FWBRuntimePostActivationRefreshOptions& Options)
+{
+	return WBRuntimePostActivationRefreshSequencer::ExecuteActivationAndRefreshFromExternalData(
+		State,
+		SelectedActivationActionId,
+		this,
+		PostActionRefreshInput,
+		Options);
 }
 
 FWBRuntimeActionSelectionExecutionResult

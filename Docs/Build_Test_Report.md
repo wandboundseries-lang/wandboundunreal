@@ -2,6 +2,94 @@
 
 Date of check: 2026-06-26 (America/New_York)
 
+## Runtime Post-Activation Refresh Sequencing Pass
+
+### Scope
+
+This pass added explicit runtime post-activation refresh sequencing from externally supplied data.
+
+Implemented:
+
+- `WBRuntimePostActivationRefreshSequencer`
+- `FWBRuntimePostActivationRefreshOptions`
+- `FWBRuntimePostActivationRefreshInput`
+- `FWBRuntimePostActivationRefreshResult`
+- `UWBRuntimeDecisionPointOwnerComponent::ExecuteActivationActionIdAndRefreshFromExternalData`
+- automation coverage for null owner failure, success refresh of normal decision-point presentation, success refresh of activation presentation, default refresh of both, disabled refresh stale-state behavior, failed activation no-refresh default, configured refresh on failure, normal refresh failure after successful execution, supplied-summary policy, core-owned payment/usage, hidden metadata exclusion, source guards, owner convenience delegation, and `FWBAction` separation
+
+Not implemented:
+
+- legal action generation inside runtime
+- activation candidate generation inside runtime
+- activation legal action generation inside runtime
+- public summary building from runtime state
+- direct sequencer calls to `WBEffectRunner`
+- activation `FWBAction`
+- activation `WBActionCodec` ids
+- production zones
+- CardDB import
+- UI target picking, response windows, effect negation, passives, wands, card-specific behavior
+- UI widgets, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 15.07 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=698
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.PostActivationRefreshSequencer.*`
+
+New test count: 14.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Notes
+
+- Sequencer activation execution delegates through `Owner->ExecuteActivationActionId`.
+- Sequencer refresh delegates through owner external-data refresh methods.
+- Post-action normal legal actions, activation legal actions, and public summaries are supplied by the caller.
+- Refresh is skipped on activation failure by default.
+- Optional refresh-on-failure remains caller-driven and does not make failed activation execution successful.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+
+### Risks / Unknowns
+
+- Runtime callers must still supply fresh post-action legal actions, activation legal actions, and public summaries.
+- Activation presentation refresh failure after successful execution is only reachable through missing runtime wiring; with the current owner path, the activation model required for execution is also the activation refresh target.
+- Production CardDB import and real card-zone legality remain future work.
+- Real UI target picking, response windows, effect negation, passives, wands, overflow handling, and card-specific behavior remain future work.
+
 ## Runtime Activation Execution Integration Pass
 
 ### Scope

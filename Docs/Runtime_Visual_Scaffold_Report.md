@@ -88,6 +88,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `WBRuntimeActivationExecutionBridge` now provides the explicit C++ runtime activation execution boundary. It accepts a resolved activation handoff and externally supplied mutable rules state, validates the handoff shape, and delegates to `WBEffectRunner::ApplyCardActivationCommand`. Model, coordinator, and owner convenience methods can call this bridge, but they still do not generate legal actions, own rules state, add input/UI, refresh visuals automatically, touch camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
 
+`WBRuntimePostActivationRefreshSequencer` now provides explicit post-activation refresh sequencing. It executes a selected activation id through the owner path, then refreshes normal decision-point presentation and activation presentation from externally supplied post-action data. It still adds no input, UI, target picking, legal action generation, activation action generation, public summary building from state, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

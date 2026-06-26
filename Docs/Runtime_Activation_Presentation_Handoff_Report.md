@@ -81,6 +81,8 @@ It is not automatically cleared when normal `FWBAction` decision-point refresh o
 
 The future runtime owner must refresh activation presentation with a fresh externally generated activation legal action set and public summary, or explicitly clear it.
 
+The runtime post-activation refresh sequencer can now perform this explicit activation presentation refresh after activation execution, using only externally supplied post-action activation legal actions and public summaries.
+
 ## Hidden Metadata Exclusions
 
 Runtime activation presentation snapshots expose public labels and CardIds only through existing core presentation snapshots.

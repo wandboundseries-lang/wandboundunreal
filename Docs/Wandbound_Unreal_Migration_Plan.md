@@ -1320,6 +1320,21 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production zones, CardDB import, activation codec ids, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Post-Activation Refresh Sequencing
+
+- Added `WBRuntimePostActivationRefreshSequencer`.
+- Activation execution can now be followed by explicit external-data refresh for normal decision-point presentation and activation presentation.
+- Added `FWBRuntimePostActivationRefreshOptions`, `FWBRuntimePostActivationRefreshInput`, and `FWBRuntimePostActivationRefreshResult`.
+- Added `UWBRuntimeDecisionPointOwnerComponent::ExecuteActivationActionIdAndRefreshFromExternalData`.
+- Runtime does not generate legal actions.
+- Runtime does not generate activation action sets.
+- Runtime does not build public summaries from state.
+- Runtime does not call `WBEffectRunner` directly from the sequencer.
+- Activation remains separate from `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

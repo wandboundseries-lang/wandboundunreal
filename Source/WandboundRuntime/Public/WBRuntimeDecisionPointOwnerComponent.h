@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "WBRuntimeDecisionPointCoordinatorComponent.h"
 #include "WBRuntimeActivationExecutionBridge.h"
+#include "WBRuntimePostActivationRefreshSequencer.h"
 #include "WBRuntimeDecisionPointOwnerComponent.generated.h"
 
 class UWBRuntimeControllerFacadeComponent;
@@ -45,6 +46,12 @@ public:
 	FWBRuntimeActivationExecutionResult ExecuteActivationActionId(
 		FWBGameStateData& State,
 		const FString& SelectedActivationActionId);
+
+	FWBRuntimePostActivationRefreshResult ExecuteActivationActionIdAndRefreshFromExternalData(
+		FWBGameStateData& State,
+		const FString& SelectedActivationActionId,
+		const FWBRuntimePostActivationRefreshInput& PostActionRefreshInput,
+		const FWBRuntimePostActivationRefreshOptions& Options = FWBRuntimePostActivationRefreshOptions());
 
 	FWBRuntimeActionSelectionExecutionResult ExecuteSelectedActionId(
 		FWBGameStateData& State,
