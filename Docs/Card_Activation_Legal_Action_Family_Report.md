@@ -76,6 +76,16 @@ The activation snapshot now consumes `FWBPublicBoardSummary`. Source and target 
 
 Duplicate activation ids make lookup fail so future UI selection cannot silently pick an ambiguous entry.
 
+Added target-selection presentation helpers:
+
+- `EWBCardActivationTargetPresentationKind`
+- `FWBCardActivationTargetPresentationEntry`
+- `FWBCardActivationTargetPresentationSnapshot`
+- `WBCardActivationTargetPresentation::BuildSnapshot`
+- `WBCardActivationTargetPresentation::TryFindEntryByActivationActionId`
+
+The target-selection snapshot consumes the same activation legal action set and public board summary, classifies already-generated targets as None, Unit, Tile, WallEdge, or Unknown, and exposes simple labels such as `Choose Unit`, `Choose Tile`, and `Choose Wall`.
+
 ## Fixture Operation
 
 Added fixture operation:
@@ -110,6 +120,14 @@ A later verifier-only fixture operation can select activation legal action ids f
 
 This replay path is test-only and keeps activation ids outside `FWBAction` and `WBActionCodec`.
 
+Added fixture operation:
+
+```json
+"operation": "build_card_activation_target_presentation_snapshot"
+```
+
+The operation validates target-presentation entry counts, activation ids, public activation labels, target labels, target kinds, public source CardIds, and public target CardIds. It does not apply activation commands or mutate state.
+
 ## Golden Scenarios
 
 Added:
@@ -125,6 +143,8 @@ Added:
 
 Follow-up Board-source coverage added focused fixtures for damage, status, armor, heal, deterministic ordering, cost commit preservation, usage commit preservation, selected-id replay, card mismatch failure, `FWBAction` separation, action-id stability, hidden metadata exclusion, and activation-only presentation snapshots.
 
+Follow-up target-selection presentation coverage added focused fixtures for unit, missing public unit, no-target, tile, wall-edge, deterministic ordering, clean labels, public CardIds, duplicate lookup failure, and hidden metadata exclusion.
+
 ## Guardrails
 
 Confirmed by tests:
@@ -137,6 +157,7 @@ Confirmed by tests:
 - activation legal actions preserve `FWBCardActivationCostPaymentCommit` from their source candidates
 - activation legal action ids can be selected and replayed through test-only verifier fixtures
 - activation presentation snapshots support Board-source entries without merging into `FWBAction`
+- activation target-selection presentation snapshots support already-generated targets without generating legality or UI target picks
 - applying activation remains explicit through `WBEffectRunner::ApplyCardActivationCommand`
 - generation emits no traces and mutates no state
 - hidden deck/hand/discard and debug activation metadata do not leak into trace serialization

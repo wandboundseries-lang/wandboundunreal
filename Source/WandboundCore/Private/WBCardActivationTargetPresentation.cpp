@@ -4,7 +4,7 @@
 
 namespace
 {
-const FWBPublicUnitBoardSummary* FindPublicUnitById(
+const FWBPublicUnitBoardSummary* FindTargetPresentationPublicUnitById(
 	const FWBPublicBoardSummary& PublicBoardSummary,
 	const int32 UnitId)
 {
@@ -112,7 +112,7 @@ FWBCardActivationTargetPresentationSnapshot WBCardActivationTargetPresentation::
 		Entry.TargetKind = DetermineTargetKind(Action.Target);
 		Entry.PublicTargetLabel = PublicTargetLabelForKind(Entry.TargetKind);
 
-		if (const FWBPublicUnitBoardSummary* SourceUnit = FindPublicUnitById(PublicBoardSummary, Action.SourceUnitId))
+		if (const FWBPublicUnitBoardSummary* SourceUnit = FindTargetPresentationPublicUnitById(PublicBoardSummary, Action.SourceUnitId))
 		{
 			Entry.bHasPublicSourceUnit = true;
 			Entry.SourcePublicCardId = SourceUnit->CardId;
@@ -120,7 +120,7 @@ FWBCardActivationTargetPresentationSnapshot WBCardActivationTargetPresentation::
 
 		if (Entry.TargetKind == EWBCardActivationTargetPresentationKind::Unit)
 		{
-			if (const FWBPublicUnitBoardSummary* TargetUnit = FindPublicUnitById(PublicBoardSummary, Action.Target.TargetUnitId))
+			if (const FWBPublicUnitBoardSummary* TargetUnit = FindTargetPresentationPublicUnitById(PublicBoardSummary, Action.Target.TargetUnitId))
 			{
 				Entry.bHasPublicTargetUnit = true;
 				Entry.TargetPublicCardId = TargetUnit->CardId;
