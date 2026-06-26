@@ -4404,3 +4404,68 @@ No whitespace errors. Git reported only LF-to-CRLF working-copy notices.
 - No production CardDB loader was added.
 - No production zones were added.
 - No UI, response windows, Blueprints, `.uasset`, or `.umap` files were changed.
+
+---
+
+# Test-Only CardDB Schema Fixture Validation Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 18.27 seconds
+```
+
+## Targeted CardDB Schema Fixture Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBSchemaFixtureValidation; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaFixtureValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaFixtureValidation/index.json`:
+
+```text
+succeeded=20
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=776
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added 20 `Wandbound.Core.CardDBSchemaFixtureValidation.*` automation tests.
+- Added test-only schema fixtures under `Reference/GodotCanon/CardDBSchemaFixtures/`.
+- Added a test-only `FWBCardDBSchemaFixtureValidator`.
+- Valid fixtures cover damage, heal, Burn status, armor restore, cost gate, and once-per-turn source gate shape.
+- Invalid fixtures cover missing ids, duplicate effect id, unsupported payload type/operation, unsupported target requirement, unsupported timing, invalid RR cost, invalid status id, bad player-facing label, and hidden-info policy violation.
+- Valid fixture data maps to `FWBCardDefinition` only inside the test-only validation helper.
+- Source guards confirm no validator include in `Source/WandboundCore` or `Source/WandboundRuntime`.
+- Source guards confirm the validator does not call effect execution, normal legal action generation, activation candidate generation, or activation legal action generation paths.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.

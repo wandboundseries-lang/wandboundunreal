@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "public_name": "Missing Card Id",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": []
+}

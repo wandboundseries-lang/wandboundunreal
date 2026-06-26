@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_unsupported_timing",
+  "public_name": "Response Timing",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": [
+    {
+      "effect_id": "response_activate",
+      "public_label": "Activate",
+      "target_requirement": "none",
+      "source_gate": {
+        "required_zone": "hand",
+        "timing": "response_window"
+      },
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": 1,
+          "target": "source"
+        }
+      ]
+    }
+  ]
+}

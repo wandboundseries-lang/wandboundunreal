@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_duplicate_effect_id",
+  "public_name": "Duplicate Effect",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": [
+    {
+      "effect_id": "shared",
+      "public_label": "Deal 1 damage",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 1,
+          "target": "selected"
+        }
+      ]
+    },
+    {
+      "effect_id": "shared",
+      "public_label": "Heal 1 HP",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": 1,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

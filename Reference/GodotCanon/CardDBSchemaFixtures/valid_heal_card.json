@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "card_id": "valid_heal_card",
+  "public_name": "Field Mend",
+  "kind": "fixture",
+  "public_text": "Activate: Heal 2 HP.",
+  "activated_effects": [
+    {
+      "effect_id": "heal_2",
+      "public_label": "Heal 2 HP",
+      "target_requirement": "unit",
+      "source_gate": {
+        "required_zone": "hand",
+        "timing": "normal_turn_priority",
+        "requires_fixture_zone_ownership": true
+      },
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": 2,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

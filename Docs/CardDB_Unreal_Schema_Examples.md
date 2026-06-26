@@ -1,6 +1,8 @@
 # CardDB Unreal Schema Examples
 
-These are documentation examples only. They are not fixtures, parser input, or production data.
+These are documentation examples only. They are not parser input or production data.
+
+Corresponding test-only fixture examples now live under `Reference/GodotCanon/CardDBSchemaFixtures/`. Those fixtures validate the documented schema shape and fail-closed diagnostics without creating a production importer.
 
 ## 1. Damage Effect Card
 

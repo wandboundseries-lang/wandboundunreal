@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_hidden_info_policy_violation",
+  "public_name": "Hidden Leak",
+  "kind": "fixture",
+  "public_text": "Activate after reading opponent_hand.",
+  "activated_effects": [
+    {
+      "effect_id": "hidden_leak",
+      "public_label": "Reveal SECRET_card",
+      "target_requirement": "none",
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": 1,
+          "target": "source"
+        }
+      ]
+    }
+  ]
+}

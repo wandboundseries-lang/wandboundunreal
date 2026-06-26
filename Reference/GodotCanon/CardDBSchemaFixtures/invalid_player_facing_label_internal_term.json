@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_player_facing_label_internal_term",
+  "public_name": "Bad Label",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_label",
+      "public_label": "Run EffectRunner damage_effect",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 2,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

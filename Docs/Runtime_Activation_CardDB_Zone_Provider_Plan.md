@@ -248,6 +248,8 @@ Unreal-owned CardDB schema planning docs now exist:
 
 Future production providers should consume card definitions only after importer work maps validated schema data into Unreal-owned `FWBCardDefinition` and `FWBCardEffectDefinition` values.
 
+The test-only schema fixture validator proves the current fail-closed validation contract before production provider work. Future providers should consume only schema-validated card definitions and should not perform schema validation, CardDB import, effect execution, or hidden-zone inspection themselves.
+
 The provider remains an external-data boundary. It should consume already-loaded definitions, zone observations, normal legal actions, activation legal actions, and public summaries; it should not import CardDB data, mutate rules state, generate legal action families internally, or expose hidden card identity.
 
 ## Implementation Sequence Recommendation

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_missing_effect_id",
+  "public_name": "Missing Effect Id",
+  "kind": "fixture",
+  "public_text": "Activate: Deal 1 damage.",
+  "activated_effects": [
+    {
+      "public_label": "Deal 1 damage",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 1,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "card_id": "valid_status_burn_card",
+  "public_name": "Cinder Mark",
+  "kind": "fixture",
+  "public_text": "Activate: Apply Burn.",
+  "activated_effects": [
+    {
+      "effect_id": "burn_2",
+      "public_label": "Apply Burn",
+      "target_requirement": "unit",
+      "source_gate": {
+        "required_zone": "board",
+        "timing": "normal_turn_priority",
+        "requires_source_unit": true,
+        "requires_source_unit_ownership": true
+      },
+      "payloads": [
+        {
+          "type": "status_effect",
+          "operation": "apply_status",
+          "status_id": "Burn",
+          "turns_remaining": 2,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

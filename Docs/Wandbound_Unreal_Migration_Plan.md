@@ -1418,6 +1418,23 @@
 - No UI, target picking, or response windows were added.
 - No source code was changed.
 
+## Milestone - Test-Only CardDB Schema Fixture Validation
+
+- Added Unreal-owned CardDB schema fixtures under `Reference/GodotCanon/CardDBSchemaFixtures/`.
+- Added a test-only schema fixture validator under `WandboundTests`.
+- Supported payloads validate for damage, heal, status, and armor.
+- Valid fixtures can map into `FWBCardDefinition` for validation only.
+- Unsupported payloads fail closed.
+- Unsupported operations, target requirements, timings, invalid RR costs, and invalid status ids fail closed.
+- Bad player-facing labels and hidden-information policy violations fail closed.
+- Source guards confirm the validator is not included by `WandboundCore` or `WandboundRuntime`.
+- No production importer was implemented.
+- No production CardDB loader was added.
+- No production zones were added.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_unsupported_target_requirement",
+  "public_name": "Bad Target",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_target",
+      "public_label": "Activate",
+      "target_requirement": "any_unit",
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": 1,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

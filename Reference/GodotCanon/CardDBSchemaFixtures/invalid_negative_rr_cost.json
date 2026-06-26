@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_negative_rr_cost",
+  "public_name": "Bad Cost",
+  "kind": "fixture",
+  "public_text": "Activate: Deal 1 damage.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_cost",
+      "public_label": "Deal 1 damage",
+      "target_requirement": "unit",
+      "source_gate": {
+        "required_zone": "board",
+        "timing": "normal_turn_priority",
+        "cost_gate": {
+          "requires_external_affordability": true,
+          "required_rr": -1,
+          "cost_kind": "RR"
+        }
+      },
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 1,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

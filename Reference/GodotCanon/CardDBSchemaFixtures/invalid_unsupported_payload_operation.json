@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_unsupported_payload_operation",
+  "public_name": "Unsupported Armor",
+  "kind": "fixture",
+  "public_text": "Activate: Restore Armor.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_armor",
+      "public_label": "Restore Armor",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "armor_effect",
+          "operation": "double_current_armor",
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

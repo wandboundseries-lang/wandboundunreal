@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_bad_status_id",
+  "public_name": "Bad Status",
+  "kind": "fixture",
+  "public_text": "Activate: Apply a status.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_status",
+      "public_label": "Apply Burn",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "status_effect",
+          "operation": "apply_status",
+          "status_id": "Invisible",
+          "turns_remaining": 2,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

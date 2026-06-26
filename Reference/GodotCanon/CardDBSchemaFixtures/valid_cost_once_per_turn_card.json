@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "card_id": "valid_cost_once_per_turn_card",
+  "public_name": "Heavy Burst",
+  "kind": "fixture",
+  "public_text": "Activate once per turn: Deal 3 damage.",
+  "activated_effects": [
+    {
+      "effect_id": "heavy_burst",
+      "public_label": "Deal 3 damage",
+      "target_requirement": "unit",
+      "source_gate": {
+        "required_zone": "board",
+        "timing": "normal_turn_priority",
+        "requires_source_unit": true,
+        "requires_source_unit_ownership": true,
+        "once_per_turn": true,
+        "once_per_turn_key": "heavy_burst",
+        "cost_gate": {
+          "requires_external_affordability": true,
+          "required_rr": 2,
+          "cost_kind": "RR"
+        }
+      },
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 3,
+          "bypass_armor": false,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

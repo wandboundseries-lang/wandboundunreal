@@ -488,6 +488,14 @@ Fixture strategy:
 - keep GoldenScenarios for deterministic core behavior.
 - keep C++ contract tests for provider/runtime interface behavior.
 
+## Test-Only Fixture Validation
+
+Test-only schema fixture validation now exists under `WandboundTests`.
+
+The fixture validator reads Unreal-owned schema fixtures from `Reference/GodotCanon/CardDBSchemaFixtures/`, validates fail-closed diagnostics, and may map valid fixture data into `FWBCardDefinition` for validation only.
+
+The validator is not a production importer, does not load production CardDB data, does not create production zones, does not execute effects, and does not generate production runtime activation candidates or actions.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.
