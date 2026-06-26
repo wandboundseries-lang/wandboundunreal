@@ -1,6 +1,110 @@
 # Build/Test Report
 
-Date of check: 2026-06-25 (America/New_York)
+Date of check: 2026-06-26 (America/New_York)
+
+## Runtime Activation Execution Integration Pass
+
+### Scope
+
+This pass added explicit runtime activation execution integration for already-resolved activation handoffs.
+
+Implemented:
+
+- `WBRuntimeActivationExecutionBridge`
+- `FWBRuntimeActivationExecutionResult`
+- `UWBRuntimeActivationPresentationModelComponent::ExecuteActivationActionId`
+- `UWBRuntimeDecisionPointCoordinatorComponent::ExecuteActivationActionId`
+- `UWBRuntimeDecisionPointOwnerComponent::ExecuteActivationActionId`
+- owner storage/clear helpers for the latest activation execution result
+- automation coverage for unresolved handoffs, successful execution, cost payment, usage marking, payment/effect/usage trace order, rollback, unaffordable failure, hidden metadata exclusion, stale presentation policy, model/coordinator/owner convenience methods, source guards, and `FWBAction` separation
+
+Not implemented:
+
+- activation `FWBAction`
+- activation `WBActionCodec` ids
+- activation legal-action generation from runtime
+- normal legal action regeneration after activation execution
+- visual refresh after activation execution
+- production card zones
+- CardDB import
+- UI target picking, response windows, effect negation, passives, wands, card-specific behavior
+- UI widgets, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 9.66 seconds
+```
+
+An earlier build after adding the bridge succeeded after fixing a missing public include for `FWBRuntimeActivationExecutionResult`:
+
+```text
+Result: Succeeded
+Total execution time: 13.33 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=684
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.ActivationExecutionBridge.*`
+
+New test count: 14.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+Interim errors fixed during the pass:
+
+```text
+FWBRuntimeActivationExecutionResult unknown in coordinator/owner public headers
+Wandbound.Runtime.DecisionLoopHarness.ProductionRuntimeSourceGuard
+Wandbound.Runtime.DecisionPointCoordinator.NoGameStateOwnershipSourceGuard
+Wandbound.Runtime.DecisionPointOwner.NoGameStateOwnershipSourceGuard
+```
+
+The source-guard failures were false positives from the new intended execution boundary and `.Handoff` names. Guards now allow only `WBRuntimeActivationExecutionBridge.cpp` to call `WBEffectRunner::ApplyCardActivationCommand`, and hidden-zone checks look for real hand member access patterns.
+
+### Notes
+
+- Runtime execution validates handoff shape before calling core.
+- Cost payment, effect mutation, usage marking, traces, and rollback remain in `WBEffectRunner::ApplyCardActivationCommand`.
+- The model, coordinator, and owner convenience methods do not generate legal actions.
+- Activation execution does not refresh legal actions, public summaries, or visuals.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+
+### Risks / Unknowns
+
+- Runtime callers must still supply fresh post-action legal actions, activation actions, and public summaries.
+- Production CardDB import and real card-zone legality remain future work.
+- Activation `FWBAction` / codec integration remains intentionally deferred.
+- Real UI target picking, response windows, effect negation, passives, wands, and card-specific behavior remain future work.
 
 ## Runtime Activation Execution Handoff Stub Pass
 

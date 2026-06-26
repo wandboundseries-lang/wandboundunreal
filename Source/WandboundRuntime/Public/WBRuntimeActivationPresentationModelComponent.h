@@ -5,6 +5,7 @@
 #include "WBCardActivationLegalAction.h"
 #include "WBCardActivationTargetPresentation.h"
 #include "WBPublicBoardSummary.h"
+#include "WBRuntimeActivationExecutionBridge.h"
 #include "WBRuntimeActivationExecutionHandoff.h"
 #include "WBRuntimeActivationSelectionResolver.h"
 #include "WBRuntimeActivationPresentationModelComponent.generated.h"
@@ -52,6 +53,10 @@ public:
 		const FString& SelectedActivationActionId) const;
 
 	FWBRuntimeActivationExecutionHandoffResult CreateExecutionHandoffForActivationActionId(
+		const FString& SelectedActivationActionId) const;
+
+	FWBRuntimeActivationExecutionResult ExecuteActivationActionId(
+		FWBGameStateData& State,
 		const FString& SelectedActivationActionId) const;
 
 private:

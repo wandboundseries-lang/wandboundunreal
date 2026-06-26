@@ -100,3 +100,13 @@ UWBRuntimeActivationPresentationModelComponent::CreateExecutionHandoffForActivat
 	return WBRuntimeActivationExecutionHandoff::CreateNotImplementedHandoff(
 		ResolveSelectedActivationActionId(SelectedActivationActionId));
 }
+
+FWBRuntimeActivationExecutionResult
+UWBRuntimeActivationPresentationModelComponent::ExecuteActivationActionId(
+	FWBGameStateData& State,
+	const FString& SelectedActivationActionId) const
+{
+	return WBRuntimeActivationExecutionBridge::ExecuteResolvedActivationHandoff(
+		State,
+		CreateExecutionHandoffForActivationActionId(SelectedActivationActionId));
+}

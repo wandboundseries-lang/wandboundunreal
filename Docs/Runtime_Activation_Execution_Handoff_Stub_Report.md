@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This pass adds a runtime activation execution handoff stub. It accepts a resolved activation selection result and produces a structured result that preserves future execution data while clearly reporting that activation execution is not implemented yet.
+This pass added a runtime activation execution handoff stub. It accepts a resolved activation selection result and produces a structured result that preserves execution data.
 
-This is not activation execution.
+The later runtime activation execution integration pass keeps this handoff as the selection-to-payload step and adds `WBRuntimeActivationExecutionBridge` as the separate execution step.
 
 ## Input
 
@@ -53,9 +53,9 @@ If the input selection is resolved:
 
 `bHandoffOk` means the selected activation id resolved cleanly into a handoff payload.
 
-`bExecutionImplemented` is always false in this pass.
+`bExecutionImplemented` remains false on the handoff result. The handoff object still does not execute by itself.
 
-`bExecutionAttempted` is always false in this pass. The stub does not run activation commands, emit execution traces, pay costs, mark usage, or mutate rules state.
+`bExecutionAttempted` remains false on handoff creation. The execution integration bridge returns its own `FWBRuntimeActivationExecutionResult` when execution is explicitly requested.
 
 ## Convenience Methods
 
@@ -64,6 +64,7 @@ Added:
 - `UWBRuntimeActivationPresentationModelComponent::CreateExecutionHandoffForActivationActionId`
 - `UWBRuntimeDecisionPointCoordinatorComponent::CreateActivationExecutionHandoff`
 - `UWBRuntimeDecisionPointOwnerComponent::CreateActivationExecutionHandoff`
+- later execution integration also added `ExecuteActivationActionId` convenience methods on the same model/coordinator/owner path
 
 The model resolves the selected activation action id and passes the resolution into the handoff stub.
 
@@ -71,7 +72,7 @@ The coordinator fails with `activation_presentation_model_missing` when no activ
 
 The owner fails with `decision_point_coordinator_missing` when no coordinator exists.
 
-## Non-Execution Boundary
+## Handoff Boundary
 
 The handoff stub does not:
 
@@ -83,6 +84,8 @@ The handoff stub does not:
 - generate activation candidates
 - generate activation legal actions
 - require a normal `FWBAction` decision point
+
+Runtime activation execution now lives in `WBRuntimeActivationExecutionBridge`, which validates the handoff shape and delegates to `WBEffectRunner::ApplyCardActivationCommand`.
 
 ## Hidden-Information Policy
 

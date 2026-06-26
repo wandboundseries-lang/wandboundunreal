@@ -25,7 +25,9 @@ Lookup helpers delegate to the existing core presentation helpers and fail when 
 
 `WBRuntimeActivationSelectionResolver` can now resolve selected activation action ids from this stored state and return the matching internal activation legal action plus public activation and target presentation entries.
 
-The activation presentation model can also create a not-implemented execution handoff stub for a selected activation action id. This delegates through the selection resolver and preserves the same no-execution boundary.
+The activation presentation model can also create an execution handoff for a selected activation action id. This delegates through the selection resolver and preserves the selection-to-payload boundary.
+
+The later runtime activation execution integration pass adds an explicit model convenience method that executes this handoff through `WBRuntimeActivationExecutionBridge`.
 
 ## Target Presentation Snapshot Storage
 
@@ -101,11 +103,11 @@ Normal movement, attack, end-turn, pass, and pass-response presentation remains 
 
 Runtime activation presentation consumes externally supplied activation legal actions and public board summaries. It does not generate activation candidates, filter targets, decide legality, query source gates, inspect `FWBGameStateData`, or look at hidden card zones.
 
-## Non-Execution Boundary
+## Execution Boundary
 
-This pass does not execute activations.
+This presentation pass did not execute activations.
 
-Activation execution remains outside this runtime presentation layer and still requires explicit effect-runner paths in other test-only activation replay scaffolding.
+Activation execution now lives in a separate runtime execution bridge. Presentation storage still does not generate activations, decide legality, own rules state, or inspect hidden zones.
 
 ## Deferred Target Picking
 

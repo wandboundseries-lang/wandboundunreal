@@ -42,6 +42,22 @@ FWBRuntimeActivationExecutionHandoffResult MakeOwnerActivationHandoffFailure(
 	return WBRuntimeActivationExecutionHandoff::CreateNotImplementedHandoff(Resolution);
 }
 
+FWBRuntimeActivationExecutionResult MakeOwnerActivationExecutionFailure(
+	const FString& SelectedActivationActionId,
+	const FString& Reason)
+{
+	FWBRuntimeActivationExecutionHandoffResult Handoff =
+		MakeOwnerActivationHandoffFailure(SelectedActivationActionId, Reason);
+	FWBRuntimeActivationExecutionResult Result;
+	Result.bOk = false;
+	Result.bExecutionAttempted = false;
+	Result.bActivationResolved = false;
+	Result.Reason = Reason;
+	Result.SelectedActivationActionId = SelectedActivationActionId;
+	Result.Handoff = Handoff;
+	return Result;
+}
+
 FWBRuntimeDecisionPointStatus MakeOwnerFailedStatus(const FString& Reason)
 {
 	FWBRuntimeDecisionPointStatus Status;
@@ -179,6 +195,27 @@ UWBRuntimeDecisionPointOwnerComponent::CreateActivationExecutionHandoff(
 		SelectedActivationActionId);
 }
 
+FWBRuntimeActivationExecutionResult
+UWBRuntimeDecisionPointOwnerComponent::ExecuteActivationActionId(
+	FWBGameStateData& State,
+	const FString& SelectedActivationActionId)
+{
+	if (DecisionPointCoordinator == nullptr)
+	{
+		LastActivationExecutionResult = MakeOwnerActivationExecutionFailure(
+			SelectedActivationActionId,
+			TEXT("decision_point_coordinator_missing"));
+		bHasLastActivationExecutionResult = true;
+		return LastActivationExecutionResult;
+	}
+
+	LastActivationExecutionResult = DecisionPointCoordinator->ExecuteActivationActionId(
+		State,
+		SelectedActivationActionId);
+	bHasLastActivationExecutionResult = true;
+	return LastActivationExecutionResult;
+}
+
 FWBRuntimeActionSelectionExecutionResult
 UWBRuntimeDecisionPointOwnerComponent::ExecuteSelectedActionId(
 	FWBGameStateData& State,
@@ -280,6 +317,23 @@ UWBRuntimeDecisionPointOwnerComponent::GetLastExecutionResult() const
 	return LastExecutionResult;
 }
 
+bool UWBRuntimeDecisionPointOwnerComponent::HasLastActivationExecutionResult() const
+{
+	return bHasLastActivationExecutionResult;
+}
+
+FWBRuntimeActivationExecutionResult
+UWBRuntimeDecisionPointOwnerComponent::GetLastActivationExecutionResult() const
+{
+	return LastActivationExecutionResult;
+}
+
+void UWBRuntimeDecisionPointOwnerComponent::ClearLastActivationExecutionResult()
+{
+	LastActivationExecutionResult = FWBRuntimeActivationExecutionResult();
+	bHasLastActivationExecutionResult = false;
+}
+
 void UWBRuntimeDecisionPointOwnerComponent::ClearActivationPresentation()
 {
 	if (DecisionPointCoordinator != nullptr)
@@ -295,6 +349,7 @@ void UWBRuntimeDecisionPointOwnerComponent::Clear()
 	LastRefreshResult = FWBRuntimeInteractionRefreshResult();
 	LastExecutionResult = FWBRuntimeActionSelectionExecutionResult();
 	bHasLastExecutionResult = false;
+	ClearLastActivationExecutionResult();
 
 	if (DecisionPointCoordinator != nullptr)
 	{

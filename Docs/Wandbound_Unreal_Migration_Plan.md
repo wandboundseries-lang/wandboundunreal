@@ -1306,6 +1306,20 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Execution Integration
+
+- Added `WBRuntimeActivationExecutionBridge`.
+- Runtime can now execute a resolved activation handoff by delegating to `WBEffectRunner::ApplyCardActivationCommand`.
+- Added `FWBRuntimeActivationExecutionResult` for bridge status, attempted execution state, selected activation id, copied handoff payload, and core activation command result.
+- Added model, coordinator, and owner convenience methods for executing selected activation action ids from externally refreshed activation presentation state.
+- The owner stores the latest activation execution result and clears it through the existing owner clear path.
+- Cost payment, effect mutation, usage marking, trace emission, and rollback remain owned by `WandboundCore`.
+- Activation execution does not regenerate legal actions, activation legal actions, public summaries, or visual presentation.
+- Activation remains separate from normal `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production zones, CardDB import, activation codec ids, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

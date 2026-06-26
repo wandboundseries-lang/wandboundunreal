@@ -50,13 +50,17 @@ Added:
 
 The coordinator delegate does not require a normal `FWBAction` decision point to exist. The owner delegate only requires a coordinator.
 
-Resolved activation selections can now be converted into a not-implemented execution handoff result through `WBRuntimeActivationExecutionHandoff`.
+Resolved activation selections can now be converted into an execution handoff result through `WBRuntimeActivationExecutionHandoff`.
 
-## No Activation Execution
+The later runtime execution integration pass can execute that handoff through `WBRuntimeActivationExecutionBridge`, while keeping selection resolution itself read-only.
+
+## No Activation Execution Inside Resolver
 
 The resolver does not execute activation commands.
 
 It does not call `WBEffectRunner`, emit traces, consume costs, mark usage, modify HP, modify armor, apply statuses, or mutate rules state.
+
+Execution is an explicit later step through the runtime execution bridge and core `WBEffectRunner::ApplyCardActivationCommand`.
 
 ## No Candidate Or Legal-Action Generation
 

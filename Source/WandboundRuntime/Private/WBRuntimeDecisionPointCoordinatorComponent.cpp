@@ -28,6 +28,22 @@ FWBRuntimeActivationExecutionHandoffResult MakeCoordinatorActivationHandoffFailu
 	return WBRuntimeActivationExecutionHandoff::CreateNotImplementedHandoff(Resolution);
 }
 
+FWBRuntimeActivationExecutionResult MakeCoordinatorActivationExecutionFailure(
+	const FString& SelectedActivationActionId,
+	const FString& Reason)
+{
+	FWBRuntimeActivationExecutionHandoffResult Handoff =
+		MakeCoordinatorActivationHandoffFailure(SelectedActivationActionId, Reason);
+	FWBRuntimeActivationExecutionResult Result;
+	Result.bOk = false;
+	Result.bExecutionAttempted = false;
+	Result.bActivationResolved = false;
+	Result.Reason = Reason;
+	Result.SelectedActivationActionId = SelectedActivationActionId;
+	Result.Handoff = Handoff;
+	return Result;
+}
+
 FWBRuntimeDecisionPointStatus MakeDecisionPointStatus(
 	const FWBRuntimeInteractionRefreshResult& RefreshResult,
 	const FWBPublicBoardSummary& PublicBoardSummary,
@@ -183,6 +199,23 @@ UWBRuntimeDecisionPointCoordinatorComponent::CreateActivationExecutionHandoff(
 	}
 
 	return ActivationPresentationModel->CreateExecutionHandoffForActivationActionId(
+		SelectedActivationActionId);
+}
+
+FWBRuntimeActivationExecutionResult
+UWBRuntimeDecisionPointCoordinatorComponent::ExecuteActivationActionId(
+	FWBGameStateData& State,
+	const FString& SelectedActivationActionId) const
+{
+	if (ActivationPresentationModel == nullptr)
+	{
+		return MakeCoordinatorActivationExecutionFailure(
+			SelectedActivationActionId,
+			TEXT("activation_presentation_model_missing"));
+	}
+
+	return ActivationPresentationModel->ExecuteActivationActionId(
+		State,
 		SelectedActivationActionId);
 }
 

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "WBRuntimeDecisionPointCoordinatorComponent.h"
+#include "WBRuntimeActivationExecutionBridge.h"
 #include "WBRuntimeDecisionPointOwnerComponent.generated.h"
 
 class UWBRuntimeControllerFacadeComponent;
@@ -41,6 +42,10 @@ public:
 	FWBRuntimeActivationExecutionHandoffResult CreateActivationExecutionHandoff(
 		const FString& SelectedActivationActionId) const;
 
+	FWBRuntimeActivationExecutionResult ExecuteActivationActionId(
+		FWBGameStateData& State,
+		const FString& SelectedActivationActionId);
+
 	FWBRuntimeActionSelectionExecutionResult ExecuteSelectedActionId(
 		FWBGameStateData& State,
 		const FString& SelectedActionId,
@@ -58,6 +63,9 @@ public:
 	FWBRuntimeInteractionRefreshResult GetLastRefreshResult() const;
 	bool HasLastExecutionResult() const;
 	FWBRuntimeActionSelectionExecutionResult GetLastExecutionResult() const;
+	bool HasLastActivationExecutionResult() const;
+	FWBRuntimeActivationExecutionResult GetLastActivationExecutionResult() const;
+	void ClearLastActivationExecutionResult();
 	void ClearActivationPresentation();
 	void Clear();
 
@@ -67,4 +75,6 @@ private:
 	FWBRuntimeInteractionRefreshResult LastRefreshResult;
 	FWBRuntimeActionSelectionExecutionResult LastExecutionResult;
 	bool bHasLastExecutionResult = false;
+	FWBRuntimeActivationExecutionResult LastActivationExecutionResult;
+	bool bHasLastActivationExecutionResult = false;
 };
