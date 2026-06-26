@@ -68,6 +68,8 @@ If the caller supplies stale post-action legal actions, stale activation legal a
 
 Tests verify presentation counts come from supplied post-action data, not from the mutated `FWBGameStateData`.
 
+`FWBActivationSessionTestHarness` now adds higher-level session coverage over the facade and sequencer together. It verifies execute plus external post-action refresh across consecutive decisions, and it proves once-per-turn and RR-cost changes are visible only after externally rebuilt post-action data is supplied.
+
 ## External-Data Ownership Policy
 
 Runtime callers are responsible for producing the post-action normal legal actions, activation legal action set, and public board summary through the appropriate rules owner.

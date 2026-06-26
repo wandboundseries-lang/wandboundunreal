@@ -1349,6 +1349,18 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Session Test Harness
+
+- Added test-only `FWBActivationSessionTestHarness` under `WandboundTests`.
+- The harness simulates an external rules owner by generating normal legal actions, activation candidates/actions, and public summaries only in automation tests.
+- It validates external-data refresh, activation execution, post-action external refresh, and a second decision session.
+- Coverage includes once-per-turn refresh, RR-cost affordability refresh, stale-state explicit refresh, failure-refresh policy, and hidden metadata exclusion.
+- Production runtime still does not generate legal actions, activation candidates, activation action sets, or public summaries from state.
+- Activation remains separate from `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production CardDB, production zones, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

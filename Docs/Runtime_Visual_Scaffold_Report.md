@@ -92,6 +92,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `UWBRuntimeActivationDecisionSessionFacadeComponent` now provides a C++ runtime activation session facade for future UI integration. It sequences external-data refresh, activation selection resolution, handoff creation, activation execution through the owner/sequencer path, and post-action external-data refresh. It still adds no UI/input widgets, target picking, rules generation, activation action generation, public summary building from state, direct `WBEffectRunner` calls, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
 
+`FWBActivationSessionTestHarness` now provides test-only automation coverage for the activation session facade. It lives under `WandboundTests` only and simulates an external rules owner for normal legal actions, activation legal action sets, and public summaries. Production runtime code does not include it and still does not generate legal actions, activation candidates, activation action sets, or public summaries.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

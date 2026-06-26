@@ -50,6 +50,12 @@ It preserves the existing handoff behavior: successful handoffs report `activati
 
 The facade may mutate the supplied `FWBGameStateData&` only through this existing owner/sequencer execution path.
 
+## Test Harness Coverage
+
+`FWBActivationSessionTestHarness` now verifies the facade with externally generated test data across one-decision and two-decision activation session flows. The harness lives under `WandboundTests` only and simulates an external owner for normal legal actions, activation action sets, and public summaries.
+
+The tests cover execute plus external post-action refresh, once-per-turn action removal and reappearance after turn-start setup, RR-cost affordability refresh, explicit stale-state replacement, failure refresh policy, hidden metadata exclusion, and production runtime no-generation source guards.
+
 ## Status Fields
 
 `FWBRuntimeActivationDecisionSessionStatus` reports:

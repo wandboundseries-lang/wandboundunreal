@@ -4141,3 +4141,56 @@ notRun=0
 - Production CardDB import and card-zone legality remain future work.
 - Response windows, effect negation, passives, wands, and card-specific costs remain future work.
 - Overflow and equipped wand fallout remain future work.
+
+---
+
+# Runtime Activation Session Test Harness Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 5.69 seconds
+```
+
+## Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=723
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added test-only `FWBActivationSessionTestHarness`.
+- Added 10 `Wandbound.Runtime.ActivationSessionHarness.*` automation tests.
+- The harness simulates an external rules owner in tests only by generating normal legal actions, activation candidates/actions, and public summaries.
+- Production runtime source guards confirm no test harness include, no normal legal generation, no activation candidate generation, and no activation legal action generation in `Source/WandboundRuntime`.
+- Covered one-decision and two-decision activation session flows.
+- Covered once-per-turn disappearance/reappearance, RR-cost affordability refresh, stale-state explicit refresh, failure refresh policy, hidden metadata exclusion, and activation staying separate from `FWBAction`.
+- No GodotCanon fixtures were added because this pass covers transient runtime component sequencing rather than canonical Godot rules behavior.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- No production CardDB, production zones, UI widgets, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+## Interim Issue Fixed
+
+- First automation run reported one failed assertion in `Wandbound.Runtime.ActivationSessionHarness.TwoConsecutiveDecisionSessions`: the test expected the second target to be damaged, but deterministic generator ordering selected the second effect on the first target. The assertion was corrected to reflect generator ordering, and the final suite passed.
