@@ -92,3 +92,11 @@ UWBRuntimeActivationPresentationModelComponent::ResolveSelectedActivationActionI
 		this,
 		SelectedActivationActionId);
 }
+
+FWBRuntimeActivationExecutionHandoffResult
+UWBRuntimeActivationPresentationModelComponent::CreateExecutionHandoffForActivationActionId(
+	const FString& SelectedActivationActionId) const
+{
+	return WBRuntimeActivationExecutionHandoff::CreateNotImplementedHandoff(
+		ResolveSelectedActivationActionId(SelectedActivationActionId));
+}

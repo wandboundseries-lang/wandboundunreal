@@ -50,6 +50,8 @@ Added:
 
 The coordinator delegate does not require a normal `FWBAction` decision point to exist. The owner delegate only requires a coordinator.
 
+Resolved activation selections can now be converted into a not-implemented execution handoff result through `WBRuntimeActivationExecutionHandoff`.
+
 ## No Activation Execution
 
 The resolver does not execute activation commands.
@@ -93,7 +95,7 @@ Existing normal action ids remain unchanged.
 
 ## Out Of Scope
 
-- activation execution handoff
+- activation execution
 - production zones
 - CardDB import
 - activation `FWBAction`

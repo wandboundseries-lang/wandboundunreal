@@ -38,6 +38,9 @@ public:
 	FWBRuntimeActivationSelectionResolution ResolveSelectedActivationActionId(
 		const FString& SelectedActivationActionId) const;
 
+	FWBRuntimeActivationExecutionHandoffResult CreateActivationExecutionHandoff(
+		const FString& SelectedActivationActionId) const;
+
 	FWBRuntimeActionSelectionExecutionResult ExecuteSelectedActionId(
 		FWBGameStateData& State,
 		const FString& SelectedActionId,

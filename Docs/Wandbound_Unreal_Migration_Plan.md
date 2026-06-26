@@ -1291,6 +1291,21 @@
 - Existing `WBRules::GenerateLegalActions` output remains unchanged.
 - No production zones, CardDB import, activation `FWBAction`, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Runtime Activation Execution Handoff Stub
+
+- Added `WBRuntimeActivationExecutionHandoff`.
+- Resolved activation selections can now produce a not-implemented execution handoff result.
+- Successful handoffs preserve the internal `FWBCardActivationLegalAction` and any public activation/target presentation entries.
+- Failed handoffs preserve the unresolved selection reason.
+- Model, coordinator, and owner convenience methods can create handoff stubs from selected activation action ids.
+- The stub does not execute activation commands.
+- The stub does not mutate state.
+- The stub does not inspect `FWBGameStateData`.
+- Activation remains separate from normal `FWBAction`.
+- Existing `WBActionCodec` output remains unchanged.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- No production zones, CardDB import, UI target picking, response windows, UI widgets, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

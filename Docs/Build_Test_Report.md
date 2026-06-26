@@ -2,6 +2,113 @@
 
 Date of check: 2026-06-25 (America/New_York)
 
+## Runtime Activation Execution Handoff Stub Pass
+
+### Scope
+
+This pass added a runtime activation execution handoff stub for resolved activation selections.
+
+Implemented:
+
+- `WBRuntimeActivationExecutionHandoff`
+- `FWBRuntimeActivationExecutionHandoffResult`
+- `UWBRuntimeActivationPresentationModelComponent::CreateExecutionHandoffForActivationActionId`
+- `UWBRuntimeDecisionPointCoordinatorComponent::CreateActivationExecutionHandoff`
+- `UWBRuntimeDecisionPointOwnerComponent::CreateActivationExecutionHandoff`
+- automation coverage for unresolved selection failures, not-implemented success handoffs, presentation entry copying, no mutation, hidden metadata exclusion, source guards, and `FWBAction` separation
+
+Not implemented:
+
+- activation execution
+- runtime cost payment
+- runtime usage marking
+- `WBEffectRunner` calls
+- `ApplyCardActivationCommand` calls
+- `FWBGameStateData` inspection by the handoff stub
+- activation candidate/legal-action generation
+- activation `FWBAction`
+- `WBActionCodec` activation ids
+- production zones
+- CardDB import
+- UI target picking, response windows, effect negation, passives, wands, card-specific behavior
+- UI widgets, Blueprints, `.uasset`, `.umap`, VFX, audio, or 3D runtime work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 10.53 seconds
+```
+
+An initial build after adding the handoff files also succeeded:
+
+```text
+Result: Succeeded
+Total execution time: 17.66 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=670
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+- `Wandbound.Runtime.ActivationExecutionHandoff.*`
+
+New test count: 14.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+An interim automation run reported two existing source-guard failures:
+
+```text
+Wandbound.Runtime.DecisionPointCoordinator.NoGameStateOwnershipSourceGuard
+Wandbound.Runtime.DecisionPointOwner.NoGameStateOwnershipSourceGuard
+```
+
+Both were false positives caused by the new `Handoff` identifier containing the substring `Hand`. The guards now check actual hand-zone member access patterns (`.Hand` and `->Hand`) instead of any occurrence of the word.
+
+### Notes
+
+- Successful handoffs return `activation_execution_not_implemented`.
+- Failed handoffs preserve the unresolved selection reason.
+- The handoff result preserves internal activation action/command data for future execution wiring.
+- Public presentation entries and reason strings exclude hidden activation metadata.
+- `bExecutionImplemented` and `bExecutionAttempted` remain false in this pass.
+- The handoff stub source does not contain `WBEffectRunner`, `ApplyCardActivationCommand`, `WBRules`, `GenerateLegalActions`, activation candidate/legal-action generators, or `FWBGameStateData`.
+- Existing `WBRules::GenerateLegalActions` output remains unchanged.
+- Existing `WBActionCodec` output remains unchanged.
+- `git diff --check` reported no whitespace errors, only LF-to-CRLF working-copy notices.
+
+### Risks / Unknowns
+
+- Real activation execution remains future work.
+- Production CardDB import and real card-zone legality remain future work.
+- Runtime cost payment, usage marking, target picking, response windows, effect negation, passives, wands, and card-specific behavior remain future work.
+
 ## Runtime Activation Selection Resolver Pass
 
 ### Scope

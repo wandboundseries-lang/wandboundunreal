@@ -31,6 +31,17 @@ FWBRuntimeActivationSelectionResolution MakeOwnerActivationSelectionFailure(
 	return Result;
 }
 
+FWBRuntimeActivationExecutionHandoffResult MakeOwnerActivationHandoffFailure(
+	const FString& SelectedActivationActionId,
+	const FString& Reason)
+{
+	FWBRuntimeActivationSelectionResolution Resolution;
+	Resolution.bOk = false;
+	Resolution.SelectedActivationActionId = SelectedActivationActionId;
+	Resolution.Reason = Reason;
+	return WBRuntimeActivationExecutionHandoff::CreateNotImplementedHandoff(Resolution);
+}
+
 FWBRuntimeDecisionPointStatus MakeOwnerFailedStatus(const FString& Reason)
 {
 	FWBRuntimeDecisionPointStatus Status;
@@ -150,6 +161,21 @@ UWBRuntimeDecisionPointOwnerComponent::ResolveSelectedActivationActionId(
 	}
 
 	return DecisionPointCoordinator->ResolveSelectedActivationActionId(
+		SelectedActivationActionId);
+}
+
+FWBRuntimeActivationExecutionHandoffResult
+UWBRuntimeDecisionPointOwnerComponent::CreateActivationExecutionHandoff(
+	const FString& SelectedActivationActionId) const
+{
+	if (DecisionPointCoordinator == nullptr)
+	{
+		return MakeOwnerActivationHandoffFailure(
+			SelectedActivationActionId,
+			TEXT("decision_point_coordinator_missing"));
+	}
+
+	return DecisionPointCoordinator->CreateActivationExecutionHandoff(
 		SelectedActivationActionId);
 }
 

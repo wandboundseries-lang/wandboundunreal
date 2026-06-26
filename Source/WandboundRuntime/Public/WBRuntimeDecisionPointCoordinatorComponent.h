@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "WBRuntimeActionSelectionBridge.h"
+#include "WBRuntimeActivationExecutionHandoff.h"
 #include "WBRuntimeActivationPresentationRefreshAdapter.h"
 #include "WBRuntimeActivationSelectionResolver.h"
 #include "WBRuntimeInteractionRefreshAdapter.h"
@@ -73,6 +74,9 @@ public:
 		const FWBPublicBoardSummary& PublicBoardSummary);
 
 	FWBRuntimeActivationSelectionResolution ResolveSelectedActivationActionId(
+		const FString& SelectedActivationActionId) const;
+
+	FWBRuntimeActivationExecutionHandoffResult CreateActivationExecutionHandoff(
 		const FString& SelectedActivationActionId) const;
 
 	void ClearDecisionPoint();

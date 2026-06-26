@@ -17,6 +17,17 @@ FWBRuntimeActionSelectionExecutionResult MakeCoordinatorSelectionFailure(
 	return Result;
 }
 
+FWBRuntimeActivationExecutionHandoffResult MakeCoordinatorActivationHandoffFailure(
+	const FString& SelectedActivationActionId,
+	const FString& Reason)
+{
+	FWBRuntimeActivationSelectionResolution Resolution;
+	Resolution.bOk = false;
+	Resolution.SelectedActivationActionId = SelectedActivationActionId;
+	Resolution.Reason = Reason;
+	return WBRuntimeActivationExecutionHandoff::CreateNotImplementedHandoff(Resolution);
+}
+
 FWBRuntimeDecisionPointStatus MakeDecisionPointStatus(
 	const FWBRuntimeInteractionRefreshResult& RefreshResult,
 	const FWBPublicBoardSummary& PublicBoardSummary,
@@ -157,6 +168,21 @@ UWBRuntimeDecisionPointCoordinatorComponent::ResolveSelectedActivationActionId(
 {
 	return WBRuntimeActivationSelectionResolver::ResolveSelectedActivationActionId(
 		ActivationPresentationModel.Get(),
+		SelectedActivationActionId);
+}
+
+FWBRuntimeActivationExecutionHandoffResult
+UWBRuntimeDecisionPointCoordinatorComponent::CreateActivationExecutionHandoff(
+	const FString& SelectedActivationActionId) const
+{
+	if (ActivationPresentationModel == nullptr)
+	{
+		return MakeCoordinatorActivationHandoffFailure(
+			SelectedActivationActionId,
+			TEXT("activation_presentation_model_missing"));
+	}
+
+	return ActivationPresentationModel->CreateExecutionHandoffForActivationActionId(
 		SelectedActivationActionId);
 }
 

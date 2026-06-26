@@ -84,6 +84,8 @@ No input, gameplay ownership, hidden-state access, or UI behavior was added.
 
 `WBRuntimeActivationSelectionResolver` now provides a C++-only selected activation id resolver over the stored runtime activation presentation model. It returns the matching internal activation legal action and public presentation entries, but still performs no activation execution, input handling, UI target picking, rules generation, response-window behavior, camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` work.
 
+`WBRuntimeActivationExecutionHandoff` now provides a C++-only not-implemented activation execution handoff stub. It accepts a resolved activation selection, preserves the internal activation action and public presentation entries, and explicitly reports `activation_execution_not_implemented` without executing commands, inspecting rules state, generating legal actions, adding UI/input, or touching camera behavior, VFX, audio, assets, Blueprints, `.uasset`, or `.umap` files.
+
 The visual runtime path remains public-summary-only. No input, UI, camera behavior, animation, VFX, audio, marker visuals, assets, Blueprints, `.uasset`, or `.umap` work was added.
 
 ## Placeholder Rendering

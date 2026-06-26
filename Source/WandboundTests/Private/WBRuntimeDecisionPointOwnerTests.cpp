@@ -623,7 +623,7 @@ bool FWBRuntimeDecisionPointOwnerNoGameStateOwnershipSourceGuardTest::RunTest(co
 	TestFalse(TEXT("No current game state member"), Source.Contains(TEXT("FWBGameStateData Current")));
 	TestFalse(TEXT("No stored game state member"), Source.Contains(TEXT("FWBGameStateData Stored")));
 	TestFalse(TEXT("No deck access"), Source.Contains(TEXT("Deck")));
-	TestFalse(TEXT("No hand access"), Source.Contains(TEXT("Hand")));
+	TestFalse(TEXT("No hand member access"), Source.Contains(TEXT(".Hand")) || Source.Contains(TEXT("->Hand")));
 	TestFalse(TEXT("No discard access"), Source.Contains(TEXT("Discard")));
 	return true;
 }
