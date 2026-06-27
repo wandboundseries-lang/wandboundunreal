@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"invalid_bundle_missing_carddb_version.json","card_count":1,"dependency_order_card_ids":["bundle_missing_carddb_version_card"],"diagnostics":[{"code":"carddb_version_missing","card_index":-1,"card_id":"","effect_id":"","json_path":"$.carddb_version"}]}

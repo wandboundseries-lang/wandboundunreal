@@ -179,6 +179,16 @@ Ordering policy:
 
 This order is validation output only and does not load cards into runtime or map reference data into `FWBCardDefinition`.
 
+## Bundle-Level Export Coverage
+
+Malformed bundle-level diagnostics now have expected export snapshot coverage under:
+
+```text
+Reference/GodotCanon/CardDBSchemaFixtures/ExpectedExports/
+```
+
+Coverage includes missing or unsupported bundle schema version, missing CardDB version, missing/malformed/empty `cards`, duplicate card ids, strict unknown bundle fields, non-strict unknown fields, and mixed bundle/card diagnostics.
+
 ## Confirmations
 
 - this remains test-only

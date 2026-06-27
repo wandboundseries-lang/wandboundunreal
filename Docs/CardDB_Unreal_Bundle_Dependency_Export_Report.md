@@ -104,6 +104,21 @@ Added expected export snapshots for:
 
 These cover self-reference diagnostics, cycle diagnostics, effect/path context, hidden-token safety, and multi-card diagnostic context.
 
+## Bundle-Level Export Fixture Coverage
+
+Expected export snapshots now also cover malformed bundle-level diagnostics:
+
+- missing or unsupported bundle schema version
+- missing CardDB version
+- missing, malformed, or empty `cards`
+- duplicate card ids
+- strict unknown bundle fields
+- strict unknown bundle metadata fields
+- non-strict unknown fields that remain valid
+- mixed bundle-level and card-level errors
+
+These snapshots extend dependency export coverage without changing the export helper into a production API.
+
 ## Relationship To Future Importer Planning
 
 These exports give future importer work stable review artifacts for dependency order and authoring diagnostics.

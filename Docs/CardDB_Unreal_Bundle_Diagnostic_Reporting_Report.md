@@ -94,6 +94,8 @@ Bundle validation result context can now be serialized to stable test-only expor
 
 Exported diagnostics include code, card index, safe card id, safe effect id, and JSON path. Diagnostic messages and full source JSON are omitted.
 
+Bundle-level diagnostics now have stable expected export snapshots for malformed bundle fields, duplicate card ids, strict/non-strict unknown-field behavior, mixed bundle/card diagnostics, and hidden-token-safe missing references.
+
 ## Confirmations
 
 - this remains test-only

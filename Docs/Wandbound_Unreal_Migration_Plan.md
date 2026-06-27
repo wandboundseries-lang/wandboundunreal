@@ -1543,6 +1543,19 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Bundle-Level Export Diagnostics
+
+- Added expected export snapshots for malformed bundle-level diagnostics.
+- Added export coverage for missing/unsupported bundle schema version, missing CardDB version, missing/malformed/empty `cards`, duplicate card ids, strict unknown fields, non-strict unknown-field compatibility, mixed bundle/card diagnostics, and hidden-token-safe missing references.
+- Export snapshots remain test-only planning artifacts.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

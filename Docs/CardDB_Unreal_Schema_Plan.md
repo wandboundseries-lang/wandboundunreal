@@ -616,6 +616,8 @@ Policy:
 
 Test-only dependency export snapshots now exist for future importer planning. They serialize dependency order and diagnostic context into expected JSON fixtures without exposing production parser or export APIs.
 
+Test-only bundle-level diagnostic export snapshots now preserve the same export shape for malformed bundle fields. Future importer diagnostics should keep the stable fields `ok`, clean-file-name `source_path`, `card_count`, `dependency_order_card_ids`, and sanitized diagnostic context while continuing to omit messages, full source JSON, and hidden referenced values.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

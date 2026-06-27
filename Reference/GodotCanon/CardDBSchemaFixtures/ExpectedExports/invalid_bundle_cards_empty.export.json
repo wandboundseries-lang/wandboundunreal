@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"invalid_bundle_cards_empty.json","card_count":0,"dependency_order_card_ids":[],"diagnostics":[{"code":"cards_empty","card_index":-1,"card_id":"","effect_id":"","json_path":"$.cards"}]}
