@@ -1529,6 +1529,20 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Bundle Dependency Export
+
+- Added test-only JSON export for bundle validation results.
+- Expected exports snapshot dependency order and diagnostic context.
+- Export JSON includes only safe context fields and omits diagnostic messages and full source JSON.
+- Hidden-token export safety is covered.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

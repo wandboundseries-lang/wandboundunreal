@@ -1,0 +1,1 @@
+{"ok":true,"source_path":"valid_bundle_dependency_order_diamond.json","card_count":4,"dependency_order_card_ids":["base_card","left_card","right_card","top_card"],"diagnostics":[]}

@@ -4877,3 +4877,68 @@ notRun=0
 - Cycle diagnostics report stable authoring context without full cycle lists or referenced id values.
 - No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Test-Only CardDB Bundle Dependency Export Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 9.95 seconds
+```
+
+## Targeted CardDB Schema Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDB; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaValidation/index.json`:
+
+```text
+succeeded=114
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=870
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added test-only bundle validation result JSON export.
+- Added expected export snapshots under `Reference/GodotCanon/CardDBSchemaFixtures/ExpectedExports/`.
+- Export JSON includes `ok`, clean `source_path`, `card_count`, `dependency_order_card_ids`, and diagnostic context.
+- Diagnostic export omits messages, full source JSON, public labels, public text, payload bodies, and hidden referenced values.
+- Added 11 export-specific `Wandbound.Core.CardDBBundleSchemaFixtureValidation.*` automation tests, bringing the CardDB validation group to 114 tests.
+- Hidden-token export safety is covered.
+- No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+- An interim targeted run exposed expected compact JSON fixtures versus Unreal's default pretty writer output. The export helper now uses the condensed JSON print policy, and the final targeted/full runs passed.

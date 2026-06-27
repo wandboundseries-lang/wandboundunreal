@@ -22,6 +22,11 @@ FString CardDBBundleSchemaFixturePath(const FString& FileName)
 	return FPaths::Combine(CardDBSchemaFixturePath(TEXT("Bundles")), FileName);
 }
 
+FString CardDBExpectedExportFixturePath(const FString& FileName)
+{
+	return FPaths::Combine(CardDBSchemaFixturePath(TEXT("ExpectedExports")), FileName);
+}
+
 FWBCardDBSchemaValidationOptions StrictOptions()
 {
 	FWBCardDBSchemaValidationOptions Options;
@@ -115,6 +120,50 @@ bool ExpectStringArrayEquals(
 	}
 
 	return bMatches;
+}
+
+bool LoadExpectedExportFixture(
+	FAutomationTestBase& Test,
+	const FString& FileName,
+	FString& OutJson)
+{
+	const bool bLoaded = FFileHelper::LoadFileToString(OutJson, *CardDBExpectedExportFixturePath(FileName));
+	Test.TestTrue(*FString::Printf(TEXT("%s expected export loads"), *FileName), bLoaded);
+	OutJson.TrimStartAndEndInline();
+	return bLoaded;
+}
+
+bool ExportBundleFixtureJson(
+	FAutomationTestBase& Test,
+	const FString& BundleFileName,
+	FWBCardDBBundleSchemaValidationResult& OutResult,
+	FString& OutJson)
+{
+	OutResult = ValidateBundleFixture(BundleFileName);
+	const bool bExported = FWBCardDBSchemaFixtureValidator::BundleValidationResultToJsonStringForTest(OutResult, OutJson);
+	Test.TestTrue(*FString::Printf(TEXT("%s export succeeds"), *BundleFileName), bExported);
+	return bExported;
+}
+
+bool ExpectExportMatches(
+	FAutomationTestBase& Test,
+	const FString& BundleFileName,
+	const FString& ExpectedExportFileName)
+{
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	if (!ExportBundleFixtureJson(Test, BundleFileName, Result, ActualJson)
+		|| !LoadExpectedExportFixture(Test, ExpectedExportFileName, ExpectedJson))
+	{
+		return false;
+	}
+
+	Test.TestEqual(
+		*FString::Printf(TEXT("%s export matches %s"), *BundleFileName, *ExpectedExportFileName),
+		ActualJson,
+		ExpectedJson);
+	return ActualJson == ExpectedJson;
 }
 
 void FindSourceFiles(const FString& RelativeDirectory, TArray<FString>& OutFiles)
@@ -950,6 +999,134 @@ bool FWBCardDBBundleSchemaDuplicateCardIdSkipsDependencyOrderTest::RunTest(const
 	TestFalse(TEXT("Duplicate card id bundle fails"), Result.bOk);
 	TestTrue(TEXT("Duplicate card id diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::CardIdDuplicate));
 	TestEqual(TEXT("Duplicate card id dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportValidSimpleChainMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportValidSimpleChainMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportValidSimpleChainMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	ExpectExportMatches(
+		*this,
+		TEXT("valid_bundle_dependency_order_simple_chain.json"),
+		TEXT("valid_bundle_dependency_order_simple_chain.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportValidReverseInputMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportValidReverseInputMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportValidReverseInputMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	ExpectExportMatches(
+		*this,
+		TEXT("valid_bundle_dependency_order_reverse_input.json"),
+		TEXT("valid_bundle_dependency_order_reverse_input.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportValidDiamondMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportValidDiamondMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportValidDiamondMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	ExpectExportMatches(
+		*this,
+		TEXT("valid_bundle_dependency_order_diamond.json"),
+		TEXT("valid_bundle_dependency_order_diamond.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportSelfReferenceMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportSelfReferenceMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportSelfReferenceMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_dependency_self_reference.json"),
+		TEXT("invalid_bundle_dependency_self_reference.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportTwoCardCycleMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportTwoCardCycleMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportTwoCardCycleMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_dependency_cycle_two_cards.json"),
+		TEXT("invalid_bundle_dependency_cycle_two_cards.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportEffectRefCycleMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportEffectRefCycleMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportEffectRefCycleMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_dependency_cycle_effect_ref.json"),
+		TEXT("invalid_bundle_dependency_cycle_effect_ref.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportHiddenTokenSafeMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportHiddenTokenSafeMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportHiddenTokenSafeMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJson(*this, TEXT("invalid_bundle_dependency_hidden_token_safe.json"), Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_dependency_hidden_token_safe.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Hidden dependency export omits SECRET"), ActualJson.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+	TestEqual(TEXT("Hidden dependency export matches expected"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportMultipleInvalidCardsMatchesFixtureTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportMultipleInvalidCardsMatchesFixture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportMultipleInvalidCardsMatchesFixtureTest::RunTest(const FString& Parameters)
+{
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_multiple_invalid_cards.json"),
+		TEXT("invalid_bundle_multiple_invalid_cards.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportHelperDeterministicTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportHelperDeterministic", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportHelperDeterministicTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_dependency_order_diamond.json"));
+
+	FString FirstJson;
+	FString SecondJson;
+	TestTrue(
+		TEXT("First export succeeds"),
+		FWBCardDBSchemaFixtureValidator::BundleValidationResultToJsonStringForTest(Result, FirstJson));
+	TestTrue(
+		TEXT("Second export succeeds"),
+		FWBCardDBSchemaFixtureValidator::BundleValidationResultToJsonStringForTest(Result, SecondJson));
+	TestEqual(TEXT("Export helper deterministic"), FirstJson, SecondJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportOmitsSourceJsonTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportOmitsSourceJson", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportOmitsSourceJsonTest::RunTest(const FString& Parameters)
+{
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	ExportBundleFixtureJson(*this, TEXT("invalid_bundle_dependency_cycle_effect_ref.json"), Result, ActualJson);
+
+	TestFalse(TEXT("Export omits public labels"), ActualJson.Contains(TEXT("public_label")));
+	TestFalse(TEXT("Export omits payload types"), ActualJson.Contains(TEXT("damage_effect")));
+	TestFalse(TEXT("Export omits payload amount field"), ActualJson.Contains(TEXT("amount")));
+	TestFalse(TEXT("Export omits source schema version"), ActualJson.Contains(TEXT("bundle_schema_version")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaExportOmitsDiagnosticMessageTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ExportOmitsDiagnosticMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaExportOmitsDiagnosticMessageTest::RunTest(const FString& Parameters)
+{
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	ExportBundleFixtureJson(*this, TEXT("invalid_bundle_dependency_cycle_two_cards.json"), Result, ActualJson);
+
+	TestFalse(TEXT("Export omits message field"), ActualJson.Contains(TEXT("\"message\"")));
+	TestFalse(TEXT("Export omits diagnostic message text"), ActualJson.Contains(TEXT("dependency cycle detected")));
 	return true;
 }
 

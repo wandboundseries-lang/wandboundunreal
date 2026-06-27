@@ -82,6 +82,7 @@ struct FWBCardDBBundleSchemaValidationResult
 	FString SourcePath;
 	TArray<FWBCardDBSchemaValidationDiagnostic> Diagnostics;
 	TArray<FWBCardDefinition> CardDefinitions;
+	int32 BundleCardCount = 0;
 	TArray<FString> DependencyOrderCardIds;
 };
 
@@ -102,6 +103,9 @@ public:
 		const FString& Json,
 		const FString& SourcePathForDiagnostics,
 		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());
+	static bool BundleValidationResultToJsonStringForTest(
+		const FWBCardDBBundleSchemaValidationResult& Result,
+		FString& OutJson);
 	static FString DiagnosticContextToStringForTest(const FWBCardDBSchemaValidationDiagnostic& Diagnostic);
 	static bool ContainsDiagnosticWithContext(
 		const TArray<FWBCardDBSchemaValidationDiagnostic>& Diagnostics,

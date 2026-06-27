@@ -88,6 +88,12 @@ Dependency diagnostics use the same context fields:
 
 Cycle diagnostics report the first deterministic cycle-closing edge. They use generic messages and safe owner context only, avoiding full cycle lists and referenced id values.
 
+## Stable Export JSON
+
+Bundle validation result context can now be serialized to stable test-only export JSON.
+
+Exported diagnostics include code, card index, safe card id, safe effect id, and JSON path. Diagnostic messages and full source JSON are omitted.
+
 ## Confirmations
 
 - this remains test-only

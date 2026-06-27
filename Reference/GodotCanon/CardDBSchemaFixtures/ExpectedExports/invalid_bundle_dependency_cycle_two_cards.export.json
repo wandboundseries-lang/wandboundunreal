@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"invalid_bundle_dependency_cycle_two_cards.json","card_count":2,"dependency_order_card_ids":[],"diagnostics":[{"code":"dependency_cycle_detected","card_index":1,"card_id":"cycle_b","effect_id":"","json_path":"$.cards[1].references.card_ids[0]"}]}

@@ -118,6 +118,16 @@ Added `Wandbound.Core.CardDBBundleSchemaFixtureValidation.*` coverage for:
 
 Existing cross-reference, bundle schema, root-card schema, and source guard tests still pass.
 
+## Expected Export Snapshots
+
+Dependency diagnostics now have test-only expected JSON export snapshots under:
+
+```text
+Reference/GodotCanon/CardDBSchemaFixtures/ExpectedExports/
+```
+
+These snapshots serialize dependency order and diagnostic context for future importer planning. They are not production data and do not expose a production export API.
+
 ## Confirmations
 
 - this remains test-only

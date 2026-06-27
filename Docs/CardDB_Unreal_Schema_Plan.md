@@ -614,6 +614,8 @@ Policy:
 - self-references and cycles fail closed before import.
 - dependency diagnostics are authoring diagnostics only.
 
+Test-only dependency export snapshots now exist for future importer planning. They serialize dependency order and diagnostic context into expected JSON fixtures without exposing production parser or export APIs.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

@@ -2,6 +2,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
@@ -350,7 +351,8 @@ bool SerializeJsonObjectToString(const TSharedPtr<FJsonObject>& Object, FString&
 		return false;
 	}
 
-	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutJson);
+	const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
+		TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&OutJson);
 	return FJsonSerializer::Serialize(Object.ToSharedRef(), Writer);
 }
 
@@ -2609,6 +2611,7 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 	}
 	else
 	{
+		Result.BundleCardCount = CardValues->Num();
 		TSet<FString> SeenCardIds;
 		bool bHasDuplicateCardIds = false;
 		FWBCardDBBundleReferenceIndex ReferenceIndex;
@@ -2689,6 +2692,47 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 
 	Result.bOk = Result.Diagnostics.Num() == 0;
 	return Result;
+}
+
+bool FWBCardDBSchemaFixtureValidator::BundleValidationResultToJsonStringForTest(
+	const FWBCardDBBundleSchemaValidationResult& Result,
+	FString& OutJson)
+{
+	OutJson.Reset();
+
+	const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
+		TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&OutJson);
+	Writer->WriteObjectStart();
+	Writer->WriteValue(TEXT("ok"), Result.bOk);
+	Writer->WriteValue(TEXT("source_path"), SafeDiagnosticIdentifier(FPaths::GetCleanFilename(Result.SourcePath)));
+	Writer->WriteValue(TEXT("card_count"), Result.BundleCardCount);
+
+	Writer->WriteArrayStart(TEXT("dependency_order_card_ids"));
+	for (const FString& CardId : Result.DependencyOrderCardIds)
+	{
+		Writer->WriteValue(SafeDiagnosticIdentifier(CardId));
+	}
+	Writer->WriteArrayEnd();
+
+	Writer->WriteArrayStart(TEXT("diagnostics"));
+	for (const FWBCardDBSchemaValidationDiagnostic& Diagnostic : Result.Diagnostics)
+	{
+		const FString ExportedCardId = !Diagnostic.BundleCardId.IsEmpty()
+			? Diagnostic.BundleCardId
+			: Diagnostic.CardId;
+
+		Writer->WriteObjectStart();
+		Writer->WriteValue(TEXT("code"), DiagnosticCodeToString(Diagnostic.Code));
+		Writer->WriteValue(TEXT("card_index"), Diagnostic.CardIndex);
+		Writer->WriteValue(TEXT("card_id"), SafeDiagnosticIdentifier(ExportedCardId));
+		Writer->WriteValue(TEXT("effect_id"), SafeDiagnosticIdentifier(Diagnostic.EffectId));
+		Writer->WriteValue(TEXT("json_path"), SafeDiagnosticIdentifier(Diagnostic.JsonPath));
+		Writer->WriteObjectEnd();
+	}
+	Writer->WriteArrayEnd();
+
+	Writer->WriteObjectEnd();
+	return Writer->Close();
 }
 
 FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBSchemaDiagnostic Code)
