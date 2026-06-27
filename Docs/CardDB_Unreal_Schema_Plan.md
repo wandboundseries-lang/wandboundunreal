@@ -554,6 +554,8 @@ Diagnostic categories:
 - `missing_effect_reference`
 - `reference_malformed`
 - `unknown_reference_field`
+- `dependency_cycle_detected`
+- `dependency_self_reference`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 
@@ -601,6 +603,16 @@ Policy:
 - duplicate card ids skip reference resolution because the bundle index is ambiguous.
 - missing references use generic diagnostics and safe owner context only.
 - strict mode rejects unknown reference fields with `unknown_reference_field`.
+
+Test-only bundle dependency validation now derives `DependencyOrderCardIds` from validated references. Future importer work may use a dependency order after validation, but production import is still deferred.
+
+Policy:
+
+- dependencies must appear before dependents.
+- original `cards[]` order breaks ties.
+- duplicate card ids and missing references skip dependency ordering.
+- self-references and cycles fail closed before import.
+- dependency diagnostics are authoring diagnostics only.
 
 ## Future CardDB Import Milestones
 

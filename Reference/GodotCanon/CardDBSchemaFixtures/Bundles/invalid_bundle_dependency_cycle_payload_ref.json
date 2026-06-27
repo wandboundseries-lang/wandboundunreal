@@ -1,0 +1,43 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_cycle_payload_ref",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "payload_cycle_a",
+      "public_name": "Payload Cycle A",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "payload_cycle_b"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "payload_cycle_b",
+      "public_name": "Payload Cycle B",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "payload_cycle_ref",
+          "public_label": "Deal 1 damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected",
+              "references": {
+                "card_ids": [
+                  "payload_cycle_a"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

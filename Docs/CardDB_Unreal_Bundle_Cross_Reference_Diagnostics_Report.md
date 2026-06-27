@@ -103,6 +103,8 @@ Stable JSON paths include:
 - `$.cards[i].activated_effects[e].references.effect_refs[r]`
 - `$.cards[i].activated_effects[e].payloads[p].references.card_ids[j]`
 
+Cross-reference data now also feeds test-only dependency ordering diagnostics. The dependency step runs after missing-reference validation and remains a fixture-only authoring diagnostic path.
+
 ## Hidden-Token Safety
 
 Missing-reference diagnostics use generic messages and safe context only. They do not echo referenced ids, hidden tokens, or full JSON snippets.

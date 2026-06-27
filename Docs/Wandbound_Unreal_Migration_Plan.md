@@ -1513,6 +1513,22 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Bundle Dependency Diagnostics
+
+- Added test-only dependency order calculation from existing fixture `references` fields.
+- Added `DependencyOrderCardIds` to the test-only bundle validation result.
+- Added `dependency_self_reference` and `dependency_cycle_detected` diagnostics.
+- Stable dependency ordering and original `cards[]` tie-breaks are covered by fixtures.
+- Missing references and duplicate card ids skip dependency ordering and leave the order empty.
+- Cycle diagnostics report deterministic authoring context without full cycle lists.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

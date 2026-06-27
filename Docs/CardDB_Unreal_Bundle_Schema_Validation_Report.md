@@ -162,6 +162,23 @@ Cross-reference diagnostics:
 
 Duplicate card ids make the reference index ambiguous, so bundle validation preserves duplicate diagnostics and skips missing-reference resolution for that bundle.
 
+## Dependency Ordering
+
+Bundle validation can now produce a test-only `DependencyOrderCardIds` array for acyclic references.
+
+Dependency edges are derived from card, effect, and payload `references` fields after cross-reference validation.
+
+Ordering policy:
+
+- dependencies appear before dependents.
+- independent ties follow original `cards[]` order.
+- missing references leave dependency order empty.
+- duplicate card ids leave dependency order empty.
+- self-references fail with `dependency_self_reference`.
+- cycles fail with `dependency_cycle_detected`.
+
+This order is validation output only and does not load cards into runtime or map reference data into `FWBCardDefinition`.
+
 ## Confirmations
 
 - this remains test-only

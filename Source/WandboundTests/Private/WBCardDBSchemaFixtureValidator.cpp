@@ -1069,6 +1069,481 @@ void ValidateBundleCrossReferences(
 	}
 }
 
+struct FWBCardDBBundleDependencyEdge
+{
+	FString FromCardId;
+	FString ToCardId;
+	int32 FromCardIndex = -1;
+	int32 ToCardIndex = -1;
+	FString EffectId;
+	FString JsonPath;
+};
+
+bool HasBundleDiagnosticCode(
+	const FWBCardDBBundleSchemaValidationResult& Result,
+	const EWBCardDBSchemaDiagnostic Code)
+{
+	for (const FWBCardDBSchemaValidationDiagnostic& Diagnostic : Result.Diagnostics)
+	{
+		if (Diagnostic.Code == Code)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void AddDependencyDiagnostic(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const EWBCardDBSchemaDiagnostic Code,
+	const int32 CardIndex,
+	const FString& OwnerCardId,
+	const FString& OwnerEffectId,
+	const FString& JsonPath)
+{
+	const FString SafeOwnerCardId = SafeDiagnosticIdentifier(OwnerCardId);
+	AddDiagnostic(
+		Result,
+		Code,
+		Code == EWBCardDBSchemaDiagnostic::DependencySelfReference
+			? TEXT("dependency self reference detected")
+			: TEXT("dependency cycle detected"),
+		SafeOwnerCardId,
+		SafeDiagnosticIdentifier(OwnerEffectId),
+		CardIndex,
+		SafeOwnerCardId,
+		JsonPath);
+}
+
+bool TryBuildBundleCardIdsByIndex(
+	const TArray<TSharedPtr<FJsonValue>>& CardValues,
+	TArray<FString>& OutCardIdsByIndex)
+{
+	OutCardIdsByIndex.Reset();
+	OutCardIdsByIndex.SetNum(CardValues.Num());
+
+	for (int32 CardIndex = 0; CardIndex < CardValues.Num(); ++CardIndex)
+	{
+		const TSharedPtr<FJsonObject> CardObject =
+			CardValues[CardIndex].IsValid() && CardValues[CardIndex]->Type == EJson::Object
+				? CardValues[CardIndex]->AsObject()
+				: nullptr;
+		if (!CardObject.IsValid())
+		{
+			return false;
+		}
+
+		FString CardId;
+		if (!CardObject->TryGetStringField(TEXT("card_id"), CardId) || CardId.IsEmpty())
+		{
+			return false;
+		}
+
+		OutCardIdsByIndex[CardIndex] = CardId;
+	}
+
+	return true;
+}
+
+void TryAddDependencyEdge(
+	TArray<FWBCardDBBundleDependencyEdge>& OutEdges,
+	FWBCardDBBundleDependencyEdge& InOutFirstSelfReferenceEdge,
+	bool& bOutHasSelfReference,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex,
+	const int32 FromCardIndex,
+	const FString& FromCardId,
+	const FString& OwnerEffectId,
+	const FString& ToCardId,
+	const FString& JsonPath)
+{
+	const int32* ToCardIndex = ReferenceIndex.CardIndexById.Find(ToCardId);
+	if (ToCardIndex == nullptr)
+	{
+		return;
+	}
+
+	FWBCardDBBundleDependencyEdge Edge;
+	Edge.FromCardId = FromCardId;
+	Edge.ToCardId = ToCardId;
+	Edge.FromCardIndex = FromCardIndex;
+	Edge.ToCardIndex = *ToCardIndex;
+	Edge.EffectId = OwnerEffectId;
+	Edge.JsonPath = JsonPath;
+	OutEdges.Add(Edge);
+
+	if (!bOutHasSelfReference && Edge.FromCardIndex == Edge.ToCardIndex)
+	{
+		InOutFirstSelfReferenceEdge = Edge;
+		bOutHasSelfReference = true;
+	}
+}
+
+void CollectCardIdDependencyEdges(
+	TArray<FWBCardDBBundleDependencyEdge>& OutEdges,
+	FWBCardDBBundleDependencyEdge& InOutFirstSelfReferenceEdge,
+	bool& bOutHasSelfReference,
+	const TSharedPtr<FJsonObject>& ReferencesObject,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex,
+	const int32 FromCardIndex,
+	const FString& FromCardId,
+	const FString& OwnerEffectId,
+	const FString& JsonPath)
+{
+	const TArray<TSharedPtr<FJsonValue>>* CardIdValues = nullptr;
+	if (!ReferencesObject.IsValid()
+		|| !ReferencesObject->TryGetArrayField(TEXT("card_ids"), CardIdValues)
+		|| CardIdValues == nullptr)
+	{
+		return;
+	}
+
+	for (int32 ReferenceIndexValue = 0; ReferenceIndexValue < CardIdValues->Num(); ++ReferenceIndexValue)
+	{
+		const TSharedPtr<FJsonValue>& CardIdValue = (*CardIdValues)[ReferenceIndexValue];
+		if (!CardIdValue.IsValid() || CardIdValue->Type != EJson::String)
+		{
+			continue;
+		}
+
+		TryAddDependencyEdge(
+			OutEdges,
+			InOutFirstSelfReferenceEdge,
+			bOutHasSelfReference,
+			ReferenceIndex,
+			FromCardIndex,
+			FromCardId,
+			OwnerEffectId,
+			CardIdValue->AsString(),
+			JsonPath + FString::Printf(TEXT(".card_ids[%d]"), ReferenceIndexValue));
+	}
+}
+
+void CollectEffectReferenceDependencyEdges(
+	TArray<FWBCardDBBundleDependencyEdge>& OutEdges,
+	FWBCardDBBundleDependencyEdge& InOutFirstSelfReferenceEdge,
+	bool& bOutHasSelfReference,
+	const TSharedPtr<FJsonObject>& ReferencesObject,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex,
+	const int32 FromCardIndex,
+	const FString& FromCardId,
+	const FString& OwnerEffectId,
+	const FString& JsonPath)
+{
+	const TArray<TSharedPtr<FJsonValue>>* EffectReferenceValues = nullptr;
+	if (!ReferencesObject.IsValid()
+		|| !ReferencesObject->TryGetArrayField(TEXT("effect_refs"), EffectReferenceValues)
+		|| EffectReferenceValues == nullptr)
+	{
+		return;
+	}
+
+	for (int32 EffectRefIndex = 0; EffectRefIndex < EffectReferenceValues->Num(); ++EffectRefIndex)
+	{
+		const TSharedPtr<FJsonValue>& EffectReferenceValue = (*EffectReferenceValues)[EffectRefIndex];
+		const TSharedPtr<FJsonObject> EffectReferenceObject =
+			EffectReferenceValue.IsValid() && EffectReferenceValue->Type == EJson::Object
+				? EffectReferenceValue->AsObject()
+				: nullptr;
+		if (!EffectReferenceObject.IsValid())
+		{
+			continue;
+		}
+
+		FString ReferencedCardId;
+		if (!EffectReferenceObject->TryGetStringField(TEXT("card_id"), ReferencedCardId) || ReferencedCardId.IsEmpty())
+		{
+			continue;
+		}
+
+		TryAddDependencyEdge(
+			OutEdges,
+			InOutFirstSelfReferenceEdge,
+			bOutHasSelfReference,
+			ReferenceIndex,
+			FromCardIndex,
+			FromCardId,
+			OwnerEffectId,
+			ReferencedCardId,
+			JsonPath + FString::Printf(TEXT(".effect_refs[%d]"), EffectRefIndex));
+	}
+}
+
+void CollectBundleDependencyEdges(
+	TArray<FWBCardDBBundleDependencyEdge>& OutEdges,
+	FWBCardDBBundleDependencyEdge& InOutFirstSelfReferenceEdge,
+	bool& bOutHasSelfReference,
+	const TArray<TSharedPtr<FJsonValue>>& CardValues,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex)
+{
+	for (int32 CardIndex = 0; CardIndex < CardValues.Num(); ++CardIndex)
+	{
+		const TSharedPtr<FJsonObject> CardObject =
+			CardValues[CardIndex].IsValid() && CardValues[CardIndex]->Type == EJson::Object
+				? CardValues[CardIndex]->AsObject()
+				: nullptr;
+		if (!CardObject.IsValid())
+		{
+			continue;
+		}
+
+		FString OwnerCardId;
+		CardObject->TryGetStringField(TEXT("card_id"), OwnerCardId);
+
+		const TSharedPtr<FJsonObject>* CardReferencesObject = nullptr;
+		if (TryGetReferencesObjectForResolution(CardObject, CardReferencesObject))
+		{
+			CollectCardIdDependencyEdges(
+				OutEdges,
+				InOutFirstSelfReferenceEdge,
+				bOutHasSelfReference,
+				*CardReferencesObject,
+				ReferenceIndex,
+				CardIndex,
+				OwnerCardId,
+				FString(),
+				CardJsonPath(CardIndex) + TEXT(".references"));
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
+		if (!TryGetEffectArray(CardObject, EffectValues))
+		{
+			continue;
+		}
+
+		for (int32 EffectIndex = 0; EffectIndex < EffectValues->Num(); ++EffectIndex)
+		{
+			const TSharedPtr<FJsonValue>& EffectValue = (*EffectValues)[EffectIndex];
+			const TSharedPtr<FJsonObject> EffectObject =
+				EffectValue.IsValid() && EffectValue->Type == EJson::Object
+					? EffectValue->AsObject()
+					: nullptr;
+			if (!EffectObject.IsValid())
+			{
+				continue;
+			}
+
+			FString OwnerEffectId;
+			EffectObject->TryGetStringField(TEXT("effect_id"), OwnerEffectId);
+			const FString EffectPath = CardJsonPath(CardIndex) + FString::Printf(TEXT(".activated_effects[%d]"), EffectIndex);
+
+			const TSharedPtr<FJsonObject>* EffectReferencesObject = nullptr;
+			if (TryGetReferencesObjectForResolution(EffectObject, EffectReferencesObject))
+			{
+				CollectCardIdDependencyEdges(
+					OutEdges,
+					InOutFirstSelfReferenceEdge,
+					bOutHasSelfReference,
+					*EffectReferencesObject,
+					ReferenceIndex,
+					CardIndex,
+					OwnerCardId,
+					OwnerEffectId,
+					EffectPath + TEXT(".references"));
+				CollectEffectReferenceDependencyEdges(
+					OutEdges,
+					InOutFirstSelfReferenceEdge,
+					bOutHasSelfReference,
+					*EffectReferencesObject,
+					ReferenceIndex,
+					CardIndex,
+					OwnerCardId,
+					OwnerEffectId,
+					EffectPath + TEXT(".references"));
+			}
+
+			const TArray<TSharedPtr<FJsonValue>>* PayloadValues = nullptr;
+			if (!EffectObject->TryGetArrayField(TEXT("payloads"), PayloadValues) || PayloadValues == nullptr)
+			{
+				continue;
+			}
+
+			for (int32 PayloadIndex = 0; PayloadIndex < PayloadValues->Num(); ++PayloadIndex)
+			{
+				const TSharedPtr<FJsonValue>& PayloadValue = (*PayloadValues)[PayloadIndex];
+				const TSharedPtr<FJsonObject> PayloadObject =
+					PayloadValue.IsValid() && PayloadValue->Type == EJson::Object
+						? PayloadValue->AsObject()
+						: nullptr;
+				const TSharedPtr<FJsonObject>* PayloadReferencesObject = nullptr;
+				if (TryGetReferencesObjectForResolution(PayloadObject, PayloadReferencesObject))
+				{
+					CollectCardIdDependencyEdges(
+						OutEdges,
+						InOutFirstSelfReferenceEdge,
+						bOutHasSelfReference,
+						*PayloadReferencesObject,
+						ReferenceIndex,
+						CardIndex,
+						OwnerCardId,
+						OwnerEffectId,
+						EffectPath + FString::Printf(TEXT(".payloads[%d].references"), PayloadIndex));
+				}
+			}
+		}
+	}
+}
+
+bool FindDependencyCycleFromCard(
+	const int32 CardIndex,
+	const TArray<FWBCardDBBundleDependencyEdge>& Edges,
+	TArray<uint8>& VisitStateByCardIndex,
+	FWBCardDBBundleDependencyEdge& OutCycleEdge)
+{
+	VisitStateByCardIndex[CardIndex] = 1;
+
+	for (const FWBCardDBBundleDependencyEdge& Edge : Edges)
+	{
+		if (Edge.FromCardIndex != CardIndex || Edge.ToCardIndex == INDEX_NONE)
+		{
+			continue;
+		}
+
+		if (VisitStateByCardIndex[Edge.ToCardIndex] == 1)
+		{
+			OutCycleEdge = Edge;
+			return true;
+		}
+
+		if (VisitStateByCardIndex[Edge.ToCardIndex] == 0
+			&& FindDependencyCycleFromCard(Edge.ToCardIndex, Edges, VisitStateByCardIndex, OutCycleEdge))
+		{
+			return true;
+		}
+	}
+
+	VisitStateByCardIndex[CardIndex] = 2;
+	return false;
+}
+
+bool FindFirstDependencyCycle(
+	const int32 CardCount,
+	const TArray<FWBCardDBBundleDependencyEdge>& Edges,
+	FWBCardDBBundleDependencyEdge& OutCycleEdge)
+{
+	TArray<uint8> VisitStateByCardIndex;
+	VisitStateByCardIndex.Init(0, CardCount);
+
+	for (int32 CardIndex = 0; CardIndex < CardCount; ++CardIndex)
+	{
+		if (VisitStateByCardIndex[CardIndex] == 0
+			&& FindDependencyCycleFromCard(CardIndex, Edges, VisitStateByCardIndex, OutCycleEdge))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void PopulateStableDependencyOrder(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TArray<FString>& CardIdsByIndex,
+	const TArray<FWBCardDBBundleDependencyEdge>& Edges)
+{
+	TArray<int32> DependencyCountByCardIndex;
+	DependencyCountByCardIndex.Init(0, CardIdsByIndex.Num());
+
+	for (const FWBCardDBBundleDependencyEdge& Edge : Edges)
+	{
+		if (DependencyCountByCardIndex.IsValidIndex(Edge.FromCardIndex))
+		{
+			++DependencyCountByCardIndex[Edge.FromCardIndex];
+		}
+	}
+
+	TArray<bool> bEmittedByCardIndex;
+	bEmittedByCardIndex.Init(false, CardIdsByIndex.Num());
+
+	while (Result.DependencyOrderCardIds.Num() < CardIdsByIndex.Num())
+	{
+		int32 NextCardIndex = INDEX_NONE;
+		for (int32 CardIndex = 0; CardIndex < CardIdsByIndex.Num(); ++CardIndex)
+		{
+			if (!bEmittedByCardIndex[CardIndex] && DependencyCountByCardIndex[CardIndex] == 0)
+			{
+				NextCardIndex = CardIndex;
+				break;
+			}
+		}
+
+		if (NextCardIndex == INDEX_NONE)
+		{
+			break;
+		}
+
+		Result.DependencyOrderCardIds.Add(CardIdsByIndex[NextCardIndex]);
+		bEmittedByCardIndex[NextCardIndex] = true;
+
+		for (const FWBCardDBBundleDependencyEdge& Edge : Edges)
+		{
+			if (Edge.ToCardIndex == NextCardIndex && DependencyCountByCardIndex.IsValidIndex(Edge.FromCardIndex))
+			{
+				--DependencyCountByCardIndex[Edge.FromCardIndex];
+			}
+		}
+	}
+
+	if (Result.DependencyOrderCardIds.Num() != CardIdsByIndex.Num())
+	{
+		Result.DependencyOrderCardIds.Reset();
+	}
+}
+
+void PopulateBundleDependencyOrder(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TArray<TSharedPtr<FJsonValue>>& CardValues,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex,
+	const bool bHasDuplicateCardIds)
+{
+	Result.DependencyOrderCardIds.Reset();
+
+	if (bHasDuplicateCardIds
+		|| HasBundleDiagnosticCode(Result, EWBCardDBSchemaDiagnostic::MissingCardReference)
+		|| HasBundleDiagnosticCode(Result, EWBCardDBSchemaDiagnostic::MissingEffectReference))
+	{
+		return;
+	}
+
+	TArray<FString> CardIdsByIndex;
+	if (!TryBuildBundleCardIdsByIndex(CardValues, CardIdsByIndex))
+	{
+		return;
+	}
+
+	TArray<FWBCardDBBundleDependencyEdge> Edges;
+	FWBCardDBBundleDependencyEdge FirstSelfReferenceEdge;
+	bool bHasSelfReference = false;
+	CollectBundleDependencyEdges(Edges, FirstSelfReferenceEdge, bHasSelfReference, CardValues, ReferenceIndex);
+
+	if (bHasSelfReference)
+	{
+		AddDependencyDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::DependencySelfReference,
+			FirstSelfReferenceEdge.FromCardIndex,
+			FirstSelfReferenceEdge.FromCardId,
+			FirstSelfReferenceEdge.EffectId,
+			FirstSelfReferenceEdge.JsonPath);
+		return;
+	}
+
+	FWBCardDBBundleDependencyEdge CycleEdge;
+	if (FindFirstDependencyCycle(CardIdsByIndex.Num(), Edges, CycleEdge))
+	{
+		AddDependencyDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::DependencyCycleDetected,
+			CycleEdge.FromCardIndex,
+			CycleEdge.FromCardId,
+			CycleEdge.EffectId,
+			CycleEdge.JsonPath);
+		return;
+	}
+
+	PopulateStableDependencyOrder(Result, CardIdsByIndex, Edges);
+}
+
 bool TryReadIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue)
 {
 	if (!Object.IsValid())
@@ -2209,6 +2684,7 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 		{
 			ValidateBundleCrossReferences(Result, *CardValues, ReferenceIndex);
 		}
+		PopulateBundleDependencyOrder(Result, *CardValues, ReferenceIndex, bHasDuplicateCardIds);
 	}
 
 	Result.bOk = Result.Diagnostics.Num() == 0;
@@ -2303,6 +2779,10 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 		return TEXT("reference_malformed");
 	case EWBCardDBSchemaDiagnostic::UnknownReferenceField:
 		return TEXT("unknown_reference_field");
+	case EWBCardDBSchemaDiagnostic::DependencyCycleDetected:
+		return TEXT("dependency_cycle_detected");
+	case EWBCardDBSchemaDiagnostic::DependencySelfReference:
+		return TEXT("dependency_self_reference");
 	default:
 		return TEXT("unknown");
 	}

@@ -101,6 +101,22 @@ bool ExpectStrictBundleFailsWith(
 	return !Result.bOk && HasDiagnostic(Result, ExpectedCode);
 }
 
+bool ExpectStringArrayEquals(
+	FAutomationTestBase& Test,
+	const FString& Label,
+	const TArray<FString>& Actual,
+	const TArray<FString>& Expected)
+{
+	bool bMatches = Test.TestEqual(*FString::Printf(TEXT("%s count"), *Label), Actual.Num(), Expected.Num());
+	const int32 CompareCount = FMath::Min(Actual.Num(), Expected.Num());
+	for (int32 Index = 0; Index < CompareCount; ++Index)
+	{
+		bMatches &= Test.TestEqual(*FString::Printf(TEXT("%s[%d]"), *Label, Index), Actual[Index], Expected[Index]);
+	}
+
+	return bMatches;
+}
+
 void FindSourceFiles(const FString& RelativeDirectory, TArray<FString>& OutFiles)
 {
 	const FString AbsoluteDirectory = FPaths::Combine(FPaths::ProjectDir(), RelativeDirectory);
@@ -328,6 +344,14 @@ bool FWBCardDBBundleSchemaDiagnosticCodeStringsStableTest::RunTest(const FString
 		TEXT("UnknownReferenceField string"),
 		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownReferenceField),
 		FString(TEXT("unknown_reference_field")));
+	TestEqual(
+		TEXT("DependencyCycleDetected string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::DependencyCycleDetected),
+		FString(TEXT("dependency_cycle_detected")));
+	TestEqual(
+		TEXT("DependencySelfReference string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::DependencySelfReference),
+		FString(TEXT("dependency_self_reference")));
 	return true;
 }
 
@@ -738,6 +762,194 @@ bool FWBCardDBBundleSchemaReferenceHiddenTokenSafeTest::RunTest(const FString& P
 		TestFalse(TEXT("EffectId omits SECRET"), Diagnostic.EffectId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyOrderSimpleChainTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyOrderSimpleChain", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyOrderSimpleChainTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_dependency_order_simple_chain.json"));
+	const TArray<FString> ExpectedOrder = {
+		TEXT("base_card"),
+		TEXT("middle_card"),
+		TEXT("top_card")
+	};
+
+	TestTrue(TEXT("Simple dependency chain validates"), Result.bOk);
+	ExpectStringArrayEquals(*this, TEXT("Simple dependency order"), Result.DependencyOrderCardIds, ExpectedOrder);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyOrderReverseInputTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyOrderReverseInput", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyOrderReverseInputTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_dependency_order_reverse_input.json"));
+	const TArray<FString> ExpectedOrder = {
+		TEXT("base_card"),
+		TEXT("middle_card"),
+		TEXT("top_card")
+	};
+
+	TestTrue(TEXT("Reverse-input dependency chain validates"), Result.bOk);
+	ExpectStringArrayEquals(*this, TEXT("Reverse-input dependency order"), Result.DependencyOrderCardIds, ExpectedOrder);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyOrderDiamondTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyOrderDiamond", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyOrderDiamondTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_dependency_order_diamond.json"));
+	const TArray<FString> ExpectedOrder = {
+		TEXT("base_card"),
+		TEXT("left_card"),
+		TEXT("right_card"),
+		TEXT("top_card")
+	};
+
+	TestTrue(TEXT("Diamond dependency bundle validates"), Result.bOk);
+	ExpectStringArrayEquals(*this, TEXT("Diamond dependency order"), Result.DependencyOrderCardIds, ExpectedOrder);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyOrderIndependentTiebreakTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyOrderIndependentTiebreak", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyOrderIndependentTiebreakTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_dependency_order_independent_tiebreak.json"));
+	const TArray<FString> ExpectedOrder = {
+		TEXT("independent_a"),
+		TEXT("independent_b"),
+		TEXT("independent_c")
+	};
+
+	TestTrue(TEXT("Independent dependency bundle validates"), Result.bOk);
+	ExpectStringArrayEquals(*this, TEXT("Independent dependency order"), Result.DependencyOrderCardIds, ExpectedOrder);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencySelfReferenceTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencySelfReference", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencySelfReferenceTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_dependency_self_reference.json"));
+	TestFalse(TEXT("Self-reference dependency bundle fails"), Result.bOk);
+	TestTrue(
+		TEXT("Self-reference diagnostic has context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::DependencySelfReference,
+			0,
+			TEXT("self_reference_card"),
+			FString(),
+			TEXT("$.cards[0].references.card_ids[0]")));
+	TestEqual(TEXT("Self-reference dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyCycleTwoCardsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyCycleTwoCards", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyCycleTwoCardsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_dependency_cycle_two_cards.json"));
+	TestFalse(TEXT("Two-card dependency cycle fails"), Result.bOk);
+	TestTrue(TEXT("Two-card cycle diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::DependencyCycleDetected));
+	TestEqual(TEXT("Two-card cycle dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyCycleThreeCardsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyCycleThreeCards", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyCycleThreeCardsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_dependency_cycle_three_cards.json"));
+	TestFalse(TEXT("Three-card dependency cycle fails"), Result.bOk);
+	TestTrue(TEXT("Three-card cycle diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::DependencyCycleDetected));
+	TestEqual(TEXT("Three-card cycle dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyCycleEffectRefTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyCycleEffectRef", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyCycleEffectRefTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_dependency_cycle_effect_ref.json"));
+	TestFalse(TEXT("Effect-ref dependency cycle fails"), Result.bOk);
+	TestTrue(
+		TEXT("Effect-ref cycle diagnostic has effect context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::DependencyCycleDetected,
+			1,
+			TEXT("effect_cycle_b"),
+			TEXT("return_ref"),
+			TEXT("$.cards[1].activated_effects[0].references.effect_refs[0]")));
+	TestEqual(TEXT("Effect-ref cycle dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyCyclePayloadRefTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyCyclePayloadRef", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyCyclePayloadRefTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_dependency_cycle_payload_ref.json"));
+	TestFalse(TEXT("Payload-ref dependency cycle fails"), Result.bOk);
+	TestTrue(TEXT("Payload-ref cycle diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::DependencyCycleDetected));
+
+	const FWBCardDBSchemaValidationDiagnostic* Diagnostic =
+		FindDiagnostic(Result, EWBCardDBSchemaDiagnostic::DependencyCycleDetected);
+	TestTrue(TEXT("Payload-ref cycle diagnostic exists"), Diagnostic != nullptr);
+	if (Diagnostic != nullptr)
+	{
+		TestTrue(TEXT("Payload-ref cycle path includes payloads"), Diagnostic->JsonPath.Contains(TEXT(".payloads[0].references")));
+	}
+
+	TestEqual(TEXT("Payload-ref cycle dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDependencyHiddenTokenSafeTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DependencyHiddenTokenSafe", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDependencyHiddenTokenSafeTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_dependency_hidden_token_safe.json"));
+	TestFalse(TEXT("Hidden dependency token bundle fails"), Result.bOk);
+	TestTrue(TEXT("Hidden dependency missing reference diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::MissingCardReference));
+	TestEqual(TEXT("Hidden dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+
+	for (const FWBCardDBSchemaValidationDiagnostic& Diagnostic : Result.Diagnostics)
+	{
+		TestFalse(TEXT("Message omits SECRET"), Diagnostic.Message.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("JsonPath omits SECRET"), Diagnostic.JsonPath.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("BundleCardId omits SECRET"), Diagnostic.BundleCardId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("CardId omits SECRET"), Diagnostic.CardId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("EffectId omits SECRET"), Diagnostic.EffectId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMissingReferenceSkipsDependencyOrderTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MissingReferenceSkipsDependencyOrder", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMissingReferenceSkipsDependencyOrderTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_missing_card_reference_card_level.json"));
+	TestFalse(TEXT("Missing-reference bundle fails"), Result.bOk);
+	TestTrue(TEXT("Missing-reference diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::MissingCardReference));
+	TestEqual(TEXT("Missing-reference dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDuplicateCardIdSkipsDependencyOrderTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DuplicateCardIdSkipsDependencyOrder", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDuplicateCardIdSkipsDependencyOrderTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_duplicate_card_id.json"));
+	TestFalse(TEXT("Duplicate card id bundle fails"), Result.bOk);
+	TestTrue(TEXT("Duplicate card id diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::CardIdDuplicate));
+	TestEqual(TEXT("Duplicate card id dependency order empty"), Result.DependencyOrderCardIds.Num(), 0);
 	return true;
 }
 

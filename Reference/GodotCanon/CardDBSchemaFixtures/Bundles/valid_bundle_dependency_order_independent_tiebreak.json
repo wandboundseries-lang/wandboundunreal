@@ -1,0 +1,27 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_order_independent_tiebreak",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "independent_a",
+      "public_name": "Independent A",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "independent_b",
+      "public_name": "Independent B",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "independent_c",
+      "public_name": "Independent C",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

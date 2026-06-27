@@ -46,7 +46,9 @@ enum class EWBCardDBSchemaDiagnostic : uint8
 	MissingCardReference,
 	MissingEffectReference,
 	ReferenceMalformed,
-	UnknownReferenceField
+	UnknownReferenceField,
+	DependencyCycleDetected,
+	DependencySelfReference
 };
 
 struct FWBCardDBSchemaValidationDiagnostic
@@ -80,6 +82,7 @@ struct FWBCardDBBundleSchemaValidationResult
 	FString SourcePath;
 	TArray<FWBCardDBSchemaValidationDiagnostic> Diagnostics;
 	TArray<FWBCardDefinition> CardDefinitions;
+	TArray<FString> DependencyOrderCardIds;
 };
 
 class FWBCardDBSchemaFixtureValidator

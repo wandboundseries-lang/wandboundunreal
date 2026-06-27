@@ -1,0 +1,37 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_order_reverse_input",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "top_card",
+      "public_name": "Top Card",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "middle_card"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "middle_card",
+      "public_name": "Middle Card",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "base_card"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "base_card",
+      "public_name": "Base Card",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

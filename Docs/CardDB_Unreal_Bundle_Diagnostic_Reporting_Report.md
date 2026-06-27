@@ -75,6 +75,19 @@ Bundle reference validation now reports stable context for test-only `references
 
 Duplicate card ids still report `card_id_duplicate` and skip reference resolution because the bundle card id index is ambiguous.
 
+## Dependency Diagnostic Context
+
+Bundle dependency validation now reports authoring diagnostics for self-references and cycles.
+
+Dependency diagnostics use the same context fields:
+
+- `CardIndex`
+- `BundleCardId`
+- `EffectId`
+- `JsonPath`
+
+Cycle diagnostics report the first deterministic cycle-closing edge. They use generic messages and safe owner context only, avoiding full cycle lists and referenced id values.
+
 ## Confirmations
 
 - this remains test-only

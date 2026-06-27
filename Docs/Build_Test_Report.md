@@ -4811,3 +4811,69 @@ notRun=0
 - No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 - An interim targeted run reported one `LogJson` error in the malformed `effect_refs[]` fixture path. The validator now checks `EJson::Object` before calling `AsObject()`, and the final targeted/full runs passed.
+
+---
+
+# Test-Only CardDB Bundle Dependency Diagnostics Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 16.31 seconds
+```
+
+## Targeted CardDB Schema Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDB; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaValidation/index.json`:
+
+```text
+succeeded=103
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=859
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added test-only dependency graph derivation from existing bundle `references` fields.
+- Added `DependencyOrderCardIds` to `FWBCardDBBundleSchemaValidationResult`.
+- Added `dependency_self_reference` and `dependency_cycle_detected` diagnostics.
+- Added 12 dependency-specific `Wandbound.Core.CardDBBundleSchemaFixtureValidation.*` automation tests, bringing the CardDB validation group to 103 tests.
+- Added 4 valid dependency-order fixtures and 6 invalid dependency/cycle fixtures under `Reference/GodotCanon/CardDBSchemaFixtures/Bundles/`.
+- Dependency order is populated only for unambiguous acyclic bundles and uses original `cards[]` order as the tie-break.
+- Missing references and duplicate card ids leave dependency order empty.
+- Cycle diagnostics report stable authoring context without full cycle lists or referenced id values.
+- No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.

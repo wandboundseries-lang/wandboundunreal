@@ -1,0 +1,30 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_cycle_two_cards",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "cycle_a",
+      "public_name": "Cycle A",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "cycle_b"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "cycle_b",
+      "public_name": "Cycle B",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "cycle_a"
+        ]
+      },
+      "activated_effects": []
+    }
+  ]
+}

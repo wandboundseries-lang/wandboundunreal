@@ -1,0 +1,59 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_cycle_effect_ref",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "effect_cycle_a",
+      "public_name": "Effect Cycle A",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "effect_cycle_b"
+        ]
+      },
+      "activated_effects": [
+        {
+          "effect_id": "anchor_effect",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "effect_cycle_b",
+      "public_name": "Effect Cycle B",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "return_ref",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "references": {
+            "effect_refs": [
+              {
+                "card_id": "effect_cycle_a",
+                "effect_id": "anchor_effect"
+              }
+            ]
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
