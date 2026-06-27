@@ -1,0 +1,62 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_mixed_reference_levels",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "mixed_ref_dependent",
+      "public_name": "Mixed Reference Dependent",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "mixed_ref_card_dependency"
+        ]
+      },
+      "activated_effects": [
+        {
+          "effect_id": "mixed_ref_ping",
+          "public_label": "Deal 1 damage",
+          "target_requirement": "unit",
+          "references": {
+            "card_ids": [
+              "mixed_ref_effect_dependency"
+            ]
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected",
+              "references": {
+                "card_ids": [
+                  "mixed_ref_payload_dependency"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "mixed_ref_card_dependency",
+      "public_name": "Mixed Reference Card Dependency",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "mixed_ref_effect_dependency",
+      "public_name": "Mixed Reference Effect Dependency",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "mixed_ref_payload_dependency",
+      "public_name": "Mixed Reference Payload Dependency",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

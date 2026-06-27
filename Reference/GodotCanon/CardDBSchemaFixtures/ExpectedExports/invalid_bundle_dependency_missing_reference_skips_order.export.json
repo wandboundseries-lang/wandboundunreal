@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"invalid_bundle_dependency_missing_reference_skips_order.json","card_count":2,"dependency_order_card_ids":[],"diagnostics":[{"code":"missing_card_reference","card_index":0,"card_id":"missing_ref_dependent","effect_id":"","json_path":"$.cards[0].references.card_ids[0]"}]}

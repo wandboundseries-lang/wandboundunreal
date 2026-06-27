@@ -1,0 +1,60 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_effect_and_payload_refs_same_card",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "same_ref_dependent",
+      "public_name": "Same Reference Dependent",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "same_ref_ping",
+          "public_label": "Deal 1 damage",
+          "target_requirement": "unit",
+          "references": {
+            "effect_refs": [
+              {
+                "card_id": "same_ref_dependency",
+                "effect_id": "same_ref_dependency_effect"
+              }
+            ]
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected",
+              "references": {
+                "card_ids": [
+                  "same_ref_dependency"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "same_ref_dependency",
+      "public_name": "Same Reference Dependency",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "same_ref_dependency_effect",
+          "public_label": "Restore 1 armor",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "armor_effect",
+              "operation": "restore_armor_to_max",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

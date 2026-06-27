@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"invalid_bundle_dependency_invalid_card_skips_order.json","card_count":2,"dependency_order_card_ids":[],"diagnostics":[{"code":"unsupported_payload_type","card_index":0,"card_id":"invalid_card_dependent","effect_id":"draw_2","json_path":"$.cards[0].activated_effects[0].payloads[0]"}]}

@@ -1556,6 +1556,20 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Dependency Ordering Edge Cases
+
+- Added importer-ready dependency ordering edge-case fixtures.
+- Covered duplicate references, mixed reference levels, repeated paths, disconnected components, independent card input order, and effect/payload references to the same dependency.
+- Invalid bundles skip dependency order when validation diagnostics already exist before dependency ordering.
+- Added expected export snapshots for the new edge cases.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

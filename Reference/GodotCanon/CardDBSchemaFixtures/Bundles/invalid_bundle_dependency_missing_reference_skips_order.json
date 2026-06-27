@@ -1,0 +1,25 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_missing_reference_skips_order",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "missing_ref_dependent",
+      "public_name": "Missing Reference Dependent",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "missing_ref_dependency"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "missing_ref_independent",
+      "public_name": "Missing Reference Independent",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

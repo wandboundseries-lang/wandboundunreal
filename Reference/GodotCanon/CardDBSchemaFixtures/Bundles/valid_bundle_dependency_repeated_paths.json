@@ -1,0 +1,38 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_repeated_paths",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "repeated_path_a",
+      "public_name": "Repeated Path A",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "repeated_path_b",
+          "repeated_path_c"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "repeated_path_c",
+      "public_name": "Repeated Path C",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "repeated_path_b"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "repeated_path_b",
+      "public_name": "Repeated Path B",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

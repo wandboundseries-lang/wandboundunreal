@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"strict_invalid_bundle_dependency_unknown_field_skips_order.json","card_count":2,"dependency_order_card_ids":[],"diagnostics":[{"code":"unknown_top_level_field","card_index":0,"card_id":"strict_unknown_dependent","effect_id":"","json_path":"$.cards[0]"}]}

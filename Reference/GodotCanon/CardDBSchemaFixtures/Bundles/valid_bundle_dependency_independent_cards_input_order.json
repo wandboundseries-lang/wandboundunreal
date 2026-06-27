@@ -1,0 +1,27 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_independent_cards_input_order",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "independent_gamma",
+      "public_name": "Independent Gamma",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "independent_alpha",
+      "public_name": "Independent Alpha",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "independent_beta",
+      "public_name": "Independent Beta",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

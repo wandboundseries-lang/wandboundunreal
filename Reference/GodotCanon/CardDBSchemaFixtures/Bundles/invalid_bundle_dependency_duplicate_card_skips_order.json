@@ -1,0 +1,20 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_duplicate_card_skips_order",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "duplicate_dependency_card",
+      "public_name": "Duplicate Dependency Card",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "duplicate_dependency_card",
+      "public_name": "Duplicate Dependency Card Copy",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

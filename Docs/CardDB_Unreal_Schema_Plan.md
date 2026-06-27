@@ -618,6 +618,14 @@ Test-only dependency export snapshots now exist for future importer planning. Th
 
 Test-only bundle-level diagnostic export snapshots now preserve the same export shape for malformed bundle fields. Future importer diagnostics should keep the stable fields `ok`, clean-file-name `source_path`, `card_count`, `dependency_order_card_ids`, and sanitized diagnostic context while continuing to omit messages, full source JSON, and hidden referenced values.
 
+Importer planning should preserve the test-only dependency ordering policy:
+
+- dependencies appear before dependents
+- original `cards[]` order breaks ties among currently available zero-dependency cards
+- duplicate valid references do not duplicate emitted card ids
+- card, effect, and payload references all create dependency edges
+- invalid bundles skip dependency ordering and fail closed before import
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

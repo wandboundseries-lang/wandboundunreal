@@ -1,0 +1,26 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_unknown_field_ordered",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "non_strict_unknown_dependent",
+      "public_name": "Non Strict Unknown Dependent",
+      "kind": "fixture",
+      "unexpected_card_field": true,
+      "references": {
+        "card_ids": [
+          "non_strict_unknown_dependency"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "non_strict_unknown_dependency",
+      "public_name": "Non Strict Unknown Dependency",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

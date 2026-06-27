@@ -1,1 +1,1 @@
-{"ok":false,"source_path":"strict_invalid_bundle_unknown_metadata_field.json","card_count":1,"dependency_order_card_ids":["bundle_unknown_metadata_card"],"diagnostics":[{"code":"unknown_metadata_field","card_index":-1,"card_id":"","effect_id":"","json_path":"$.metadata"}]}
+{"ok":false,"source_path":"strict_invalid_bundle_unknown_metadata_field.json","card_count":1,"dependency_order_card_ids":[],"diagnostics":[{"code":"unknown_metadata_field","card_index":-1,"card_id":"","effect_id":"","json_path":"$.metadata"}]}

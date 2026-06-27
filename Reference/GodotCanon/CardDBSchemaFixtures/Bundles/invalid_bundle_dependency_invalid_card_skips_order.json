@@ -1,0 +1,37 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_invalid_card_skips_order",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "invalid_card_dependent",
+      "public_name": "Invalid Card Dependent",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "invalid_card_dependency"
+        ]
+      },
+      "activated_effects": [
+        {
+          "effect_id": "draw_2",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "payloads": [
+            {
+              "type": "draw_cards",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "invalid_card_dependency",
+      "public_name": "Invalid Card Dependency",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

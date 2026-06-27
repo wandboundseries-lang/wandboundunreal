@@ -128,6 +128,18 @@ Reference/GodotCanon/CardDBSchemaFixtures/ExpectedExports/
 
 These snapshots serialize dependency order and diagnostic context for future importer planning. They are not production data and do not expose a production export API.
 
+## Dependency Edge-Case Policy
+
+Dependency fixture coverage now documents importer-ready edge cases:
+
+- duplicate valid references are allowed and produce one emitted dependency card id
+- card-level, effect-level, and payload-level references all create dependency edges
+- repeated direct and transitive paths preserve dependency-before-dependent ordering
+- disconnected components use the existing zero-dependency input-order tie-break
+- independent cards preserve input order
+
+Invalid bundles now fail closed for dependency ordering when validation diagnostics already exist before the dependency pass. This keeps `DependencyOrderCardIds` empty for missing references, duplicate card ids, invalid cards, strict unknown fields, and malformed bundle validation failures.
+
 ## Confirmations
 
 - this remains test-only

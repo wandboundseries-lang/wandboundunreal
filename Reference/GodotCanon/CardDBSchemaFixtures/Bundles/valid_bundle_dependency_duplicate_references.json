@@ -1,0 +1,44 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_duplicate_references",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "duplicate_ref_dependent",
+      "public_name": "Duplicate Reference Dependent",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "duplicate_ref_dependency",
+          "duplicate_ref_dependency"
+        ]
+      },
+      "activated_effects": [
+        {
+          "effect_id": "duplicate_ref_ping",
+          "public_label": "Deal 1 damage",
+          "target_requirement": "unit",
+          "references": {
+            "card_ids": [
+              "duplicate_ref_dependency"
+            ]
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "duplicate_ref_dependency",
+      "public_name": "Duplicate Reference Dependency",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

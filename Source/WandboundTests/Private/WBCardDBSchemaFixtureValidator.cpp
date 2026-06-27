@@ -1500,9 +1500,7 @@ void PopulateBundleDependencyOrder(
 {
 	Result.DependencyOrderCardIds.Reset();
 
-	if (bHasDuplicateCardIds
-		|| HasBundleDiagnosticCode(Result, EWBCardDBSchemaDiagnostic::MissingCardReference)
-		|| HasBundleDiagnosticCode(Result, EWBCardDBSchemaDiagnostic::MissingEffectReference))
+	if (bHasDuplicateCardIds || Result.Diagnostics.Num() > 0)
 	{
 		return;
 	}

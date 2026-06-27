@@ -1,0 +1,18 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_hidden_reference_safe",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "hidden_reference_dependent",
+      "public_name": "Hidden Reference Dependent",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "SECRET_dependency_reference"
+        ]
+      },
+      "activated_effects": []
+    }
+  ]
+}

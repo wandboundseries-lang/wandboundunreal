@@ -119,6 +119,22 @@ Expected export snapshots now also cover malformed bundle-level diagnostics:
 
 These snapshots extend dependency export coverage without changing the export helper into a production API.
 
+## Dependency Edge-Case Export Coverage
+
+Expected export snapshots now cover importer-ready dependency ordering edge cases:
+
+- duplicate references
+- mixed card/effect/payload reference levels
+- repeated direct and transitive paths
+- disconnected components
+- independent card input order
+- effect and payload references to the same dependency
+- invalid and missing-reference bundles that skip dependency order
+- strict/non-strict unknown-field ordering behavior
+- hidden-token-safe missing references
+
+Invalid bundles now fail closed by exporting an empty `dependency_order_card_ids` array when validation diagnostics already exist before dependency ordering.
+
 ## Relationship To Future Importer Planning
 
 These exports give future importer work stable review artifacts for dependency order and authoring diagnostics.

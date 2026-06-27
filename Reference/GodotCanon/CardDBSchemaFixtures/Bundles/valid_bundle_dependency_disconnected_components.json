@@ -1,0 +1,51 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_dependency_disconnected_components",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "component_c",
+      "public_name": "Component C",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "component_d"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "component_a",
+      "public_name": "Component A",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "component_b"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "component_d",
+      "public_name": "Component D",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "component_b",
+      "public_name": "Component B",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "component_e",
+      "public_name": "Component E",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

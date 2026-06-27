@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"invalid_bundle_dependency_duplicate_card_skips_order.json","card_count":2,"dependency_order_card_ids":[],"diagnostics":[{"code":"card_id_duplicate","card_index":1,"card_id":"duplicate_dependency_card","effect_id":"","json_path":"$.cards"}]}

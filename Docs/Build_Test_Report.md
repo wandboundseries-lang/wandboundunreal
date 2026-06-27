@@ -4682,6 +4682,69 @@ notRun=0
 
 ---
 
+# Test-Only CardDB Dependency Ordering Edge Cases Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 17.98 seconds
+```
+
+## Targeted CardDB Schema Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDB; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaValidation/index.json`:
+
+```text
+succeeded=142
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=898
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added 13 dependency edge-case `Wandbound.Core.CardDBBundleSchemaFixtureValidation.*` automation tests, bringing the CardDB validation group to 142 tests.
+- Added importer-ready dependency fixtures for duplicate references, mixed reference levels, repeated paths, disconnected components, independent cards, and effect/payload refs to the same dependency.
+- Added skip-order fixtures for missing references, duplicate card ids, invalid cards, strict unknown fields, non-strict unknown-field ordering, and hidden-token-safe missing references.
+- Dependency order now fails closed when validation diagnostics already exist before dependency ordering.
+- Expected export snapshots were added or updated for the edge cases and fail-closed invalid-bundle policy.
+- No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
 # Test-Only CardDB Bundle Diagnostic Reporting Pass
 
 ## Build
