@@ -1,0 +1,14 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "metadata": "not an object",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "metadata_not_object_card",
+      "public_name": "Metadata Not Object",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

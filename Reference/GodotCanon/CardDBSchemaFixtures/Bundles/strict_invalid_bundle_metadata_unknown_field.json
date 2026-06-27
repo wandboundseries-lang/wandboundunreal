@@ -1,0 +1,16 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "metadata": {
+    "unexpected_metadata_field": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "metadata_unknown_field_card",
+      "public_name": "Metadata Unknown Field",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

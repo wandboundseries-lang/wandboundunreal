@@ -1,0 +1,22 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0.0",
+  "source_version": "godot/ref-2026.06",
+  "migration_notes": "Test-only migration metadata for Unreal schema validation.",
+  "metadata": {
+    "author": "Wandbound Tests",
+    "notes": "Bundle metadata value policy fixture.",
+    "source": "GodotCanon",
+    "version": "v1.0",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "version_metadata_full_card",
+      "public_name": "Version Metadata Full",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

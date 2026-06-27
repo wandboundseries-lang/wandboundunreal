@@ -1,0 +1,1 @@
+{"ok":false,"source_path":"invalid_bundle_metadata_notes_too_long.json","card_count":1,"dependency_order_card_ids":[],"diagnostics":[{"code":"metadata_malformed","card_index":-1,"card_id":"","effect_id":"","json_path":"$.metadata.notes"}]}

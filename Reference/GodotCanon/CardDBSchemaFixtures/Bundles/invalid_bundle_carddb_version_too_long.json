@@ -1,0 +1,13 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "carddb_version_too_long_card",
+      "public_name": "CardDB Version Too Long",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

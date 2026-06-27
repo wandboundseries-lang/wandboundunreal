@@ -48,7 +48,11 @@ enum class EWBCardDBSchemaDiagnostic : uint8
 	ReferenceMalformed,
 	UnknownReferenceField,
 	DependencyCycleDetected,
-	DependencySelfReference
+	DependencySelfReference,
+	InvalidCardDBVersion,
+	InvalidSourceVersion,
+	MigrationNotesMalformed,
+	MetadataMalformed
 };
 
 struct FWBCardDBSchemaValidationDiagnostic

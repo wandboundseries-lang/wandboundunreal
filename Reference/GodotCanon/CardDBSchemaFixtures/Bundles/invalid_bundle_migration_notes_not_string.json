@@ -1,0 +1,17 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "migration_notes": [
+    "not",
+    "string"
+  ],
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "migration_notes_not_string_card",
+      "public_name": "Migration Notes Not String",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

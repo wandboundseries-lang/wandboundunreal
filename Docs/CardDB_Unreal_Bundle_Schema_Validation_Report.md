@@ -189,6 +189,17 @@ Reference/GodotCanon/CardDBSchemaFixtures/ExpectedExports/
 
 Coverage includes missing or unsupported bundle schema version, missing CardDB version, missing/malformed/empty `cards`, duplicate card ids, strict unknown bundle fields, non-strict unknown fields, and mixed bundle/card diagnostics.
 
+## Version And Metadata Diagnostics
+
+Bundle validation now applies test-only version and metadata policy diagnostics:
+
+- `carddb_version` format and max length
+- optional `source_version` type, allowed characters, and max length
+- optional `migration_notes` type, max length, and hidden-token policy
+- optional bundle `metadata` object type, allowed value types, max lengths, and hidden-token policy
+
+Strict unknown metadata fields still fail with `unknown_metadata_field`. Malformed metadata values fail with `metadata_malformed`.
+
 ## Confirmations
 
 - this remains test-only

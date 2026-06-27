@@ -626,6 +626,14 @@ Importer planning should preserve the test-only dependency ordering policy:
 - card, effect, and payload references all create dependency edges
 - invalid bundles skip dependency ordering and fail closed before import
 
+Bundle version and metadata planning should preserve the test-only policies:
+
+- `carddb_version` is required, max 64 characters, and uses letters, numbers, underscore, hyphen, and dot
+- `source_version` is optional, max 64 characters, and may also use slash
+- `migration_notes` is optional string metadata, max 512 characters, and cannot contain hidden-information tokens
+- bundle metadata fields have fixed value types and max lengths
+- hidden-information tokens in metadata fail closed without echoing the values
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

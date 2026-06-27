@@ -1,0 +1,16 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "metadata": {
+    "notes": "Contains SECRET_metadata_note for hidden-token validation."
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "metadata_hidden_token_card",
+      "public_name": "Metadata Hidden Token",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

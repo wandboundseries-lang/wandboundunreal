@@ -1,0 +1,22 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards.strict-1.0",
+  "source_version": "godot/strict-1.0",
+  "migration_notes": "Strict bundle metadata fixture.",
+  "metadata": {
+    "author": "Wandbound Tests",
+    "notes": "Strict metadata uses only allowed fields.",
+    "source": "GodotCanon",
+    "version": "strict.1",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "strict_version_metadata_card",
+      "public_name": "Strict Version Metadata",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

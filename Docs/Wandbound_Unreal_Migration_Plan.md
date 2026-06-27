@@ -1570,6 +1570,20 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Bundle Version Metadata Diagnostics
+
+- Added test-only `carddb_version` and `source_version` policy diagnostics.
+- Added `migration_notes` validation for type, max length, and hidden-token safety.
+- Added bundle metadata object/value type validation and hidden-token safety.
+- Added expected export snapshots for version and metadata diagnostics.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

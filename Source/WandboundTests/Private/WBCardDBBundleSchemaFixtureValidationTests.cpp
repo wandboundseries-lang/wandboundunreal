@@ -252,6 +252,255 @@ bool FWBCardDBBundleSchemaStrictValidBundleMetadataTest::RunTest(const FString& 
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaValidVersionMetadataFullTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ValidVersionMetadataFull", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaValidVersionMetadataFullTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_version_metadata_full.json"));
+	TestTrue(TEXT("Full version metadata bundle validates"), Result.bOk);
+	TestEqual(TEXT("Full version metadata diagnostics"), Result.Diagnostics.Num(), 0);
+	TestEqual(TEXT("Full version metadata card definitions"), Result.CardDefinitions.Num(), 1);
+	ExpectExportMatches(
+		*this,
+		TEXT("valid_bundle_version_metadata_full.json"),
+		TEXT("valid_bundle_version_metadata_full.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaValidVersionMetadataMinimalTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ValidVersionMetadataMinimal", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaValidVersionMetadataMinimalTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_version_metadata_minimal.json"));
+	TestTrue(TEXT("Minimal version metadata bundle validates"), Result.bOk);
+	TestEqual(TEXT("Minimal version metadata diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaStrictValidVersionMetadataTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.StrictValidVersionMetadata", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaStrictValidVersionMetadataTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixtureStrict(TEXT("strict_valid_bundle_version_metadata.json"));
+	TestTrue(TEXT("Strict version metadata bundle validates"), Result.bOk);
+	TestEqual(TEXT("Strict version metadata diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaInvalidCardDBVersionEmptyTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.InvalidCardDBVersionEmpty", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaInvalidCardDBVersionEmptyTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_carddb_version_empty.json"),
+		EWBCardDBSchemaDiagnostic::InvalidCardDBVersion);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_carddb_version_empty.json"),
+		TEXT("invalid_bundle_carddb_version_empty.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaInvalidCardDBVersionBadCharsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.InvalidCardDBVersionBadChars", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaInvalidCardDBVersionBadCharsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_carddb_version_bad_chars.json"),
+		EWBCardDBSchemaDiagnostic::InvalidCardDBVersion);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_carddb_version_bad_chars.json"),
+		TEXT("invalid_bundle_carddb_version_bad_chars.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaInvalidCardDBVersionTooLongTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.InvalidCardDBVersionTooLong", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaInvalidCardDBVersionTooLongTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_carddb_version_too_long.json"),
+		EWBCardDBSchemaDiagnostic::InvalidCardDBVersion);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_carddb_version_too_long.json"),
+		TEXT("invalid_bundle_carddb_version_too_long.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaInvalidSourceVersionNotStringTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.InvalidSourceVersionNotString", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaInvalidSourceVersionNotStringTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_source_version_not_string.json"),
+		EWBCardDBSchemaDiagnostic::InvalidSourceVersion);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_source_version_not_string.json"),
+		TEXT("invalid_bundle_source_version_not_string.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaInvalidSourceVersionBadCharsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.InvalidSourceVersionBadChars", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaInvalidSourceVersionBadCharsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_source_version_bad_chars.json"),
+		EWBCardDBSchemaDiagnostic::InvalidSourceVersion);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_source_version_bad_chars.json"),
+		TEXT("invalid_bundle_source_version_bad_chars.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaInvalidSourceVersionTooLongTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.InvalidSourceVersionTooLong", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaInvalidSourceVersionTooLongTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_source_version_too_long.json"),
+		EWBCardDBSchemaDiagnostic::InvalidSourceVersion);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_source_version_too_long.json"),
+		TEXT("invalid_bundle_source_version_too_long.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMigrationNotesNotStringTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MigrationNotesNotString", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMigrationNotesNotStringTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_migration_notes_not_string.json"),
+		EWBCardDBSchemaDiagnostic::MigrationNotesMalformed);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_migration_notes_not_string.json"),
+		TEXT("invalid_bundle_migration_notes_not_string.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMigrationNotesTooLongTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MigrationNotesTooLong", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMigrationNotesTooLongTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_migration_notes_too_long.json"),
+		EWBCardDBSchemaDiagnostic::MigrationNotesMalformed);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_migration_notes_too_long.json"),
+		TEXT("invalid_bundle_migration_notes_too_long.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMigrationNotesHiddenTokenTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MigrationNotesHiddenToken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMigrationNotesHiddenTokenTest::RunTest(const FString& Parameters)
+{
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJson(*this, TEXT("invalid_bundle_migration_notes_hidden_token.json"), Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_migration_notes_hidden_token.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Migration notes hidden-token bundle fails"), Result.bOk);
+	TestTrue(TEXT("Migration notes hidden-token diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation));
+	TestFalse(TEXT("Migration notes hidden-token export omits SECRET"), ActualJson.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+	TestEqual(TEXT("Migration notes hidden-token export matches expected"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMetadataNotObjectTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MetadataNotObject", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMetadataNotObjectTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_metadata_not_object.json"),
+		EWBCardDBSchemaDiagnostic::MetadataMalformed);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_metadata_not_object.json"),
+		TEXT("invalid_bundle_metadata_not_object.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMetadataAuthorNotStringTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MetadataAuthorNotString", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMetadataAuthorNotStringTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_metadata_author_not_string.json"),
+		EWBCardDBSchemaDiagnostic::MetadataMalformed);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_metadata_author_not_string.json"),
+		TEXT("invalid_bundle_metadata_author_not_string.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMetadataNotesTooLongTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MetadataNotesTooLong", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMetadataNotesTooLongTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_metadata_notes_too_long.json"),
+		EWBCardDBSchemaDiagnostic::MetadataMalformed);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_metadata_notes_too_long.json"),
+		TEXT("invalid_bundle_metadata_notes_too_long.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMetadataTestOnlyNotBoolTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MetadataTestOnlyNotBool", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMetadataTestOnlyNotBoolTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_metadata_test_only_not_bool.json"),
+		EWBCardDBSchemaDiagnostic::MetadataMalformed);
+	ExpectExportMatches(
+		*this,
+		TEXT("invalid_bundle_metadata_test_only_not_bool.json"),
+		TEXT("invalid_bundle_metadata_test_only_not_bool.export.json"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMetadataHiddenTokenTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MetadataHiddenToken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMetadataHiddenTokenTest::RunTest(const FString& Parameters)
+{
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJson(*this, TEXT("invalid_bundle_metadata_hidden_token.json"), Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_metadata_hidden_token.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Metadata hidden-token bundle fails"), Result.bOk);
+	TestTrue(TEXT("Metadata hidden-token diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation));
+	TestFalse(TEXT("Metadata hidden-token export omits SECRET"), ActualJson.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+	TestEqual(TEXT("Metadata hidden-token export matches expected"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaStrictMetadataUnknownFieldTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.StrictMetadataUnknownField", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaStrictMetadataUnknownFieldTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictBundleFailsWith(
+		*this,
+		TEXT("strict_invalid_bundle_metadata_unknown_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownMetadataField);
+	ExpectStrictExportMatches(
+		*this,
+		TEXT("strict_invalid_bundle_metadata_unknown_field.json"),
+		TEXT("strict_invalid_bundle_metadata_unknown_field.export.json"));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMissingSchemaVersionFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MissingSchemaVersionFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBCardDBBundleSchemaMissingSchemaVersionFailsTest::RunTest(const FString& Parameters)
 {
@@ -435,6 +684,22 @@ bool FWBCardDBBundleSchemaDiagnosticCodeStringsStableTest::RunTest(const FString
 		TEXT("DependencySelfReference string"),
 		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::DependencySelfReference),
 		FString(TEXT("dependency_self_reference")));
+	TestEqual(
+		TEXT("InvalidCardDBVersion string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::InvalidCardDBVersion),
+		FString(TEXT("invalid_carddb_version")));
+	TestEqual(
+		TEXT("InvalidSourceVersion string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::InvalidSourceVersion),
+		FString(TEXT("invalid_source_version")));
+	TestEqual(
+		TEXT("MigrationNotesMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::MigrationNotesMalformed),
+		FString(TEXT("migration_notes_malformed")));
+	TestEqual(
+		TEXT("MetadataMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::MetadataMalformed),
+		FString(TEXT("metadata_malformed")));
 	return true;
 }
 

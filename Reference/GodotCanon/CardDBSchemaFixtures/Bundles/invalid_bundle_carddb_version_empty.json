@@ -1,0 +1,13 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "carddb_version_empty_card",
+      "public_name": "CardDB Version Empty",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

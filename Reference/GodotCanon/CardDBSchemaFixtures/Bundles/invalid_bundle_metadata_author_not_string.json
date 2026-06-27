@@ -1,0 +1,16 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "metadata": {
+    "author": 7
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "metadata_author_not_string_card",
+      "public_name": "Metadata Author Not String",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

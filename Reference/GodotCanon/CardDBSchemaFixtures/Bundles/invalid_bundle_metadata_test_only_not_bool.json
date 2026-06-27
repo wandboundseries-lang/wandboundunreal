@@ -1,0 +1,16 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "metadata": {
+    "test_only": "true"
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "metadata_test_only_not_bool_card",
+      "public_name": "Metadata Test Only Not Bool",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

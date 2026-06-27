@@ -237,6 +237,154 @@ const TArray<FString>& ReferenceMetadataAllowedFields()
 	return Fields;
 }
 
+bool ContainsHiddenDiagnosticTerm(const FString& Value);
+
+bool IsCardDBVersionCharacterAllowed(const TCHAR Character)
+{
+	return (Character >= TEXT('A') && Character <= TEXT('Z'))
+		|| (Character >= TEXT('a') && Character <= TEXT('z'))
+		|| (Character >= TEXT('0') && Character <= TEXT('9'))
+		|| Character == TEXT('_')
+		|| Character == TEXT('-')
+		|| Character == TEXT('.');
+}
+
+bool IsSourceVersionCharacterAllowed(const TCHAR Character)
+{
+	return IsCardDBVersionCharacterAllowed(Character) || Character == TEXT('/');
+}
+
+bool IsVersionStringValid(
+	const FString& Value,
+	const int32 MaxLength,
+	bool (*IsCharacterAllowed)(const TCHAR))
+{
+	if (Value.IsEmpty() || Value.Len() > MaxLength)
+	{
+		return false;
+	}
+
+	for (const TCHAR Character : Value)
+	{
+		if (!IsCharacterAllowed(Character))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void AddBundleFieldDiagnostic(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const EWBCardDBSchemaDiagnostic Code,
+	const FString& Message,
+	const FString& JsonPath)
+{
+	AddDiagnostic(
+		Result,
+		Code,
+		Message,
+		FString(),
+		FString(),
+		-1,
+		FString(),
+		JsonPath);
+}
+
+void ValidateRequiredCardDBVersion(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& RootObject)
+{
+	const TSharedPtr<FJsonValue>* Value = RootObject.IsValid()
+		? RootObject->Values.Find(TEXT("carddb_version"))
+		: nullptr;
+	if (Value == nullptr || !Value->IsValid())
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::CardDBVersionMissing,
+			TEXT("carddb_version is required"),
+			TEXT("$.carddb_version"));
+		return;
+	}
+
+	if ((*Value)->Type != EJson::String
+		|| !IsVersionStringValid((*Value)->AsString(), 64, &IsCardDBVersionCharacterAllowed))
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::InvalidCardDBVersion,
+			TEXT("carddb_version has invalid format"),
+			TEXT("$.carddb_version"));
+	}
+}
+
+void ValidateOptionalSourceVersion(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& RootObject)
+{
+	const TSharedPtr<FJsonValue>* Value = RootObject.IsValid()
+		? RootObject->Values.Find(TEXT("source_version"))
+		: nullptr;
+	if (Value == nullptr)
+	{
+		return;
+	}
+
+	if (!Value->IsValid()
+		|| (*Value)->Type != EJson::String
+		|| !IsVersionStringValid((*Value)->AsString(), 64, &IsSourceVersionCharacterAllowed))
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::InvalidSourceVersion,
+			TEXT("source_version has invalid format"),
+			TEXT("$.source_version"));
+	}
+}
+
+void ValidateOptionalMigrationNotes(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& RootObject)
+{
+	const TSharedPtr<FJsonValue>* Value = RootObject.IsValid()
+		? RootObject->Values.Find(TEXT("migration_notes"))
+		: nullptr;
+	if (Value == nullptr)
+	{
+		return;
+	}
+
+	if (!Value->IsValid() || (*Value)->Type != EJson::String)
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::MigrationNotesMalformed,
+			TEXT("migration_notes must be a string"),
+			TEXT("$.migration_notes"));
+		return;
+	}
+
+	const FString Notes = (*Value)->AsString();
+	if (Notes.Len() > 512)
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::MigrationNotesMalformed,
+			TEXT("migration_notes is too long"),
+			TEXT("$.migration_notes"));
+	}
+	else if (ContainsHiddenDiagnosticTerm(Notes))
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation,
+			TEXT("migration_notes contains hidden-information token"),
+			TEXT("$.migration_notes"));
+	}
+}
+
 template <typename ResultType>
 void ValidateAllowedFields(
 	ResultType& Result,
@@ -315,6 +463,121 @@ void ValidateMetadataAllowedFields(
 		CardId,
 		EffectId,
 		JsonPath);
+}
+
+bool ValidateBundleMetadataStringField(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& MetadataObject,
+	const FString& FieldName,
+	const int32 MaxLength)
+{
+	const TSharedPtr<FJsonValue>* Value = MetadataObject.IsValid()
+		? MetadataObject->Values.Find(FieldName)
+		: nullptr;
+	if (Value == nullptr)
+	{
+		return true;
+	}
+
+	const FString JsonPath = FString(TEXT("$.metadata.")) + FieldName;
+	if (!Value->IsValid() || (*Value)->Type != EJson::String)
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::MetadataMalformed,
+			TEXT("metadata field must be a string"),
+			JsonPath);
+		return false;
+	}
+
+	const FString StringValue = (*Value)->AsString();
+	if (StringValue.Len() > MaxLength)
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::MetadataMalformed,
+			TEXT("metadata field is too long"),
+			JsonPath);
+		return false;
+	}
+
+	if (ContainsHiddenDiagnosticTerm(StringValue))
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation,
+			TEXT("metadata field contains hidden-information token"),
+			JsonPath);
+		return false;
+	}
+
+	return true;
+}
+
+bool ValidateBundleMetadataBoolField(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& MetadataObject,
+	const FString& FieldName)
+{
+	const TSharedPtr<FJsonValue>* Value = MetadataObject.IsValid()
+		? MetadataObject->Values.Find(FieldName)
+		: nullptr;
+	if (Value == nullptr)
+	{
+		return true;
+	}
+
+	if (!Value->IsValid() || (*Value)->Type != EJson::Boolean)
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::MetadataMalformed,
+			TEXT("metadata field must be a boolean"),
+			FString(TEXT("$.metadata.")) + FieldName);
+		return false;
+	}
+
+	return true;
+}
+
+void ValidateBundleMetadataPolicy(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& RootObject,
+	const FWBCardDBSchemaValidationOptions& Options)
+{
+	if (!RootObject.IsValid() || !RootObject->HasField(TEXT("metadata")))
+	{
+		return;
+	}
+
+	const TSharedPtr<FJsonObject>* MetadataObject = nullptr;
+	if (!RootObject->TryGetObjectField(TEXT("metadata"), MetadataObject)
+		|| MetadataObject == nullptr
+		|| !MetadataObject->IsValid())
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::MetadataMalformed,
+			TEXT("metadata must be an object"),
+			TEXT("$.metadata"));
+		return;
+	}
+
+	ValidateAllowedFields(
+		Result,
+		*MetadataObject,
+		CardMetadataAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownMetadataField,
+		Options,
+		FString(),
+		FString(),
+		TEXT("$.metadata"));
+
+	ValidateBundleMetadataStringField(Result, *MetadataObject, TEXT("author"), 64);
+	ValidateBundleMetadataStringField(Result, *MetadataObject, TEXT("notes"), 512);
+	ValidateBundleMetadataStringField(Result, *MetadataObject, TEXT("source"), 128);
+	ValidateBundleMetadataStringField(Result, *MetadataObject, TEXT("version"), 64);
+	ValidateBundleMetadataBoolField(Result, *MetadataObject, TEXT("test_only"));
 }
 
 void ValidateStatsAllowedFields(
@@ -2528,7 +2791,7 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 		FString(),
 		FString(),
 		TEXT("$"));
-	ValidateMetadataAllowedFields(Result, RootObject, CardMetadataAllowedFields(), Options, FString(), FString(), TEXT("$.metadata"));
+	ValidateBundleMetadataPolicy(Result, RootObject, Options);
 
 	int32 BundleSchemaVersion = 0;
 	if (!TryReadIntegerField(RootObject, TEXT("bundle_schema_version"), BundleSchemaVersion))
@@ -2556,19 +2819,9 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			TEXT("$.bundle_schema_version"));
 	}
 
-	FString CardDBVersion;
-	if (!RootObject->TryGetStringField(TEXT("carddb_version"), CardDBVersion) || CardDBVersion.IsEmpty())
-	{
-		AddDiagnostic(
-			Result,
-			EWBCardDBSchemaDiagnostic::CardDBVersionMissing,
-			TEXT("carddb_version is required"),
-			FString(),
-			FString(),
-			-1,
-			FString(),
-			TEXT("$.carddb_version"));
-	}
+	ValidateRequiredCardDBVersion(Result, RootObject);
+	ValidateOptionalSourceVersion(Result, RootObject);
+	ValidateOptionalMigrationNotes(Result, RootObject);
 
 	const TArray<TSharedPtr<FJsonValue>>* CardValues = nullptr;
 	if (!RootObject->HasField(TEXT("cards")))
@@ -2825,6 +3078,14 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 		return TEXT("dependency_cycle_detected");
 	case EWBCardDBSchemaDiagnostic::DependencySelfReference:
 		return TEXT("dependency_self_reference");
+	case EWBCardDBSchemaDiagnostic::InvalidCardDBVersion:
+		return TEXT("invalid_carddb_version");
+	case EWBCardDBSchemaDiagnostic::InvalidSourceVersion:
+		return TEXT("invalid_source_version");
+	case EWBCardDBSchemaDiagnostic::MigrationNotesMalformed:
+		return TEXT("migration_notes_malformed");
+	case EWBCardDBSchemaDiagnostic::MetadataMalformed:
+		return TEXT("metadata_malformed");
 	default:
 		return TEXT("unknown");
 	}

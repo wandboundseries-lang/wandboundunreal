@@ -1,0 +1,14 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "migration_notes": "Contains SECRET_bundle_note for hidden-token validation.",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "migration_notes_hidden_token_card",
+      "public_name": "Migration Notes Hidden Token",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

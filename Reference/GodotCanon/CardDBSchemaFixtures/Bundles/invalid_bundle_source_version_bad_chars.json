@@ -1,0 +1,14 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards-1.0",
+  "source_version": "godot:bad",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "source_version_bad_chars_card",
+      "public_name": "Source Version Bad Chars",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

@@ -74,6 +74,8 @@ The hidden reference snapshot verifies that a referenced hidden token is not ech
 
 Missing reference diagnostics export generic owner context only and do not include the missing referenced id.
 
+Version and metadata export snapshots now also verify hidden-token safety for `migration_notes` and metadata string values. The export contains diagnostic code and JSON path context only, not full metadata values.
+
 ## Confirmations
 
 - this remains test-only

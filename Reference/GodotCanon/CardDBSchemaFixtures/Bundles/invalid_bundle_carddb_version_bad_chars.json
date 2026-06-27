@@ -1,0 +1,13 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "cards/with/slash",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "carddb_version_bad_chars_card",
+      "public_name": "CardDB Version Bad Chars",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}
