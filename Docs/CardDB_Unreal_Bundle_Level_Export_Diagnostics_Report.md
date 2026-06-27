@@ -76,6 +76,17 @@ Missing reference diagnostics export generic owner context only and do not inclu
 
 Version and metadata export snapshots now also verify hidden-token safety for `migration_notes` and metadata string values. The export contains diagnostic code and JSON path context only, not full metadata values.
 
+Source-version compatibility export snapshots now cover opt-in matrix failures and successes:
+
+- missing required `source_version`
+- unsupported source version
+- unsupported source-to-target transition
+- malformed compatibility matrix target
+- malformed compatibility matrix transition entry
+- hidden-token-safe `source_version`
+
+The export still omits matrix internals, diagnostic messages, full source JSON, and hidden source values.
+
 ## Confirmations
 
 - this remains test-only

@@ -1,6 +1,123 @@
 # Build/Test Report
 
-Date of check: 2026-06-26 (America/New_York)
+Date of check: 2026-06-27 (America/New_York)
+
+## Test-Only CardDB Source Version Compatibility Pass
+
+### Scope
+
+This pass added opt-in, test-only CardDB bundle source-version compatibility validation for future importer planning.
+
+Implemented:
+
+- `FWBCardDBSourceVersionTransitionForTest`
+- `FWBCardDBSourceVersionCompatibilityMatrixForTest`
+- source-version compatibility options on `FWBCardDBSchemaValidationOptions`
+- source-version compatibility diagnostics
+- source-version compatibility bundle fixtures
+- expected export snapshots
+- hidden-token-safe source-version fixture coverage
+- source guards proving the validator remains test-only
+
+Not implemented:
+
+- production CardDB importer
+- production CardDB loader
+- production zones
+- schema migration logic
+- runtime activation behavior changes
+- rules behavior changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- UI widgets, response windows, Blueprints, `.uasset`, or `.umap` work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 10.56 seconds
+```
+
+### Targeted CardDB Bundle Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBBundleSchemaFixtureValidation; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBBundle'
+```
+
+Final result from `Saved/AutomationReports/CardDBBundle/index.json`:
+
+```text
+succeeded=127
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=928
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 12 source-version compatibility `Wandbound.Core.CardDBBundleSchemaFixtureValidation.*` automation tests.
+
+Updated the bundle diagnostic-code string stability test for:
+
+- `source_version_missing`
+- `source_version_unsupported`
+- `source_version_transition_unsupported`
+- `source_version_compatibility_matrix_malformed`
+
+### Notes
+
+- Compatibility validation is disabled by default.
+- Current target source versions pass directly.
+- Directly supported source versions pass without migration.
+- Explicit source-to-target transitions pass without migration.
+- Missing required source versions fail with `source_version_missing`.
+- Unsupported source versions fail with `source_version_unsupported`.
+- Unsupported transitions fail with `source_version_transition_unsupported`.
+- Malformed matrix targets/transitions fail with `source_version_compatibility_matrix_malformed`.
+- Compatibility failures leave dependency order empty under the existing invalid-bundle policy.
+- Expected exports omit matrix internals, diagnostic messages, full source JSON, and hidden values.
+- JSON fixture/export sanity check passed for the source-version fixtures.
+- Expected export hidden-token scan found no `SECRET` values.
+- Source guards found no `WBCardDBSchemaFixtureValidator` includes in `Source/WandboundCore` or `Source/WandboundRuntime`.
+- Source guards found no `WBEffectRunner`, `GenerateLegalActions`, `WBCardActivationCandidateGenerator`, or `WBCardActivationLegalActionGenerator` references in the validator.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- The compatibility matrix is test-only and does not represent production loader behavior yet.
+- No schema migration is implemented; transitions are declarative validation policy only.
+- Future importer work still needs a production boundary for source-version compatibility decisions.
 
 ## Runtime Activation Decision-Session Facade Pass
 

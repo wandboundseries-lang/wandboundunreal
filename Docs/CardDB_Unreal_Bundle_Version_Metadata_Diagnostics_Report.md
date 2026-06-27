@@ -103,6 +103,16 @@ Expected exports live under:
 Reference/GodotCanon/CardDBSchemaFixtures/ExpectedExports/
 ```
 
+## Source Version Compatibility Layer
+
+An opt-in test-only source-version compatibility matrix now sits above the existing `source_version` format diagnostics.
+
+The format policy still validates shape first. When compatibility validation is explicitly enabled in test options, the matrix validates a target source version, direct support entries, and source-to-target transition entries.
+
+Unsupported source versions fail with `source_version_unsupported`. Unsupported transitions fail with `source_version_transition_unsupported`. Malformed matrix policy fails with `source_version_compatibility_matrix_malformed`.
+
+This compatibility layer does not migrate data and is not a production importer or loader.
+
 ## Confirmations
 
 - this remains test-only

@@ -34,6 +34,43 @@ FWBCardDBSchemaValidationOptions StrictOptions()
 	return Options;
 }
 
+FWBCardDBSchemaValidationOptions SourceVersionCompatibilityOptions(
+	const FString& TargetSourceVersion,
+	const bool bRequireSourceVersion = false)
+{
+	FWBCardDBSchemaValidationOptions Options;
+	Options.SourceVersionCompatibility.bEnableSourceVersionCompatibilityValidation = true;
+	Options.SourceVersionCompatibility.bRequireSourceVersion = bRequireSourceVersion;
+	Options.SourceVersionCompatibility.TargetSourceVersion = TargetSourceVersion;
+	return Options;
+}
+
+FWBCardDBSchemaValidationOptions SourceVersionDirectSupportOptions(
+	const FString& TargetSourceVersion,
+	const FString& DirectlySupportedSourceVersion,
+	const bool bRequireSourceVersion = false)
+{
+	FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TargetSourceVersion, bRequireSourceVersion);
+	Options.SourceVersionCompatibility.DirectlySupportedSourceVersions.Add(DirectlySupportedSourceVersion);
+	return Options;
+}
+
+FWBCardDBSchemaValidationOptions SourceVersionTransitionOptions(
+	const FString& TargetSourceVersion,
+	const FString& FromSourceVersion,
+	const FString& ToSourceVersion,
+	const bool bRequireSourceVersion = false)
+{
+	FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TargetSourceVersion, bRequireSourceVersion);
+	FWBCardDBSourceVersionTransitionForTest Transition;
+	Transition.FromSourceVersion = FromSourceVersion;
+	Transition.ToSourceVersion = ToSourceVersion;
+	Options.SourceVersionCompatibility.SupportedTransitions.Add(Transition);
+	return Options;
+}
+
 FWBCardDBBundleSchemaValidationResult ValidateBundleFixture(const FString& FileName)
 {
 	return FWBCardDBSchemaFixtureValidator::ValidateBundleFixtureFile(CardDBBundleSchemaFixturePath(FileName));
@@ -284,6 +321,203 @@ bool FWBCardDBBundleSchemaStrictValidVersionMetadataTest::RunTest(const FString&
 		ValidateBundleFixtureStrict(TEXT("strict_valid_bundle_version_metadata.json"));
 	TestTrue(TEXT("Strict version metadata bundle validates"), Result.bOk);
 	TestEqual(TEXT("Strict version metadata diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionCurrentPassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionCurrentPasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionCurrentPassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TEXT("wandbound_schema.1"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("valid_bundle_source_version_current.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("valid_bundle_source_version_current.export.json"), ExpectedJson);
+
+	TestTrue(TEXT("Current source version validates"), Result.bOk);
+	TestEqual(TEXT("Current source version diagnostics"), Result.Diagnostics.Num(), 0);
+	TestEqual(TEXT("Current source version export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionDirectSupportedPassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionDirectSupportedPasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionDirectSupportedPassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionDirectSupportOptions(TEXT("wandbound_schema.2"), TEXT("wandbound_schema.1"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("valid_bundle_source_version_direct_supported.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("valid_bundle_source_version_direct_supported.export.json"), ExpectedJson);
+
+	TestTrue(TEXT("Directly supported source version validates"), Result.bOk);
+	TestEqual(TEXT("Directly supported source version diagnostics"), Result.Diagnostics.Num(), 0);
+	TestEqual(TEXT("Directly supported source version export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionSupportedTransitionPassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionSupportedTransitionPasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionSupportedTransitionPassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionTransitionOptions(TEXT("wandbound_schema.2"), TEXT("legacy_schema.1"), TEXT("wandbound_schema.2"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("valid_bundle_source_version_supported_transition.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("valid_bundle_source_version_supported_transition.export.json"), ExpectedJson);
+
+	TestTrue(TEXT("Supported source version transition validates"), Result.bOk);
+	TestEqual(TEXT("Supported source version transition diagnostics"), Result.Diagnostics.Num(), 0);
+	TestEqual(TEXT("Supported source version transition export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionMissingOptionalPassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionMissingOptionalPasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionMissingOptionalPassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TEXT("wandbound_schema.1"), false);
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("valid_bundle_source_version_missing_optional.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("valid_bundle_source_version_missing_optional.export.json"), ExpectedJson);
+
+	TestTrue(TEXT("Missing optional source version validates"), Result.bOk);
+	TestEqual(TEXT("Missing optional source version diagnostics"), Result.Diagnostics.Num(), 0);
+	TestEqual(TEXT("Missing optional source version export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionMissingRequiredFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionMissingRequiredFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionMissingRequiredFailsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TEXT("wandbound_schema.1"), true);
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("invalid_bundle_source_version_missing_required.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_source_version_missing_required.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Missing required source version fails"), Result.bOk);
+	TestTrue(TEXT("Missing required source version diagnostic"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::SourceVersionMissing));
+	TestEqual(TEXT("Missing required source version export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionUnsupportedFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionUnsupportedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionUnsupportedFailsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TEXT("wandbound_schema.2"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("invalid_bundle_source_version_unsupported.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_source_version_unsupported.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Unsupported source version fails"), Result.bOk);
+	TestTrue(TEXT("Unsupported source version diagnostic"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::SourceVersionUnsupported));
+	TestEqual(TEXT("Unsupported source version export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionTransitionUnsupportedFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionTransitionUnsupportedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionTransitionUnsupportedFailsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionTransitionOptions(TEXT("wandbound_schema.3"), TEXT("legacy_schema.1"), TEXT("wandbound_schema.2"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("invalid_bundle_source_version_transition_unsupported.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_source_version_transition_unsupported.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Unsupported source version transition fails"), Result.bOk);
+	TestTrue(TEXT("Unsupported source version transition diagnostic"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::SourceVersionTransitionUnsupported));
+	TestEqual(TEXT("Unsupported source version transition export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionCompatMatrixBadTargetFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionCompatMatrixBadTargetFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionCompatMatrixBadTargetFailsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TEXT("bad target"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("invalid_bundle_source_version_compat_matrix_bad_target.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_source_version_compat_matrix_bad_target.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Malformed matrix target fails"), Result.bOk);
+	TestTrue(TEXT("Malformed matrix target diagnostic"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::SourceVersionCompatibilityMatrixMalformed));
+	TestEqual(TEXT("Malformed matrix target export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionCompatMatrixBadTransitionFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionCompatMatrixBadTransitionFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionCompatMatrixBadTransitionFailsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionTransitionOptions(TEXT("wandbound_schema.2"), TEXT(""), TEXT("wandbound_schema.2"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("invalid_bundle_source_version_compat_matrix_bad_transition.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_source_version_compat_matrix_bad_transition.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Malformed matrix transition fails"), Result.bOk);
+	TestTrue(TEXT("Malformed matrix transition diagnostic"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::SourceVersionCompatibilityMatrixMalformed));
+	TestEqual(TEXT("Malformed matrix transition export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionHiddenTokenSafeTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionHiddenTokenSafe", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionHiddenTokenSafeTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TEXT("wandbound_schema.1"));
+	FWBCardDBBundleSchemaValidationResult Result;
+	FString ActualJson;
+	FString ExpectedJson;
+	ExportBundleFixtureJsonWithOptions(*this, TEXT("invalid_bundle_source_version_hidden_token_safe.json"), Options, Result, ActualJson);
+	LoadExpectedExportFixture(*this, TEXT("invalid_bundle_source_version_hidden_token_safe.export.json"), ExpectedJson);
+
+	TestFalse(TEXT("Hidden-token source version fails"), Result.bOk);
+	TestTrue(TEXT("Hidden-token source version diagnostic"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation));
+	TestFalse(TEXT("Hidden-token source version export omits SECRET"), ActualJson.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+	TestEqual(TEXT("Hidden-token source version export"), ActualJson, ExpectedJson);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionCompatibilityDisabledPreservesDefaultTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionCompatibilityDisabledPreservesDefault", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionCompatibilityDisabledPreservesDefaultTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_source_version_unsupported.json"));
+	TestTrue(TEXT("Unsupported source version fixture validates when compatibility is disabled"), Result.bOk);
+	TestEqual(TEXT("Compatibility-disabled diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaSourceVersionCompatibilityFailureSkipsDependencyOrderTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.SourceVersionCompatibilityFailureSkipsDependencyOrder", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaSourceVersionCompatibilityFailureSkipsDependencyOrderTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationOptions Options =
+		SourceVersionCompatibilityOptions(TEXT("wandbound_schema.2"));
+	const FWBCardDBBundleSchemaValidationResult Result =
+		FWBCardDBSchemaFixtureValidator::ValidateBundleFixtureFile(
+			CardDBBundleSchemaFixturePath(TEXT("invalid_bundle_source_version_unsupported.json")),
+			Options);
+
+	TestFalse(TEXT("Compatibility failure invalidates bundle"), Result.bOk);
+	TestTrue(TEXT("Compatibility failure diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::SourceVersionUnsupported));
+	TestEqual(TEXT("Compatibility failure skips dependency order"), Result.DependencyOrderCardIds.Num(), 0);
 	return true;
 }
 
@@ -700,6 +934,22 @@ bool FWBCardDBBundleSchemaDiagnosticCodeStringsStableTest::RunTest(const FString
 		TEXT("MetadataMalformed string"),
 		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::MetadataMalformed),
 		FString(TEXT("metadata_malformed")));
+	TestEqual(
+		TEXT("SourceVersionMissing string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::SourceVersionMissing),
+		FString(TEXT("source_version_missing")));
+	TestEqual(
+		TEXT("SourceVersionUnsupported string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::SourceVersionUnsupported),
+		FString(TEXT("source_version_unsupported")));
+	TestEqual(
+		TEXT("SourceVersionTransitionUnsupported string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::SourceVersionTransitionUnsupported),
+		FString(TEXT("source_version_transition_unsupported")));
+	TestEqual(
+		TEXT("SourceVersionCompatibilityMatrixMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::SourceVersionCompatibilityMatrixMalformed),
+		FString(TEXT("source_version_compatibility_matrix_malformed")));
 	return true;
 }
 

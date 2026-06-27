@@ -1,0 +1,14 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "source_version_compat_matrix_bad_target",
+  "source_version": "wandbound_schema.1",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "source_version_compat_matrix_bad_target_card",
+      "public_name": "Source Version Matrix Bad Target",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

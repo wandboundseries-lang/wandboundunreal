@@ -1,0 +1,14 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "source_version_supported_transition",
+  "source_version": "legacy_schema.1",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "source_version_supported_transition_card",
+      "public_name": "Source Version Supported Transition",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

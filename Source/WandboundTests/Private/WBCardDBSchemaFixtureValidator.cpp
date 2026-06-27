@@ -341,7 +341,199 @@ void ValidateOptionalSourceVersion(
 			EWBCardDBSchemaDiagnostic::InvalidSourceVersion,
 			TEXT("source_version has invalid format"),
 			TEXT("$.source_version"));
+		return;
 	}
+
+	if (ContainsHiddenDiagnosticTerm((*Value)->AsString()))
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation,
+			TEXT("source_version contains hidden-information token"),
+			TEXT("$.source_version"));
+	}
+}
+
+bool IsSourceVersionValuePresentForCompatibility(
+	const TSharedPtr<FJsonObject>& RootObject,
+	FString& OutSourceVersion,
+	bool& bOutPresentButEmpty)
+{
+	OutSourceVersion.Reset();
+	bOutPresentButEmpty = false;
+
+	const TSharedPtr<FJsonValue>* Value = RootObject.IsValid()
+		? RootObject->Values.Find(TEXT("source_version"))
+		: nullptr;
+	if (Value == nullptr)
+	{
+		return false;
+	}
+
+	if (!Value->IsValid()
+		|| (*Value)->Type != EJson::String)
+	{
+		return false;
+	}
+
+	const FString SourceVersion = (*Value)->AsString();
+	if (SourceVersion.IsEmpty())
+	{
+		bOutPresentButEmpty = true;
+		return false;
+	}
+
+	if (!IsVersionStringValid(SourceVersion, 64, &IsSourceVersionCharacterAllowed)
+		|| ContainsHiddenDiagnosticTerm(SourceVersion))
+	{
+		return false;
+	}
+
+	OutSourceVersion = SourceVersion;
+	return true;
+}
+
+bool IsSourceVersionCompatibilityMatrixMalformed(
+	const FWBCardDBSourceVersionCompatibilityMatrixForTest& Matrix)
+{
+	if (!IsVersionStringValid(Matrix.TargetSourceVersion, 64, &IsSourceVersionCharacterAllowed)
+		|| ContainsHiddenDiagnosticTerm(Matrix.TargetSourceVersion))
+	{
+		return true;
+	}
+
+	for (const FString& SourceVersion : Matrix.DirectlySupportedSourceVersions)
+	{
+		if (!IsVersionStringValid(SourceVersion, 64, &IsSourceVersionCharacterAllowed)
+			|| ContainsHiddenDiagnosticTerm(SourceVersion))
+		{
+			return true;
+		}
+	}
+
+	for (const FWBCardDBSourceVersionTransitionForTest& Transition : Matrix.SupportedTransitions)
+	{
+		if (!IsVersionStringValid(Transition.FromSourceVersion, 64, &IsSourceVersionCharacterAllowed)
+			|| !IsVersionStringValid(Transition.ToSourceVersion, 64, &IsSourceVersionCharacterAllowed)
+			|| ContainsHiddenDiagnosticTerm(Transition.FromSourceVersion)
+			|| ContainsHiddenDiagnosticTerm(Transition.ToSourceVersion))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool HasDirectlySupportedSourceVersion(
+	const FWBCardDBSourceVersionCompatibilityMatrixForTest& Matrix,
+	const FString& SourceVersion)
+{
+	for (const FString& SupportedSourceVersion : Matrix.DirectlySupportedSourceVersions)
+	{
+		if (SupportedSourceVersion == SourceVersion)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool HasSupportedSourceVersionTransition(
+	const FWBCardDBSourceVersionCompatibilityMatrixForTest& Matrix,
+	const FString& SourceVersion,
+	const FString& TargetSourceVersion)
+{
+	for (const FWBCardDBSourceVersionTransitionForTest& Transition : Matrix.SupportedTransitions)
+	{
+		if (Transition.FromSourceVersion == SourceVersion
+			&& Transition.ToSourceVersion == TargetSourceVersion)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool HasTransitionFromSourceVersion(
+	const FWBCardDBSourceVersionCompatibilityMatrixForTest& Matrix,
+	const FString& SourceVersion)
+{
+	for (const FWBCardDBSourceVersionTransitionForTest& Transition : Matrix.SupportedTransitions)
+	{
+		if (Transition.FromSourceVersion == SourceVersion)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void ValidateSourceVersionCompatibility(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& RootObject,
+	const FWBCardDBSchemaValidationOptions& Options)
+{
+	const FWBCardDBSourceVersionCompatibilityMatrixForTest& Matrix = Options.SourceVersionCompatibility;
+	if (!Matrix.bEnableSourceVersionCompatibilityValidation)
+	{
+		return;
+	}
+
+	if (IsSourceVersionCompatibilityMatrixMalformed(Matrix))
+	{
+		AddBundleFieldDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::SourceVersionCompatibilityMatrixMalformed,
+			TEXT("source_version compatibility matrix is malformed"),
+			TEXT("$"));
+		return;
+	}
+
+	FString SourceVersion;
+	bool bPresentButEmpty = false;
+	const bool bHasSourceVersionField =
+		RootObject.IsValid() && RootObject->Values.Contains(TEXT("source_version"));
+	const bool bHasSourceVersion =
+		IsSourceVersionValuePresentForCompatibility(RootObject, SourceVersion, bPresentButEmpty);
+	if (!bHasSourceVersion)
+	{
+		if (Matrix.bRequireSourceVersion && !bHasSourceVersionField)
+		{
+			AddBundleFieldDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::SourceVersionMissing,
+				TEXT("source_version is required for compatibility validation"),
+				TEXT("$.source_version"));
+		}
+		else if (Matrix.bRequireSourceVersion && bPresentButEmpty)
+		{
+			AddBundleFieldDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::SourceVersionMissing,
+				TEXT("source_version is required for compatibility validation"),
+				TEXT("$.source_version"));
+		}
+		return;
+	}
+
+	if (SourceVersion == Matrix.TargetSourceVersion
+		|| HasDirectlySupportedSourceVersion(Matrix, SourceVersion)
+		|| HasSupportedSourceVersionTransition(Matrix, SourceVersion, Matrix.TargetSourceVersion))
+	{
+		return;
+	}
+
+	AddBundleFieldDiagnostic(
+		Result,
+		HasTransitionFromSourceVersion(Matrix, SourceVersion)
+			? EWBCardDBSchemaDiagnostic::SourceVersionTransitionUnsupported
+			: EWBCardDBSchemaDiagnostic::SourceVersionUnsupported,
+		TEXT("source_version is not compatible with target source version"),
+		TEXT("$.source_version"));
 }
 
 void ValidateOptionalMigrationNotes(
@@ -2821,6 +3013,7 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 
 	ValidateRequiredCardDBVersion(Result, RootObject);
 	ValidateOptionalSourceVersion(Result, RootObject);
+	ValidateSourceVersionCompatibility(Result, RootObject, Options);
 	ValidateOptionalMigrationNotes(Result, RootObject);
 
 	const TArray<TSharedPtr<FJsonValue>>* CardValues = nullptr;
@@ -3086,6 +3279,14 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 		return TEXT("migration_notes_malformed");
 	case EWBCardDBSchemaDiagnostic::MetadataMalformed:
 		return TEXT("metadata_malformed");
+	case EWBCardDBSchemaDiagnostic::SourceVersionMissing:
+		return TEXT("source_version_missing");
+	case EWBCardDBSchemaDiagnostic::SourceVersionUnsupported:
+		return TEXT("source_version_unsupported");
+	case EWBCardDBSchemaDiagnostic::SourceVersionTransitionUnsupported:
+		return TEXT("source_version_transition_unsupported");
+	case EWBCardDBSchemaDiagnostic::SourceVersionCompatibilityMatrixMalformed:
+		return TEXT("source_version_compatibility_matrix_malformed");
 	default:
 		return TEXT("unknown");
 	}

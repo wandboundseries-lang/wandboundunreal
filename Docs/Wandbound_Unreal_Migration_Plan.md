@@ -1584,6 +1584,24 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Source Version Compatibility
+
+- Added an opt-in test-only source-version compatibility matrix.
+- Added target source version validation for future importer planning.
+- Added direct support and source-to-target transition support fixtures.
+- Unsupported source versions fail closed with `source_version_unsupported`.
+- Unsupported transitions fail closed with `source_version_transition_unsupported`.
+- Missing required source versions fail closed with `source_version_missing`.
+- Malformed compatibility matrix options fail closed with `source_version_compatibility_matrix_malformed`.
+- No migration implementation was added.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

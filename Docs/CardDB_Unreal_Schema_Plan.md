@@ -634,6 +634,20 @@ Bundle version and metadata planning should preserve the test-only policies:
 - bundle metadata fields have fixed value types and max lengths
 - hidden-information tokens in metadata fail closed without echoing the values
 
+Source version compatibility planning should preserve the opt-in test-only matrix policy:
+
+- compatibility validation is disabled by default
+- a target source version is required when compatibility validation is enabled
+- a bundle source version equal to the target passes
+- directly supported source versions pass without migration
+- explicit source-to-target transitions pass without transforming data
+- missing required source versions fail closed with `source_version_missing`
+- unsupported source versions fail closed with `source_version_unsupported`
+- unsupported transitions fail closed with `source_version_transition_unsupported`
+- malformed matrix policy fails closed with `source_version_compatibility_matrix_malformed`
+
+This compatibility policy is validation only. It does not implement schema migration, production import, production loading, production zones, runtime activation generation, or `FWBAction` integration.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

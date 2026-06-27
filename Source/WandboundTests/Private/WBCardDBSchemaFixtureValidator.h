@@ -52,7 +52,11 @@ enum class EWBCardDBSchemaDiagnostic : uint8
 	InvalidCardDBVersion,
 	InvalidSourceVersion,
 	MigrationNotesMalformed,
-	MetadataMalformed
+	MetadataMalformed,
+	SourceVersionMissing,
+	SourceVersionUnsupported,
+	SourceVersionTransitionUnsupported,
+	SourceVersionCompatibilityMatrixMalformed
 };
 
 struct FWBCardDBSchemaValidationDiagnostic
@@ -66,9 +70,27 @@ struct FWBCardDBSchemaValidationDiagnostic
 	FString JsonPath;
 };
 
+struct FWBCardDBSourceVersionTransitionForTest
+{
+	FString FromSourceVersion;
+	FString ToSourceVersion;
+};
+
+struct FWBCardDBSourceVersionCompatibilityMatrixForTest
+{
+	bool bEnableSourceVersionCompatibilityValidation = false;
+	bool bRequireSourceVersion = false;
+
+	FString TargetSourceVersion;
+
+	TArray<FString> DirectlySupportedSourceVersions;
+	TArray<FWBCardDBSourceVersionTransitionForTest> SupportedTransitions;
+};
+
 struct FWBCardDBSchemaValidationOptions
 {
 	bool bStrictUnknownFieldRejection = false;
+	FWBCardDBSourceVersionCompatibilityMatrixForTest SourceVersionCompatibility;
 };
 
 struct FWBCardDBSchemaValidationResult
