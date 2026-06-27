@@ -4469,3 +4469,68 @@ notRun=0
 - Source guards confirm no validator include in `Source/WandboundCore` or `Source/WandboundRuntime`.
 - Source guards confirm the validator does not call effect execution, normal legal action generation, activation candidate generation, or activation legal action generation paths.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Extended Test-Only CardDB Schema Fixture Validation Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 5.38 seconds
+```
+
+## Targeted CardDB Schema Fixture Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBSchemaFixtureValidation; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaFixtureValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaFixtureValidation/index.json`:
+
+```text
+succeeded=33
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=789
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added 13 additional `Wandbound.Core.CardDBSchemaFixtureValidation.*` automation tests, bringing the group to 33 tests.
+- Added unsupported card kind and unsupported source zone fixtures.
+- Added malformed JSON fixture.
+- Added missing, malformed, and empty payload array fixtures.
+- Added malformed activated effects, source gate, and cost gate fixtures.
+- Added malformed numeric fixtures for damage amount, heal amount, status duration, and armor amount.
+- Existing valid fixtures still pass.
+- Existing invalid fixtures still fail with stable diagnostics.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.

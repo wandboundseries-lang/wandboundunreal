@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_cost_gate_not_object",
+  "public_name": "Bad Cost Gate",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_cost_gate",
+      "public_label": "Activate",
+      "target_requirement": "none",
+      "source_gate": {
+        "required_zone": "board",
+        "timing": "normal_turn_priority",
+        "cost_gate": 2
+      },
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": 1,
+          "target": "source"
+        }
+      ]
+    }
+  ]
+}

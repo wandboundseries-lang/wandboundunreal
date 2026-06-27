@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_unsupported_source_zone",
+  "public_name": "Bad Source",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_source",
+      "public_label": "Activate",
+      "target_requirement": "none",
+      "source_gate": {
+        "required_zone": "void",
+        "timing": "normal_turn_priority"
+      },
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": 1,
+          "target": "source"
+        }
+      ]
+    }
+  ]
+}

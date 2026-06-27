@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_damage_amount_not_number",
+  "public_name": "Bad Damage Amount",
+  "kind": "fixture",
+  "public_text": "Activate: Deal damage.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_damage_amount",
+      "public_label": "Deal 2 damage",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": "two",
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

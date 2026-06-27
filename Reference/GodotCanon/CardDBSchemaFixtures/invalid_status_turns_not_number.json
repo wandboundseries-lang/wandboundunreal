@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_status_turns_not_number",
+  "public_name": "Bad Status Turns",
+  "kind": "fixture",
+  "public_text": "Activate: Apply Burn.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_status_turns",
+      "public_label": "Apply Burn",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "status_effect",
+          "operation": "apply_status",
+          "status_id": "Burn",
+          "turns_remaining": "two",
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

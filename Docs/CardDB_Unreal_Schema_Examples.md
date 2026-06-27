@@ -4,6 +4,8 @@ These are documentation examples only. They are not parser input or production d
 
 Corresponding test-only fixture examples now live under `Reference/GodotCanon/CardDBSchemaFixtures/`. Those fixtures validate the documented schema shape and fail-closed diagnostics without creating a production importer.
 
+Additional invalid examples cover unsupported card kind/source zone, malformed JSON, missing/malformed/empty payload arrays, malformed activated effects/source gates/cost gates, and malformed numeric fields.
+
 ## 1. Damage Effect Card
 
 Board source, unit target, and optional RR cost:

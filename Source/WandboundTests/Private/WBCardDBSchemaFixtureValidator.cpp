@@ -46,6 +46,60 @@ int32 ReadIntegerFieldOrDefault(const TSharedPtr<FJsonObject>& Object, const TCH
 	return Value;
 }
 
+bool ValidateOptionalIntegerField(
+	FWBCardDBSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& CardId,
+	const FString& EffectId,
+	int32& OutValue)
+{
+	if (!Object.IsValid() || !Object->HasField(FieldName))
+	{
+		return true;
+	}
+
+	if (!TryReadIntegerField(Object, FieldName, OutValue))
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::InvalidNumericField,
+			FString::Printf(TEXT("%s must be numeric"), FieldName),
+			CardId,
+			EffectId);
+		return false;
+	}
+
+	return true;
+}
+
+bool ValidateOptionalNonNegativeIntegerField(
+	FWBCardDBSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	const FString& CardId,
+	const FString& EffectId,
+	int32& OutValue)
+{
+	if (!ValidateOptionalIntegerField(Result, Object, FieldName, CardId, EffectId, OutValue))
+	{
+		return false;
+	}
+
+	if (Object.IsValid() && Object->HasField(FieldName) && OutValue < 0)
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::InvalidNumericField,
+			FString::Printf(TEXT("%s must be greater than or equal to zero"), FieldName),
+			CardId,
+			EffectId);
+		return false;
+	}
+
+	return true;
+}
+
 bool ContainsAnyTerm(const FString& Value, const TArray<FString>& Terms)
 {
 	for (const FString& Term : Terms)
@@ -409,14 +463,34 @@ void ValidateSourceGate(
 	SourceGateObject->TryGetStringField(TEXT("once_per_turn_key"), OutSourceGate.OncePerTurnKey);
 
 	const TSharedPtr<FJsonObject>* CostGateObject = nullptr;
-	if (SourceGateObject->TryGetObjectField(TEXT("cost_gate"), CostGateObject)
-		&& CostGateObject != nullptr
-		&& CostGateObject->IsValid())
+	if (SourceGateObject->HasField(TEXT("cost_gate")))
 	{
+		if (!SourceGateObject->TryGetObjectField(TEXT("cost_gate"), CostGateObject)
+			|| CostGateObject == nullptr
+			|| !CostGateObject->IsValid())
+		{
+			AddDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::CostGateMalformed,
+				TEXT("cost_gate must be an object"),
+				CardId,
+				EffectId);
+			return;
+		}
+
 		(*CostGateObject)->TryGetBoolField(
 			TEXT("requires_external_affordability"),
 			OutSourceGate.CostGate.bRequiresExternalAffordability);
-		OutSourceGate.CostGate.RequiredRR = ReadIntegerFieldOrDefault(*CostGateObject, TEXT("required_rr"), 0);
+		if (!ValidateOptionalIntegerField(
+			Result,
+			*CostGateObject,
+			TEXT("required_rr"),
+			CardId,
+			EffectId,
+			OutSourceGate.CostGate.RequiredRR))
+		{
+			return;
+		}
 
 		FString CostKind;
 		if ((*CostGateObject)->TryGetStringField(TEXT("cost_kind"), CostKind))
@@ -458,7 +532,13 @@ void ValidatePayload(
 	if (PayloadType.Equals(TEXT("damage_effect"), ESearchCase::IgnoreCase))
 	{
 		OutPayload.Operation = EWBGenericEffectOp::DamageEffect;
-		OutPayload.DamageEffect.Amount = ReadIntegerFieldOrDefault(PayloadObject, TEXT("amount"), 0);
+		ValidateOptionalNonNegativeIntegerField(
+			Result,
+			PayloadObject,
+			TEXT("amount"),
+			CardId,
+			EffectId,
+			OutPayload.DamageEffect.Amount);
 		PayloadObject->TryGetBoolField(TEXT("bypass_armor"), OutPayload.DamageEffect.bBypassArmor);
 
 		FString DamageCause;
@@ -473,7 +553,13 @@ void ValidatePayload(
 	if (PayloadType.Equals(TEXT("heal_effect"), ESearchCase::IgnoreCase))
 	{
 		OutPayload.Operation = EWBGenericEffectOp::HealEffect;
-		OutPayload.HealEffect.Amount = ReadIntegerFieldOrDefault(PayloadObject, TEXT("amount"), 0);
+		ValidateOptionalNonNegativeIntegerField(
+			Result,
+			PayloadObject,
+			TEXT("amount"),
+			CardId,
+			EffectId,
+			OutPayload.HealEffect.Amount);
 		return;
 	}
 
@@ -494,7 +580,13 @@ void ValidatePayload(
 			return;
 		}
 
-		OutPayload.ArmorEffect.Amount = ReadIntegerFieldOrDefault(PayloadObject, TEXT("amount"), 0);
+		ValidateOptionalNonNegativeIntegerField(
+			Result,
+			PayloadObject,
+			TEXT("amount"),
+			CardId,
+			EffectId,
+			OutPayload.ArmorEffect.Amount);
 		return;
 	}
 
@@ -532,7 +624,13 @@ void ValidatePayload(
 				EffectId);
 		}
 
-		OutPayload.StatusEffect.Duration = ReadIntegerFieldOrDefault(PayloadObject, TEXT("turns_remaining"), 0);
+		ValidateOptionalNonNegativeIntegerField(
+			Result,
+			PayloadObject,
+			TEXT("turns_remaining"),
+			CardId,
+			EffectId,
+			OutPayload.StatusEffect.Duration);
 		return;
 	}
 
@@ -550,10 +648,19 @@ void ValidateActivatedEffects(
 	const FString& CardId)
 {
 	const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
-	if (!RootObject.IsValid()
-		|| !RootObject->TryGetArrayField(TEXT("activated_effects"), EffectValues)
-		|| EffectValues == nullptr)
+	if (!RootObject.IsValid() || !RootObject->HasField(TEXT("activated_effects")))
 	{
+		return;
+	}
+
+	if (!RootObject->TryGetArrayField(TEXT("activated_effects"), EffectValues) || EffectValues == nullptr)
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::ActivatedEffectsMalformed,
+			TEXT("activated_effects must be an array"),
+			CardId,
+			FString());
 		return;
 	}
 
@@ -620,15 +727,54 @@ void ValidateActivatedEffects(
 		}
 
 		const TSharedPtr<FJsonObject>* SourceGateObject = nullptr;
-		if (EffectObject->TryGetObjectField(TEXT("source_gate"), SourceGateObject)
-			&& SourceGateObject != nullptr
-			&& SourceGateObject->IsValid())
+		if (EffectObject->HasField(TEXT("source_gate")))
 		{
+			if (!EffectObject->TryGetObjectField(TEXT("source_gate"), SourceGateObject)
+				|| SourceGateObject == nullptr
+				|| !SourceGateObject->IsValid())
+			{
+				AddDiagnostic(
+					Result,
+					EWBCardDBSchemaDiagnostic::SourceGateMalformed,
+					TEXT("source_gate must be an object"),
+					CardId,
+					Effect.EffectId);
+			}
+			else
+			{
 			ValidateSourceGate(Result, *SourceGateObject, CardId, Effect.EffectId, Effect.SourceGate);
+			}
 		}
 
 		const TArray<TSharedPtr<FJsonValue>>* PayloadValues = nullptr;
-		if (EffectObject->TryGetArrayField(TEXT("payloads"), PayloadValues) && PayloadValues != nullptr)
+		if (!EffectObject->HasField(TEXT("payloads")))
+		{
+			AddDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::PayloadsMissing,
+				TEXT("payloads is required for activated effects"),
+				CardId,
+				Effect.EffectId);
+		}
+		else if (!EffectObject->TryGetArrayField(TEXT("payloads"), PayloadValues) || PayloadValues == nullptr)
+		{
+			AddDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::PayloadsMalformed,
+				TEXT("payloads must be an array"),
+				CardId,
+				Effect.EffectId);
+		}
+		else if (PayloadValues->Num() == 0)
+		{
+			AddDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::PayloadsEmpty,
+				TEXT("payloads must not be empty for activated effects"),
+				CardId,
+				Effect.EffectId);
+		}
+		else
 		{
 			for (const TSharedPtr<FJsonValue>& PayloadValue : *PayloadValues)
 			{
@@ -771,10 +917,24 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 		return TEXT("unsupported_payload_type");
 	case EWBCardDBSchemaDiagnostic::UnsupportedPayloadOperation:
 		return TEXT("unsupported_payload_operation");
+	case EWBCardDBSchemaDiagnostic::PayloadsMissing:
+		return TEXT("payloads_missing");
+	case EWBCardDBSchemaDiagnostic::PayloadsMalformed:
+		return TEXT("payloads_malformed");
+	case EWBCardDBSchemaDiagnostic::PayloadsEmpty:
+		return TEXT("payloads_empty");
+	case EWBCardDBSchemaDiagnostic::ActivatedEffectsMalformed:
+		return TEXT("activated_effects_malformed");
+	case EWBCardDBSchemaDiagnostic::SourceGateMalformed:
+		return TEXT("source_gate_malformed");
+	case EWBCardDBSchemaDiagnostic::CostGateMalformed:
+		return TEXT("cost_gate_malformed");
 	case EWBCardDBSchemaDiagnostic::InvalidRRCost:
 		return TEXT("invalid_rr_cost");
 	case EWBCardDBSchemaDiagnostic::InvalidStatusId:
 		return TEXT("invalid_status_id");
+	case EWBCardDBSchemaDiagnostic::InvalidNumericField:
+		return TEXT("invalid_numeric_field");
 	case EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation:
 		return TEXT("hidden_info_policy_violation");
 	case EWBCardDBSchemaDiagnostic::PlayerFacingLabelContainsInternalTerm:

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_armor_amount_not_number",
+  "public_name": "Bad Armor Amount",
+  "kind": "fixture",
+  "public_text": "Activate: Restore Armor.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_armor_amount",
+      "public_label": "Restore Armor",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "armor_effect",
+          "operation": "add_current_armor",
+          "amount": "two",
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

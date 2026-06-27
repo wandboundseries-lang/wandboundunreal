@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_unsupported_card_kind",
+  "public_name": "Bad Kind",
+  "kind": "relic",
+  "public_text": "Activate.",
+  "activated_effects": []
+}

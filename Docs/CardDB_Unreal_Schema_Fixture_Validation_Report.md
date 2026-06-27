@@ -63,11 +63,20 @@ Supported diagnostic strings:
 - `unsupported_timing`
 - `unsupported_payload_type`
 - `unsupported_payload_operation`
+- `payloads_missing`
+- `payloads_malformed`
+- `payloads_empty`
+- `activated_effects_malformed`
+- `source_gate_malformed`
+- `cost_gate_malformed`
 - `invalid_rr_cost`
 - `invalid_status_id`
+- `invalid_numeric_field`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 - `json_parse_failed`
+
+Extended validation now covers unsupported card kind/source zone, malformed JSON, missing/malformed/empty payload arrays, malformed activated effects, malformed source/cost gate fields, and malformed numeric fields.
 
 ## Fail-Closed Policy
 

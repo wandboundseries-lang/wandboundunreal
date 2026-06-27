@@ -1435,6 +1435,23 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Extended Test-Only CardDB Schema Fixture Validation
+
+- Added additional negative CardDB schema fixtures.
+- Added unsupported card kind and unsupported source zone coverage.
+- Added malformed JSON coverage.
+- Added missing, malformed, and empty payload array coverage.
+- Added malformed activated effects, source gate, and cost gate coverage.
+- Added numeric validation coverage for payload amount and status duration fields.
+- Existing valid fixtures still validate.
+- Existing invalid fixtures still fail with stable diagnostics.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

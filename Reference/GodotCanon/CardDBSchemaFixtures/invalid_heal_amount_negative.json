@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_heal_amount_negative",
+  "public_name": "Bad Heal Amount",
+  "kind": "fixture",
+  "public_text": "Activate: Heal HP.",
+  "activated_effects": [
+    {
+      "effect_id": "bad_heal_amount",
+      "public_label": "Heal 2 HP",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "heal_effect",
+          "amount": -2,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

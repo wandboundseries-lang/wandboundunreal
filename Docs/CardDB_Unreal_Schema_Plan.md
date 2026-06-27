@@ -183,6 +183,17 @@ Target requirement policy:
 - candidate generation filters by gates and supplied candidate targets.
 - real UI picking remains future work.
 
+Payload array policy:
+
+- `activated_effects` may be missing or empty for vanilla/passive cards.
+- if an activated effect exists, `payloads` must exist.
+- `payloads` must be an array.
+- `payloads` must not be empty.
+- missing payload arrays fail with `payloads_missing`.
+- non-array payload fields fail with `payloads_malformed`.
+- empty payload arrays fail with `payloads_empty`.
+- silent no-op activated effects are not allowed in this schema slice.
+
 ## Source Gate Schema
 
 Future JSON-like shape:
@@ -381,6 +392,9 @@ Fail-closed behavior:
 - unsupported operation fails import/validation.
 - unsupported target shape fails import/validation.
 - unsupported timing fails import/validation.
+- malformed JSON fails import/validation.
+- malformed `activated_effects`, `source_gate`, `cost_gate`, and `payloads` fields fail import/validation.
+- malformed or negative payload numeric fields fail import/validation.
 - no silent fallback to no-op.
 - diagnostics may include non-hidden card id/effect id in developer logs only.
 - public UI should show a safe generic failure.
@@ -470,8 +484,15 @@ Diagnostic categories:
 - `unsupported_timing`
 - `unsupported_payload_type`
 - `unsupported_payload_operation`
+- `payloads_missing`
+- `payloads_malformed`
+- `payloads_empty`
+- `activated_effects_malformed`
+- `source_gate_malformed`
+- `cost_gate_malformed`
 - `invalid_rr_cost`
 - `invalid_status_id`
+- `invalid_numeric_field`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 

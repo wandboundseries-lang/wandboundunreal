@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_malformed_json",
+  "public_name": "Malformed JSON",
+  "kind": "fixture",
+  "activated_effects": [
+    {
+      "effect_id": "broken"
+      "public_label": "Activate"
+    }
+  ]
+}

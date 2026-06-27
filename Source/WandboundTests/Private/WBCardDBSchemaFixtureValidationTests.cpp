@@ -190,6 +190,13 @@ bool FWBCardDBSchemaMissingEffectIdFailsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaUnsupportedCardKindFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.UnsupportedCardKindFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaUnsupportedCardKindFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_unsupported_card_kind.json"), EWBCardDBSchemaDiagnostic::UnsupportedCardKind);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaDuplicateEffectIdFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.DuplicateEffectIdFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FWBCardDBSchemaDuplicateEffectIdFailsTest::RunTest(const FString& Parameters)
 {
@@ -222,6 +229,102 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaUnsupportedTimingFailsTest, "Wan
 bool FWBCardDBSchemaUnsupportedTimingFailsTest::RunTest(const FString& Parameters)
 {
 	ExpectFixtureFailsWith(*this, TEXT("invalid_unsupported_timing.json"), EWBCardDBSchemaDiagnostic::UnsupportedTiming);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaUnsupportedSourceZoneFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.UnsupportedSourceZoneFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaUnsupportedSourceZoneFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_unsupported_source_zone.json"), EWBCardDBSchemaDiagnostic::UnsupportedSourceZone);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaMalformedJsonFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.MalformedJsonFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaMalformedJsonFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_malformed_json.json"), EWBCardDBSchemaDiagnostic::JsonParseFailed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaPayloadsMissingFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.PayloadsMissingFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaPayloadsMissingFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_payloads_missing.json"), EWBCardDBSchemaDiagnostic::PayloadsMissing);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaPayloadsMalformedFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.PayloadsMalformedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaPayloadsMalformedFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_payloads_not_array.json"), EWBCardDBSchemaDiagnostic::PayloadsMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaPayloadsEmptyFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.PayloadsEmptyFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaPayloadsEmptyFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_payloads_empty.json"), EWBCardDBSchemaDiagnostic::PayloadsEmpty);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaActivatedEffectsMalformedFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.ActivatedEffectsMalformedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaActivatedEffectsMalformedFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(
+		*this,
+		TEXT("invalid_activated_effects_not_array.json"),
+		EWBCardDBSchemaDiagnostic::ActivatedEffectsMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaSourceGateMalformedFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.SourceGateMalformedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaSourceGateMalformedFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_source_gate_not_object.json"), EWBCardDBSchemaDiagnostic::SourceGateMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaCostGateMalformedFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.CostGateMalformedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaCostGateMalformedFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_cost_gate_not_object.json"), EWBCardDBSchemaDiagnostic::CostGateMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaDamageAmountMalformedFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.DamageAmountMalformedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaDamageAmountMalformedFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(
+		*this,
+		TEXT("invalid_damage_amount_not_number.json"),
+		EWBCardDBSchemaDiagnostic::InvalidNumericField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaHealAmountNegativeFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.HealAmountNegativeFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaHealAmountNegativeFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(*this, TEXT("invalid_heal_amount_negative.json"), EWBCardDBSchemaDiagnostic::InvalidNumericField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStatusTurnsMalformedFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StatusTurnsMalformedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStatusTurnsMalformedFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(
+		*this,
+		TEXT("invalid_status_turns_not_number.json"),
+		EWBCardDBSchemaDiagnostic::InvalidNumericField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaArmorAmountMalformedFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.ArmorAmountMalformedFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaArmorAmountMalformedFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectFixtureFailsWith(
+		*this,
+		TEXT("invalid_armor_amount_not_number.json"),
+		EWBCardDBSchemaDiagnostic::InvalidNumericField);
 	return true;
 }
 
@@ -283,6 +386,34 @@ bool FWBCardDBSchemaDiagnosticCodeStringsStableTest::RunTest(const FString& Para
 		TEXT("JsonParseFailed string"),
 		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::JsonParseFailed),
 		FString(TEXT("json_parse_failed")));
+	TestEqual(
+		TEXT("PayloadsMissing string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::PayloadsMissing),
+		FString(TEXT("payloads_missing")));
+	TestEqual(
+		TEXT("PayloadsMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::PayloadsMalformed),
+		FString(TEXT("payloads_malformed")));
+	TestEqual(
+		TEXT("PayloadsEmpty string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::PayloadsEmpty),
+		FString(TEXT("payloads_empty")));
+	TestEqual(
+		TEXT("ActivatedEffectsMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::ActivatedEffectsMalformed),
+		FString(TEXT("activated_effects_malformed")));
+	TestEqual(
+		TEXT("SourceGateMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::SourceGateMalformed),
+		FString(TEXT("source_gate_malformed")));
+	TestEqual(
+		TEXT("CostGateMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::CostGateMalformed),
+		FString(TEXT("cost_gate_malformed")));
+	TestEqual(
+		TEXT("InvalidNumericField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::InvalidNumericField),
+		FString(TEXT("invalid_numeric_field")));
 
 	return true;
 }

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "card_id": "invalid_activated_effects_not_array",
+  "public_name": "Bad Effects",
+  "kind": "fixture",
+  "public_text": "Activate.",
+  "activated_effects": {
+    "effect_id": "bad_effects"
+  }
+}
