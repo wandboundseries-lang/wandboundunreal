@@ -338,3 +338,102 @@ Corrected label:
   ]
 }
 ```
+
+## 9. Strict Valid Metadata Example
+
+Allowed metadata fields stay inside explicit `metadata` objects:
+
+```json
+{
+  "schema_version": 1,
+  "metadata": {
+    "author": "WandboundTests",
+    "notes": "Allowed authoring notes.",
+    "source": "Unreal fixture",
+    "version": "1",
+    "test_only": true
+  },
+  "card_id": "example_strict_metadata",
+  "public_name": "Spark Archive",
+  "kind": "fixture",
+  "public_text": "Activate: Deal 1 damage.",
+  "activated_effects": [
+    {
+      "effect_id": "deal_1",
+      "public_label": "Deal 1 damage",
+      "target_requirement": "unit",
+      "metadata": {
+        "notes": "Allowed effect metadata.",
+        "source": "Unreal fixture",
+        "test_only": true
+      },
+      "source_gate": {
+        "required_zone": "board",
+        "timing": "normal_turn_priority",
+        "metadata": {
+          "notes": "Allowed source gate metadata.",
+          "test_only": true
+        }
+      },
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 1,
+          "target": "selected",
+          "metadata": {
+            "notes": "Allowed payload metadata.",
+            "test_only": true
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Expected strict-mode result:
+
+```text
+valid
+```
+
+## 10. Strict Invalid Unknown-Field Example
+
+Unknown fields fail only when strict unknown-field rejection is enabled:
+
+```json
+{
+  "schema_version": 1,
+  "extra_authoring_field": true,
+  "card_id": "example_unknown_field",
+  "public_name": "Spark Bolt",
+  "kind": "fixture",
+  "public_text": "Activate: Deal 2 damage.",
+  "activated_effects": [
+    {
+      "effect_id": "deal_2",
+      "public_label": "Deal 2 damage",
+      "target_requirement": "unit",
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 2,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Expected strict-mode diagnostic:
+
+```text
+unknown_top_level_field
+```
+
+Expected default non-strict result:
+
+```text
+valid
+```

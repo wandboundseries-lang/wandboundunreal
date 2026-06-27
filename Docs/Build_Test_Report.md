@@ -4534,3 +4534,87 @@ notRun=0
 - Existing valid fixtures still pass.
 - Existing invalid fixtures still fail with stable diagnostics.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Test-Only CardDB Strict Schema Validation Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 19.35 seconds
+```
+
+## Targeted CardDB Schema Fixture Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBSchemaFixtureValidation; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaFixtureValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaFixtureValidation/index.json`:
+
+```text
+succeeded=45
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=801
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Whitespace And Scope Checks
+
+Command used:
+
+```powershell
+git diff --check
+```
+
+Final result:
+
+```text
+No whitespace errors. Git reported only LF-to-CRLF working-copy notices.
+```
+
+Scope checks:
+
+- no `Source/WandboundCore` changes
+- no `Source/WandboundRuntime` changes
+- no `Reference/GodotProject` changes
+- no `.uasset` or `.umap` changes
+
+## Notes
+
+- Added 12 additional `Wandbound.Core.CardDBSchemaFixtureValidation.*` automation tests, bringing the group to 45 tests.
+- Added explicit strict unknown-field validation options to the test-only fixture validator.
+- Default validator behavior remains non-strict.
+- Added strict unknown-field diagnostics for top-level/card, stats, effect, source gate, cost gate, payload, and metadata objects.
+- Added strict-valid, strict-invalid, and non-strict compatibility schema fixtures.
+- Added strict validation audit/report docs and updated schema docs.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.

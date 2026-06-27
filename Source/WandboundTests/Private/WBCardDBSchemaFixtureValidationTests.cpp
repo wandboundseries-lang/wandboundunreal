@@ -22,6 +22,13 @@ FWBCardDBSchemaValidationResult ValidateFixture(const FString& FileName)
 	return FWBCardDBSchemaFixtureValidator::ValidateFixtureFile(CardDBSchemaFixturePath(FileName));
 }
 
+FWBCardDBSchemaValidationResult ValidateFixtureStrict(const FString& FileName)
+{
+	FWBCardDBSchemaValidationOptions Options;
+	Options.bStrictUnknownFieldRejection = true;
+	return FWBCardDBSchemaFixtureValidator::ValidateFixtureFile(CardDBSchemaFixturePath(FileName), Options);
+}
+
 bool HasDiagnostic(
 	const FWBCardDBSchemaValidationResult& Result,
 	const EWBCardDBSchemaDiagnostic ExpectedCode)
@@ -44,6 +51,22 @@ bool ExpectFixtureFailsWith(
 {
 	const FWBCardDBSchemaValidationResult Result = ValidateFixture(FileName);
 	Test.TestFalse(*FString::Printf(TEXT("%s fails validation"), *FileName), Result.bOk);
+	Test.TestTrue(
+		*FString::Printf(
+			TEXT("%s has %s"),
+			*FileName,
+			*FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(ExpectedCode)),
+		HasDiagnostic(Result, ExpectedCode));
+	return !Result.bOk && HasDiagnostic(Result, ExpectedCode);
+}
+
+bool ExpectStrictFixtureFailsWith(
+	FAutomationTestBase& Test,
+	const FString& FileName,
+	const EWBCardDBSchemaDiagnostic ExpectedCode)
+{
+	const FWBCardDBSchemaValidationResult Result = ValidateFixtureStrict(FileName);
+	Test.TestFalse(*FString::Printf(TEXT("%s fails strict validation"), *FileName), Result.bOk);
 	Test.TestTrue(
 		*FString::Printf(
 			TEXT("%s has %s"),
@@ -95,6 +118,123 @@ bool FWBCardDBSchemaAllValidFixturesTest::RunTest(const FString& Parameters)
 		TestEqual(*FString::Printf(TEXT("%s diagnostics"), *FixtureName), Result.Diagnostics.Num(), 0);
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictValidBasicDamageCardTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictValidBasicDamageCard", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictValidBasicDamageCardTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationResult Result = ValidateFixtureStrict(TEXT("strict_valid_basic_damage_card.json"));
+	TestTrue(TEXT("Strict valid basic damage fixture validates"), Result.bOk);
+	TestEqual(TEXT("Strict valid basic damage diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictValidMetadataFieldsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictValidMetadataFields", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictValidMetadataFieldsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationResult Result = ValidateFixtureStrict(TEXT("strict_valid_metadata_fields.json"));
+	TestTrue(TEXT("Strict valid metadata fixture validates"), Result.bOk);
+	TestEqual(TEXT("Strict valid metadata diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictUnknownTopLevelFieldFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictUnknownTopLevelFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictUnknownTopLevelFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("strict_invalid_unknown_top_level_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownTopLevelField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictUnknownCardFieldFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictUnknownCardFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictUnknownCardFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("strict_invalid_unknown_card_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownCardField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictUnknownEffectFieldFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictUnknownEffectFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictUnknownEffectFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("strict_invalid_unknown_effect_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownEffectField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictUnknownSourceGateFieldFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictUnknownSourceGateFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictUnknownSourceGateFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("strict_invalid_unknown_source_gate_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownSourceGateField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictUnknownCostGateFieldFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictUnknownCostGateFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictUnknownCostGateFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("strict_invalid_unknown_cost_gate_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownCostGateField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictUnknownPayloadFieldFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictUnknownPayloadFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictUnknownPayloadFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("strict_invalid_unknown_payload_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownPayloadField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaStrictUnknownMetadataFieldFailsTest, "Wandbound.Core.CardDBSchemaFixtureValidation.StrictUnknownMetadataFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaStrictUnknownMetadataFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("strict_invalid_unknown_metadata_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownMetadataField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaNonStrictUnknownFieldAllowedTest, "Wandbound.Core.CardDBSchemaFixtureValidation.NonStrictUnknownFieldAllowed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaNonStrictUnknownFieldAllowedTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationResult Result = ValidateFixture(TEXT("non_strict_unknown_field_allowed.json"));
+	TestTrue(TEXT("Non-strict unknown field fixture validates"), Result.bOk);
+	TestEqual(TEXT("Non-strict unknown field diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaNonStrictUnknownFieldFailsWhenStrictTest, "Wandbound.Core.CardDBSchemaFixtureValidation.NonStrictUnknownFieldFailsWhenStrict", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaNonStrictUnknownFieldFailsWhenStrictTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictFixtureFailsWith(
+		*this,
+		TEXT("non_strict_unknown_field_allowed.json"),
+		EWBCardDBSchemaDiagnostic::UnknownTopLevelField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBSchemaDefaultOptionsRemainNonStrictTest, "Wandbound.Core.CardDBSchemaFixtureValidation.DefaultOptionsRemainNonStrict", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBSchemaDefaultOptionsRemainNonStrictTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationResult Result =
+		FWBCardDBSchemaFixtureValidator::ValidateFixtureFile(CardDBSchemaFixturePath(TEXT("non_strict_unknown_field_allowed.json")));
+	TestTrue(TEXT("Default options allow unknown fields"), Result.bOk);
+	TestEqual(TEXT("Default options unknown-field diagnostics"), Result.Diagnostics.Num(), 0);
 	return true;
 }
 
@@ -414,6 +554,34 @@ bool FWBCardDBSchemaDiagnosticCodeStringsStableTest::RunTest(const FString& Para
 		TEXT("InvalidNumericField string"),
 		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::InvalidNumericField),
 		FString(TEXT("invalid_numeric_field")));
+	TestEqual(
+		TEXT("UnknownTopLevelField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownTopLevelField),
+		FString(TEXT("unknown_top_level_field")));
+	TestEqual(
+		TEXT("UnknownCardField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownCardField),
+		FString(TEXT("unknown_card_field")));
+	TestEqual(
+		TEXT("UnknownEffectField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownEffectField),
+		FString(TEXT("unknown_effect_field")));
+	TestEqual(
+		TEXT("UnknownSourceGateField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownSourceGateField),
+		FString(TEXT("unknown_source_gate_field")));
+	TestEqual(
+		TEXT("UnknownCostGateField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownCostGateField),
+		FString(TEXT("unknown_cost_gate_field")));
+	TestEqual(
+		TEXT("UnknownPayloadField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownPayloadField),
+		FString(TEXT("unknown_payload_field")));
+	TestEqual(
+		TEXT("UnknownMetadataField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownMetadataField),
+		FString(TEXT("unknown_metadata_field")));
 
 	return true;
 }

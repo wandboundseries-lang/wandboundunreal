@@ -72,17 +72,30 @@ Supported diagnostic strings:
 - `invalid_rr_cost`
 - `invalid_status_id`
 - `invalid_numeric_field`
+- `unknown_top_level_field`
+- `unknown_card_field`
+- `unknown_effect_field`
+- `unknown_source_gate_field`
+- `unknown_cost_gate_field`
+- `unknown_payload_field`
+- `unknown_metadata_field`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 - `json_parse_failed`
 
 Extended validation now covers unsupported card kind/source zone, malformed JSON, missing/malformed/empty payload arrays, malformed activated effects, malformed source/cost gate fields, and malformed numeric fields.
 
+Strict unknown-field validation now exists behind explicit `FWBCardDBSchemaValidationOptions`.
+
+Default validator behavior remains non-strict so existing fixtures keep their compatibility behavior.
+
 ## Fail-Closed Policy
 
 Validation result `bOk` is false when any diagnostic is emitted.
 
 Unsupported payload types, unsupported payload operations, unsupported target requirements, unsupported timings, invalid RR costs, invalid status ids, bad public labels, and hidden-information policy violations do not silently become no-op card definitions.
+
+When strict mode is enabled, unknown fields in top-level/card, stats, effect, source gate, cost gate, payload, or allowed metadata objects also fail closed. Non-strict mode continues to ignore unknown fields unless existing validation catches another problem.
 
 ## Supported Payload Validation
 

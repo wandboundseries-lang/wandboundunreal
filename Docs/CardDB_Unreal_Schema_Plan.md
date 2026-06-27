@@ -51,6 +51,16 @@ Policy:
 - optional authoring metadata is allowed only under `metadata`.
 - unknown fields inside known objects fail in strict mode unless explicitly listed under `metadata`.
 
+Strict fixture validation is opt-in for the current test-only validator. Default validation remains non-strict until a production importer boundary exists.
+
+Allowed card metadata fields:
+
+- `author`
+- `notes`
+- `source`
+- `version`
+- `test_only`
+
 ## Card Definition Shape
 
 Future JSON-like shape:
@@ -146,6 +156,7 @@ Policy:
 - future schema should prefer a clear Base RL / Current RL distinction.
 - `RL Used` is runtime state, not static card schema.
 - `rr` may describe a static activation/equip requirement, but individual activation effects should declare their own cost gates when needed.
+- strict fixture validation rejects unknown stats fields with `unknown_card_field`.
 
 ## Activated Effects Schema
 
@@ -168,6 +179,7 @@ Mapping:
 - `target_requirement` maps to `FWBCardEffectDefinition.TargetRequirement`
 - `source_gate` maps to `FWBCardEffectDefinition.SourceGate`
 - `payloads` maps to `FWBCardEffectDefinition.Payloads`
+- `metadata` is authoring-only and may contain `notes`, `source`, and `test_only`
 
 Target requirements:
 
@@ -217,6 +229,7 @@ Future JSON-like shape:
 Mapping:
 
 - maps to `FWBCardActivationSourceGateDefinition`
+- optional `metadata` may contain `notes` and `test_only`
 
 Allowed zones:
 
@@ -248,6 +261,7 @@ Future JSON-like shape:
 Mapping:
 
 - maps to `FWBCardActivationCostGateDefinition`
+- optional `metadata` may contain `notes` and `test_only`
 
 Policy:
 
@@ -361,6 +375,7 @@ Policy:
 - can interact with armor.
 - lethal damage runs zero-HP cleanup through the current activation execution path.
 - death triggers and card-specific replacement are deferred.
+- optional payload `metadata` may contain `notes` and `test_only`.
 
 ### heal_effect
 
@@ -493,6 +508,13 @@ Diagnostic categories:
 - `invalid_rr_cost`
 - `invalid_status_id`
 - `invalid_numeric_field`
+- `unknown_top_level_field`
+- `unknown_card_field`
+- `unknown_effect_field`
+- `unknown_source_gate_field`
+- `unknown_cost_gate_field`
+- `unknown_payload_field`
+- `unknown_metadata_field`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 
@@ -516,6 +538,8 @@ Test-only schema fixture validation now exists under `WandboundTests`.
 The fixture validator reads Unreal-owned schema fixtures from `Reference/GodotCanon/CardDBSchemaFixtures/`, validates fail-closed diagnostics, and may map valid fixture data into `FWBCardDefinition` for validation only.
 
 The validator is not a production importer, does not load production CardDB data, does not create production zones, does not execute effects, and does not generate production runtime activation candidates or actions.
+
+Strict fixture validation exists as an explicit option for unknown-field rejection. It rejects unknown top-level/card fields, unknown stats fields, unknown effect/source gate/cost gate/payload fields, and unknown metadata fields. The default validator path remains non-strict for compatibility with earlier schema fixtures.
 
 ## Future CardDB Import Milestones
 

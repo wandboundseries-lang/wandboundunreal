@@ -26,6 +26,13 @@ enum class EWBCardDBSchemaDiagnostic : uint8
 	InvalidRRCost,
 	InvalidStatusId,
 	InvalidNumericField,
+	UnknownTopLevelField,
+	UnknownCardField,
+	UnknownEffectField,
+	UnknownSourceGateField,
+	UnknownCostGateField,
+	UnknownPayloadField,
+	UnknownMetadataField,
 	HiddenInfoPolicyViolation,
 	PlayerFacingLabelContainsInternalTerm,
 	JsonParseFailed
@@ -37,6 +44,11 @@ struct FWBCardDBSchemaValidationDiagnostic
 	FString Message;
 	FString CardId;
 	FString EffectId;
+};
+
+struct FWBCardDBSchemaValidationOptions
+{
+	bool bStrictUnknownFieldRejection = false;
 };
 
 struct FWBCardDBSchemaValidationResult
@@ -51,7 +63,12 @@ struct FWBCardDBSchemaValidationResult
 class FWBCardDBSchemaFixtureValidator
 {
 public:
-	static FWBCardDBSchemaValidationResult ValidateFixtureFile(const FString& AbsolutePath);
-	static FWBCardDBSchemaValidationResult ValidateJsonString(const FString& Json, const FString& SourcePathForDiagnostics);
+	static FWBCardDBSchemaValidationResult ValidateFixtureFile(
+		const FString& AbsolutePath,
+		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());
+	static FWBCardDBSchemaValidationResult ValidateJsonString(
+		const FString& Json,
+		const FString& SourcePathForDiagnostics,
+		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());
 	static FString DiagnosticCodeToString(EWBCardDBSchemaDiagnostic Code);
 };

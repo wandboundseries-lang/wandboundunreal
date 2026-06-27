@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "carddb_version": "test",
+  "source_version": "manual",
+  "migration_notes": [
+    "strict metadata allow-list fixture"
+  ],
+  "metadata": {
+    "author": "WandboundTests",
+    "notes": "Allowed top-level metadata only.",
+    "source": "Unreal fixture",
+    "version": "1",
+    "test_only": true
+  },
+  "card_id": "strict_valid_metadata_fields",
+  "public_name": "Spark Archive",
+  "kind": "fixture",
+  "public_text": "Activate: Deal 1 damage.",
+  "tags": [
+    "test"
+  ],
+  "stats": {
+    "hp": 6,
+    "max_hp": 6,
+    "atk": 1,
+    "ar": 1,
+    "base_rl": 4,
+    "current_rl": 4,
+    "rr": 1
+  },
+  "activated_effects": [
+    {
+      "effect_id": "deal_1",
+      "public_label": "Deal 1 damage",
+      "target_requirement": "unit",
+      "metadata": {
+        "notes": "Allowed effect metadata.",
+        "source": "Unreal fixture",
+        "test_only": true
+      },
+      "source_gate": {
+        "required_zone": "board",
+        "timing": "normal_turn_priority",
+        "requires_source_unit": true,
+        "requires_source_unit_ownership": true,
+        "blocked_by_stunned": true,
+        "blocked_by_frozen": false,
+        "requires_costs_satisfied_externally": false,
+        "once_per_turn": true,
+        "once_per_turn_key": "spark_archive",
+        "requires_fixture_zone_ownership": false,
+        "metadata": {
+          "notes": "Allowed source gate metadata.",
+          "test_only": true
+        },
+        "cost_gate": {
+          "requires_external_affordability": true,
+          "required_rr": 1,
+          "cost_kind": "RR",
+          "metadata": {
+            "notes": "Allowed cost gate metadata.",
+            "test_only": true
+          }
+        }
+      },
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 1,
+          "bypass_armor": false,
+          "damage_cause": "Effect",
+          "target": "selected",
+          "metadata": {
+            "notes": "Allowed payload metadata.",
+            "test_only": true
+          }
+        }
+      ]
+    }
+  ]
+}

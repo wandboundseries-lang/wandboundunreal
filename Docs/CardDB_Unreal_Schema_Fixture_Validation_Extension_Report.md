@@ -6,6 +6,8 @@ Extended the test-only CardDB schema fixture validator with additional fail-clos
 
 The work remains test-only under `WandboundTests` and `Reference/GodotCanon/CardDBSchemaFixtures/`.
 
+Strict validation now extends this malformed-field coverage with opt-in unknown-field rejection. The default validator path remains non-strict.
+
 ## New Diagnostics
 
 Added stable diagnostics:
@@ -17,6 +19,13 @@ Added stable diagnostics:
 - `source_gate_malformed`
 - `cost_gate_malformed`
 - `invalid_numeric_field`
+- `unknown_top_level_field`
+- `unknown_card_field`
+- `unknown_effect_field`
+- `unknown_source_gate_field`
+- `unknown_cost_gate_field`
+- `unknown_payload_field`
+- `unknown_metadata_field`
 
 Existing diagnostics are unchanged, including:
 
@@ -64,6 +73,8 @@ Policy:
 - `source_gate` present but not an object fails `source_gate_malformed`.
 - missing `cost_gate` is allowed.
 - `cost_gate` present but not an object fails `cost_gate_malformed`.
+- strict mode rejects unknown fields in top-level/card, stats, effect, source gate, cost gate, payload, and metadata objects.
+- non-strict mode preserves compatibility and ignores unknown fields unless an existing validation rule catches the data.
 
 ## Numeric Validation Policy
 

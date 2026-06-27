@@ -1452,6 +1452,20 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Strict Schema Validation
+
+- Added explicit strict unknown-field validation options to the test-only CardDB schema fixture validator.
+- Default validator behavior remains non-strict.
+- Added unknown-field diagnostics for top-level/card, stats, effect, source gate, cost gate, payload, and metadata objects.
+- Documented and tested the metadata allow-list.
+- Added strict-valid, strict-invalid, and non-strict compatibility fixtures.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

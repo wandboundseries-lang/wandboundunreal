@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "card_id": "strict_invalid_unknown_card_field",
+  "public_name": "Spark Bolt",
+  "kind": "fixture",
+  "public_text": "Activate: Deal 2 damage.",
+  "stats": {
+    "hp": 6,
+    "max_hp": 6,
+    "unexpected_stat_field": 9
+  },
+  "activated_effects": [
+    {
+      "effect_id": "deal_2",
+      "public_label": "Deal 2 damage",
+      "target_requirement": "unit",
+      "source_gate": {
+        "required_zone": "board",
+        "timing": "normal_turn_priority"
+      },
+      "payloads": [
+        {
+          "type": "damage_effect",
+          "amount": 2,
+          "target": "selected"
+        }
+      ]
+    }
+  ]
+}

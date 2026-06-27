@@ -22,6 +22,243 @@ void AddDiagnostic(
 	Result.Diagnostics.Add(Diagnostic);
 }
 
+const TArray<FString>& TopLevelAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("schema_version"),
+		TEXT("carddb_version"),
+		TEXT("source_version"),
+		TEXT("migration_notes"),
+		TEXT("metadata"),
+		TEXT("card_id"),
+		TEXT("public_name"),
+		TEXT("public_text"),
+		TEXT("kind"),
+		TEXT("tags"),
+		TEXT("stats"),
+		TEXT("activated_effects")
+	};
+	return Fields;
+}
+
+const TArray<FString>& CardMetadataAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("author"),
+		TEXT("notes"),
+		TEXT("source"),
+		TEXT("version"),
+		TEXT("test_only")
+	};
+	return Fields;
+}
+
+const TArray<FString>& StatsAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("hp"),
+		TEXT("max_hp"),
+		TEXT("atk"),
+		TEXT("ar"),
+		TEXT("base_rl"),
+		TEXT("current_rl"),
+		TEXT("rr")
+	};
+	return Fields;
+}
+
+const TArray<FString>& EffectAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("effect_id"),
+		TEXT("public_label"),
+		TEXT("target_requirement"),
+		TEXT("source_gate"),
+		TEXT("payloads"),
+		TEXT("metadata")
+	};
+	return Fields;
+}
+
+const TArray<FString>& EffectMetadataAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("notes"),
+		TEXT("source"),
+		TEXT("test_only")
+	};
+	return Fields;
+}
+
+const TArray<FString>& SourceGateAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("required_zone"),
+		TEXT("timing"),
+		TEXT("requires_source_unit"),
+		TEXT("requires_source_unit_ownership"),
+		TEXT("blocked_by_stunned"),
+		TEXT("blocked_by_frozen"),
+		TEXT("requires_costs_satisfied_externally"),
+		TEXT("once_per_turn"),
+		TEXT("once_per_turn_key"),
+		TEXT("requires_fixture_zone_ownership"),
+		TEXT("cost_gate"),
+		TEXT("metadata")
+	};
+	return Fields;
+}
+
+const TArray<FString>& SourceGateMetadataAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("notes"),
+		TEXT("test_only")
+	};
+	return Fields;
+}
+
+const TArray<FString>& CostGateAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("requires_external_affordability"),
+		TEXT("required_rr"),
+		TEXT("cost_kind"),
+		TEXT("metadata")
+	};
+	return Fields;
+}
+
+const TArray<FString>& CostGateMetadataAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("notes"),
+		TEXT("test_only")
+	};
+	return Fields;
+}
+
+const TArray<FString>& PayloadAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("type"),
+		TEXT("operation"),
+		TEXT("amount"),
+		TEXT("bypass_armor"),
+		TEXT("damage_cause"),
+		TEXT("status_id"),
+		TEXT("turns_remaining"),
+		TEXT("target"),
+		TEXT("metadata")
+	};
+	return Fields;
+}
+
+const TArray<FString>& PayloadMetadataAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("notes"),
+		TEXT("test_only")
+	};
+	return Fields;
+}
+
+void ValidateAllowedFields(
+	FWBCardDBSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& Object,
+	const TArray<FString>& AllowedFieldNames,
+	const EWBCardDBSchemaDiagnostic DiagnosticCode,
+	const FWBCardDBSchemaValidationOptions& Options,
+	const FString& CardId,
+	const FString& EffectId)
+{
+	if (!Options.bStrictUnknownFieldRejection || !Object.IsValid())
+	{
+		return;
+	}
+
+	TArray<FString> FieldNames;
+	Object->Values.GetKeys(FieldNames);
+	FieldNames.Sort();
+
+	for (const FString& FieldName : FieldNames)
+	{
+		if (!AllowedFieldNames.Contains(FieldName))
+		{
+			AddDiagnostic(
+				Result,
+				DiagnosticCode,
+				FString::Printf(TEXT("unknown field: %s"), *FieldName),
+				CardId,
+				EffectId);
+		}
+	}
+}
+
+void ValidateMetadataAllowedFields(
+	FWBCardDBSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& Object,
+	const TArray<FString>& AllowedFieldNames,
+	const FWBCardDBSchemaValidationOptions& Options,
+	const FString& CardId,
+	const FString& EffectId)
+{
+	if (!Options.bStrictUnknownFieldRejection || !Object.IsValid() || !Object->HasField(TEXT("metadata")))
+	{
+		return;
+	}
+
+	const TSharedPtr<FJsonObject>* MetadataObject = nullptr;
+	if (!Object->TryGetObjectField(TEXT("metadata"), MetadataObject)
+		|| MetadataObject == nullptr
+		|| !MetadataObject->IsValid())
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::UnknownMetadataField,
+			TEXT("metadata must be an object"),
+			CardId,
+			EffectId);
+		return;
+	}
+
+	ValidateAllowedFields(
+		Result,
+		*MetadataObject,
+		AllowedFieldNames,
+		EWBCardDBSchemaDiagnostic::UnknownMetadataField,
+		Options,
+		CardId,
+		EffectId);
+}
+
+void ValidateStatsAllowedFields(
+	FWBCardDBSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& RootObject,
+	const FWBCardDBSchemaValidationOptions& Options,
+	const FString& CardId)
+{
+	if (!Options.bStrictUnknownFieldRejection || !RootObject.IsValid() || !RootObject->HasField(TEXT("stats")))
+	{
+		return;
+	}
+
+	const TSharedPtr<FJsonObject>* StatsObject = nullptr;
+	if (RootObject->TryGetObjectField(TEXT("stats"), StatsObject)
+		&& StatsObject != nullptr
+		&& StatsObject->IsValid())
+	{
+		ValidateAllowedFields(
+			Result,
+			*StatsObject,
+			StatsAllowedFields(),
+			EWBCardDBSchemaDiagnostic::UnknownCardField,
+			Options,
+			CardId,
+			FString());
+	}
+}
+
 bool TryReadIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue)
 {
 	if (!Object.IsValid())
@@ -416,12 +653,23 @@ void ValidateSourceGate(
 	const TSharedPtr<FJsonObject>& SourceGateObject,
 	const FString& CardId,
 	const FString& EffectId,
+	const FWBCardDBSchemaValidationOptions& Options,
 	FWBCardActivationSourceGateDefinition& OutSourceGate)
 {
 	if (!SourceGateObject.IsValid())
 	{
 		return;
 	}
+
+	ValidateAllowedFields(
+		Result,
+		SourceGateObject,
+		SourceGateAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownSourceGateField,
+		Options,
+		CardId,
+		EffectId);
+	ValidateMetadataAllowedFields(Result, SourceGateObject, SourceGateMetadataAllowedFields(), Options, CardId, EffectId);
 
 	OutSourceGate.bHasExplicitSourceGate = true;
 
@@ -478,6 +726,16 @@ void ValidateSourceGate(
 			return;
 		}
 
+		ValidateAllowedFields(
+			Result,
+			*CostGateObject,
+			CostGateAllowedFields(),
+			EWBCardDBSchemaDiagnostic::UnknownCostGateField,
+			Options,
+			CardId,
+			EffectId);
+		ValidateMetadataAllowedFields(Result, *CostGateObject, CostGateMetadataAllowedFields(), Options, CardId, EffectId);
+
 		(*CostGateObject)->TryGetBoolField(
 			TEXT("requires_external_affordability"),
 			OutSourceGate.CostGate.bRequiresExternalAffordability);
@@ -515,8 +773,19 @@ void ValidatePayload(
 	const TSharedPtr<FJsonObject>& PayloadObject,
 	const FString& CardId,
 	const FString& EffectId,
+	const FWBCardDBSchemaValidationOptions& Options,
 	FWBGenericEffectPayload& OutPayload)
 {
+	ValidateAllowedFields(
+		Result,
+		PayloadObject,
+		PayloadAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownPayloadField,
+		Options,
+		CardId,
+		EffectId);
+	ValidateMetadataAllowedFields(Result, PayloadObject, PayloadMetadataAllowedFields(), Options, CardId, EffectId);
+
 	FString PayloadType;
 	if (!PayloadObject.IsValid() || !PayloadObject->TryGetStringField(TEXT("type"), PayloadType))
 	{
@@ -645,7 +914,8 @@ void ValidatePayload(
 void ValidateActivatedEffects(
 	FWBCardDBSchemaValidationResult& Result,
 	const TSharedPtr<FJsonObject>& RootObject,
-	const FString& CardId)
+	const FString& CardId,
+	const FWBCardDBSchemaValidationOptions& Options)
 {
 	const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
 	if (!RootObject.IsValid() || !RootObject->HasField(TEXT("activated_effects")))
@@ -675,6 +945,16 @@ void ValidateActivatedEffects(
 
 		FWBCardEffectDefinition Effect;
 		EffectObject->TryGetStringField(TEXT("effect_id"), Effect.EffectId);
+
+		ValidateAllowedFields(
+			Result,
+			EffectObject,
+			EffectAllowedFields(),
+			EWBCardDBSchemaDiagnostic::UnknownEffectField,
+			Options,
+			CardId,
+			Effect.EffectId);
+		ValidateMetadataAllowedFields(Result, EffectObject, EffectMetadataAllowedFields(), Options, CardId, Effect.EffectId);
 
 		if (Effect.EffectId.IsEmpty())
 		{
@@ -742,7 +1022,7 @@ void ValidateActivatedEffects(
 			}
 			else
 			{
-			ValidateSourceGate(Result, *SourceGateObject, CardId, Effect.EffectId, Effect.SourceGate);
+				ValidateSourceGate(Result, *SourceGateObject, CardId, Effect.EffectId, Options, Effect.SourceGate);
 			}
 		}
 
@@ -780,7 +1060,7 @@ void ValidateActivatedEffects(
 			{
 				const TSharedPtr<FJsonObject> PayloadObject = PayloadValue.IsValid() ? PayloadValue->AsObject() : nullptr;
 				FWBGenericEffectPayload Payload;
-				ValidatePayload(Result, PayloadObject, CardId, Effect.EffectId, Payload);
+				ValidatePayload(Result, PayloadObject, CardId, Effect.EffectId, Options, Payload);
 				Effect.Payloads.Add(Payload);
 			}
 		}
@@ -790,7 +1070,9 @@ void ValidateActivatedEffects(
 }
 }
 
-FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateFixtureFile(const FString& AbsolutePath)
+FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateFixtureFile(
+	const FString& AbsolutePath,
+	const FWBCardDBSchemaValidationOptions& Options)
 {
 	FString Json;
 	if (!FFileHelper::LoadFileToString(Json, *AbsolutePath))
@@ -806,12 +1088,13 @@ FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateFixture
 		return Result;
 	}
 
-	return ValidateJsonString(Json, AbsolutePath);
+	return ValidateJsonString(Json, AbsolutePath, Options);
 }
 
 FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateJsonString(
 	const FString& Json,
-	const FString& SourcePathForDiagnostics)
+	const FString& SourcePathForDiagnostics,
+	const FWBCardDBSchemaValidationOptions& Options)
 {
 	FWBCardDBSchemaValidationResult Result;
 	Result.SourcePath = SourcePathForDiagnostics;
@@ -828,6 +1111,19 @@ FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateJsonStr
 			FString());
 		return Result;
 	}
+
+	FString StrictDiagnosticCardId;
+	RootObject->TryGetStringField(TEXT("card_id"), StrictDiagnosticCardId);
+	ValidateAllowedFields(
+		Result,
+		RootObject,
+		TopLevelAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownTopLevelField,
+		Options,
+		StrictDiagnosticCardId,
+		FString());
+	ValidateMetadataAllowedFields(Result, RootObject, CardMetadataAllowedFields(), Options, StrictDiagnosticCardId, FString());
+	ValidateStatsAllowedFields(Result, RootObject, Options, StrictDiagnosticCardId);
 
 	int32 SchemaVersion = 0;
 	if (!TryReadIntegerField(RootObject, TEXT("schema_version"), SchemaVersion) || SchemaVersion != 1)
@@ -884,7 +1180,7 @@ FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateJsonStr
 			FString());
 	}
 
-	ValidateActivatedEffects(Result, RootObject, Result.CardDefinition.CardId);
+	ValidateActivatedEffects(Result, RootObject, Result.CardDefinition.CardId, Options);
 	Result.bOk = Result.Diagnostics.Num() == 0;
 	return Result;
 }
@@ -935,6 +1231,20 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 		return TEXT("invalid_status_id");
 	case EWBCardDBSchemaDiagnostic::InvalidNumericField:
 		return TEXT("invalid_numeric_field");
+	case EWBCardDBSchemaDiagnostic::UnknownTopLevelField:
+		return TEXT("unknown_top_level_field");
+	case EWBCardDBSchemaDiagnostic::UnknownCardField:
+		return TEXT("unknown_card_field");
+	case EWBCardDBSchemaDiagnostic::UnknownEffectField:
+		return TEXT("unknown_effect_field");
+	case EWBCardDBSchemaDiagnostic::UnknownSourceGateField:
+		return TEXT("unknown_source_gate_field");
+	case EWBCardDBSchemaDiagnostic::UnknownCostGateField:
+		return TEXT("unknown_cost_gate_field");
+	case EWBCardDBSchemaDiagnostic::UnknownPayloadField:
+		return TEXT("unknown_payload_field");
+	case EWBCardDBSchemaDiagnostic::UnknownMetadataField:
+		return TEXT("unknown_metadata_field");
 	case EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation:
 		return TEXT("hidden_info_policy_violation");
 	case EWBCardDBSchemaDiagnostic::PlayerFacingLabelContainsInternalTerm:
