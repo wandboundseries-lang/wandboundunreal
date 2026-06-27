@@ -1,0 +1,120 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_bundle_supported_cards",
+  "source_version": "fixture",
+  "migration_notes": "",
+  "metadata": {
+    "notes": "fixture-only"
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "bundle_damage_card",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "public_text": "Activate: Deal 2 damage.",
+      "activated_effects": [
+        {
+          "effect_id": "deal_2",
+          "public_label": "Deal 2 damage",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 2,
+              "bypass_armor": false,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "bundle_heal_card",
+      "public_name": "Field Mend",
+      "kind": "fixture",
+      "public_text": "Activate: Heal 2 HP.",
+      "activated_effects": [
+        {
+          "effect_id": "heal_2",
+          "public_label": "Heal 2 HP",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "hand",
+            "timing": "normal_turn_priority",
+            "requires_fixture_zone_ownership": true
+          },
+          "payloads": [
+            {
+              "type": "heal_effect",
+              "amount": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "bundle_status_burn_card",
+      "public_name": "Cinder Mark",
+      "kind": "fixture",
+      "public_text": "Activate: Apply Burn.",
+      "activated_effects": [
+        {
+          "effect_id": "burn_2",
+          "public_label": "Apply Burn",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true
+          },
+          "payloads": [
+            {
+              "type": "status_effect",
+              "operation": "apply_status",
+              "status_id": "Burn",
+              "turns_remaining": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "bundle_armor_card",
+      "public_name": "Reforge Guard",
+      "kind": "fixture",
+      "public_text": "Activate: Restore Armor.",
+      "activated_effects": [
+        {
+          "effect_id": "restore_armor",
+          "public_label": "Restore Armor",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true
+          },
+          "payloads": [
+            {
+              "type": "armor_effect",
+              "operation": "restore_armor_to_max",
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

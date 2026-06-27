@@ -16,6 +16,14 @@ Reference/GodotCanon/CardDBSchemaFixtures/
 
 These are Unreal-owned schema examples. They are not imported Godot CardDB data and are not placed under `Reference/GodotProject`.
 
+Bundle fixtures now live under:
+
+```text
+Reference/GodotCanon/CardDBSchemaFixtures/Bundles/
+```
+
+Bundle validation is also test-only and validates a future production-shaped `cards[]` wrapper without adding a production importer or loader.
+
 ## Valid Fixtures
 
 Valid fixtures:
@@ -79,6 +87,13 @@ Supported diagnostic strings:
 - `unknown_cost_gate_field`
 - `unknown_payload_field`
 - `unknown_metadata_field`
+- `carddb_version_missing`
+- `cards_missing`
+- `cards_malformed`
+- `cards_empty`
+- `card_id_duplicate`
+- `bundle_schema_version_missing`
+- `bundle_schema_version_unsupported`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 - `json_parse_failed`
@@ -96,6 +111,8 @@ Validation result `bOk` is false when any diagnostic is emitted.
 Unsupported payload types, unsupported payload operations, unsupported target requirements, unsupported timings, invalid RR costs, invalid status ids, bad public labels, and hidden-information policy violations do not silently become no-op card definitions.
 
 When strict mode is enabled, unknown fields in top-level/card, stats, effect, source gate, cost gate, payload, or allowed metadata objects also fail closed. Non-strict mode continues to ignore unknown fields unless existing validation catches another problem.
+
+Bundle validation fails closed for missing/unsupported bundle schema version, missing CardDB version, malformed/empty `cards`, duplicate card ids, invalid child cards, and strict unknown bundle fields.
 
 ## Supported Payload Validation
 

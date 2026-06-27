@@ -1,0 +1,8 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_cards_not_array",
+  "cards": {
+    "schema_version": 1,
+    "card_id": "not_array"
+  }
+}

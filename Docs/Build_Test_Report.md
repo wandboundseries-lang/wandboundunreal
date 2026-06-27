@@ -4618,3 +4618,66 @@ Scope checks:
 - Added strict-valid, strict-invalid, and non-strict compatibility schema fixtures.
 - Added strict validation audit/report docs and updated schema docs.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Test-Only CardDB Bundle Schema Validation Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 16.18 seconds
+```
+
+## Targeted CardDB Schema Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDB; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaValidation/index.json`:
+
+```text
+succeeded=65
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=821
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added 20 `Wandbound.Core.CardDBBundleSchemaFixtureValidation.*` automation tests.
+- Added test-only bundle validation for future production-shaped `cards[]` fixtures.
+- Valid bundle cards map into `FWBCardDefinition` values for validation only.
+- Bundle validation detects missing/unsupported bundle schema version, missing CardDB version, missing/malformed/empty `cards`, duplicate card ids, invalid child cards, and strict unknown bundle fields.
+- Existing root-card fixture validation remains unchanged.
+- No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.

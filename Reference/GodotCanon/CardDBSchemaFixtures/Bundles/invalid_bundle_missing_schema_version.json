@@ -1,0 +1,12 @@
+{
+  "carddb_version": "fixture_missing_schema_version",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "bundle_missing_schema_version_card",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

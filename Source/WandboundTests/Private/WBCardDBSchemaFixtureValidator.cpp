@@ -4,11 +4,27 @@
 #include "Misc/FileHelper.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 namespace
 {
 void AddDiagnostic(
 	FWBCardDBSchemaValidationResult& Result,
+	const EWBCardDBSchemaDiagnostic Code,
+	const FString& Message,
+	const FString& CardId,
+	const FString& EffectId)
+{
+	FWBCardDBSchemaValidationDiagnostic Diagnostic;
+	Diagnostic.Code = Code;
+	Diagnostic.Message = Message;
+	Diagnostic.CardId = CardId;
+	Diagnostic.EffectId = EffectId;
+	Result.Diagnostics.Add(Diagnostic);
+}
+
+void AddDiagnostic(
+	FWBCardDBBundleSchemaValidationResult& Result,
 	const EWBCardDBSchemaDiagnostic Code,
 	const FString& Message,
 	const FString& CardId,
@@ -37,6 +53,19 @@ const TArray<FString>& TopLevelAllowedFields()
 		TEXT("tags"),
 		TEXT("stats"),
 		TEXT("activated_effects")
+	};
+	return Fields;
+}
+
+const TArray<FString>& BundleTopLevelAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("bundle_schema_version"),
+		TEXT("carddb_version"),
+		TEXT("source_version"),
+		TEXT("migration_notes"),
+		TEXT("metadata"),
+		TEXT("cards")
 	};
 	return Fields;
 }
@@ -163,8 +192,9 @@ const TArray<FString>& PayloadMetadataAllowedFields()
 	return Fields;
 }
 
+template <typename ResultType>
 void ValidateAllowedFields(
-	FWBCardDBSchemaValidationResult& Result,
+	ResultType& Result,
 	const TSharedPtr<FJsonObject>& Object,
 	const TArray<FString>& AllowedFieldNames,
 	const EWBCardDBSchemaDiagnostic DiagnosticCode,
@@ -195,8 +225,9 @@ void ValidateAllowedFields(
 	}
 }
 
+template <typename ResultType>
 void ValidateMetadataAllowedFields(
-	FWBCardDBSchemaValidationResult& Result,
+	ResultType& Result,
 	const TSharedPtr<FJsonObject>& Object,
 	const TArray<FString>& AllowedFieldNames,
 	const FWBCardDBSchemaValidationOptions& Options,
@@ -257,6 +288,24 @@ void ValidateStatsAllowedFields(
 			CardId,
 			FString());
 	}
+}
+
+void AppendDiagnostics(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const FWBCardDBSchemaValidationResult& CardResult)
+{
+	Result.Diagnostics.Append(CardResult.Diagnostics);
+}
+
+bool SerializeJsonObjectToString(const TSharedPtr<FJsonObject>& Object, FString& OutJson)
+{
+	if (!Object.IsValid())
+	{
+		return false;
+	}
+
+	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutJson);
+	return FJsonSerializer::Serialize(Object.ToSharedRef(), Writer);
 }
 
 bool TryReadIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue)
@@ -1185,6 +1234,179 @@ FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateJsonStr
 	return Result;
 }
 
+FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateBundleFixtureFile(
+	const FString& AbsolutePath,
+	const FWBCardDBSchemaValidationOptions& Options)
+{
+	FString Json;
+	if (!FFileHelper::LoadFileToString(Json, *AbsolutePath))
+	{
+		FWBCardDBBundleSchemaValidationResult Result;
+		Result.SourcePath = AbsolutePath;
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::JsonParseFailed,
+			TEXT("bundle fixture file could not be loaded"),
+			FString(),
+			FString());
+		return Result;
+	}
+
+	return ValidateBundleJsonString(Json, AbsolutePath, Options);
+}
+
+FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateBundleJsonString(
+	const FString& Json,
+	const FString& SourcePathForDiagnostics,
+	const FWBCardDBSchemaValidationOptions& Options)
+{
+	FWBCardDBBundleSchemaValidationResult Result;
+	Result.SourcePath = SourcePathForDiagnostics;
+
+	TSharedPtr<FJsonObject> RootObject;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	if (!FJsonSerializer::Deserialize(Reader, RootObject) || !RootObject.IsValid())
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::JsonParseFailed,
+			TEXT("bundle json could not be parsed"),
+			FString(),
+			FString());
+		return Result;
+	}
+
+	ValidateAllowedFields(
+		Result,
+		RootObject,
+		BundleTopLevelAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownTopLevelField,
+		Options,
+		FString(),
+		FString());
+	ValidateMetadataAllowedFields(Result, RootObject, CardMetadataAllowedFields(), Options, FString(), FString());
+
+	int32 BundleSchemaVersion = 0;
+	if (!TryReadIntegerField(RootObject, TEXT("bundle_schema_version"), BundleSchemaVersion))
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::BundleSchemaVersionMissing,
+			TEXT("bundle_schema_version is required and must equal 1"),
+			FString(),
+			FString());
+	}
+	else if (BundleSchemaVersion != 1)
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::BundleSchemaVersionUnsupported,
+			TEXT("bundle_schema_version must equal 1"),
+			FString(),
+			FString());
+	}
+
+	FString CardDBVersion;
+	if (!RootObject->TryGetStringField(TEXT("carddb_version"), CardDBVersion) || CardDBVersion.IsEmpty())
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::CardDBVersionMissing,
+			TEXT("carddb_version is required"),
+			FString(),
+			FString());
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* CardValues = nullptr;
+	if (!RootObject->HasField(TEXT("cards")))
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::CardsMissing,
+			TEXT("cards is required"),
+			FString(),
+			FString());
+	}
+	else if (!RootObject->TryGetArrayField(TEXT("cards"), CardValues) || CardValues == nullptr)
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::CardsMalformed,
+			TEXT("cards must be an array"),
+			FString(),
+			FString());
+	}
+	else if (CardValues->Num() == 0)
+	{
+		AddDiagnostic(
+			Result,
+			EWBCardDBSchemaDiagnostic::CardsEmpty,
+			TEXT("cards must not be empty"),
+			FString(),
+			FString());
+	}
+	else
+	{
+		TSet<FString> SeenCardIds;
+		for (const TSharedPtr<FJsonValue>& CardValue : *CardValues)
+		{
+			const TSharedPtr<FJsonObject> CardObject = CardValue.IsValid() ? CardValue->AsObject() : nullptr;
+			if (!CardObject.IsValid())
+			{
+				AddDiagnostic(
+					Result,
+					EWBCardDBSchemaDiagnostic::CardsMalformed,
+					TEXT("cards entries must be objects"),
+					FString(),
+					FString());
+				continue;
+			}
+
+			FString CardId;
+			CardObject->TryGetStringField(TEXT("card_id"), CardId);
+			if (!CardId.IsEmpty())
+			{
+				if (SeenCardIds.Contains(CardId))
+				{
+					AddDiagnostic(
+						Result,
+						EWBCardDBSchemaDiagnostic::CardIdDuplicate,
+						TEXT("card_id must be unique within the bundle"),
+						CardId,
+						FString());
+				}
+				else
+				{
+					SeenCardIds.Add(CardId);
+				}
+			}
+
+			FString CardJson;
+			if (!SerializeJsonObjectToString(CardObject, CardJson))
+			{
+				AddDiagnostic(
+					Result,
+					EWBCardDBSchemaDiagnostic::JsonParseFailed,
+					TEXT("card object could not be serialized for validation"),
+					CardId,
+					FString());
+				continue;
+			}
+
+			const FWBCardDBSchemaValidationResult CardResult =
+				ValidateJsonString(CardJson, SourcePathForDiagnostics, Options);
+			AppendDiagnostics(Result, CardResult);
+			if (CardResult.bOk)
+			{
+				Result.CardDefinitions.Add(CardResult.CardDefinition);
+			}
+		}
+	}
+
+	Result.bOk = Result.Diagnostics.Num() == 0;
+	return Result;
+}
+
 FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBSchemaDiagnostic Code)
 {
 	switch (Code)
@@ -1251,6 +1473,20 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 		return TEXT("player_facing_label_contains_internal_term");
 	case EWBCardDBSchemaDiagnostic::JsonParseFailed:
 		return TEXT("json_parse_failed");
+	case EWBCardDBSchemaDiagnostic::CardDBVersionMissing:
+		return TEXT("carddb_version_missing");
+	case EWBCardDBSchemaDiagnostic::CardsMissing:
+		return TEXT("cards_missing");
+	case EWBCardDBSchemaDiagnostic::CardsMalformed:
+		return TEXT("cards_malformed");
+	case EWBCardDBSchemaDiagnostic::CardsEmpty:
+		return TEXT("cards_empty");
+	case EWBCardDBSchemaDiagnostic::CardIdDuplicate:
+		return TEXT("card_id_duplicate");
+	case EWBCardDBSchemaDiagnostic::BundleSchemaVersionMissing:
+		return TEXT("bundle_schema_version_missing");
+	case EWBCardDBSchemaDiagnostic::BundleSchemaVersionUnsupported:
+		return TEXT("bundle_schema_version_unsupported");
 	default:
 		return TEXT("unknown");
 	}

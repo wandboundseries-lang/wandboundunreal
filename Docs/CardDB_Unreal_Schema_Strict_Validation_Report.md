@@ -30,6 +30,8 @@ Strict mode can emit:
 
 Existing diagnostic strings were not renamed.
 
+Bundle validation also uses `unknown_top_level_field` for unknown bundle top-level fields and `unknown_metadata_field` for unknown bundle metadata fields.
+
 ## Allowed Field Sets
 
 Strict mode allow-lists:
@@ -40,6 +42,7 @@ Strict mode allow-lists:
 - source gate fields such as `required_zone`, `timing`, source ownership gates, stun/frozen gates, cost gate, usage gate, and `metadata`
 - cost gate fields such as external affordability, RR requirement, cost kind, and `metadata`
 - payload fields for the current supported generic payload families
+- bundle top-level fields such as `bundle_schema_version`, `carddb_version`, `source_version`, `migration_notes`, `metadata`, and `cards`
 
 Unknown fields inside `stats` fail with `unknown_card_field`.
 
@@ -54,6 +57,7 @@ Allowed metadata fields are intentionally narrow:
 - source gate metadata: `notes`, `test_only`
 - cost gate metadata: `notes`, `test_only`
 - payload metadata: `notes`, `test_only`
+- bundle metadata: `author`, `notes`, `source`, `version`, `test_only`
 
 Unknown fields inside metadata fail with `unknown_metadata_field` in strict mode.
 
@@ -79,6 +83,14 @@ Compatibility fixture:
 - `non_strict_unknown_field_allowed.json`
 
 The compatibility fixture validates with default options and fails with strict options.
+
+Bundle strict fixture coverage:
+
+- `strict_valid_bundle_metadata.json`
+- `strict_invalid_bundle_unknown_top_level_field.json`
+- `strict_invalid_bundle_unknown_metadata_field.json`
+- `strict_invalid_bundle_card_unknown_field.json`
+- `non_strict_bundle_unknown_field_allowed.json`
 
 ## Fail-Closed Behavior
 

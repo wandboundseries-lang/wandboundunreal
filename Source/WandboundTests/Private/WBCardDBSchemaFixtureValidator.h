@@ -35,7 +35,14 @@ enum class EWBCardDBSchemaDiagnostic : uint8
 	UnknownMetadataField,
 	HiddenInfoPolicyViolation,
 	PlayerFacingLabelContainsInternalTerm,
-	JsonParseFailed
+	JsonParseFailed,
+	CardDBVersionMissing,
+	CardsMissing,
+	CardsMalformed,
+	CardsEmpty,
+	CardIdDuplicate,
+	BundleSchemaVersionMissing,
+	BundleSchemaVersionUnsupported
 };
 
 struct FWBCardDBSchemaValidationDiagnostic
@@ -60,6 +67,14 @@ struct FWBCardDBSchemaValidationResult
 	FWBCardDefinition CardDefinition;
 };
 
+struct FWBCardDBBundleSchemaValidationResult
+{
+	bool bOk = false;
+	FString SourcePath;
+	TArray<FWBCardDBSchemaValidationDiagnostic> Diagnostics;
+	TArray<FWBCardDefinition> CardDefinitions;
+};
+
 class FWBCardDBSchemaFixtureValidator
 {
 public:
@@ -67,6 +82,13 @@ public:
 		const FString& AbsolutePath,
 		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());
 	static FWBCardDBSchemaValidationResult ValidateJsonString(
+		const FString& Json,
+		const FString& SourcePathForDiagnostics,
+		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());
+	static FWBCardDBBundleSchemaValidationResult ValidateBundleFixtureFile(
+		const FString& AbsolutePath,
+		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());
+	static FWBCardDBBundleSchemaValidationResult ValidateBundleJsonString(
 		const FString& Json,
 		const FString& SourcePathForDiagnostics,
 		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());

@@ -437,3 +437,87 @@ Expected default non-strict result:
 ```text
 valid
 ```
+
+## 11. Bundle Example
+
+Future production-shaped CardDB data should use a bundle wrapper with `cards[]`:
+
+```json
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "test_bundle_v1",
+  "source_version": "fixture",
+  "migration_notes": "",
+  "metadata": {
+    "notes": "fixture-only"
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "example_bundle_spark_bolt",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "public_text": "Activate: Deal 2 damage.",
+      "activated_effects": [
+        {
+          "effect_id": "deal_2",
+          "public_label": "Deal 2 damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Expected bundle result:
+
+```text
+valid
+```
+
+Duplicate `card_id` values inside one bundle fail with:
+
+```text
+card_id_duplicate
+```
+
+## 12. Strict Invalid Bundle Unknown-Field Example
+
+Unknown bundle fields fail only when strict unknown-field rejection is enabled:
+
+```json
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "test_bundle_v1",
+  "unexpected_bundle_field": true,
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "example_bundle_spark_bolt",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}
+```
+
+Expected strict-mode diagnostic:
+
+```text
+unknown_top_level_field
+```
+
+Expected default non-strict result:
+
+```text
+valid
+```

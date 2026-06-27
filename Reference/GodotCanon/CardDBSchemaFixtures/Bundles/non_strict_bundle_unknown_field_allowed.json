@@ -1,0 +1,14 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_non_strict_bundle_unknown",
+  "extra_bundle_authoring_field": "ignored unless strict mode is enabled",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "bundle_non_strict_unknown_card",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

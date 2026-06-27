@@ -61,6 +61,34 @@ Allowed card metadata fields:
 - `version`
 - `test_only`
 
+## Future Bundle Shape
+
+Future production-shaped CardDB data should use a top-level bundle wrapper:
+
+```json
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "test_bundle_v1",
+  "source_version": "fixture",
+  "migration_notes": "",
+  "metadata": {
+    "notes": "fixture-only"
+  },
+  "cards": []
+}
+```
+
+Bundle policy:
+
+- `bundle_schema_version` is required and must equal `1`.
+- `carddb_version` is required and must be a non-empty string.
+- `cards` is required, must be an array, and must not be empty.
+- each `cards[]` entry validates through the same root-card schema behavior.
+- duplicate non-empty `card_id` values fail closed with `card_id_duplicate`.
+- strict mode rejects unknown bundle top-level fields with `unknown_top_level_field`.
+- strict mode rejects unknown bundle metadata fields with `unknown_metadata_field`.
+- production import and loading remain future work.
+
 ## Card Definition Shape
 
 Future JSON-like shape:
@@ -515,6 +543,13 @@ Diagnostic categories:
 - `unknown_cost_gate_field`
 - `unknown_payload_field`
 - `unknown_metadata_field`
+- `carddb_version_missing`
+- `cards_missing`
+- `cards_malformed`
+- `cards_empty`
+- `card_id_duplicate`
+- `bundle_schema_version_missing`
+- `bundle_schema_version_unsupported`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 
@@ -540,6 +575,8 @@ The fixture validator reads Unreal-owned schema fixtures from `Reference/GodotCa
 The validator is not a production importer, does not load production CardDB data, does not create production zones, does not execute effects, and does not generate production runtime activation candidates or actions.
 
 Strict fixture validation exists as an explicit option for unknown-field rejection. It rejects unknown top-level/card fields, unknown stats fields, unknown effect/source gate/cost gate/payload fields, and unknown metadata fields. The default validator path remains non-strict for compatibility with earlier schema fixtures.
+
+Test-only bundle validation also exists for future production-shaped `cards[]` fixtures. It validates bundle fields, aggregates root-card diagnostics, rejects duplicate card ids, and maps valid bundle cards into `FWBCardDefinition` values for validation only.
 
 ## Future CardDB Import Milestones
 

@@ -1466,6 +1466,21 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Bundle Schema Validation
+
+- Added test-only bundle validation for a future production-shaped `cards[]` wrapper.
+- Bundle validation supports `bundle_schema_version`, `carddb_version`, optional source/migration/metadata fields, and `cards`.
+- Each `cards[]` entry validates through the existing root-card fixture validator.
+- Duplicate card ids fail closed.
+- Strict bundle unknown-field rejection was added for bundle top-level and metadata fields.
+- Valid bundle cards map into `FWBCardDefinition` values for validation only.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art
