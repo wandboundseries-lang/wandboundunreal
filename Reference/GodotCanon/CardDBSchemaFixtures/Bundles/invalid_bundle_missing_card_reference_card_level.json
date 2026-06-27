@@ -1,0 +1,18 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_missing_card_reference_card_level",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "missing_card_reference_source",
+      "public_name": "Missing Card Reference Source",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "missing_target_card"
+        ]
+      },
+      "activated_effects": []
+    }
+  ]
+}

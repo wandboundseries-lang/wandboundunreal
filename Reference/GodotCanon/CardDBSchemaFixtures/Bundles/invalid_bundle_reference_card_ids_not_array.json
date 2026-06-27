@@ -1,0 +1,16 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_reference_card_ids_not_array",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "reference_card_ids_not_array",
+      "public_name": "Reference Card Ids Not Array",
+      "kind": "fixture",
+      "references": {
+        "card_ids": "target_card"
+      },
+      "activated_effects": []
+    }
+  ]
+}

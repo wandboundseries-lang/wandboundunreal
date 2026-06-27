@@ -42,6 +42,8 @@ Context fields do not include full JSON snippets or hidden values.
 
 Bundle context sanitizes unsafe card/effect ids before copying them into diagnostics. Hidden-token fixture coverage verifies diagnostic message, card id, bundle card id, effect id, and JSON path do not leak `SECRET` tokens.
 
+Cross-reference diagnostics also avoid echoing referenced ids. Missing reference diagnostics use generic messages and safe owner context only, so a hidden token in a referenced card id cannot leak through diagnostic text or context.
+
 ## Multi-Card Fixture Coverage
 
 Added fixtures covering:
@@ -61,6 +63,17 @@ Added test-only helpers:
 - `ContainsDiagnosticWithContext`
 
 These helpers are part of the test-only validator surface under `WandboundTests`.
+
+## Cross-Reference Diagnostic Context
+
+Bundle reference validation now reports stable context for test-only `references` objects:
+
+- card-level references use `$.cards[i].references.card_ids[j]`
+- effect-level card references use `$.cards[i].activated_effects[e].references.card_ids[j]`
+- effect references use `$.cards[i].activated_effects[e].references.effect_refs[r]`
+- payload-level references use `$.cards[i].activated_effects[e].payloads[p].references.card_ids[j]`
+
+Duplicate card ids still report `card_id_duplicate` and skip reference resolution because the bundle card id index is ambiguous.
 
 ## Confirmations
 

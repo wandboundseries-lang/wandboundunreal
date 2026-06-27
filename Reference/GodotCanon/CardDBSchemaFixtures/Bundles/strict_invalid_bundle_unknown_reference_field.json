@@ -1,0 +1,17 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_unknown_reference_field",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "unknown_reference_field_card",
+      "public_name": "Unknown Reference Field",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [],
+        "unexpected_reference_field": true
+      },
+      "activated_effects": []
+    }
+  ]
+}

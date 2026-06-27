@@ -1,0 +1,29 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_effect_refs_not_array",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "effect_refs_not_array_card",
+      "public_name": "Effect Refs Not Array",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "bad_refs",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "references": {
+            "effect_refs": "bad"
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

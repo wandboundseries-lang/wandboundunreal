@@ -1,0 +1,14 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_references_not_object",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "references_not_object",
+      "public_name": "References Not Object",
+      "kind": "fixture",
+      "references": "bad",
+      "activated_effects": []
+    }
+  ]
+}

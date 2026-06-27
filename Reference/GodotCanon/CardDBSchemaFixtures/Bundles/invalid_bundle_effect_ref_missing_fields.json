@@ -1,0 +1,33 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_effect_ref_missing_fields",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "effect_ref_missing_fields_card",
+      "public_name": "Effect Ref Missing Fields",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "bad_ref",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "references": {
+            "effect_refs": [
+              {
+                "card_id": "some_card"
+              }
+            ]
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

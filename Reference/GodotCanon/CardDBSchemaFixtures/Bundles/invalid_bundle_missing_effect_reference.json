@@ -1,0 +1,54 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_missing_effect_reference",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "missing_effect_reference_source",
+      "public_name": "Missing Effect Reference Source",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "effect_referrer",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "references": {
+            "effect_refs": [
+              {
+                "card_id": "missing_effect_reference_target",
+                "effect_id": "missing_target_effect"
+              }
+            ]
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "missing_effect_reference_target",
+      "public_name": "Missing Effect Reference Target",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "existing_target_effect",
+          "public_label": "Deal 1 damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

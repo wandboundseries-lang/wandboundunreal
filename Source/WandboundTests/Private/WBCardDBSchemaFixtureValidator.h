@@ -42,7 +42,11 @@ enum class EWBCardDBSchemaDiagnostic : uint8
 	CardsEmpty,
 	CardIdDuplicate,
 	BundleSchemaVersionMissing,
-	BundleSchemaVersionUnsupported
+	BundleSchemaVersionUnsupported,
+	MissingCardReference,
+	MissingEffectReference,
+	ReferenceMalformed,
+	UnknownReferenceField
 };
 
 struct FWBCardDBSchemaValidationDiagnostic

@@ -64,7 +64,8 @@ const TArray<FString>& TopLevelAllowedFields()
 		TEXT("kind"),
 		TEXT("tags"),
 		TEXT("stats"),
-		TEXT("activated_effects")
+		TEXT("activated_effects"),
+		TEXT("references")
 	};
 	return Fields;
 }
@@ -116,7 +117,8 @@ const TArray<FString>& EffectAllowedFields()
 		TEXT("target_requirement"),
 		TEXT("source_gate"),
 		TEXT("payloads"),
-		TEXT("metadata")
+		TEXT("metadata"),
+		TEXT("references")
 	};
 	return Fields;
 }
@@ -190,12 +192,42 @@ const TArray<FString>& PayloadAllowedFields()
 		TEXT("status_id"),
 		TEXT("turns_remaining"),
 		TEXT("target"),
-		TEXT("metadata")
+		TEXT("metadata"),
+		TEXT("references")
 	};
 	return Fields;
 }
 
 const TArray<FString>& PayloadMetadataAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("notes"),
+		TEXT("test_only")
+	};
+	return Fields;
+}
+
+const TArray<FString>& ReferenceAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("card_ids"),
+		TEXT("effect_refs"),
+		TEXT("metadata")
+	};
+	return Fields;
+}
+
+const TArray<FString>& EffectReferenceAllowedFields()
+{
+	static const TArray<FString> Fields = {
+		TEXT("card_id"),
+		TEXT("effect_id"),
+		TEXT("metadata")
+	};
+	return Fields;
+}
+
+const TArray<FString>& ReferenceMetadataAllowedFields()
 {
 	static const TArray<FString> Fields = {
 		TEXT("notes"),
@@ -322,6 +354,200 @@ bool SerializeJsonObjectToString(const TSharedPtr<FJsonObject>& Object, FString&
 	return FJsonSerializer::Serialize(Object.ToSharedRef(), Writer);
 }
 
+template <typename ResultType>
+void AddReferenceMalformedDiagnostic(
+	ResultType& Result,
+	const FString& Message,
+	const FString& CardId,
+	const FString& EffectId,
+	const FString& JsonPath)
+{
+	AddDiagnostic(
+		Result,
+		EWBCardDBSchemaDiagnostic::ReferenceMalformed,
+		Message,
+		CardId,
+		EffectId,
+		-1,
+		FString(),
+		JsonPath);
+}
+
+template <typename ResultType>
+void ValidateReferenceMetadataShape(
+	ResultType& Result,
+	const TSharedPtr<FJsonObject>& Object,
+	const FWBCardDBSchemaValidationOptions& Options,
+	const FString& CardId,
+	const FString& EffectId,
+	const FString& JsonPath)
+{
+	if (!Object.IsValid() || !Object->HasField(TEXT("metadata")))
+	{
+		return;
+	}
+
+	const TSharedPtr<FJsonObject>* MetadataObject = nullptr;
+	if (!Object->TryGetObjectField(TEXT("metadata"), MetadataObject)
+		|| MetadataObject == nullptr
+		|| !MetadataObject->IsValid())
+	{
+		AddReferenceMalformedDiagnostic(Result, TEXT("references metadata must be an object"), CardId, EffectId, JsonPath);
+		return;
+	}
+
+	ValidateAllowedFields(
+		Result,
+		*MetadataObject,
+		ReferenceMetadataAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownReferenceField,
+		Options,
+		CardId,
+		EffectId,
+		JsonPath);
+}
+
+template <typename ResultType>
+void ValidateEffectReferenceShape(
+	ResultType& Result,
+	const TSharedPtr<FJsonObject>& EffectReferenceObject,
+	const FWBCardDBSchemaValidationOptions& Options,
+	const FString& CardId,
+	const FString& EffectId,
+	const FString& JsonPath)
+{
+	ValidateAllowedFields(
+		Result,
+		EffectReferenceObject,
+		EffectReferenceAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownReferenceField,
+		Options,
+		CardId,
+		EffectId,
+		JsonPath);
+	ValidateReferenceMetadataShape(Result, EffectReferenceObject, Options, CardId, EffectId, JsonPath + TEXT(".metadata"));
+
+	FString ReferencedCardId;
+	FString ReferencedEffectId;
+	if (!EffectReferenceObject.IsValid()
+		|| !EffectReferenceObject->TryGetStringField(TEXT("card_id"), ReferencedCardId)
+		|| ReferencedCardId.IsEmpty()
+		|| !EffectReferenceObject->TryGetStringField(TEXT("effect_id"), ReferencedEffectId)
+		|| ReferencedEffectId.IsEmpty())
+	{
+		AddReferenceMalformedDiagnostic(
+			Result,
+			TEXT("effect reference must include card_id and effect_id strings"),
+			CardId,
+			EffectId,
+			JsonPath);
+	}
+}
+
+template <typename ResultType>
+void ValidateReferencesObjectShape(
+	ResultType& Result,
+	const TSharedPtr<FJsonObject>& ReferencesObject,
+	const FWBCardDBSchemaValidationOptions& Options,
+	const FString& CardId,
+	const FString& EffectId,
+	const FString& JsonPath)
+{
+	ValidateAllowedFields(
+		Result,
+		ReferencesObject,
+		ReferenceAllowedFields(),
+		EWBCardDBSchemaDiagnostic::UnknownReferenceField,
+		Options,
+		CardId,
+		EffectId,
+		JsonPath);
+	ValidateReferenceMetadataShape(Result, ReferencesObject, Options, CardId, EffectId, JsonPath + TEXT(".metadata"));
+
+	const TArray<TSharedPtr<FJsonValue>>* CardIdValues = nullptr;
+	if (ReferencesObject.IsValid() && ReferencesObject->HasField(TEXT("card_ids")))
+	{
+		if (!ReferencesObject->TryGetArrayField(TEXT("card_ids"), CardIdValues) || CardIdValues == nullptr)
+		{
+			AddReferenceMalformedDiagnostic(Result, TEXT("references.card_ids must be an array"), CardId, EffectId, JsonPath + TEXT(".card_ids"));
+		}
+		else
+		{
+			for (int32 CardIdIndex = 0; CardIdIndex < CardIdValues->Num(); ++CardIdIndex)
+			{
+				if (!(*CardIdValues)[CardIdIndex].IsValid() || (*CardIdValues)[CardIdIndex]->Type != EJson::String)
+				{
+					AddReferenceMalformedDiagnostic(
+						Result,
+						TEXT("references.card_ids entries must be strings"),
+						CardId,
+						EffectId,
+						JsonPath + FString::Printf(TEXT(".card_ids[%d]"), CardIdIndex));
+				}
+			}
+		}
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* EffectReferenceValues = nullptr;
+	if (ReferencesObject.IsValid() && ReferencesObject->HasField(TEXT("effect_refs")))
+	{
+		if (!ReferencesObject->TryGetArrayField(TEXT("effect_refs"), EffectReferenceValues) || EffectReferenceValues == nullptr)
+		{
+			AddReferenceMalformedDiagnostic(Result, TEXT("references.effect_refs must be an array"), CardId, EffectId, JsonPath + TEXT(".effect_refs"));
+		}
+		else
+		{
+			for (int32 EffectRefIndex = 0; EffectRefIndex < EffectReferenceValues->Num(); ++EffectRefIndex)
+			{
+				const TSharedPtr<FJsonValue>& EffectReferenceValue = (*EffectReferenceValues)[EffectRefIndex];
+				const TSharedPtr<FJsonObject> EffectReferenceObject =
+					EffectReferenceValue.IsValid() && EffectReferenceValue->Type == EJson::Object
+						? EffectReferenceValue->AsObject()
+						: nullptr;
+				const FString EffectRefPath = JsonPath + FString::Printf(TEXT(".effect_refs[%d]"), EffectRefIndex);
+				if (!EffectReferenceObject.IsValid())
+				{
+					AddReferenceMalformedDiagnostic(
+						Result,
+						TEXT("references.effect_refs entries must be objects"),
+						CardId,
+						EffectId,
+						EffectRefPath);
+					continue;
+				}
+
+				ValidateEffectReferenceShape(Result, EffectReferenceObject, Options, CardId, EffectId, EffectRefPath);
+			}
+		}
+	}
+}
+
+template <typename ResultType>
+void ValidateReferencesFieldShape(
+	ResultType& Result,
+	const TSharedPtr<FJsonObject>& OwnerObject,
+	const FWBCardDBSchemaValidationOptions& Options,
+	const FString& CardId,
+	const FString& EffectId,
+	const FString& JsonPath)
+{
+	if (!OwnerObject.IsValid() || !OwnerObject->HasField(TEXT("references")))
+	{
+		return;
+	}
+
+	const TSharedPtr<FJsonObject>* ReferencesObject = nullptr;
+	if (!OwnerObject->TryGetObjectField(TEXT("references"), ReferencesObject)
+		|| ReferencesObject == nullptr
+		|| !ReferencesObject->IsValid())
+	{
+		AddReferenceMalformedDiagnostic(Result, TEXT("references must be an object"), CardId, EffectId, JsonPath);
+		return;
+	}
+
+	ValidateReferencesObjectShape(Result, *ReferencesObject, Options, CardId, EffectId, JsonPath);
+}
+
 bool ContainsHiddenDiagnosticTerm(const FString& Value)
 {
 	static const TArray<FString> HiddenTerms = {
@@ -351,6 +577,27 @@ FString SafeDiagnosticIdentifier(const FString& Value)
 FString CardJsonPath(const int32 CardIndex)
 {
 	return FString::Printf(TEXT("$.cards[%d]"), CardIndex);
+}
+
+FString PrefixBundleCardJsonPath(const FString& RootCardJsonPath, const int32 CardIndex)
+{
+	if (RootCardJsonPath.IsEmpty())
+	{
+		return FString();
+	}
+
+	const FString BasePath = CardJsonPath(CardIndex);
+	if (RootCardJsonPath == TEXT("$"))
+	{
+		return BasePath;
+	}
+
+	if (RootCardJsonPath.StartsWith(TEXT("$.")))
+	{
+		return BasePath + RootCardJsonPath.RightChop(1);
+	}
+
+	return RootCardJsonPath;
 }
 
 bool IsKnownPayloadTypeForPath(const FString& PayloadType)
@@ -548,8 +795,277 @@ void AppendDiagnostics(
 		Diagnostic.BundleCardId = SafeBundleCardId;
 		Diagnostic.CardId = SafeDiagnosticIdentifier(Diagnostic.CardId);
 		Diagnostic.EffectId = SafeDiagnosticIdentifier(Diagnostic.EffectId);
-		Diagnostic.JsonPath = InferBundleCardDiagnosticJsonPath(CardObject, Diagnostic, CardIndex);
+		Diagnostic.JsonPath = Diagnostic.JsonPath.IsEmpty()
+			? InferBundleCardDiagnosticJsonPath(CardObject, Diagnostic, CardIndex)
+			: PrefixBundleCardJsonPath(Diagnostic.JsonPath, CardIndex);
 		Result.Diagnostics.Add(Diagnostic);
+	}
+}
+
+struct FWBCardDBBundleReferenceIndex
+{
+	TMap<FString, int32> CardIndexById;
+	TMap<FString, TSet<FString>> EffectIdsByCardId;
+};
+
+TSet<FString> CollectEffectIds(const TSharedPtr<FJsonObject>& CardObject)
+{
+	TSet<FString> EffectIds;
+	const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
+	if (!TryGetEffectArray(CardObject, EffectValues))
+	{
+		return EffectIds;
+	}
+
+	for (const TSharedPtr<FJsonValue>& EffectValue : *EffectValues)
+	{
+		const TSharedPtr<FJsonObject> EffectObject = EffectValue.IsValid() ? EffectValue->AsObject() : nullptr;
+		if (!EffectObject.IsValid())
+		{
+			continue;
+		}
+
+		FString EffectId;
+		if (EffectObject->TryGetStringField(TEXT("effect_id"), EffectId) && !EffectId.IsEmpty())
+		{
+			EffectIds.Add(EffectId);
+		}
+	}
+
+	return EffectIds;
+}
+
+bool TryGetReferencesObjectForResolution(
+	const TSharedPtr<FJsonObject>& OwnerObject,
+	const TSharedPtr<FJsonObject>*& OutReferencesObject)
+{
+	OutReferencesObject = nullptr;
+	return OwnerObject.IsValid()
+		&& OwnerObject->TryGetObjectField(TEXT("references"), OutReferencesObject)
+		&& OutReferencesObject != nullptr
+		&& OutReferencesObject->IsValid();
+}
+
+void AddMissingReferenceDiagnostic(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const EWBCardDBSchemaDiagnostic Code,
+	const int32 CardIndex,
+	const FString& OwnerCardId,
+	const FString& OwnerEffectId,
+	const FString& JsonPath)
+{
+	const FString SafeOwnerCardId = SafeDiagnosticIdentifier(OwnerCardId);
+	AddDiagnostic(
+		Result,
+		Code,
+		Code == EWBCardDBSchemaDiagnostic::MissingEffectReference
+			? TEXT("referenced effect id was not found")
+			: TEXT("referenced card id was not found"),
+		SafeOwnerCardId,
+		SafeDiagnosticIdentifier(OwnerEffectId),
+		CardIndex,
+		SafeOwnerCardId,
+		JsonPath);
+}
+
+void ValidateReferencedCardIds(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& ReferencesObject,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex,
+	const int32 CardIndex,
+	const FString& OwnerCardId,
+	const FString& OwnerEffectId,
+	const FString& JsonPath)
+{
+	const TArray<TSharedPtr<FJsonValue>>* CardIdValues = nullptr;
+	if (!ReferencesObject.IsValid()
+		|| !ReferencesObject->TryGetArrayField(TEXT("card_ids"), CardIdValues)
+		|| CardIdValues == nullptr)
+	{
+		return;
+	}
+
+	for (int32 ReferenceIndexValue = 0; ReferenceIndexValue < CardIdValues->Num(); ++ReferenceIndexValue)
+	{
+		if (!(*CardIdValues)[ReferenceIndexValue].IsValid() || (*CardIdValues)[ReferenceIndexValue]->Type != EJson::String)
+		{
+			continue;
+		}
+
+		const FString ReferencedCardId = (*CardIdValues)[ReferenceIndexValue]->AsString();
+		if (ReferencedCardId.IsEmpty() || !ReferenceIndex.CardIndexById.Contains(ReferencedCardId))
+		{
+			AddMissingReferenceDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::MissingCardReference,
+				CardIndex,
+				OwnerCardId,
+				OwnerEffectId,
+				JsonPath + FString::Printf(TEXT(".card_ids[%d]"), ReferenceIndexValue));
+		}
+	}
+}
+
+void ValidateReferencedEffectRefs(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TSharedPtr<FJsonObject>& ReferencesObject,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex,
+	const int32 CardIndex,
+	const FString& OwnerCardId,
+	const FString& OwnerEffectId,
+	const FString& JsonPath)
+{
+	const TArray<TSharedPtr<FJsonValue>>* EffectReferenceValues = nullptr;
+	if (!ReferencesObject.IsValid()
+		|| !ReferencesObject->TryGetArrayField(TEXT("effect_refs"), EffectReferenceValues)
+		|| EffectReferenceValues == nullptr)
+	{
+		return;
+	}
+
+	for (int32 EffectRefIndex = 0; EffectRefIndex < EffectReferenceValues->Num(); ++EffectRefIndex)
+	{
+		const TSharedPtr<FJsonValue>& EffectReferenceValue = (*EffectReferenceValues)[EffectRefIndex];
+		const TSharedPtr<FJsonObject> EffectReferenceObject =
+			EffectReferenceValue.IsValid() && EffectReferenceValue->Type == EJson::Object
+				? EffectReferenceValue->AsObject()
+				: nullptr;
+		if (!EffectReferenceObject.IsValid())
+		{
+			continue;
+		}
+
+		FString ReferencedCardId;
+		FString ReferencedEffectId;
+		if (!EffectReferenceObject->TryGetStringField(TEXT("card_id"), ReferencedCardId)
+			|| ReferencedCardId.IsEmpty()
+			|| !EffectReferenceObject->TryGetStringField(TEXT("effect_id"), ReferencedEffectId)
+			|| ReferencedEffectId.IsEmpty())
+		{
+			continue;
+		}
+
+		const FString EffectRefPath = JsonPath + FString::Printf(TEXT(".effect_refs[%d]"), EffectRefIndex);
+		if (!ReferenceIndex.CardIndexById.Contains(ReferencedCardId))
+		{
+			AddMissingReferenceDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::MissingCardReference,
+				CardIndex,
+				OwnerCardId,
+				OwnerEffectId,
+				EffectRefPath);
+			continue;
+		}
+
+		const TSet<FString>* ReferencedEffectIds = ReferenceIndex.EffectIdsByCardId.Find(ReferencedCardId);
+		if (ReferencedEffectIds == nullptr || !ReferencedEffectIds->Contains(ReferencedEffectId))
+		{
+			AddMissingReferenceDiagnostic(
+				Result,
+				EWBCardDBSchemaDiagnostic::MissingEffectReference,
+				CardIndex,
+				OwnerCardId,
+				OwnerEffectId,
+				EffectRefPath);
+		}
+	}
+}
+
+void ValidateBundleCrossReferences(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const TArray<TSharedPtr<FJsonValue>>& CardValues,
+	const FWBCardDBBundleReferenceIndex& ReferenceIndex)
+{
+	for (int32 CardIndex = 0; CardIndex < CardValues.Num(); ++CardIndex)
+	{
+		const TSharedPtr<FJsonObject> CardObject =
+			CardValues[CardIndex].IsValid() ? CardValues[CardIndex]->AsObject() : nullptr;
+		if (!CardObject.IsValid())
+		{
+			continue;
+		}
+
+		FString OwnerCardId;
+		CardObject->TryGetStringField(TEXT("card_id"), OwnerCardId);
+
+		const TSharedPtr<FJsonObject>* CardReferencesObject = nullptr;
+		if (TryGetReferencesObjectForResolution(CardObject, CardReferencesObject))
+		{
+			ValidateReferencedCardIds(
+				Result,
+				*CardReferencesObject,
+				ReferenceIndex,
+				CardIndex,
+				OwnerCardId,
+				FString(),
+				CardJsonPath(CardIndex) + TEXT(".references"));
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
+		if (!TryGetEffectArray(CardObject, EffectValues))
+		{
+			continue;
+		}
+
+		for (int32 EffectIndex = 0; EffectIndex < EffectValues->Num(); ++EffectIndex)
+		{
+			const TSharedPtr<FJsonObject> EffectObject =
+				(*EffectValues)[EffectIndex].IsValid() ? (*EffectValues)[EffectIndex]->AsObject() : nullptr;
+			if (!EffectObject.IsValid())
+			{
+				continue;
+			}
+
+			FString OwnerEffectId;
+			EffectObject->TryGetStringField(TEXT("effect_id"), OwnerEffectId);
+			const FString EffectPath = CardJsonPath(CardIndex) + FString::Printf(TEXT(".activated_effects[%d]"), EffectIndex);
+
+			const TSharedPtr<FJsonObject>* EffectReferencesObject = nullptr;
+			if (TryGetReferencesObjectForResolution(EffectObject, EffectReferencesObject))
+			{
+				ValidateReferencedCardIds(
+					Result,
+					*EffectReferencesObject,
+					ReferenceIndex,
+					CardIndex,
+					OwnerCardId,
+					OwnerEffectId,
+					EffectPath + TEXT(".references"));
+				ValidateReferencedEffectRefs(
+					Result,
+					*EffectReferencesObject,
+					ReferenceIndex,
+					CardIndex,
+					OwnerCardId,
+					OwnerEffectId,
+					EffectPath + TEXT(".references"));
+			}
+
+			const TArray<TSharedPtr<FJsonValue>>* PayloadValues = nullptr;
+			if (!EffectObject->TryGetArrayField(TEXT("payloads"), PayloadValues) || PayloadValues == nullptr)
+			{
+				continue;
+			}
+
+			for (int32 PayloadIndex = 0; PayloadIndex < PayloadValues->Num(); ++PayloadIndex)
+			{
+				const TSharedPtr<FJsonObject> PayloadObject =
+					(*PayloadValues)[PayloadIndex].IsValid() ? (*PayloadValues)[PayloadIndex]->AsObject() : nullptr;
+				const TSharedPtr<FJsonObject>* PayloadReferencesObject = nullptr;
+				if (TryGetReferencesObjectForResolution(PayloadObject, PayloadReferencesObject))
+				{
+					ValidateReferencedCardIds(
+						Result,
+						*PayloadReferencesObject,
+						ReferenceIndex,
+						CardIndex,
+						OwnerCardId,
+						OwnerEffectId,
+						EffectPath + FString::Printf(TEXT(".payloads[%d].references"), PayloadIndex));
+				}
+			}
+		}
 	}
 }
 
@@ -1229,8 +1745,9 @@ void ValidateActivatedEffects(
 	}
 
 	TSet<FString> SeenEffectIds;
-	for (const TSharedPtr<FJsonValue>& EffectValue : *EffectValues)
+	for (int32 EffectIndex = 0; EffectIndex < EffectValues->Num(); ++EffectIndex)
 	{
+		const TSharedPtr<FJsonValue>& EffectValue = (*EffectValues)[EffectIndex];
 		const TSharedPtr<FJsonObject> EffectObject = EffectValue.IsValid() ? EffectValue->AsObject() : nullptr;
 		if (!EffectObject.IsValid())
 		{
@@ -1239,6 +1756,7 @@ void ValidateActivatedEffects(
 
 		FWBCardEffectDefinition Effect;
 		EffectObject->TryGetStringField(TEXT("effect_id"), Effect.EffectId);
+		const FString EffectPath = FString::Printf(TEXT("$.activated_effects[%d]"), EffectIndex);
 
 		ValidateAllowedFields(
 			Result,
@@ -1249,6 +1767,7 @@ void ValidateActivatedEffects(
 			CardId,
 			Effect.EffectId);
 		ValidateMetadataAllowedFields(Result, EffectObject, EffectMetadataAllowedFields(), Options, CardId, Effect.EffectId);
+		ValidateReferencesFieldShape(Result, EffectObject, Options, CardId, Effect.EffectId, EffectPath + TEXT(".references"));
 
 		if (Effect.EffectId.IsEmpty())
 		{
@@ -1350,10 +1869,13 @@ void ValidateActivatedEffects(
 		}
 		else
 		{
-			for (const TSharedPtr<FJsonValue>& PayloadValue : *PayloadValues)
+			for (int32 PayloadIndex = 0; PayloadIndex < PayloadValues->Num(); ++PayloadIndex)
 			{
+				const TSharedPtr<FJsonValue>& PayloadValue = (*PayloadValues)[PayloadIndex];
 				const TSharedPtr<FJsonObject> PayloadObject = PayloadValue.IsValid() ? PayloadValue->AsObject() : nullptr;
+				const FString PayloadPath = EffectPath + FString::Printf(TEXT(".payloads[%d]"), PayloadIndex);
 				FWBGenericEffectPayload Payload;
+				ValidateReferencesFieldShape(Result, PayloadObject, Options, CardId, Effect.EffectId, PayloadPath + TEXT(".references"));
 				ValidatePayload(Result, PayloadObject, CardId, Effect.EffectId, Options, Payload);
 				Effect.Payloads.Add(Payload);
 			}
@@ -1418,6 +1940,7 @@ FWBCardDBSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateJsonStr
 		FString());
 	ValidateMetadataAllowedFields(Result, RootObject, CardMetadataAllowedFields(), Options, StrictDiagnosticCardId, FString());
 	ValidateStatsAllowedFields(Result, RootObject, Options, StrictDiagnosticCardId);
+	ValidateReferencesFieldShape(Result, RootObject, Options, StrictDiagnosticCardId, FString(), TEXT("$.references"));
 
 	int32 SchemaVersion = 0;
 	if (!TryReadIntegerField(RootObject, TEXT("schema_version"), SchemaVersion) || SchemaVersion != 1)
@@ -1612,6 +2135,8 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 	else
 	{
 		TSet<FString> SeenCardIds;
+		bool bHasDuplicateCardIds = false;
+		FWBCardDBBundleReferenceIndex ReferenceIndex;
 		for (int32 CardIndex = 0; CardIndex < CardValues->Num(); ++CardIndex)
 		{
 			const TSharedPtr<FJsonValue>& CardValue = (*CardValues)[CardIndex];
@@ -1637,6 +2162,7 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			{
 				if (SeenCardIds.Contains(CardId))
 				{
+					bHasDuplicateCardIds = true;
 					AddDiagnostic(
 						Result,
 						EWBCardDBSchemaDiagnostic::CardIdDuplicate,
@@ -1650,6 +2176,8 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 				else
 				{
 					SeenCardIds.Add(CardId);
+					ReferenceIndex.CardIndexById.Add(CardId, CardIndex);
+					ReferenceIndex.EffectIdsByCardId.Add(CardId, CollectEffectIds(CardObject));
 				}
 			}
 
@@ -1675,6 +2203,11 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			{
 				Result.CardDefinitions.Add(CardResult.CardDefinition);
 			}
+		}
+
+		if (!bHasDuplicateCardIds)
+		{
+			ValidateBundleCrossReferences(Result, *CardValues, ReferenceIndex);
 		}
 	}
 
@@ -1762,6 +2295,14 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 		return TEXT("bundle_schema_version_missing");
 	case EWBCardDBSchemaDiagnostic::BundleSchemaVersionUnsupported:
 		return TEXT("bundle_schema_version_unsupported");
+	case EWBCardDBSchemaDiagnostic::MissingCardReference:
+		return TEXT("missing_card_reference");
+	case EWBCardDBSchemaDiagnostic::MissingEffectReference:
+		return TEXT("missing_effect_reference");
+	case EWBCardDBSchemaDiagnostic::ReferenceMalformed:
+		return TEXT("reference_malformed");
+	case EWBCardDBSchemaDiagnostic::UnknownReferenceField:
+		return TEXT("unknown_reference_field");
 	default:
 		return TEXT("unknown");
 	}

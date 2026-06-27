@@ -130,6 +130,38 @@ Bundle diagnostics now include stable per-card context when diagnostics come fro
 
 Duplicate card id diagnostics report the second duplicate index and `$.cards` path.
 
+## Cross-Reference Validation
+
+Bundle fixtures may now include test-only `references` objects at card, activated-effect, and payload level.
+
+Root-card validation checks reference shape only. Bundle validation resolves references against the card id/effect id index after child card validation.
+
+Supported reference fields:
+
+- `card_ids`
+- `effect_refs`
+- `metadata`
+
+Supported effect reference fields:
+
+- `card_id`
+- `effect_id`
+- `metadata`
+
+Supported reference metadata fields:
+
+- `notes`
+- `test_only`
+
+Cross-reference diagnostics:
+
+- `missing_card_reference`
+- `missing_effect_reference`
+- `reference_malformed`
+- `unknown_reference_field`
+
+Duplicate card ids make the reference index ambiguous, so bundle validation preserves duplicate diagnostics and skips missing-reference resolution for that bundle.
+
 ## Confirmations
 
 - this remains test-only

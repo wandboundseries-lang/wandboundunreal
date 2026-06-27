@@ -1,0 +1,25 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_card_level_reference",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "reference_source_card",
+      "public_name": "Reference Source",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "reference_target_card"
+        ]
+      },
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "reference_target_card",
+      "public_name": "Reference Target",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

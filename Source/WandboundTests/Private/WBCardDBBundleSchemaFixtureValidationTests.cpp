@@ -312,6 +312,22 @@ bool FWBCardDBBundleSchemaDiagnosticCodeStringsStableTest::RunTest(const FString
 		TEXT("BundleSchemaVersionUnsupported string"),
 		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::BundleSchemaVersionUnsupported),
 		FString(TEXT("bundle_schema_version_unsupported")));
+	TestEqual(
+		TEXT("MissingCardReference string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::MissingCardReference),
+		FString(TEXT("missing_card_reference")));
+	TestEqual(
+		TEXT("MissingEffectReference string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::MissingEffectReference),
+		FString(TEXT("missing_effect_reference")));
+	TestEqual(
+		TEXT("ReferenceMalformed string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::ReferenceMalformed),
+		FString(TEXT("reference_malformed")));
+	TestEqual(
+		TEXT("UnknownReferenceField string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::UnknownReferenceField),
+		FString(TEXT("unknown_reference_field")));
 	return true;
 }
 
@@ -505,6 +521,223 @@ bool FWBCardDBBundleSchemaContainsDiagnosticWithContextWorksTest::RunTest(const 
 			TEXT("status_card"),
 			TEXT("bad_status"),
 			TEXT("$.cards[2].activated_effects[0].payloads[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaValidCardLevelReferencePassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ValidCardLevelReferencePasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaValidCardLevelReferencePassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_card_level_reference.json"));
+	TestTrue(TEXT("Valid card-level reference bundle validates"), Result.bOk);
+	TestEqual(TEXT("Valid card-level reference diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaValidEffectReferencePassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ValidEffectReferencePasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaValidEffectReferencePassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_effect_reference.json"));
+	TestTrue(TEXT("Valid effect reference bundle validates"), Result.bOk);
+	TestEqual(TEXT("Valid effect reference diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaValidPayloadReferencePassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ValidPayloadReferencePasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaValidPayloadReferencePassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_payload_reference.json"));
+	TestTrue(TEXT("Valid payload reference bundle validates"), Result.bOk);
+	TestEqual(TEXT("Valid payload reference diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaStrictValidReferencesMetadataPassesTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.StrictValidReferencesMetadataPasses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaStrictValidReferencesMetadataPassesTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixtureStrict(TEXT("strict_valid_bundle_references_metadata.json"));
+	TestTrue(TEXT("Strict valid references metadata validates"), Result.bOk);
+	TestEqual(TEXT("Strict valid references metadata diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMissingCardReferenceCardLevelTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MissingCardReferenceCardLevel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMissingCardReferenceCardLevelTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_missing_card_reference_card_level.json"));
+	TestFalse(TEXT("Missing card reference at card level fails"), Result.bOk);
+	TestTrue(
+		TEXT("Missing card reference has card-level context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::MissingCardReference,
+			0,
+			TEXT("missing_card_reference_source"),
+			FString(),
+			TEXT("$.cards[0].references.card_ids[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMissingCardReferenceEffectLevelTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MissingCardReferenceEffectLevel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMissingCardReferenceEffectLevelTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_missing_card_reference_effect_level.json"));
+	TestFalse(TEXT("Missing card reference at effect level fails"), Result.bOk);
+	TestTrue(
+		TEXT("Missing card reference has effect-level context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::MissingCardReference,
+			0,
+			TEXT("effect_missing_card_source"),
+			TEXT("effect_referrer"),
+			TEXT("$.cards[0].activated_effects[0].references.card_ids[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMissingEffectReferenceTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MissingEffectReference", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMissingEffectReferenceTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_missing_effect_reference.json"));
+	TestFalse(TEXT("Missing effect reference fails"), Result.bOk);
+	TestTrue(
+		TEXT("Missing effect reference has effect-ref context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::MissingEffectReference,
+			0,
+			TEXT("missing_effect_reference_source"),
+			TEXT("effect_referrer"),
+			TEXT("$.cards[0].activated_effects[0].references.effect_refs[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMissingCardInEffectReferenceTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MissingCardInEffectReference", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMissingCardInEffectReferenceTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_missing_card_in_effect_reference.json"));
+	TestFalse(TEXT("Missing card in effect reference fails"), Result.bOk);
+	TestTrue(
+		TEXT("Missing card in effect reference has context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::MissingCardReference,
+			0,
+			TEXT("missing_card_effect_reference_source"),
+			TEXT("effect_referrer"),
+			TEXT("$.cards[0].activated_effects[0].references.effect_refs[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMissingCardReferencePayloadLevelTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MissingCardReferencePayloadLevel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMissingCardReferencePayloadLevelTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_missing_card_reference_payload_level.json"));
+	TestFalse(TEXT("Missing card reference at payload level fails"), Result.bOk);
+	TestTrue(
+		TEXT("Missing card reference has payload-level context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::MissingCardReference,
+			0,
+			TEXT("payload_missing_card_source"),
+			TEXT("payload_referrer"),
+			TEXT("$.cards[0].activated_effects[0].payloads[0].references.card_ids[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaReferencesNotObjectFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ReferencesNotObjectFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaReferencesNotObjectFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(*this, TEXT("invalid_bundle_references_not_object.json"), EWBCardDBSchemaDiagnostic::ReferenceMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaReferenceCardIdsNotArrayFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ReferenceCardIdsNotArrayFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaReferenceCardIdsNotArrayFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_reference_card_ids_not_array.json"),
+		EWBCardDBSchemaDiagnostic::ReferenceMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaReferenceCardIdNotStringFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ReferenceCardIdNotStringFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaReferenceCardIdNotStringFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_reference_card_id_not_string.json"),
+		EWBCardDBSchemaDiagnostic::ReferenceMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaEffectRefsNotArrayFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.EffectRefsNotArrayFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaEffectRefsNotArrayFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_effect_refs_not_array.json"),
+		EWBCardDBSchemaDiagnostic::ReferenceMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaEffectRefNotObjectFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.EffectRefNotObjectFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaEffectRefNotObjectFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_effect_ref_not_object.json"),
+		EWBCardDBSchemaDiagnostic::ReferenceMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaEffectRefMissingFieldsFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.EffectRefMissingFieldsFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaEffectRefMissingFieldsFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectBundleFailsWith(
+		*this,
+		TEXT("invalid_bundle_effect_ref_missing_fields.json"),
+		EWBCardDBSchemaDiagnostic::ReferenceMalformed);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaStrictUnknownReferenceFieldFailsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.StrictUnknownReferenceFieldFails", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaStrictUnknownReferenceFieldFailsTest::RunTest(const FString& Parameters)
+{
+	ExpectStrictBundleFailsWith(
+		*this,
+		TEXT("strict_invalid_bundle_unknown_reference_field.json"),
+		EWBCardDBSchemaDiagnostic::UnknownReferenceField);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaReferenceHiddenTokenSafeTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ReferenceHiddenTokenSafe", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaReferenceHiddenTokenSafeTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_reference_hidden_token_safe.json"));
+	TestFalse(TEXT("Hidden reference token bundle fails"), Result.bOk);
+	TestTrue(TEXT("Missing card reference diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::MissingCardReference));
+
+	for (const FWBCardDBSchemaValidationDiagnostic& Diagnostic : Result.Diagnostics)
+	{
+		TestFalse(TEXT("Message omits SECRET"), Diagnostic.Message.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("JsonPath omits SECRET"), Diagnostic.JsonPath.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("BundleCardId omits SECRET"), Diagnostic.BundleCardId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("CardId omits SECRET"), Diagnostic.CardId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("EffectId omits SECRET"), Diagnostic.EffectId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+	}
+
 	return true;
 }
 

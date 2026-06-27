@@ -1,0 +1,18 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_reference_hidden_token_safe",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "reference_hidden_token_card",
+      "public_name": "Reference Hidden Token",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "SECRET_missing_card"
+        ]
+      },
+      "activated_effects": []
+    }
+  ]
+}

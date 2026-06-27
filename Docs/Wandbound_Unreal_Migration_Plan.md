@@ -1496,6 +1496,23 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Bundle Cross-Reference Diagnostics
+
+- Added test-only `references` shape validation for card, activated-effect, and payload fixture objects.
+- Added bundle-level resolution for referenced card ids and effect ids.
+- Added `missing_card_reference`, `missing_effect_reference`, `reference_malformed`, and `unknown_reference_field` diagnostics.
+- Root-card validation checks reference shape only; bundle validation resolves references.
+- Reference metadata remains authoring/test metadata and does not map into `FWBCardDefinition`.
+- Duplicate card ids preserve duplicate diagnostics and skip reference resolution because the bundle index is ambiguous.
+- Hidden-token diagnostic safety is covered for missing references.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

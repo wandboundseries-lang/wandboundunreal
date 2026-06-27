@@ -1,0 +1,80 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_references_metadata",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "references_metadata_source",
+      "public_name": "Reference Metadata Source",
+      "kind": "fixture",
+      "references": {
+        "card_ids": [
+          "references_metadata_target"
+        ],
+        "metadata": {
+          "notes": "Allowed reference metadata.",
+          "test_only": true
+        }
+      },
+      "activated_effects": [
+        {
+          "effect_id": "metadata_effect",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "references": {
+            "effect_refs": [
+              {
+                "card_id": "references_metadata_target",
+                "effect_id": "metadata_target_effect",
+                "metadata": {
+                  "notes": "Allowed effect ref metadata.",
+                  "test_only": true
+                }
+              }
+            ],
+            "metadata": {
+              "notes": "Allowed effect references metadata.",
+              "test_only": true
+            }
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected",
+              "references": {
+                "card_ids": [
+                  "references_metadata_target"
+                ],
+                "metadata": {
+                  "notes": "Allowed payload reference metadata.",
+                  "test_only": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "references_metadata_target",
+      "public_name": "Reference Metadata Target",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "metadata_target_effect",
+          "public_label": "Deal 1 damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_missing_card_reference_payload_level",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "payload_missing_card_source",
+      "public_name": "Payload Missing Card Source",
+      "kind": "fixture",
+      "activated_effects": [
+        {
+          "effect_id": "payload_referrer",
+          "public_label": "Deal 1 damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 1,
+              "target": "selected",
+              "references": {
+                "card_ids": [
+                  "missing_payload_target_card"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

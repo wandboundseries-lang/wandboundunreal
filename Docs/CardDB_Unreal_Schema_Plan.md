@@ -550,6 +550,10 @@ Diagnostic categories:
 - `card_id_duplicate`
 - `bundle_schema_version_missing`
 - `bundle_schema_version_unsupported`
+- `missing_card_reference`
+- `missing_effect_reference`
+- `reference_malformed`
+- `unknown_reference_field`
 - `hidden_info_policy_violation`
 - `player_facing_label_contains_internal_term`
 
@@ -586,6 +590,17 @@ Bundle diagnostic reporting now records stable context for fixture tests:
 - stable JSON path
 
 Future production importer diagnostics should preserve equivalent context without logging hidden values or full JSON snippets. Bundle-level diagnostics should appear before card-level diagnostics when detected first, and card-level diagnostics should remain in `cards[]` order.
+
+Test-only bundle reference validation now exists for `references` objects on cards, activated effects, and payloads.
+
+Policy:
+
+- root-card validation checks reference shape only.
+- bundle validation resolves `card_ids` and `effect_refs`.
+- reference data does not map into `FWBCardDefinition`.
+- duplicate card ids skip reference resolution because the bundle index is ambiguous.
+- missing references use generic diagnostics and safe owner context only.
+- strict mode rejects unknown reference fields with `unknown_reference_field`.
 
 ## Future CardDB Import Milestones
 
