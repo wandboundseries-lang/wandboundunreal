@@ -1,0 +1,13 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_hidden_token_safety",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "bundle_hidden_token_card",
+      "public_name": "SECRET_Hidden Name",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}

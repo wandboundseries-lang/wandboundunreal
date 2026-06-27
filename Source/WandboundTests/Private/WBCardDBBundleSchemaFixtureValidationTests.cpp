@@ -54,6 +54,21 @@ bool HasDiagnostic(
 	return false;
 }
 
+const FWBCardDBSchemaValidationDiagnostic* FindDiagnostic(
+	const FWBCardDBBundleSchemaValidationResult& Result,
+	const EWBCardDBSchemaDiagnostic ExpectedCode)
+{
+	for (const FWBCardDBSchemaValidationDiagnostic& Diagnostic : Result.Diagnostics)
+	{
+		if (Diagnostic.Code == ExpectedCode)
+		{
+			return &Diagnostic;
+		}
+	}
+
+	return nullptr;
+}
+
 bool ExpectBundleFailsWith(
 	FAutomationTestBase& Test,
 	const FString& FileName,
@@ -297,6 +312,199 @@ bool FWBCardDBBundleSchemaDiagnosticCodeStringsStableTest::RunTest(const FString
 		TEXT("BundleSchemaVersionUnsupported string"),
 		FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(EWBCardDBSchemaDiagnostic::BundleSchemaVersionUnsupported),
 		FString(TEXT("bundle_schema_version_unsupported")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaMultipleInvalidCardsReportContextTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.MultipleInvalidCardsReportContext", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaMultipleInvalidCardsReportContextTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_multiple_invalid_cards.json"));
+	TestFalse(TEXT("Multiple invalid cards bundle fails"), Result.bOk);
+	TestTrue(
+		TEXT("Missing public name has card context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::PublicNameMissing,
+			0,
+			TEXT("bundle_missing_public_name"),
+			FString(),
+			TEXT("$.cards[0].public_name")));
+	TestTrue(
+		TEXT("Unsupported payload has card/effect/payload context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::UnsupportedPayloadType,
+			1,
+			TEXT("bundle_unsupported_payload"),
+			TEXT("draw_2"),
+			TEXT("$.cards[1].activated_effects[0].payloads[0]")));
+	TestTrue(
+		TEXT("Invalid status has card/effect/payload context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::InvalidStatusId,
+			2,
+			TEXT("bundle_invalid_status"),
+			TEXT("bad_status"),
+			TEXT("$.cards[2].activated_effects[0].payloads[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaEffectContextPreservedTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.EffectContextPreserved", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaEffectContextPreservedTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_card_effect_context.json"));
+	TestFalse(TEXT("Effect context bundle fails"), Result.bOk);
+	TestTrue(
+		TEXT("Effect context includes card index, card id, effect id, and payload path"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::UnsupportedPayloadType,
+			0,
+			TEXT("bundle_effect_context_card"),
+			TEXT("bad_effect"),
+			TEXT("$.cards[0].activated_effects[0].payloads[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDuplicateCardIdContextTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DuplicateCardIdContext", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDuplicateCardIdContextTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_duplicate_card_context.json"));
+	TestFalse(TEXT("Duplicate card context bundle fails"), Result.bOk);
+	TestTrue(
+		TEXT("Duplicate card id reports the second duplicate index"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::CardIdDuplicate,
+			2,
+			TEXT("duplicate_context_card"),
+			FString(),
+			TEXT("$.cards")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaBundleDiagnosticsPrecedeCardDiagnosticsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.BundleDiagnosticsPrecedeCardDiagnostics", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaBundleDiagnosticsPrecedeCardDiagnosticsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixtureStrict(TEXT("invalid_bundle_mixed_bundle_and_card_errors.json"));
+	TestFalse(TEXT("Mixed bundle/card errors fail"), Result.bOk);
+	TestTrue(TEXT("Mixed diagnostics exist"), Result.Diagnostics.Num() >= 2);
+	if (Result.Diagnostics.Num() >= 2)
+	{
+		TestEqual(TEXT("Bundle-level diagnostic appears first"), Result.Diagnostics[0].Code, EWBCardDBSchemaDiagnostic::UnknownTopLevelField);
+		TestEqual(TEXT("Bundle-level diagnostic path"), Result.Diagnostics[0].JsonPath, FString(TEXT("$")));
+	}
+
+	TestTrue(
+		TEXT("Card-level missing effect id keeps context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Result.Diagnostics,
+			EWBCardDBSchemaDiagnostic::EffectIdMissing,
+			0,
+			TEXT("bundle_missing_effect_id"),
+			FString(),
+			TEXT("$.cards[0].activated_effects[0].effect_id")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaHiddenTokenNotLeakedTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.HiddenTokenNotLeaked", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaHiddenTokenNotLeakedTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("invalid_bundle_hidden_token_not_in_diagnostics.json"));
+	TestFalse(TEXT("Hidden-token bundle fails"), Result.bOk);
+	TestTrue(TEXT("Hidden-token diagnostic present"), HasDiagnostic(Result, EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation));
+
+	for (const FWBCardDBSchemaValidationDiagnostic& Diagnostic : Result.Diagnostics)
+	{
+		TestFalse(TEXT("Message omits SECRET"), Diagnostic.Message.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("JsonPath omits SECRET"), Diagnostic.JsonPath.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("BundleCardId omits SECRET"), Diagnostic.BundleCardId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("CardId omits SECRET"), Diagnostic.CardId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+		TestFalse(TEXT("EffectId omits SECRET"), Diagnostic.EffectId.Contains(TEXT("SECRET"), ESearchCase::IgnoreCase));
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaValidBundleHasNoDiagnosticsTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ValidBundleHasNoDiagnostics", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaValidBundleHasNoDiagnosticsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBBundleSchemaValidationResult Result =
+		ValidateBundleFixture(TEXT("valid_bundle_context_fields_absent.json"));
+	TestTrue(TEXT("Valid context bundle validates"), Result.bOk);
+	TestEqual(TEXT("Valid context bundle diagnostics"), Result.Diagnostics.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaRootCardDiagnosticContextAbsentTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.RootCardDiagnosticContextAbsent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaRootCardDiagnosticContextAbsentTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDBSchemaValidationResult Result =
+		FWBCardDBSchemaFixtureValidator::ValidateFixtureFile(CardDBSchemaFixturePath(TEXT("invalid_missing_public_name.json")));
+	TestFalse(TEXT("Root invalid card fails"), Result.bOk);
+	TestTrue(TEXT("Root invalid card has diagnostics"), Result.Diagnostics.Num() > 0);
+	if (Result.Diagnostics.Num() > 0)
+	{
+		TestEqual(TEXT("Root diagnostic card index stays absent"), Result.Diagnostics[0].CardIndex, -1);
+		TestEqual(TEXT("Root diagnostic bundle card id stays absent"), Result.Diagnostics[0].BundleCardId, FString());
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaDiagnosticContextStringStableTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.DiagnosticContextStringStable", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaDiagnosticContextStringStableTest::RunTest(const FString& Parameters)
+{
+	FWBCardDBSchemaValidationDiagnostic Diagnostic;
+	Diagnostic.Code = EWBCardDBSchemaDiagnostic::UnsupportedPayloadType;
+	Diagnostic.CardIndex = 3;
+	Diagnostic.BundleCardId = TEXT("safe_card");
+	Diagnostic.CardId = TEXT("safe_card");
+	Diagnostic.EffectId = TEXT("safe_effect");
+	Diagnostic.JsonPath = TEXT("$.cards[3].activated_effects[0].payloads[0]");
+
+	TestEqual(
+		TEXT("Diagnostic context string"),
+		FWBCardDBSchemaFixtureValidator::DiagnosticContextToStringForTest(Diagnostic),
+		FString(TEXT("code=unsupported_payload_type;card_index=3;bundle_card_id=safe_card;card_id=safe_card;effect_id=safe_effect;json_path=$.cards[3].activated_effects[0].payloads[0]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDBBundleSchemaContainsDiagnosticWithContextWorksTest, "Wandbound.Core.CardDBBundleSchemaFixtureValidation.ContainsDiagnosticWithContextWorks", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDBBundleSchemaContainsDiagnosticWithContextWorksTest::RunTest(const FString& Parameters)
+{
+	FWBCardDBSchemaValidationDiagnostic Diagnostic;
+	Diagnostic.Code = EWBCardDBSchemaDiagnostic::InvalidStatusId;
+	Diagnostic.CardIndex = 2;
+	Diagnostic.BundleCardId = TEXT("status_card");
+	Diagnostic.EffectId = TEXT("bad_status");
+	Diagnostic.JsonPath = TEXT("$.cards[2].activated_effects[0].payloads[0]");
+
+	TArray<FWBCardDBSchemaValidationDiagnostic> Diagnostics;
+	Diagnostics.Add(Diagnostic);
+	TestTrue(
+		TEXT("Helper finds exact context"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Diagnostics,
+			EWBCardDBSchemaDiagnostic::InvalidStatusId,
+			2,
+			TEXT("status_card"),
+			TEXT("bad_status"),
+			TEXT("$.cards[2].activated_effects[0].payloads[0]")));
+	TestFalse(
+		TEXT("Helper rejects wrong index"),
+		FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+			Diagnostics,
+			EWBCardDBSchemaDiagnostic::InvalidStatusId,
+			1,
+			TEXT("status_card"),
+			TEXT("bad_status"),
+			TEXT("$.cards[2].activated_effects[0].payloads[0]")));
 	return true;
 }
 

@@ -1,0 +1,27 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_context_fields_absent",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "bundle_context_valid_card",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "public_text": "Activate: Deal 2 damage.",
+      "activated_effects": [
+        {
+          "effect_id": "deal_2",
+          "public_label": "Deal 2 damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

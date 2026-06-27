@@ -1481,6 +1481,21 @@
 - No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
 - No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Milestone - Test-Only CardDB Bundle Diagnostic Reporting
+
+- Added stable bundle diagnostic context for card index, safe card id, effect id, and JSON path.
+- Multi-card invalid bundle coverage was added.
+- Duplicate card id diagnostics report the second duplicate index.
+- Bundle-level diagnostics appear before card-level diagnostics when detected first.
+- Hidden-token diagnostic safety is covered.
+- No production importer was implemented.
+- No production loader was added.
+- No production zones were added.
+- No Core or Runtime source files were changed.
+- No runtime activation behavior was changed.
+- No `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` behavior was changed.
+- No UI, target picking, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
 ## Phase 12 - Asset Migration
 
 - card art

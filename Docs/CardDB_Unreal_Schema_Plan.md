@@ -578,6 +578,15 @@ Strict fixture validation exists as an explicit option for unknown-field rejecti
 
 Test-only bundle validation also exists for future production-shaped `cards[]` fixtures. It validates bundle fields, aggregates root-card diagnostics, rejects duplicate card ids, and maps valid bundle cards into `FWBCardDefinition` values for validation only.
 
+Bundle diagnostic reporting now records stable context for fixture tests:
+
+- zero-based card index for `cards[]` entries
+- safe bundle card id
+- effect id when available
+- stable JSON path
+
+Future production importer diagnostics should preserve equivalent context without logging hidden values or full JSON snippets. Bundle-level diagnostics should appear before card-level diagnostics when detected first, and card-level diagnostics should remain in `cards[]` order.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

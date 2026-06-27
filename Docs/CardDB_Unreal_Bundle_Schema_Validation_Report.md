@@ -119,6 +119,17 @@ Added invalid bundle fixtures:
 
 Bundle validation serializes each card object and validates it through the existing root-card `ValidateJsonString` path. This keeps root-card required-field, payload, source gate, cost gate, label, hidden-info, and strict unknown-field behavior centralized.
 
+## Diagnostic Context
+
+Bundle diagnostics now include stable per-card context when diagnostics come from `cards[]` entries:
+
+- zero-based card index
+- safe bundle card id
+- existing effect id
+- stable JSON path
+
+Duplicate card id diagnostics report the second duplicate index and `$.cards` path.
+
 ## Confirmations
 
 - this remains test-only

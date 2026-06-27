@@ -4681,3 +4681,67 @@ notRun=0
 - Existing root-card fixture validation remains unchanged.
 - No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Test-Only CardDB Bundle Diagnostic Reporting Pass
+
+## Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 1.08 seconds
+Target is up to date
+```
+
+## Targeted CardDB Schema Validation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDB; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBSchemaValidation'
+```
+
+Final result from `Saved/AutomationReports/CardDBSchemaValidation/index.json`:
+
+```text
+succeeded=74
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=830
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+## Notes
+
+- Added stable bundle diagnostic context fields: card index, bundle card id, existing effect id, and JSON path.
+- Added multi-card invalid bundle fixtures.
+- Added duplicate-card context coverage using the second duplicate index.
+- Added hidden-token diagnostic safety coverage.
+- Added test-only diagnostic context helper coverage.
+- No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
+- No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.

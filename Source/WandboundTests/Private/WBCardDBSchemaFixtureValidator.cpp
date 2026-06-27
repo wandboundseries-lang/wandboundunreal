@@ -13,13 +13,19 @@ void AddDiagnostic(
 	const EWBCardDBSchemaDiagnostic Code,
 	const FString& Message,
 	const FString& CardId,
-	const FString& EffectId)
+	const FString& EffectId,
+	const int32 CardIndex = -1,
+	const FString& BundleCardId = FString(),
+	const FString& JsonPath = FString())
 {
 	FWBCardDBSchemaValidationDiagnostic Diagnostic;
 	Diagnostic.Code = Code;
 	Diagnostic.Message = Message;
 	Diagnostic.CardId = CardId;
 	Diagnostic.EffectId = EffectId;
+	Diagnostic.CardIndex = CardIndex;
+	Diagnostic.BundleCardId = BundleCardId;
+	Diagnostic.JsonPath = JsonPath;
 	Result.Diagnostics.Add(Diagnostic);
 }
 
@@ -28,13 +34,19 @@ void AddDiagnostic(
 	const EWBCardDBSchemaDiagnostic Code,
 	const FString& Message,
 	const FString& CardId,
-	const FString& EffectId)
+	const FString& EffectId,
+	const int32 CardIndex = -1,
+	const FString& BundleCardId = FString(),
+	const FString& JsonPath = FString())
 {
 	FWBCardDBSchemaValidationDiagnostic Diagnostic;
 	Diagnostic.Code = Code;
 	Diagnostic.Message = Message;
 	Diagnostic.CardId = CardId;
 	Diagnostic.EffectId = EffectId;
+	Diagnostic.CardIndex = CardIndex;
+	Diagnostic.BundleCardId = BundleCardId;
+	Diagnostic.JsonPath = JsonPath;
 	Result.Diagnostics.Add(Diagnostic);
 }
 
@@ -200,7 +212,8 @@ void ValidateAllowedFields(
 	const EWBCardDBSchemaDiagnostic DiagnosticCode,
 	const FWBCardDBSchemaValidationOptions& Options,
 	const FString& CardId,
-	const FString& EffectId)
+	const FString& EffectId,
+	const FString& JsonPath = FString())
 {
 	if (!Options.bStrictUnknownFieldRejection || !Object.IsValid())
 	{
@@ -220,7 +233,10 @@ void ValidateAllowedFields(
 				DiagnosticCode,
 				FString::Printf(TEXT("unknown field: %s"), *FieldName),
 				CardId,
-				EffectId);
+				EffectId,
+				-1,
+				FString(),
+				JsonPath);
 		}
 	}
 }
@@ -232,7 +248,8 @@ void ValidateMetadataAllowedFields(
 	const TArray<FString>& AllowedFieldNames,
 	const FWBCardDBSchemaValidationOptions& Options,
 	const FString& CardId,
-	const FString& EffectId)
+	const FString& EffectId,
+	const FString& JsonPath = FString())
 {
 	if (!Options.bStrictUnknownFieldRejection || !Object.IsValid() || !Object->HasField(TEXT("metadata")))
 	{
@@ -249,7 +266,10 @@ void ValidateMetadataAllowedFields(
 			EWBCardDBSchemaDiagnostic::UnknownMetadataField,
 			TEXT("metadata must be an object"),
 			CardId,
-			EffectId);
+			EffectId,
+			-1,
+			FString(),
+			JsonPath);
 		return;
 	}
 
@@ -260,7 +280,8 @@ void ValidateMetadataAllowedFields(
 		EWBCardDBSchemaDiagnostic::UnknownMetadataField,
 		Options,
 		CardId,
-		EffectId);
+		EffectId,
+		JsonPath);
 }
 
 void ValidateStatsAllowedFields(
@@ -290,13 +311,6 @@ void ValidateStatsAllowedFields(
 	}
 }
 
-void AppendDiagnostics(
-	FWBCardDBBundleSchemaValidationResult& Result,
-	const FWBCardDBSchemaValidationResult& CardResult)
-{
-	Result.Diagnostics.Append(CardResult.Diagnostics);
-}
-
 bool SerializeJsonObjectToString(const TSharedPtr<FJsonObject>& Object, FString& OutJson)
 {
 	if (!Object.IsValid())
@@ -306,6 +320,237 @@ bool SerializeJsonObjectToString(const TSharedPtr<FJsonObject>& Object, FString&
 
 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutJson);
 	return FJsonSerializer::Serialize(Object.ToSharedRef(), Writer);
+}
+
+bool ContainsHiddenDiagnosticTerm(const FString& Value)
+{
+	static const TArray<FString> HiddenTerms = {
+		TEXT("SECRET"),
+		TEXT("hidden_hand"),
+		TEXT("opponent_hand"),
+		TEXT("deck_card_id"),
+		TEXT("marker_identity")
+	};
+
+	for (const FString& HiddenTerm : HiddenTerms)
+	{
+		if (Value.Contains(HiddenTerm, ESearchCase::IgnoreCase))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FString SafeDiagnosticIdentifier(const FString& Value)
+{
+	return ContainsHiddenDiagnosticTerm(Value) ? FString() : Value;
+}
+
+FString CardJsonPath(const int32 CardIndex)
+{
+	return FString::Printf(TEXT("$.cards[%d]"), CardIndex);
+}
+
+bool IsKnownPayloadTypeForPath(const FString& PayloadType)
+{
+	return PayloadType.Equals(TEXT("damage_effect"), ESearchCase::IgnoreCase)
+		|| PayloadType.Equals(TEXT("heal_effect"), ESearchCase::IgnoreCase)
+		|| PayloadType.Equals(TEXT("armor_effect"), ESearchCase::IgnoreCase)
+		|| PayloadType.Equals(TEXT("status_effect"), ESearchCase::IgnoreCase);
+}
+
+bool TryGetEffectArray(
+	const TSharedPtr<FJsonObject>& CardObject,
+	const TArray<TSharedPtr<FJsonValue>>*& OutEffectValues)
+{
+	OutEffectValues = nullptr;
+	return CardObject.IsValid()
+		&& CardObject->TryGetArrayField(TEXT("activated_effects"), OutEffectValues)
+		&& OutEffectValues != nullptr;
+}
+
+int32 FindEffectIndexForDiagnostic(
+	const TSharedPtr<FJsonObject>& CardObject,
+	const FWBCardDBSchemaValidationDiagnostic& Diagnostic)
+{
+	const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
+	if (!TryGetEffectArray(CardObject, EffectValues))
+	{
+		return INDEX_NONE;
+	}
+
+	for (int32 EffectIndex = 0; EffectIndex < EffectValues->Num(); ++EffectIndex)
+	{
+		const TSharedPtr<FJsonObject> EffectObject =
+			(*EffectValues)[EffectIndex].IsValid() ? (*EffectValues)[EffectIndex]->AsObject() : nullptr;
+		if (!EffectObject.IsValid())
+		{
+			continue;
+		}
+
+		FString EffectId;
+		EffectObject->TryGetStringField(TEXT("effect_id"), EffectId);
+		if (!Diagnostic.EffectId.IsEmpty() && EffectId == Diagnostic.EffectId)
+		{
+			return EffectIndex;
+		}
+
+		if (Diagnostic.Code == EWBCardDBSchemaDiagnostic::EffectIdMissing && EffectId.IsEmpty())
+		{
+			return EffectIndex;
+		}
+	}
+
+	return EffectValues->Num() > 0 ? 0 : INDEX_NONE;
+}
+
+TSharedPtr<FJsonObject> GetEffectObjectAt(const TSharedPtr<FJsonObject>& CardObject, const int32 EffectIndex)
+{
+	const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
+	if (EffectIndex == INDEX_NONE || !TryGetEffectArray(CardObject, EffectValues) || !EffectValues->IsValidIndex(EffectIndex))
+	{
+		return nullptr;
+	}
+
+	return (*EffectValues)[EffectIndex].IsValid() ? (*EffectValues)[EffectIndex]->AsObject() : nullptr;
+}
+
+int32 FindPayloadIndexForDiagnostic(
+	const TSharedPtr<FJsonObject>& EffectObject,
+	const EWBCardDBSchemaDiagnostic Code)
+{
+	const TArray<TSharedPtr<FJsonValue>>* PayloadValues = nullptr;
+	if (!EffectObject.IsValid()
+		|| !EffectObject->TryGetArrayField(TEXT("payloads"), PayloadValues)
+		|| PayloadValues == nullptr)
+	{
+		return INDEX_NONE;
+	}
+
+	for (int32 PayloadIndex = 0; PayloadIndex < PayloadValues->Num(); ++PayloadIndex)
+	{
+		const TSharedPtr<FJsonObject> PayloadObject =
+			(*PayloadValues)[PayloadIndex].IsValid() ? (*PayloadValues)[PayloadIndex]->AsObject() : nullptr;
+		if (!PayloadObject.IsValid())
+		{
+			continue;
+		}
+
+		FString PayloadType;
+		PayloadObject->TryGetStringField(TEXT("type"), PayloadType);
+		if (Code == EWBCardDBSchemaDiagnostic::UnsupportedPayloadType
+			&& (PayloadType.IsEmpty() || !IsKnownPayloadTypeForPath(PayloadType)))
+		{
+			return PayloadIndex;
+		}
+
+		if (Code == EWBCardDBSchemaDiagnostic::InvalidStatusId
+			&& PayloadType.Equals(TEXT("status_effect"), ESearchCase::IgnoreCase))
+		{
+			return PayloadIndex;
+		}
+
+		if (Code == EWBCardDBSchemaDiagnostic::UnsupportedPayloadOperation
+			|| Code == EWBCardDBSchemaDiagnostic::InvalidNumericField
+			|| Code == EWBCardDBSchemaDiagnostic::UnknownPayloadField)
+		{
+			return PayloadIndex;
+		}
+	}
+
+	return PayloadValues->Num() > 0 ? 0 : INDEX_NONE;
+}
+
+FString InferBundleCardDiagnosticJsonPath(
+	const TSharedPtr<FJsonObject>& CardObject,
+	const FWBCardDBSchemaValidationDiagnostic& Diagnostic,
+	const int32 CardIndex)
+{
+	const FString BasePath = CardJsonPath(CardIndex);
+
+	switch (Diagnostic.Code)
+	{
+	case EWBCardDBSchemaDiagnostic::SchemaVersionMissing:
+		return BasePath + TEXT(".schema_version");
+	case EWBCardDBSchemaDiagnostic::CardIdMissing:
+		return BasePath + TEXT(".card_id");
+	case EWBCardDBSchemaDiagnostic::PublicNameMissing:
+		return BasePath + TEXT(".public_name");
+	case EWBCardDBSchemaDiagnostic::UnsupportedCardKind:
+		return BasePath + TEXT(".kind");
+	case EWBCardDBSchemaDiagnostic::ActivatedEffectsMalformed:
+		return BasePath + TEXT(".activated_effects");
+	case EWBCardDBSchemaDiagnostic::UnknownTopLevelField:
+		return BasePath;
+	case EWBCardDBSchemaDiagnostic::UnknownCardField:
+		return BasePath + TEXT(".stats");
+	default:
+		break;
+	}
+
+	const int32 EffectIndex = FindEffectIndexForDiagnostic(CardObject, Diagnostic);
+	if (EffectIndex == INDEX_NONE)
+	{
+		return BasePath;
+	}
+
+	const FString EffectPath = BasePath + FString::Printf(TEXT(".activated_effects[%d]"), EffectIndex);
+	switch (Diagnostic.Code)
+	{
+	case EWBCardDBSchemaDiagnostic::EffectIdMissing:
+	case EWBCardDBSchemaDiagnostic::EffectIdDuplicate:
+		return EffectPath + TEXT(".effect_id");
+	case EWBCardDBSchemaDiagnostic::PlayerFacingLabelContainsInternalTerm:
+	case EWBCardDBSchemaDiagnostic::HiddenInfoPolicyViolation:
+		return Diagnostic.EffectId.IsEmpty() ? BasePath : EffectPath + TEXT(".public_label");
+	case EWBCardDBSchemaDiagnostic::UnsupportedTargetRequirement:
+		return EffectPath + TEXT(".target_requirement");
+	case EWBCardDBSchemaDiagnostic::SourceGateMalformed:
+	case EWBCardDBSchemaDiagnostic::UnsupportedSourceZone:
+	case EWBCardDBSchemaDiagnostic::UnsupportedTiming:
+	case EWBCardDBSchemaDiagnostic::UnknownSourceGateField:
+		return EffectPath + TEXT(".source_gate");
+	case EWBCardDBSchemaDiagnostic::CostGateMalformed:
+	case EWBCardDBSchemaDiagnostic::InvalidRRCost:
+	case EWBCardDBSchemaDiagnostic::UnknownCostGateField:
+		return EffectPath + TEXT(".source_gate.cost_gate");
+	case EWBCardDBSchemaDiagnostic::PayloadsMissing:
+	case EWBCardDBSchemaDiagnostic::PayloadsMalformed:
+	case EWBCardDBSchemaDiagnostic::PayloadsEmpty:
+		return EffectPath + TEXT(".payloads");
+	default:
+		break;
+	}
+
+	const TSharedPtr<FJsonObject> EffectObject = GetEffectObjectAt(CardObject, EffectIndex);
+	const int32 PayloadIndex = FindPayloadIndexForDiagnostic(EffectObject, Diagnostic.Code);
+	if (PayloadIndex != INDEX_NONE)
+	{
+		return EffectPath + FString::Printf(TEXT(".payloads[%d]"), PayloadIndex);
+	}
+
+	return EffectPath;
+}
+
+void AppendDiagnostics(
+	FWBCardDBBundleSchemaValidationResult& Result,
+	const FWBCardDBSchemaValidationResult& CardResult,
+	const TSharedPtr<FJsonObject>& CardObject,
+	const int32 CardIndex,
+	const FString& BundleCardId)
+{
+	const FString SafeBundleCardId = SafeDiagnosticIdentifier(BundleCardId);
+	for (FWBCardDBSchemaValidationDiagnostic Diagnostic : CardResult.Diagnostics)
+	{
+		Diagnostic.CardIndex = CardIndex;
+		Diagnostic.BundleCardId = SafeBundleCardId;
+		Diagnostic.CardId = SafeDiagnosticIdentifier(Diagnostic.CardId);
+		Diagnostic.EffectId = SafeDiagnosticIdentifier(Diagnostic.EffectId);
+		Diagnostic.JsonPath = InferBundleCardDiagnosticJsonPath(CardObject, Diagnostic, CardIndex);
+		Result.Diagnostics.Add(Diagnostic);
+	}
 }
 
 bool TryReadIntegerField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName, int32& OutValue)
@@ -1283,8 +1528,9 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 		EWBCardDBSchemaDiagnostic::UnknownTopLevelField,
 		Options,
 		FString(),
-		FString());
-	ValidateMetadataAllowedFields(Result, RootObject, CardMetadataAllowedFields(), Options, FString(), FString());
+		FString(),
+		TEXT("$"));
+	ValidateMetadataAllowedFields(Result, RootObject, CardMetadataAllowedFields(), Options, FString(), FString(), TEXT("$.metadata"));
 
 	int32 BundleSchemaVersion = 0;
 	if (!TryReadIntegerField(RootObject, TEXT("bundle_schema_version"), BundleSchemaVersion))
@@ -1294,7 +1540,10 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			EWBCardDBSchemaDiagnostic::BundleSchemaVersionMissing,
 			TEXT("bundle_schema_version is required and must equal 1"),
 			FString(),
-			FString());
+			FString(),
+			-1,
+			FString(),
+			TEXT("$.bundle_schema_version"));
 	}
 	else if (BundleSchemaVersion != 1)
 	{
@@ -1303,7 +1552,10 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			EWBCardDBSchemaDiagnostic::BundleSchemaVersionUnsupported,
 			TEXT("bundle_schema_version must equal 1"),
 			FString(),
-			FString());
+			FString(),
+			-1,
+			FString(),
+			TEXT("$.bundle_schema_version"));
 	}
 
 	FString CardDBVersion;
@@ -1314,7 +1566,10 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			EWBCardDBSchemaDiagnostic::CardDBVersionMissing,
 			TEXT("carddb_version is required"),
 			FString(),
-			FString());
+			FString(),
+			-1,
+			FString(),
+			TEXT("$.carddb_version"));
 	}
 
 	const TArray<TSharedPtr<FJsonValue>>* CardValues = nullptr;
@@ -1325,7 +1580,10 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			EWBCardDBSchemaDiagnostic::CardsMissing,
 			TEXT("cards is required"),
 			FString(),
-			FString());
+			FString(),
+			-1,
+			FString(),
+			TEXT("$.cards"));
 	}
 	else if (!RootObject->TryGetArrayField(TEXT("cards"), CardValues) || CardValues == nullptr)
 	{
@@ -1334,7 +1592,10 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			EWBCardDBSchemaDiagnostic::CardsMalformed,
 			TEXT("cards must be an array"),
 			FString(),
-			FString());
+			FString(),
+			-1,
+			FString(),
+			TEXT("$.cards"));
 	}
 	else if (CardValues->Num() == 0)
 	{
@@ -1343,13 +1604,17 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 			EWBCardDBSchemaDiagnostic::CardsEmpty,
 			TEXT("cards must not be empty"),
 			FString(),
-			FString());
+			FString(),
+			-1,
+			FString(),
+			TEXT("$.cards"));
 	}
 	else
 	{
 		TSet<FString> SeenCardIds;
-		for (const TSharedPtr<FJsonValue>& CardValue : *CardValues)
+		for (int32 CardIndex = 0; CardIndex < CardValues->Num(); ++CardIndex)
 		{
+			const TSharedPtr<FJsonValue>& CardValue = (*CardValues)[CardIndex];
 			const TSharedPtr<FJsonObject> CardObject = CardValue.IsValid() ? CardValue->AsObject() : nullptr;
 			if (!CardObject.IsValid())
 			{
@@ -1358,12 +1623,16 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 					EWBCardDBSchemaDiagnostic::CardsMalformed,
 					TEXT("cards entries must be objects"),
 					FString(),
-					FString());
+					FString(),
+					CardIndex,
+					FString(),
+					CardJsonPath(CardIndex));
 				continue;
 			}
 
 			FString CardId;
 			CardObject->TryGetStringField(TEXT("card_id"), CardId);
+			const FString SafeCardId = SafeDiagnosticIdentifier(CardId);
 			if (!CardId.IsEmpty())
 			{
 				if (SeenCardIds.Contains(CardId))
@@ -1372,8 +1641,11 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 						Result,
 						EWBCardDBSchemaDiagnostic::CardIdDuplicate,
 						TEXT("card_id must be unique within the bundle"),
-						CardId,
-						FString());
+						SafeCardId,
+						FString(),
+						CardIndex,
+						SafeCardId,
+						TEXT("$.cards"));
 				}
 				else
 				{
@@ -1388,14 +1660,17 @@ FWBCardDBBundleSchemaValidationResult FWBCardDBSchemaFixtureValidator::ValidateB
 					Result,
 					EWBCardDBSchemaDiagnostic::JsonParseFailed,
 					TEXT("card object could not be serialized for validation"),
-					CardId,
-					FString());
+					SafeCardId,
+					FString(),
+					CardIndex,
+					SafeCardId,
+					CardJsonPath(CardIndex));
 				continue;
 			}
 
 			const FWBCardDBSchemaValidationResult CardResult =
 				ValidateJsonString(CardJson, SourcePathForDiagnostics, Options);
-			AppendDiagnostics(Result, CardResult);
+			AppendDiagnostics(Result, CardResult, CardObject, CardIndex, CardId);
 			if (CardResult.bOk)
 			{
 				Result.CardDefinitions.Add(CardResult.CardDefinition);
@@ -1490,4 +1765,40 @@ FString FWBCardDBSchemaFixtureValidator::DiagnosticCodeToString(const EWBCardDBS
 	default:
 		return TEXT("unknown");
 	}
+}
+
+FString FWBCardDBSchemaFixtureValidator::DiagnosticContextToStringForTest(
+	const FWBCardDBSchemaValidationDiagnostic& Diagnostic)
+{
+	return FString::Printf(
+		TEXT("code=%s;card_index=%d;bundle_card_id=%s;card_id=%s;effect_id=%s;json_path=%s"),
+		*DiagnosticCodeToString(Diagnostic.Code),
+		Diagnostic.CardIndex,
+		*Diagnostic.BundleCardId,
+		*Diagnostic.CardId,
+		*Diagnostic.EffectId,
+		*Diagnostic.JsonPath);
+}
+
+bool FWBCardDBSchemaFixtureValidator::ContainsDiagnosticWithContext(
+	const TArray<FWBCardDBSchemaValidationDiagnostic>& Diagnostics,
+	const EWBCardDBSchemaDiagnostic Code,
+	const int32 ExpectedCardIndex,
+	const FString& ExpectedCardId,
+	const FString& ExpectedEffectId,
+	const FString& ExpectedJsonPath)
+{
+	for (const FWBCardDBSchemaValidationDiagnostic& Diagnostic : Diagnostics)
+	{
+		if (Diagnostic.Code == Code
+			&& Diagnostic.CardIndex == ExpectedCardIndex
+			&& Diagnostic.BundleCardId == ExpectedCardId
+			&& Diagnostic.EffectId == ExpectedEffectId
+			&& Diagnostic.JsonPath == ExpectedJsonPath)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

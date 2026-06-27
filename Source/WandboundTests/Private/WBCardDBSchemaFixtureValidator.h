@@ -51,6 +51,9 @@ struct FWBCardDBSchemaValidationDiagnostic
 	FString Message;
 	FString CardId;
 	FString EffectId;
+	int32 CardIndex = -1;
+	FString BundleCardId;
+	FString JsonPath;
 };
 
 struct FWBCardDBSchemaValidationOptions
@@ -92,5 +95,13 @@ public:
 		const FString& Json,
 		const FString& SourcePathForDiagnostics,
 		const FWBCardDBSchemaValidationOptions& Options = FWBCardDBSchemaValidationOptions());
+	static FString DiagnosticContextToStringForTest(const FWBCardDBSchemaValidationDiagnostic& Diagnostic);
+	static bool ContainsDiagnosticWithContext(
+		const TArray<FWBCardDBSchemaValidationDiagnostic>& Diagnostics,
+		EWBCardDBSchemaDiagnostic Code,
+		int32 ExpectedCardIndex,
+		const FString& ExpectedCardId,
+		const FString& ExpectedEffectId,
+		const FString& ExpectedJsonPath);
 	static FString DiagnosticCodeToString(EWBCardDBSchemaDiagnostic Code);
 };

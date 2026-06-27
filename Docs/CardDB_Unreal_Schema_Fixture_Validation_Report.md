@@ -114,6 +114,15 @@ When strict mode is enabled, unknown fields in top-level/card, stats, effect, so
 
 Bundle validation fails closed for missing/unsupported bundle schema version, missing CardDB version, malformed/empty `cards`, duplicate card ids, invalid child cards, and strict unknown bundle fields.
 
+Bundle-origin diagnostics now include stable context fields for test assertions:
+
+- `CardIndex`
+- `BundleCardId`
+- `EffectId`
+- `JsonPath`
+
+Root-card validation outside bundle mode keeps bundle context absent.
+
 ## Supported Payload Validation
 
 The validator accepts and maps:

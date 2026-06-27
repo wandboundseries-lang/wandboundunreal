@@ -1,0 +1,55 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_multiple_invalid_cards",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "bundle_missing_public_name",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "bundle_unsupported_payload",
+      "public_name": "Draw Example",
+      "kind": "fixture",
+      "public_text": "Activate.",
+      "activated_effects": [
+        {
+          "effect_id": "draw_2",
+          "public_label": "Activate",
+          "target_requirement": "none",
+          "payloads": [
+            {
+              "type": "draw_cards",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "bundle_invalid_status",
+      "public_name": "Wrong Mark",
+      "kind": "fixture",
+      "public_text": "Activate: Apply a status.",
+      "activated_effects": [
+        {
+          "effect_id": "bad_status",
+          "public_label": "Apply Burn",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "status_effect",
+              "operation": "apply_status",
+              "status_id": "NotAStatus",
+              "turns_remaining": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_mixed_bundle_and_card_errors",
+  "unexpected_bundle_field": true,
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "bundle_missing_effect_id",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "public_text": "Activate: Deal 2 damage.",
+      "activated_effects": [
+        {
+          "public_label": "Deal 2 damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

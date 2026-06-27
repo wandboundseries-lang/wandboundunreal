@@ -1,0 +1,27 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "fixture_duplicate_card_context",
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "duplicate_context_card",
+      "public_name": "Spark Bolt",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "unique_context_card",
+      "public_name": "Field Mend",
+      "kind": "fixture",
+      "activated_effects": []
+    },
+    {
+      "schema_version": 1,
+      "card_id": "duplicate_context_card",
+      "public_name": "Cinder Mark",
+      "kind": "fixture",
+      "activated_effects": []
+    }
+  ]
+}
