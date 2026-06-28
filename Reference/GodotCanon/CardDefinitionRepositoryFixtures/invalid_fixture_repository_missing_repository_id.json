@@ -1,0 +1,10 @@
+{
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_missing_repo",
+      "public_name": "Fixture Missing Repository",
+      "kind": "fixture"
+    }
+  ]
+}

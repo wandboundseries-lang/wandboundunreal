@@ -73,7 +73,7 @@ Implemented notes:
 
 ## Phase 2 - Minimal Production Card Definition Repository
 
-Status: started. The production-safe `CardDefinitionRepository` shell is implemented; the minimal Unreal-owned fixture repository loader remains the next pass.
+Status: implemented through the production-safe `CardDefinitionRepository` shell and minimal Unreal-owned fixture repository loader.
 
 Milestones:
 
@@ -101,7 +101,10 @@ Implemented notes:
 - `FWBCardDefinitionRepository` stores Unreal-owned `FWBCardDefinition` values outside `FWBGameStateData`.
 - Repository validation fails closed on missing ids, duplicate card ids, missing public names, malformed effect ids, duplicate effect ids, and internal player-facing labels.
 - Lookup and enumeration are deterministic by `CardId`.
-- No loader, file parsing, CardDB import, provider integration, runtime changes, legal-action generation change, or action-codec change was added.
+- `WBCardDefinitionFixtureLoader` loads narrow Unreal-owned fixture JSON into `FWBCardDefinitionRepository`.
+- Fixture loading supports damage, heal, status, and armor generic payload families and fail-closed diagnostics.
+- Expected export snapshots cover valid loads, duplicate ids, unsupported payloads, bad public labels, and hidden-token safety.
+- No Godot CardDB import, full production CardDB import, provider integration, runtime changes, legal-action generation change, or action-codec change was added.
 
 ## Phase 3 - Production Activation Data Provider Skeleton
 

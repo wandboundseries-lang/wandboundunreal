@@ -1,0 +1,24 @@
+{
+  "repository_id": "fixture_repo_hidden_token_safe",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_hidden_token_safe",
+      "public_name": "Fixture Hidden Token Safe",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "hidden_payload",
+          "public_label": "Try hidden payload",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "SECRET_DO_NOT_LEAK_payload",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

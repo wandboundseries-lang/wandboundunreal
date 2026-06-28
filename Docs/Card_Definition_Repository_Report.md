@@ -6,7 +6,9 @@ Date: 2026-06-28
 
 This pass adds a minimal production-safe WandboundCore repository shell for Unreal-owned `FWBCardDefinition` values.
 
-The repository is static data/query scaffolding only. It does not load files, parse JSON, import Godot CardDB data, generate actions, generate activation candidates, execute effects, inspect hidden zones, or mutate game state.
+The repository itself is static data/query scaffolding only. The separate `WBCardDefinitionFixtureLoader` can now populate repositories from narrow Unreal-owned fixture JSON files.
+
+Neither the repository nor the fixture loader imports Godot CardDB data, generates actions, generates activation candidates, executes effects, inspects hidden zones, or mutates game state.
 
 ## Repository Vs Card Zone State
 
@@ -91,6 +93,16 @@ The repository exposes:
 
 Empty lookup ids fail with `card_id_missing`. Missing cards fail with `card_definition_not_found`.
 
+## Fixture Loader
+
+`WBCardDefinitionFixtureLoader` loads the narrow Unreal-owned fixture shape under `Reference/GodotCanon/CardDefinitionRepositoryFixtures/`.
+
+The loader maps supported fixture data into existing `FWBCardDefinition`, `FWBCardEffectDefinition`, `FWBCardActivationSourceGateDefinition`, and `FWBGenericEffectPayload` structures.
+
+Supported payload families are damage, heal, status, and armor. Unsupported fields, payloads, timings, zones, malformed data, invalid statuses, and invalid numeric values fail closed with deterministic diagnostics.
+
+The loader calls `WBCardDefinitionRepository::ValidateRepository` after parsing succeeds, so duplicate ids and public-label internal-term failures still use the repository boundary.
+
 ## Game State Policy
 
 The repository is not stored on `FWBGameStateData`.
@@ -100,8 +112,8 @@ Game state owns mutable rules state and card instances. The repository is immuta
 ## Out Of Scope
 
 - Godot CardDB import
-- production JSON/CardDB loading
-- schema parser
+- full production CardDB loading
+- broad schema parser
 - zone movement
 - draw
 - shuffle
@@ -126,4 +138,4 @@ Game state owns mutable rules state and card instances. The repository is immuta
 
 ## Next Planned Pass
 
-Add a minimal Unreal-owned fixture repository loader that populates `FWBCardDefinitionRepository` from a narrow supported fixture format, without importing Godot CardDB or adding runtime/provider behavior yet.
+Add a production activation data provider skeleton that consumes externally supplied zone observations and card definitions without making runtime own rules state.

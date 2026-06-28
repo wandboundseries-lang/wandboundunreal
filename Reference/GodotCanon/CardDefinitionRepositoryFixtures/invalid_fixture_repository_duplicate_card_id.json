@@ -1,0 +1,16 @@
+{
+  "repository_id": "fixture_repo_duplicate_card",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_duplicate_card",
+      "public_name": "Fixture Duplicate Card",
+      "kind": "fixture"
+    },
+    {
+      "card_id": "fixture_duplicate_card",
+      "public_name": "Fixture Duplicate Card Copy",
+      "kind": "fixture"
+    }
+  ]
+}

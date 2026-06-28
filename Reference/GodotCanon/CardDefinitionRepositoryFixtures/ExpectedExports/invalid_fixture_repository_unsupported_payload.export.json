@@ -1,0 +1,1 @@
+{"ok":false,"reason":"fixture_load_failed","source_path":"invalid_fixture_repository_unsupported_payload.json","repository_id":"","source_version":"","card_count":0,"card_ids":[],"diagnostics":[{"code":"unsupported_payload_type","card_id":"fixture_bad_payload","effect_id":"bad_payload","path":"$.cards[0].activated_effects[0].payloads[0]"}]}

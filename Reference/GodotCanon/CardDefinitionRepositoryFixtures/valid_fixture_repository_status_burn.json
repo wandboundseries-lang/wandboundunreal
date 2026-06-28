@@ -1,0 +1,30 @@
+{
+  "repository_id": "fixture_repo_status_burn",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_status_burn",
+      "public_name": "Fixture Burn Unit",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "apply_burn",
+          "public_label": "Apply Burn",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority"
+          },
+          "payloads": [
+            {
+              "type": "status_effect",
+              "operation": "apply_status",
+              "status_id": "Burn",
+              "turns_remaining": 2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

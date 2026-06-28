@@ -1,0 +1,28 @@
+{
+  "repository_id": "fixture_repo_armor",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_restore_armor",
+      "public_name": "Fixture Armor Unit",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "restore_armor",
+          "public_label": "Restore Armor",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority"
+          },
+          "payloads": [
+            {
+              "type": "armor_effect",
+              "operation": "restore_armor_to_max"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

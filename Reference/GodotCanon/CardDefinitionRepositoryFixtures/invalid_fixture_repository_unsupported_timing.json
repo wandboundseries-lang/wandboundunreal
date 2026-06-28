@@ -1,0 +1,28 @@
+{
+  "repository_id": "fixture_repo_unsupported_timing",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_unsupported_timing",
+      "public_name": "Fixture Unsupported Timing",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "response_timing",
+          "public_label": "Try response timing",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "hand",
+            "timing": "response_window"
+          },
+          "payloads": [
+            {
+              "type": "heal_effect",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

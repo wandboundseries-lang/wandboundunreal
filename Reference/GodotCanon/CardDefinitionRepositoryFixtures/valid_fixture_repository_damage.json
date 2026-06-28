@@ -1,0 +1,35 @@
+{
+  "repository_id": "fixture_repo_damage",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_damage_unit",
+      "public_name": "Fixture Damage Unit",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "deal_2",
+          "public_label": "Deal 2 damage",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "blocked_by_stunned": true,
+            "blocked_by_frozen": false,
+            "once_per_turn": false
+          },
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 2,
+              "bypass_armor": false,
+              "damage_cause": "Effect"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

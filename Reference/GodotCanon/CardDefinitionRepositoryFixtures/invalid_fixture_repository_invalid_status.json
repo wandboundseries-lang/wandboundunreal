@@ -1,0 +1,26 @@
+{
+  "repository_id": "fixture_repo_invalid_status",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_invalid_status",
+      "public_name": "Fixture Invalid Status",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "bad_status",
+          "public_label": "Apply unknown status",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "status_effect",
+              "operation": "apply_status",
+              "status_id": "BogusStatus",
+              "turns_remaining": 2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

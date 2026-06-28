@@ -651,6 +651,21 @@ Source version compatibility planning should preserve the opt-in test-only matri
 
 This compatibility policy is validation only. It does not implement schema migration, production import, production loading, production zones, runtime activation generation, or `FWBAction` integration.
 
+## Minimal Fixture Repository Loader
+
+`WBCardDefinitionFixtureLoader` now exists as a narrower Core fixture loader for vertical-slice definitions.
+
+This loader is deliberately smaller than the future CardDB schema/importer described in this document:
+
+- it reads Unreal-owned fixture repositories, not Godot CardDB
+- it maps directly into `FWBCardDefinitionRepository`
+- it supports only damage, heal, status, and armor generic payload families
+- it reuses repository validation for duplicate ids and public-label internal-term guards
+- it returns fail-closed diagnostics and sanitized expected exports
+- it does not implement schema migration, bundle manifests, dependency ordering, production zones, provider integration, action generation, effect execution, activation `FWBAction`, or `WBActionCodec`
+
+Future importer work should treat the fixture loader as a small vertical-slice data source, not as the final production CardDB import boundary.
+
 Future importer readiness criteria should preserve the test-only helper policy:
 
 - bundle validation passes

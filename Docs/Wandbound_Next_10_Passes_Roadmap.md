@@ -38,12 +38,14 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 4 - Minimal Fixture CardDB Repository Loader, Unreal-Owned Only
 
+- Status: implemented as a narrow Core fixture loader. No Godot CardDB import, provider integration, action-codec change, legal-action generation change, runtime/UI behavior, or effect execution was added.
 - Purpose: Load a small Unreal-owned fixture bundle into the repository to support vertical-slice cards.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundTests/Private/`, documentation under `Docs/`.
 - Guardrails: Use Unreal-owned fixture data only; do not read `Reference/GodotProject` at runtime; do not build a full importer; keep fixture schema narrow.
 - Tests expected: valid fixture load, malformed fixture failure, unsupported payload failure, deterministic output, hidden-token safety.
 - Out-of-scope: production manifest batches, Godot CardDB import, content pipeline integration.
 - Success criteria: Vertical-slice card definitions can be loaded from a minimal supported fixture path.
+- Implemented notes: `WBCardDefinitionFixtureLoader` loads `Reference/GodotCanon/CardDefinitionRepositoryFixtures/`, maps the existing `FWBCardDefinition` shape, supports damage/heal/status/armor payload families, reuses repository validation, and emits sanitized expected export snapshots.
 
 ## Pass 5 - Production Activation Data Provider Skeleton
 

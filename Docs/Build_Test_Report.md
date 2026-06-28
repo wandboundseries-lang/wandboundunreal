@@ -2,6 +2,127 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## CardDefinition Fixture Repository Loader Pass
+
+### Scope
+
+This pass adds a minimal production-safe WandboundCore fixture loader for Unreal-owned card definition repositories.
+
+Implemented:
+
+- `FWBCardDefinitionFixtureLoadDiagnostic`
+- `FWBCardDefinitionFixtureLoadResult`
+- `WBCardDefinitionFixtureLoader::LoadRepositoryFromJsonString`
+- `WBCardDefinitionFixtureLoader::LoadRepositoryFromFile`
+- `WBCardDefinitionFixtureLoader::FixtureLoadResultToJsonStringForTest`
+- Unreal-owned fixture repositories under `Reference/GodotCanon/CardDefinitionRepositoryFixtures/`
+- expected deterministic export snapshots under `Reference/GodotCanon/CardDefinitionRepositoryFixtures/ExpectedExports/`
+
+Supported fixture payload families:
+
+- `damage_effect`
+- `heal_effect`
+- `status_effect`
+- `armor_effect`
+
+Not implemented:
+
+- Godot CardDB import
+- full production CardDB loader
+- production provider/runtime integration
+- activation legal action generation changes
+- activation candidate generation changes
+- effect execution
+- zone movement
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- response windows
+- UI widgets
+- Blueprint gameplay
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 6.53 seconds
+```
+
+### Targeted Fixture Loader Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDefinitionFixtureLoader; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\WandboundFixtureLoader'
+```
+
+Final result from `Saved/AutomationReports/WandboundFixtureLoader/index.json`:
+
+```text
+succeeded=24
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1117
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 24 `Wandbound.Core.CardDefinitionFixtureLoader.*` automation tests covering valid damage/heal/status/armor/mixed fixture loading, missing and malformed required fields, duplicate card/effect ids, unsupported payloads, unsupported timing, bad public labels, invalid statuses, hidden-token-safe exports, file/string load equivalence, deterministic exports, repository validation reuse, no game-state mutation, no action/candidate generation, no effect execution, Core-only runtime separation, existing repository test boundary, and test-only CardDB validator boundary.
+
+### Validation
+
+- `git diff --check`: passed with no whitespace errors. Git reported LF-to-CRLF working-copy notices only.
+- Source/WandboundRuntime was not modified by this pass.
+- `Reference/GodotProject` was not modified by this pass.
+- `.uasset` and `.umap` assets were not modified by this pass.
+- Generated folders `Saved`, `Intermediate`, `Binaries`, `DerivedDataCache`, and `.vs` were not newly tracked.
+
+### Notes
+
+- Fixture loading is data ingestion only.
+- The loader reuses `WBCardDefinitionRepository::ValidateRepository` after parsing succeeds.
+- Expected exports include clean source filenames, sorted card ids, and sanitized diagnostics.
+- Hidden-token export safety found no `SECRET` values in exported results.
+- The loader does not depend on WandboundTests or the test-only CardDB schema validators.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+An interim build exposed a missing `Policies/CondensedJsonPrintPolicy.h` include in the new Core loader serializer. The include was added and the final build passed.
+
+### Risks / Unknowns
+
+- The fixture format is intentionally narrower than the future production CardDB schema/importer.
+- Additional payload families, production manifests, dependency ordering, and schema migration remain future work.
+- Future provider work still needs to connect repository definitions, zone observation, target options, and activation command execution without leaking hidden zones.
+
 ## CardDefinitionRepository Shell Pass
 
 ### Scope

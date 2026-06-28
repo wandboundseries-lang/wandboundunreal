@@ -1,0 +1,24 @@
+{
+  "repository_id": "fixture_repo_unsupported_payload",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_bad_payload",
+      "public_name": "Fixture Bad Payload",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "bad_payload",
+          "public_label": "Try unsupported payload",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "draw_cards",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

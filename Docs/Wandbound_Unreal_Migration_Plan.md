@@ -66,6 +66,25 @@
 - No runtime/provider integration was added.
 - No draw, shuffle, discard movement, summon, equip gameplay, marker reveal, response windows, UI, Blueprint, `.uasset`, or `.umap` work was added.
 
+## Milestone - CardDefinition Fixture Repository Loader
+
+- Added `WBCardDefinitionFixtureLoader` as a minimal production-safe Core loader for Unreal-owned fixture repositories.
+- Added `FWBCardDefinitionFixtureLoadDiagnostic` and `FWBCardDefinitionFixtureLoadResult`.
+- Loaded fixture data into existing `FWBCardDefinitionRepository`, `FWBCardDefinition`, `FWBCardEffectDefinition`, `FWBCardActivationSourceGateDefinition`, and `FWBGenericEffectPayload` structures.
+- Supported generic payload families are damage, heal, status, and armor.
+- Supported source gate zones are fixture, board, hand, discard, and equipped.
+- Supported timing values are any and normal-turn priority.
+- The loader fails closed with deterministic diagnostics and empties the repository on failure.
+- Repository validation is reused after parsing succeeds.
+- Added Unreal-owned fixture repositories and expected sanitized export snapshots under `Reference/GodotCanon/CardDefinitionRepositoryFixtures/`.
+- Hidden-token export safety is covered; unsupported payload values are not echoed in exports.
+- No Godot CardDB import was added.
+- No full production CardDB loader was added.
+- No runtime/provider integration was added.
+- No activation legal action generation, activation candidates, effect execution, zone movement, response windows, UI, Blueprint, `.uasset`, or `.umap` work was added.
+- `WBActionCodec` remains unchanged.
+- `WBRules::GenerateLegalActions` remains unchanged.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

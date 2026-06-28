@@ -1,0 +1,24 @@
+{
+  "repository_id": "fixture_repo_bad_public_label",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_bad_public_label",
+      "public_name": "Fixture Bad Public Label",
+      "kind": "character",
+      "activated_effects": [
+        {
+          "effect_id": "bad_label",
+          "public_label": "Run EffectRunner damage",
+          "target_requirement": "unit",
+          "payloads": [
+            {
+              "type": "damage_effect",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
