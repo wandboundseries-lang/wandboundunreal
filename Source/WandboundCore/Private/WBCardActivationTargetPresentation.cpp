@@ -74,6 +74,27 @@ EWBCardActivationTargetPresentationKind DetermineTargetKind(const FWBEffectTarge
 	return EWBCardActivationTargetPresentationKind::Unknown;
 }
 
+EWBCardActivationTargetPresentationKind DetermineTargetKindForAction(
+	const FWBCardActivationLegalAction& Action)
+{
+	const EWBCardActivationTargetPresentationKind SelectedTargetKind =
+		DetermineTargetKind(Action.Target);
+	if (SelectedTargetKind != EWBCardActivationTargetPresentationKind::None)
+	{
+		return SelectedTargetKind;
+	}
+
+	for (const FWBCardActivationTargetOption& TargetOption : Action.TargetOptions)
+	{
+		if (TargetOption.Type == EWBCardActivationTargetOptionType::Unit)
+		{
+			return EWBCardActivationTargetPresentationKind::Unit;
+		}
+	}
+
+	return SelectedTargetKind;
+}
+
 FString PublicTargetLabelForKind(const EWBCardActivationTargetPresentationKind TargetKind)
 {
 	switch (TargetKind)
@@ -107,9 +128,10 @@ FWBCardActivationTargetPresentationSnapshot WBCardActivationTargetPresentation::
 		Entry.PlayerId = Action.PlayerId;
 		Entry.SourceUnitId = Action.SourceUnitId;
 		Entry.TargetUnitId = Action.Target.TargetUnitId;
+		Entry.TargetOptionCount = Action.TargetOptions.Num();
 		Entry.TargetTile = Action.Target.TargetTile;
 		Entry.TargetWallEdge = Action.Target.TargetWallEdge;
-		Entry.TargetKind = DetermineTargetKind(Action.Target);
+		Entry.TargetKind = DetermineTargetKindForAction(Action);
 		Entry.PublicTargetLabel = PublicTargetLabelForKind(Entry.TargetKind);
 
 		if (const FWBPublicUnitBoardSummary* SourceUnit = FindTargetPresentationPublicUnitById(PublicBoardSummary, Action.SourceUnitId))

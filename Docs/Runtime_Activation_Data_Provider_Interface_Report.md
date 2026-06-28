@@ -29,7 +29,7 @@ The provider request does not contain `FWBGameStateData`.
 The refresh input carries only the data the runtime facade already accepts:
 
 - normal legal `FWBAction` values
-- `FWBCardActivationLegalActionSet`
+- `FWBCardActivationLegalActionSet`, including externally supplied activation target options
 - `FWBPublicBoardSummary`
 
 ## Interface
@@ -73,7 +73,7 @@ It exists only for automation coverage and is not included by production runtime
 
 Provider implementations are responsible for supplying runtime-safe public/action data. Runtime remains a consumer.
 
-`FWBProductionActivationDataProvider` supplies target-deferred activation source/effect decision data from `FWBGameStateData`, `WBCardZoneObservation`, and `FWBCardDefinitionRepository`.
+`FWBProductionActivationDataProvider` supplies activation source/effect decision data and supported unit target options from `FWBGameStateData`, `WBCardZoneObservation`, `FWBPublicBoardSummary`, and `FWBCardDefinitionRepository`.
 
 The production provider skeleton does not:
 
@@ -84,11 +84,13 @@ The production provider skeleton does not:
 - call `WBEffectRunner` directly
 - call `WBActionCodec`
 
-It does emit a target-deferred `FWBCardActivationLegalActionSet` for source/effect presentation.
+It emits an externally supplied `FWBCardActivationLegalActionSet` for source/effect presentation. Unit target options are included on the activation legal actions. Tile and wall targets remain deferred.
 
 ## Hidden Information
 
 Provider output must remain public/runtime-safe. Tests verify activation presentation refreshed from provider data excludes internal source effect ids, usage keys, debug activation ids, and cost metadata.
+
+Target options may include visible board unit `CardId` values, but must not include opponent hand, deck, or hidden marker identities.
 
 ## Provider Contract
 
@@ -108,7 +110,7 @@ Activation legal actions remain separate from `FWBAction`.
 
 ## Out Of Scope
 
-- target option enumeration
+- tile and wall target option enumeration
 - production zones
 - CardDB import
 - UI widgets

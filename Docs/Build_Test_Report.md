@@ -2,6 +2,110 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Production Activation Unit Target Options Pass
+
+### Scope
+
+This pass adds deterministic, read-only unit target-option enumeration to `FWBProductionActivationDataProvider`.
+
+Implemented:
+
+- `EWBCardActivationTargetOptionType`
+- `FWBCardActivationTargetOption`
+- `FWBCardActivationLegalAction::TargetOptions`
+- unit target options for board-source activation effects
+- unit target options for own-hand activation effects
+- deterministic target option ordering by owner, tile, unit id, and card id
+- deferred diagnostics for tile and wall targets
+- fail-closed diagnostics for unsupported target requirements and empty unit target sets
+- runtime-session coverage proving target options are carried as externally supplied activation data
+
+Not implemented:
+
+- effect execution
+- activation resolution
+- target picking UI
+- response windows
+- draw, discard movement, summon, or equip gameplay
+- Godot CardDB import
+- activation `FWBAction` integration
+- `WBRules::GenerateLegalActions` changes
+- `WBActionCodec` changes
+- Blueprint/UI/assets
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 40.48 seconds
+```
+
+### Targeted Target-Option Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Runtime.ProductionActivationDataProviderTargetOptions; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\WandboundProductionActivationTargetOptions'
+```
+
+Final result from `Saved/AutomationReports/WandboundProductionActivationTargetOptions/index.json`:
+
+```text
+succeeded=24
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1167
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Validation
+
+- Unit target options are read-only provider decision data.
+- Board-source and own-hand effects both receive visible board unit target options.
+- `None` targets emit no options and no deferred diagnostic.
+- Tile and wall targets remain deferred.
+- Hidden opponent hand, deck identity, and hidden marker identity remain excluded.
+- Runtime sessions carry target options from externally supplied activation action sets.
+- `WBRules::GenerateLegalActions`, `WBActionCodec`, and `WBEffectRunner` were not changed.
+- `Reference/GodotProject` and `Reference/GodotCanon` were not modified by this pass.
+- `.uasset` and `.umap` assets were not modified.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- Friendly/enemy/self/range/line-of-sight target filters are future canon work.
+- Tile and wall target enumeration remain deferred.
+- Selecting a target option and binding it into an executable activation command is still future work.
+- No UI target picker exists yet.
+
 ## Production Activation Data Provider Skeleton Pass
 
 ### Scope

@@ -49,7 +49,7 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 5 - Production Activation Data Provider Skeleton
 
-- Status: implemented as an initial provider skeleton with target options deferred. No effect execution, CardDB import, `FWBAction` activation integration, `WBActionCodec` change, or normal legal action generation change was added.
+- Status: implemented as a provider skeleton with board-source and own-hand activation decisions. Unit target options are now implemented; tile and wall targets remain deferred. No effect execution, CardDB import, `FWBAction` activation integration, `WBActionCodec` change, or normal legal action generation change was added.
 - Purpose: Add the first production-shaped provider implementation that supplies runtime with externally owned decision data.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
 - Guardrails: Runtime remains a consumer; provider does not live in UI; activation remains separate from `FWBAction`; `WBRules::GenerateLegalActions` and `WBActionCodec` remain unchanged.
@@ -58,23 +58,25 @@ This roadmap lists the recommended next implementation passes after the engine-t
 - Success criteria: Existing runtime facade can refresh from a production-shaped provider result.
 - Implemented notes: `FWBProductionActivationDataProvider` emits board and own-hand source/effect activation decision data from const state, card-zone observation, and card definition repository input. Hidden opponent hand, deck identity, and marker internal identity stay excluded.
 
-## Pass 6 - Board-Source Production Activation Provider Integration
+## Pass 6 - Production Activation Unit Target Options
 
-- Purpose: Connect visible board units and card definitions to activation candidate/action generation through the provider.
+- Status: implemented as read-only unit target-option enumeration for board-source and own-hand provider activations.
+- Purpose: Connect visible board units and card definitions to provider-owned activation target choices.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
-- Guardrails: Use board-visible public card identity only; no hidden hand/deck reads; no UI target picker; no response windows.
-- Tests expected: legal board activation appears, target options are deterministic, costs filter, usage filters, hidden metadata excluded.
-- Out-of-scope: hand activation, summon, equip, draw/discard.
-- Success criteria: A visible unit can expose a legal activation action through production-shaped provider output.
+- Guardrails: Use board-visible public card identity only; no hidden hand/deck reads; no UI target picker; no response windows; do not execute effects.
+- Tests expected: board-source unit targets, own-hand unit targets, tile/wall deferred, deterministic ordering, hidden metadata excluded, runtime session consumes external options.
+- Out-of-scope: activation selection/execution, summon, equip, draw/discard.
+- Success criteria: Board-source and own-hand activation decisions expose deterministic visible unit target options through production-shaped provider output.
+- Implemented notes: Unit target options are attached to `FWBCardActivationLegalAction` data, sorted by owner/tile/unit/card, and carried through the runtime session as external data.
 
-## Pass 7 - Hand-Source Activation Provider Integration
+## Pass 7 - Activation Unit Target Selection Bridge
 
-- Purpose: Let own-hand cards generate activation actions through owner-scoped observation.
+- Purpose: Bind a selected provider-supplied unit target option to an activation command so the C++ vertical slice can execute a chosen target.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
-- Guardrails: Own hand only; opponent hand hidden; activation output must be scoped to requesting player; no UI widgets.
-- Tests expected: own hand card activation generated, opponent hand hidden, cost/usage filtering, deterministic ordering after board-source actions.
+- Guardrails: Use provider-owned target option data only; no UI widgets; no response windows; keep activation separate from normal `FWBAction` unless explicitly changed.
+- Tests expected: target option selection succeeds/fails deterministically, command target is filled, hidden data remains excluded, no `WBActionCodec` change.
 - Out-of-scope: draw, discard movement after play, response windows, target-picker UI.
-- Success criteria: Provider output can include legal hand-source activation actions for the owning player without leaking them globally.
+- Success criteria: A C++ harness can select a unit target option and produce an executable activation command without runtime target computation.
 
 ## Pass 8 - Draw/Hand/Discard Movement Loop
 

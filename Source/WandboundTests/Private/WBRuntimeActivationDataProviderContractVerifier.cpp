@@ -61,6 +61,23 @@ void AppendActivationActionDebugString(
 	OutDebug += FString::FromInt(Action.SourceUnitId);
 	OutDebug += TEXT(":target=");
 	OutDebug += FString::FromInt(Action.Target.TargetUnitId);
+	OutDebug += TEXT(":target_options=");
+	OutDebug += FString::FromInt(Action.TargetOptions.Num());
+	for (const FWBCardActivationTargetOption& TargetOption : Action.TargetOptions)
+	{
+		OutDebug += TEXT(":option_unit=");
+		OutDebug += FString::FromInt(TargetOption.TargetUnitId);
+		OutDebug += TEXT(":option_owner=");
+		OutDebug += FString::FromInt(TargetOption.TargetOwnerPlayerId);
+		OutDebug += TEXT(":option_x=");
+		OutDebug += FString::FromInt(TargetOption.TargetTile.X);
+		OutDebug += TEXT(":option_y=");
+		OutDebug += FString::FromInt(TargetOption.TargetTile.Y);
+		OutDebug += TEXT(":option_card=");
+		OutDebug += TargetOption.TargetCardId;
+		OutDebug += TEXT(":option_label=");
+		OutDebug += TargetOption.PublicLabel;
+	}
 }
 
 void AppendPublicSummaryDebugString(

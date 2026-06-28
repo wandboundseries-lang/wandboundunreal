@@ -158,13 +158,110 @@ FString PublicLabelForEffect(const FWBCardEffectDefinition& Effect)
 	return Effect.PublicLabel.IsEmpty() ? FString(TEXT("Activate")) : Effect.PublicLabel;
 }
 
+bool IsValidUnitTargetOptionSource(const FWBPublicUnitBoardSummary& Unit)
+{
+	return Unit.UnitId >= 0
+		&& FWBGameStateData::IsValidPlayerId(Unit.OwnerId)
+		&& Unit.X >= 0
+		&& Unit.Y >= 0
+		&& !Unit.CardId.IsEmpty();
+}
+
+FString PublicLabelForTargetUnit(const FWBPublicUnitBoardSummary& Unit)
+{
+	return FString::Printf(TEXT("Unit %d"), Unit.UnitId);
+}
+
+TArray<FWBCardActivationTargetOption> BuildUnitTargetOptions(
+	const FWBPublicBoardSummary& PublicBoardSummary)
+{
+	TArray<FWBCardActivationTargetOption> Options;
+	Options.Reserve(PublicBoardSummary.Units.Num());
+
+	for (const FWBPublicUnitBoardSummary& Unit : PublicBoardSummary.Units)
+	{
+		if (!IsValidUnitTargetOptionSource(Unit))
+		{
+			continue;
+		}
+
+		FWBCardActivationTargetOption Option;
+		Option.Type = EWBCardActivationTargetOptionType::Unit;
+		Option.TargetUnitId = Unit.UnitId;
+		Option.TargetOwnerPlayerId = Unit.OwnerId;
+		Option.TargetTile = FWBTile(Unit.X, Unit.Y);
+		Option.TargetCardId = Unit.CardId;
+		Option.PublicLabel = PublicLabelForTargetUnit(Unit);
+		Options.Add(Option);
+	}
+
+	Options.Sort([](const FWBCardActivationTargetOption& A, const FWBCardActivationTargetOption& B)
+	{
+		if (A.TargetOwnerPlayerId != B.TargetOwnerPlayerId)
+		{
+			return A.TargetOwnerPlayerId < B.TargetOwnerPlayerId;
+		}
+
+		if (A.TargetTile.Y != B.TargetTile.Y)
+		{
+			return A.TargetTile.Y < B.TargetTile.Y;
+		}
+
+		if (A.TargetTile.X != B.TargetTile.X)
+		{
+			return A.TargetTile.X < B.TargetTile.X;
+		}
+
+		if (A.TargetUnitId != B.TargetUnitId)
+		{
+			return A.TargetUnitId < B.TargetUnitId;
+		}
+
+		return A.TargetCardId < B.TargetCardId;
+	});
+
+	return Options;
+}
+
+TArray<FWBCardActivationTargetOption> BuildTargetOptionsForEffect(
+	const FWBCardEffectDefinition& Effect,
+	const FWBPublicBoardSummary& PublicBoardSummary,
+	const FWBCardDefinition& Definition,
+	const FString& InstanceId,
+	const int32 SourceUnitId,
+	TArray<FWBProductionActivationDataProviderDiagnostic>& Diagnostics)
+{
+	switch (Effect.TargetRequirement)
+	{
+	case EWBCardEffectTargetRequirement::None:
+		return TArray<FWBCardActivationTargetOption>();
+	case EWBCardEffectTargetRequirement::Unit:
+	{
+		TArray<FWBCardActivationTargetOption> Options = BuildUnitTargetOptions(PublicBoardSummary);
+		if (Options.IsEmpty())
+		{
+			AddDiagnostic(Diagnostics, TEXT("no_unit_targets_available"), Definition.CardId, InstanceId, SourceUnitId);
+		}
+		return Options;
+	}
+	case EWBCardEffectTargetRequirement::Tile:
+	case EWBCardEffectTargetRequirement::WallEdge:
+		AddDiagnostic(Diagnostics, TEXT("target_options_deferred"), Definition.CardId, InstanceId, SourceUnitId);
+		return TArray<FWBCardActivationTargetOption>();
+	default:
+		AddDiagnostic(Diagnostics, TEXT("unsupported_target_requirement"), Definition.CardId, InstanceId, SourceUnitId);
+		return TArray<FWBCardActivationTargetOption>();
+	}
+}
+
 FWBCardActivationLegalAction MakeTargetDeferredAction(
 	const FWBCardDefinition& Definition,
 	const FWBCardEffectDefinition& Effect,
 	const EWBProductionActivationSourceSortZone SortZone,
 	const int32 PlayerId,
 	const int32 SourceUnitId,
-	const FString& InstanceId)
+	const FString& InstanceId,
+	const TArray<FWBCardActivationTargetOption>& TargetOptions)
 {
 	FWBCardActivationLegalAction Action;
 	Action.ActivationActionId = MakeActivationActionId(
@@ -177,6 +274,7 @@ FWBCardActivationLegalAction MakeTargetDeferredAction(
 	Action.PlayerId = PlayerId;
 	Action.SourceUnitId = SourceUnitId;
 	Action.PublicLabel = PublicLabelForEffect(Effect);
+	Action.TargetOptions = TargetOptions;
 
 	Action.Candidate.ActivationCandidateId = Action.ActivationActionId;
 	Action.Candidate.PlayerId = PlayerId;
@@ -208,6 +306,7 @@ void AppendActionForEffectIfAllowed(
 	const FString& InstanceId,
 	const FWBCardActivationFixtureZoneContext& FixtureZoneContext,
 	const FWBProductionActivationDataProviderConfig& Config,
+	const FWBPublicBoardSummary& PublicBoardSummary,
 	TArray<FWBProductionActivationActionBuildEntry>& OutEntries,
 	TArray<FWBProductionActivationDataProviderDiagnostic>& Diagnostics)
 {
@@ -238,10 +337,13 @@ void AppendActionForEffectIfAllowed(
 		return;
 	}
 
-	if (Effect.TargetRequirement != EWBCardEffectTargetRequirement::None)
-	{
-		AddDiagnostic(Diagnostics, TEXT("target_options_deferred"), Definition.CardId, InstanceId, SourceUnitId);
-	}
+	const TArray<FWBCardActivationTargetOption> TargetOptions = BuildTargetOptionsForEffect(
+		Effect,
+		PublicBoardSummary,
+		Definition,
+		InstanceId,
+		SourceUnitId,
+		Diagnostics);
 
 	FWBProductionActivationActionBuildEntry Entry;
 	Entry.Action = MakeTargetDeferredAction(
@@ -250,7 +352,8 @@ void AppendActionForEffectIfAllowed(
 		SortZone,
 		PlayerId,
 		SourceUnitId,
-		InstanceId);
+		InstanceId,
+		TargetOptions);
 	Entry.SortZone = SortZone;
 	Entry.SortPlayerId = PlayerId;
 	Entry.SortIndex = SortIndex;
@@ -270,6 +373,7 @@ void AppendActionsForDefinition(
 	const FString& InstanceId,
 	const FWBCardActivationFixtureZoneContext& FixtureZoneContext,
 	const FWBProductionActivationDataProviderConfig& Config,
+	const FWBPublicBoardSummary& PublicBoardSummary,
 	TArray<FWBProductionActivationActionBuildEntry>& OutEntries,
 	TArray<FWBProductionActivationDataProviderDiagnostic>& Diagnostics)
 {
@@ -293,6 +397,7 @@ void AppendActionsForDefinition(
 			InstanceId,
 			FixtureZoneContext,
 			Config,
+			PublicBoardSummary,
 			OutEntries,
 			Diagnostics);
 	}
@@ -338,6 +443,7 @@ void AppendBoardSourceActions(
 			FString(),
 			FWBCardActivationFixtureZoneContext(),
 			Config,
+			PublicBoardSummary,
 			OutEntries,
 			Diagnostics);
 	}
@@ -348,6 +454,7 @@ void AppendOwnHandSourceActions(
 	const FWBCardDefinitionRepository& Repository,
 	const int32 ViewerPlayerId,
 	const FWBProductionActivationDataProviderConfig& Config,
+	const FWBPublicBoardSummary& PublicBoardSummary,
 	TArray<FWBProductionActivationActionBuildEntry>& OutEntries,
 	TArray<FWBProductionActivationDataProviderDiagnostic>& Diagnostics)
 {
@@ -383,6 +490,7 @@ void AppendOwnHandSourceActions(
 			Card.InstanceId,
 			FixtureZoneContext,
 			Config,
+			PublicBoardSummary,
 			OutEntries,
 			Diagnostics);
 	}
@@ -497,6 +605,7 @@ FWBRuntimeActivationDataProviderResult FWBProductionActivationDataProvider::GetA
 		*Input.Repository,
 		Input.ViewerPlayerId,
 		Config,
+		Result.RefreshInput.PublicBoardSummary,
 		ActionEntries,
 		LastDiagnostics);
 

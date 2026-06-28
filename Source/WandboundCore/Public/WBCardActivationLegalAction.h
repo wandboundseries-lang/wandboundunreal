@@ -5,6 +5,23 @@
 
 struct FWBPublicBoardSummary;
 
+enum class EWBCardActivationTargetOptionType : uint8
+{
+	Unknown,
+	Unit
+};
+
+struct WANDBOUNDCORE_API FWBCardActivationTargetOption
+{
+	EWBCardActivationTargetOptionType Type = EWBCardActivationTargetOptionType::Unknown;
+
+	int32 TargetUnitId = -1;
+	int32 TargetOwnerPlayerId = -1;
+	FWBTile TargetTile;
+	FString TargetCardId;
+	FString PublicLabel;
+};
+
 struct WANDBOUNDCORE_API FWBCardActivationLegalAction
 {
 	FString ActivationActionId;
@@ -15,6 +32,7 @@ struct WANDBOUNDCORE_API FWBCardActivationLegalAction
 	FString PublicLabel;
 
 	FWBEffectTargetRef Target;
+	TArray<FWBCardActivationTargetOption> TargetOptions;
 	FWBCardActivationCandidate Candidate;
 	FWBCardActivationCommand Command;
 };

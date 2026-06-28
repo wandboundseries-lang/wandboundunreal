@@ -13,12 +13,14 @@ Successful current-decision and post-activation provider results must use reques
 Provider results are expected to carry externally prepared:
 
 - normal legal `FWBAction` values
-- `FWBCardActivationLegalActionSet`
+- `FWBCardActivationLegalActionSet`, including provider-supplied target options when available
 - `FWBPublicBoardSummary`
 
 Successful provider results must also include a valid player id and non-empty decision point id. Post-activation provider requests must include the selected activation action id that triggered the refresh.
 
 Every activation legal action must have a non-empty `ActivationActionId`.
+
+Target options are part of the externally supplied activation action data. The contract debug string includes target option ids, owners, tiles, visible card ids, and public labels so hidden-token checks and determinism checks cover that payload.
 
 The expectations helper can require minimum counts for normal legal actions, activation actions, and public summary units. It can also allow phases with no activation actions when a test configures that explicitly.
 
@@ -31,6 +33,8 @@ The expectations helper can require minimum counts for normal legal actions, act
 The contract verifier checks a test-only debug string against forbidden substrings. The negative coverage proves internal or hidden tokens such as private labels, raw schema wording, and internal operation names are rejected when they appear in provider-facing output.
 
 Provider-supplied presentation should keep using clean public labels such as `Activate`, `Choose Unit`, `Choose Tile`, and `Choose Wall`.
+
+Provider-supplied target option labels must also avoid raw schema or implementation terms.
 
 ## Provider Failure Policy
 
@@ -75,7 +79,7 @@ The production provider may build read-only activation source/effect action-set 
 
 ## Production Provider Contract Coverage
 
-`WBProductionActivationDataProviderTests.cpp` adds production provider contract coverage for configuration failures, board-source activations, own-hand activations, hidden-info exclusion, deterministic output, session facade refresh, no mutation, no effect execution, no `WBRules::GenerateLegalActions` call, and no `WBActionCodec` dependency.
+`WBProductionActivationDataProviderTests.cpp` and `WBProductionActivationDataProviderTargetOptionsTests.cpp` add production provider contract coverage for configuration failures, board-source activations, own-hand activations, unit target options, hidden-info exclusion, deterministic output, session facade refresh, no mutation, no effect execution, no `WBRules::GenerateLegalActions` call, and no `WBActionCodec` dependency.
 
 ## Future Provider Guidance
 

@@ -94,12 +94,34 @@
 - Board-source activation decision data derives from viewer-owned visible board units and explicit board source gates.
 - Own-hand activation decision data derives only from `WBCardZoneObservation::OwnHand`.
 - Missing definitions, unsupported source zones, rejected public labels, and deferred targets are reported through sanitized diagnostics.
-- Target options are intentionally deferred.
 - Runtime activation sessions can refresh from provider output through the existing adapter/facade path.
 - Hidden opponent hand, deck identity, and marker internal identity remain excluded from provider output.
 - The provider does not mutate game state or repositories.
 - The provider does not execute effects.
 - The provider does not call `WBEffectRunner`.
+- No Godot CardDB import was added.
+- No draw, shuffle, discard movement, summon, equip, marker reveal, NPC phase, response window, passive, wand, overflow, UI, Blueprint, `.uasset`, or `.umap` work was added.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- `WBActionCodec` remains unchanged.
+
+## Milestone - Production Activation Unit Target Options
+
+- Added provider-owned unit target option enumeration for activation decision data.
+- Added `FWBCardActivationTargetOption` and `FWBCardActivationLegalAction::TargetOptions`.
+- Board-source effects with `Unit` target requirements now receive visible board unit target options.
+- Own-hand effects with `Unit` target requirements now receive visible board unit target options.
+- Generic unit targeting includes self, friendly units, and enemy units because no stricter target requirement enum exists yet.
+- Target options are sorted deterministically by target owner, tile Y, tile X, unit id, and card id.
+- Removed and defeated units are excluded through public board summary policy.
+- `None` target requirements emit no target options and no deferred diagnostic.
+- Tile and wall-edge targets remain deferred with `target_options_deferred`.
+- Unsupported target requirements fail closed with `unsupported_target_requirement`.
+- Unit-target effects with no visible unit targets emit `no_unit_targets_available`.
+- Runtime sessions receive target options through externally supplied `FWBCardActivationLegalActionSet` data.
+- The runtime session, owner, coordinator, and presentation model do not compute target options.
+- Hidden opponent hand, deck identity, and marker internal identity remain excluded from provider output.
+- No effect execution was added.
+- No activation `FWBAction` integration was added.
 - No Godot CardDB import was added.
 - No draw, shuffle, discard movement, summon, equip, marker reveal, NPC phase, response window, passive, wand, overflow, UI, Blueprint, `.uasset`, or `.umap` work was added.
 - `WBRules::GenerateLegalActions` remains unchanged.

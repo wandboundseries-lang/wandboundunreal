@@ -38,7 +38,7 @@ The provider returns the existing `FWBRuntimeActivationDataProviderResult`.
 Successful output fills `FWBRuntimeActivationDecisionSessionRefreshInput` with:
 
 - empty normal legal actions
-- `FWBCardActivationLegalActionSet` containing target-deferred activation source/effect choices
+- `FWBCardActivationLegalActionSet` containing activation source/effect choices and supported unit target options
 - `FWBPublicBoardSummary`
 
 Normal `FWBAction` generation remains external and unchanged.
@@ -53,7 +53,8 @@ For each viewer-owned visible board unit:
 - activated effects are inspected
 - only explicit board source gates are considered
 - `WBCardActivationSourceGate::Evaluate` is reused as a read-only source gate check
-- a target-deferred activation action is emitted when the source gate passes
+- an activation action is emitted when the source gate passes
+- unit-target effects receive visible board unit target options
 
 Opponent board units are not emitted as viewer actions.
 
@@ -69,7 +70,8 @@ For each own-hand card:
 - activated effects are inspected
 - only explicit hand source gates are considered
 - source gate evaluation remains read-only
-- a target-deferred activation action is emitted when the source gate passes
+- an activation action is emitted when the source gate passes
+- unit-target effects receive visible board unit target options
 
 ## Hidden-Info Policy
 
@@ -79,13 +81,15 @@ Safe context may include visible board card ids, own-hand card ids, own-hand ins
 
 Diagnostics and provider output must not include opponent hand identities, deck identities, or marker internal card ids.
 
-## Target Options Deferred
+## Target Options
 
-This pass does not enumerate target options.
+The provider now enumerates unit target options for supported `Unit` target requirements.
 
-Effects with a non-`none` target requirement still emit source/effect decision data, but their `FWBEffectTargetRef` remains unset and the provider records `target_options_deferred`.
+Unit target options are visible board units from `FWBPublicBoardSummary`, sorted deterministically by owner, tile, unit id, and card id. Generic unit targeting includes friendly units, enemy units, and self because no stricter target requirement enum exists yet.
 
-Future provider work should add read-only target enumeration and presentation once target legality policy is explicit.
+`None` target requirements have no target options and no deferred diagnostic.
+
+Tile and wall-edge target requirements remain deferred and record `target_options_deferred`.
 
 ## Diagnostics
 
@@ -98,17 +102,19 @@ Stable diagnostic codes include:
 - `card_definition_not_found`
 - `unsupported_source_zone`
 - `target_options_deferred`
+- `unsupported_target_requirement`
+- `no_unit_targets_available`
 - `public_label_rejected`
 
 Invalid required inputs return `bOk=false` and empty decision data.
 
-Missing card definitions, unsupported source zones, public-label rejections, and deferred target options are non-fatal diagnostics on otherwise successful provider output.
+Missing card definitions, unsupported source zones, public-label rejections, deferred target options, unsupported target requirements, and no available unit targets are non-fatal diagnostics on otherwise successful provider output.
 
 ## Runtime Session Integration
 
 The provider implements the existing runtime provider interface.
 
-`WBRuntimeActivationDataProviderAdapter::RefreshSessionFromProvider` can pass provider output into `UWBRuntimeActivationDecisionSessionFacadeComponent`, which refreshes activation presentation from externally supplied data.
+`WBRuntimeActivationDataProviderAdapter::RefreshSessionFromProvider` can pass provider output into `UWBRuntimeActivationDecisionSessionFacadeComponent`, which refreshes activation presentation from externally supplied data, including provider-supplied target options.
 
 The session still does not generate activation data internally.
 
@@ -134,4 +140,4 @@ This pass did not add:
 
 ## Next Planned Pass
 
-Add read-only target option enumeration for provider-emitted activation source/effect choices, still without executing effects or integrating activation into `FWBAction`.
+Add a C++ activation selection bridge that binds a selected unit target option to an activation command for execution, still without UI or response windows.

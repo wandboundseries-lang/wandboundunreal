@@ -24,6 +24,7 @@ struct WANDBOUNDCORE_API FWBCardActivationTargetPresentationEntry
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
 	int32 TargetUnitId = -1;
+	int32 TargetOptionCount = 0;
 
 	FWBTile TargetTile;
 	FWBWallEdge TargetWallEdge;

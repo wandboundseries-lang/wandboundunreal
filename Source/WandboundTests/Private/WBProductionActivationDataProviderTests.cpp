@@ -223,6 +223,15 @@ FString BuildProductionProviderOutputScanText(
 		Text += Action.Candidate.SourceEffectId;
 		Text += Action.Command.Source.SourceCardId;
 		Text += Action.Command.Source.SourceEffectId;
+		for (const FWBCardActivationTargetOption& TargetOption : Action.TargetOptions)
+		{
+			Text += FString::FromInt(TargetOption.TargetUnitId);
+			Text += FString::FromInt(TargetOption.TargetOwnerPlayerId);
+			Text += FString::FromInt(TargetOption.TargetTile.X);
+			Text += FString::FromInt(TargetOption.TargetTile.Y);
+			Text += TargetOption.TargetCardId;
+			Text += TargetOption.PublicLabel;
+		}
 	}
 
 	for (const FWBProductionActivationDataProviderDiagnostic& Diagnostic : Provider.GetDiagnosticsForTest())
@@ -537,7 +546,7 @@ bool FWBProductionActivationDataProviderTargetDeferredTest::RunTest(const FStrin
 {
 	const FWBGameStateData State = MakeProductionProviderState();
 	const FWBCardDefinitionRepository Repository = MakeProductionProviderRepository({
-		MakeProductionProviderDefinition(TEXT("provider_board_card"), TEXT("Provider Board Card"), EWBCardActivationSourceZone::Board, TEXT("unit_target"), TEXT("Choose Unit Burst"), EWBCardEffectTargetRequirement::Unit)
+		MakeProductionProviderDefinition(TEXT("provider_board_card"), TEXT("Provider Board Card"), EWBCardActivationSourceZone::Board, TEXT("tile_target"), TEXT("Choose Tile Burst"), EWBCardEffectTargetRequirement::Tile)
 	});
 	FWBProductionActivationDataProvider Provider;
 	const FWBRuntimeActivationDataProviderResult Result = RunProductionProvider(State, Repository, Provider);
@@ -545,6 +554,7 @@ bool FWBProductionActivationDataProviderTargetDeferredTest::RunTest(const FStrin
 	TestTrue(TEXT("Provider ok"), Result.bOk);
 	TestEqual(TEXT("Action emitted"), Result.RefreshInput.ActivationActionSet.Actions.Num(), 1);
 	TestEqual(TEXT("No target unit"), Result.RefreshInput.ActivationActionSet.Actions[0].Target.TargetUnitId, -1);
+	TestEqual(TEXT("No target options"), Result.RefreshInput.ActivationActionSet.Actions[0].TargetOptions.Num(), 0);
 	TestTrue(TEXT("Deferred diagnostic"), HasProductionProviderDiagnostic(Provider, TEXT("target_options_deferred")));
 	return true;
 }

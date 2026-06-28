@@ -113,6 +113,8 @@ Missing definitions fail closed for that source with `card_definition_not_found`
 
 The provider also reuses repository public-label guard behavior to reject internal player-facing labels.
 
+Effect `TargetRequirement` now feeds provider target-option behavior. `Unit` requirements enumerate visible board unit options, `None` emits no options, and `Tile`/`WallEdge` remain deferred.
+
 ## Game State Policy
 
 The repository is not stored on `FWBGameStateData`.
@@ -148,4 +150,4 @@ Game state owns mutable rules state and card instances. The repository is immuta
 
 ## Next Planned Pass
 
-Add read-only target option enumeration for provider-emitted activation source/effect choices.
+Add an activation selection bridge that binds selected unit target options to activation commands.

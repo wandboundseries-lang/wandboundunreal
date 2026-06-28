@@ -45,6 +45,8 @@ Own hand cards include `InstanceId`, `CardId`, and `OwnerPlayerId`, ordered by `
 
 Only `OwnHand.Cards` are used for hand-source activations. Opponent hand, deck identity, and hidden marker identity remain outside provider output.
 
+Provider unit target options use visible board units from `FWBPublicBoardSummary`. They do not inspect hidden card zones.
+
 ## Opponent Hand Policy
 
 Opponent hand identity is hidden.
@@ -130,4 +132,4 @@ Source guards also verify that public observation structs do not contain `Intern
 
 ## Next Planned Pass
 
-Add read-only target option enumeration for provider-emitted activation source/effect choices without changing hidden-information policy.
+Add an activation selection bridge that binds a selected provider target option to an executable activation command without changing hidden-information policy.
