@@ -149,6 +149,30 @@
 - `WBRules::GenerateLegalActions` remains unchanged.
 - `WBActionCodec` remains unchanged.
 
+## Milestone - Production Activation Execution Handoff
+
+- Added `FWBProductionActivationExecutionHandoff` in `WandboundRuntime`.
+- Added stable execution handoff input/result structs and result codes.
+- The adapter consumes a configured `FWBProductionActivationDataProvider`, a target-selection request, mutable game state, const repository, and viewer id.
+- Provider-supplied unit-target selections can now hand into the existing activation command execution path.
+- The adapter uses `FWBProductionActivationTargetSelectionBridge` for target validation and binding.
+- Internal execution metadata is resolved by matching the selected provider entry and rebuilding the command through `WBCardActivationExpansion` from the const repository.
+- Execution delegates through `WBRuntimeActivationExecutionBridge`; the production adapter does not call `WBEffectRunner` directly.
+- Post-action provider refresh is added by configuring a fresh production provider with updated state, repository, and viewer id after successful execution.
+- Board-source and own-hand unit-target activations are covered in C++ tests.
+- Current no-target generic payloads fail safely through existing core target validation when no target unit exists; no new no-target effect behavior was added.
+- Tile and wall targets remain unsupported/deferred.
+- Hidden opponent hand, deck identity, hidden marker identity, debug activation ids, and usage keys remain excluded from handoff output and refreshed provider entries.
+- The adapter does not mutate repositories.
+- No UI was added.
+- No response windows were added.
+- No new `WBEffectRunner` behavior was added.
+- No activation `FWBAction` creation was added.
+- No Godot CardDB import was added.
+- No draw, shuffle, discard movement, summon, equip, marker reveal, NPC phase, passive, wand, overflow, Blueprint, `.uasset`, or `.umap` work was added.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- `WBActionCodec` remains unchanged.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

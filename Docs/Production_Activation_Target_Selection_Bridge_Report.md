@@ -16,6 +16,8 @@ The bridge is configured from externally supplied `FWBCardActivationLegalAction`
 
 The bridge does not inspect `FWBGameStateData`, repositories, hidden zones, or Godot CardDB data.
 
+The bridge output now feeds `FWBProductionActivationExecutionHandoff`, which resolves internal execution metadata separately from the safe bridge result.
+
 ## Bridge Output
 
 `FWBProductionActivationTargetSelectionResult` returns:
@@ -84,6 +86,8 @@ A C++ runtime harness test refreshes the existing activation decision-session fa
 
 The runtime session still does not compute target options internally.
 
+The next production handoff adapter now consumes the same bridge result in C++ to rebuild the internal command, execute through the existing runtime execution bridge, and refresh provider data afterward.
+
 ## Boundaries
 
 This pass did not add:
@@ -103,4 +107,4 @@ This pass did not add:
 
 ## Next Planned Pass
 
-Add the next production vertical-slice step: either connect the bound selection result into a narrow C++ activation execution/handoff harness, or begin deterministic draw/hand/discard movement needed for played-card lifecycle.
+Add deterministic draw/hand/discard movement needed for played-card lifecycle now that the C++ provider -> selection -> handoff -> refresh path exists.

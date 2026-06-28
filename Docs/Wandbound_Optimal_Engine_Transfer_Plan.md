@@ -143,7 +143,7 @@ Implemented notes:
 
 ## Phase 4 - Playable Board/Hand Activation Vertical Slice
 
-Status: preparation advanced. Provider-owned unit target options and the C++ unit target-selection bridge now exist; execution wiring is still future work.
+Status: C++ vertical-slice handoff path implemented through provider-owned unit target options, target-selection bridge, production execution handoff, existing runtime execution bridge, and post-action provider refresh. Card lifecycle movement and UI remain future work.
 
 Milestones:
 
@@ -172,6 +172,11 @@ Implemented notes:
 - No-target activations succeed without a selected target.
 - Tile and wall targets remain unsupported/deferred.
 - The bridge does not mutate state or repositories, execute effects, create `FWBAction`, call `WBRules::GenerateLegalActions`, or depend on `WBActionCodec`.
+- `FWBProductionActivationExecutionHandoff` now matches the selected provider entry, rebuilds internal command metadata from the repository, executes through `WBRuntimeActivationExecutionBridge`, and refreshes provider data after success.
+- Board-source and own-hand unit-target activations can execute through the existing command path in C++ tests.
+- Current no-target generic payloads fail through existing core validation when they lack a target unit; no new no-target effect semantics were added.
+- The production handoff adapter does not call `WBEffectRunner` directly, mutate repositories, create `FWBAction`, call `WBRules::GenerateLegalActions`, or depend on `WBActionCodec`.
+- No UI, response windows, CardDB import, draw/discard movement, Blueprint, `.uasset`, or `.umap` work was added.
 
 ## Phase 5 - Draw / Hand / Discard Loop
 

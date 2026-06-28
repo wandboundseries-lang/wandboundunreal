@@ -405,14 +405,20 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	const FString RuntimeSource = LoadRuntimeSourceText();
 	const FString ProviderHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionActivationDataProvider.h"));
 	const FString ProviderSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationDataProvider.cpp"));
+	const FString ExecutionHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionActivationExecutionHandoff.h"));
+	const FString ExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationExecutionHandoff.cpp"));
 	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ExecutionHandoffHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ExecutionHandoffSource, TEXT(""));
 
 	TestTrue(TEXT("Production provider accepts repository input"), ProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Production provider consumes repository helper"), ProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
-	TestFalse(TEXT("Runtime outside production provider does not include repository helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardDefinitionRepository")));
-	TestFalse(TEXT("Runtime outside production provider does not own repository struct"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Production execution handoff accepts repository input"), ExecutionHandoffHeader.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Production execution handoff consumes repository helper"), ExecutionHandoffSource.Contains(TEXT("WBCardDefinitionRepository")));
+	TestFalse(TEXT("Runtime outside production provider/handoff does not include repository helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardDefinitionRepository")));
+	TestFalse(TEXT("Runtime outside production provider/handoff does not own repository struct"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("FWBCardDefinitionRepository")));
 	return true;
 }
 

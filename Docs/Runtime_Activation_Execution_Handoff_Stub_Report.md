@@ -89,6 +89,8 @@ Runtime activation execution now lives in `WBRuntimeActivationExecutionBridge`, 
 
 `FWBProductionActivationTargetSelectionBridge` can produce a target-bound copied command for later handoff/execution wiring, but this pass did not change the handoff or execution bridge behavior.
 
+`FWBProductionActivationExecutionHandoff` now exists as the production C++ adapter above this runtime execution boundary. It resolves provider-owned activation entries, rebuilds the internal command from the repository, creates an execution handoff payload, delegates to `WBRuntimeActivationExecutionBridge`, and refreshes provider data after success.
+
 ## Hidden-Information Policy
 
 The returned `ActivationAction.Command` is internal runtime data and may retain command metadata required for future execution wiring.

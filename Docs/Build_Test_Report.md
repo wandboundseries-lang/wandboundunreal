@@ -2,6 +2,140 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Production Activation Execution Handoff Pass
+
+### Scope
+
+This pass adds a narrow production C++ execution handoff adapter for provider-owned activation entries.
+
+Implemented:
+
+- `FWBProductionActivationExecutionHandoff`
+- `FWBProductionActivationExecutionHandoffInput`
+- `FWBProductionActivationExecutionHandoffResult`
+- stable production handoff result codes
+- provider data lookup before execution
+- target validation through `FWBProductionActivationTargetSelectionBridge`
+- internal command rebuild through `WBCardActivationExpansion`
+- execution through `WBRuntimeActivationExecutionBridge`
+- post-success refresh through a fresh `FWBProductionActivationDataProvider`
+- board-source unit-target execution coverage
+- own-hand unit-target execution coverage
+- no-target current execution failure coverage through existing core validation
+- tile/wall unsupported coverage
+- hidden-info scans for opponent hand, deck, hidden marker, debug activation id, and usage key strings
+- source guards for no direct `WBEffectRunner`, no `FWBAction`, no `WBActionCodec`, and no `WBRules::GenerateLegalActions`
+
+Not implemented:
+
+- new `WBEffectRunner` payload behavior
+- UI or Blueprint target picking
+- response windows
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- Godot CardDB import
+- draw, discard movement, summon, equip, marker reveal, NPC phase, passives, wands, or RL overflow
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 8.04 seconds
+```
+
+An earlier build after adding the adapter also succeeded in 13.77 seconds. The final build was rerun after narrowing an existing repository source-guard test to permit the new production handoff adapter.
+
+### Targeted Production Execution Handoff Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Runtime.ProductionActivationExecutionHandoff; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\WandboundProductionActivationExecutionHandoff'
+```
+
+Final result from `Saved/AutomationReports/WandboundProductionActivationExecutionHandoff/index.json`:
+
+```text
+succeeded=26
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Repository Source-Guard Rerun
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDefinitionRepository.RuntimeSourceUnchanged; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\WandboundRepositoryRuntimeSourceGuard'
+```
+
+Final result:
+
+```text
+succeeded=1
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1217
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Validation
+
+- Provider entry lookup fails closed before execution.
+- Selection failure does not mutate state.
+- Missing activation entries fail closed.
+- Board-source and own-hand unit-target activations execute through the existing runtime execution bridge.
+- No-target generic damage currently fails safely through existing core validation with `missing_effect_target_unit`.
+- Tile and wall targets remain unsupported.
+- Provider refresh happens after successful execution and observes once-per-turn usage state.
+- Hidden opponent hand, deck identity, hidden marker identity, debug activation ids, and usage keys remain excluded from handoff output and refreshed provider entries.
+- Repository data is not mutated.
+- The production handoff adapter does not call `WBEffectRunner` directly.
+- The production handoff adapter does not create `FWBAction`, call `WBRules::GenerateLegalActions`, or depend on `WBActionCodec`.
+- `WBRules.cpp`, `WBActionCodec.cpp`, `Reference/GodotProject`, `Reference/GodotCanon`, `.uasset`, and `.umap` files were not modified by this pass.
+- `git diff --check` passed with no whitespace errors; Git reported LF-to-CRLF working-copy notices only.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+Interim full automation reported one failure in `Wandbound.Core.CardDefinitionRepository.RuntimeSourceUnchanged` because the old source guard only exempted `WBProductionActivationDataProvider` as a runtime repository consumer. The test was narrowed to also exempt the new production execution handoff adapter, and the targeted rerun plus full suite passed.
+
+### Risks / Unknowns
+
+- No-target activations with current generic payloads still require a target unit in core validation.
+- Tile and wall target option enumeration and handoff remain future work.
+- Post-action provider refresh uses default production provider config because the current provider object does not expose a cloneable config.
+- Card lifecycle movement after successful hand-source activation remains future work.
+- No UI target picker exists yet.
+
 ## Production Activation Unit Target Selection Bridge Pass
 
 ### Scope

@@ -80,7 +80,18 @@ This roadmap lists the recommended next implementation passes after the engine-t
 - Success criteria: A C++ harness can select a unit target option and produce an executable activation command without runtime target computation.
 - Implemented notes: Board-source and own-hand unit target selection succeed, no-target activations succeed without a target, tile/wall targets fail closed, hidden zones remain hidden, and source guards prove the bridge does not call rules generation, EffectRunner, or ActionCodec.
 
-## Pass 8 - Draw/Hand/Discard Movement Loop
+## Pass 8 - Production Activation Execution Handoff
+
+- Status: implemented as a narrow C++ provider -> selection -> execution handoff -> provider refresh path. No UI, response windows, `FWBAction`, `WBActionCodec`, or `WBRules::GenerateLegalActions` changes were added.
+- Purpose: Prove provider-owned board/hand activations can execute through the existing runtime activation command path and refresh provider data afterward.
+- Files likely touched: `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
+- Guardrails: Use the existing target-selection bridge and existing runtime execution bridge; do not call `WBEffectRunner` directly from the production adapter; do not mutate repositories; do not expose debug activation ids, usage keys, opponent hand identity, deck identity, or hidden marker identity.
+- Tests expected: missing inputs, selection failure, board-source execution, own-hand execution, no-target current failure behavior, tile/wall unsupported, provider refresh, no repository mutation, no pre-execution mutation, hidden-info scans, source guards.
+- Out-of-scope: UI target picking, response windows, draw/discard movement, summon, equip, Godot CardDB import.
+- Success criteria: A C++ harness can run provider entry -> selected target -> handoff execution -> provider refresh.
+- Implemented notes: `FWBProductionActivationExecutionHandoff` rebuilds internal command metadata from `FWBCardDefinitionRepository`, executes through `WBRuntimeActivationExecutionBridge`, and refreshes a fresh production provider after success.
+
+## Pass 9 - Draw/Hand/Discard Movement Loop
 
 - Purpose: Add deterministic card movement for turn-start draw and post-activation movement where supported.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundTests/Private/`, `Reference/GodotCanon/GoldenScenarios/` only if canon fixtures are explicitly needed, `Docs/`.
@@ -88,15 +99,6 @@ This roadmap lists the recommended next implementation passes after the engine-t
 - Tests expected: draw from deck to hand, first-player first-turn exception, empty deck behavior, played card to discard where supported, trace coverage.
 - Out-of-scope: full CardDB import, response discard timing, graveyard/death-trigger interaction.
 - Success criteria: A deterministic vertical-slice turn can move cards through Deck, Hand, and Discard.
-
-## Pass 9 - Runtime Vertical-Slice Harness for Hand/Board Activation
-
-- Purpose: Prove the provider, runtime facade, activation execution, and post-action refresh work together in one production-shaped C++ flow.
-- Files likely touched: `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
-- Guardrails: Harness only; no Blueprints, widgets, `.uasset`, or `.umap`; runtime still does not generate legal actions internally.
-- Tests expected: board activation execute/refresh, hand activation execute/refresh, stale provider failure, hidden-info exclusion, trace/public summary parity.
-- Out-of-scope: actual UI target picking, camera, animation, VFX, response windows.
-- Success criteria: A test harness can run a small playable decision sequence using the same contracts future UI will use.
 
 ## Pass 10 - Summon/Equip/RL Foundation Planning Or First Implementation Pass
 

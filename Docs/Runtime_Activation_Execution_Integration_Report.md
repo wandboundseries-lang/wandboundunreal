@@ -70,6 +70,8 @@ The later runtime post-activation refresh sequencing pass adds an explicit exter
 
 The runtime activation decision-session facade now provides a higher-level external-data session flow over refresh, selection, handoff, execution, and post-action refresh. It still delegates execution through the existing owner/sequencer path and does not call `WBEffectRunner` directly.
 
+The production activation execution handoff adapter now uses this existing execution integration rather than adding a parallel effect path. It rebuilds a provider-selected activation command from the repository, creates a runtime handoff payload, and calls `WBRuntimeActivationExecutionBridge::ExecuteResolvedActivationHandoff`.
+
 ## Hidden-Information Policy
 
 The bridge carries internal activation command data only as execution input and result data. Public presentation remains the safe display surface.
@@ -98,6 +100,7 @@ This pass covers transient Unreal runtime components and their explicit delegati
 
 - production card zones
 - CardDB import
+- new production handoff effect semantics
 - activation `FWBAction`
 - activation codec ids
 - legal activation generation

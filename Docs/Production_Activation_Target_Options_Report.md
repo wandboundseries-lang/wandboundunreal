@@ -77,6 +77,8 @@ The session facade, owner, coordinator, and activation presentation model do not
 
 Provider target options can now be selected through the C++ `FWBProductionActivationTargetSelectionBridge`, which binds one provider-supplied unit option into a copied activation command without adding UI or effect execution.
 
+That selected target path now participates in the provider -> selection -> production execution handoff -> provider refresh C++ test path. Target options remain externally supplied provider data; runtime still does not compute them internally.
+
 ## Boundaries
 
 This pass did not add:
@@ -94,4 +96,4 @@ This pass did not add:
 
 ## Next Planned Pass
 
-Connect the target-bound activation selection result into the next narrow C++ vertical-slice harness, still without UI or response windows.
+Add deterministic draw/hand/discard movement needed for played-card lifecycle, still without UI or response windows.

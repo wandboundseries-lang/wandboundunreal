@@ -96,6 +96,8 @@ The owner still stores the activation execution result through its existing acti
 
 The later runtime activation decision-session facade wraps this sequencer path for future UI integration. The facade still receives all normal legal actions, activation legal actions, and public summaries externally.
 
+The production activation execution handoff adapter now performs a provider-specific post-action refresh after successful execution by creating a fresh `FWBProductionActivationDataProvider` from updated state, repository, and viewer id. This is a narrow provider refresh path and does not change the generic external-data sequencer contract.
+
 ## Separation From FWBAction
 
 Activation legal actions remain a separate action family.

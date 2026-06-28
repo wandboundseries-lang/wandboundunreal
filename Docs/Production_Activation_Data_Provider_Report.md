@@ -45,6 +45,8 @@ Normal `FWBAction` generation remains external and unchanged.
 
 The provider decision data now feeds `FWBProductionActivationTargetSelectionBridge`, which validates one selected provider unit target option and binds it into a copied activation command.
 
+The provider is also refreshed after successful production execution handoff. `FWBProductionActivationExecutionHandoff` creates a fresh provider after execution using the updated game state, const repository, and viewer id, then returns refreshed activation entries.
+
 ## Board-Source Behavior
 
 Board-source activations are derived from visible board unit summaries.
@@ -120,6 +122,8 @@ The provider implements the existing runtime provider interface.
 
 The session still does not generate activation data internally.
 
+The new production handoff adapter uses provider data before execution to resolve the selected entry and provider data after execution to return a fresh activation snapshot.
+
 ## Boundaries
 
 This pass did not add:
@@ -142,4 +146,4 @@ This pass did not add:
 
 ## Next Planned Pass
 
-Connect target-bound activation selection results into the next narrow C++ vertical-slice harness, still without UI or response windows.
+Add deterministic draw/hand/discard movement needed for played-card lifecycle, still without UI or response windows.
