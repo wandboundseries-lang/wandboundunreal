@@ -144,6 +144,14 @@ Readiness results can now be grouped by the test-only importer diagnostic summar
 
 The summary helper counts ready/not-ready bundles, groups not-ready reasons, groups schema diagnostic codes, counts affected bundles/cards, and exports sanitized aggregate JSON for fixture comparison.
 
+## Batch Readiness Integration
+
+Readiness results can now be evaluated in named test-only batches.
+
+The batch helper calls this readiness helper for each named bundle entry, preserves per-bundle readiness output in input order, and pairs those results with one grouped diagnostic summary.
+
+Batch readiness is still validation-only. It does not load CardDB data into runtime, create zones, execute effects, or generate activation candidates/actions.
+
 ## Confirmations
 
 - this remains test-only

@@ -662,6 +662,10 @@ Future importer diagnostics should provide both detailed diagnostics and high-le
 
 Detailed diagnostics should preserve stable context for authoring fixes. Grouped summaries should count readiness failure reasons, diagnostic codes, affected bundles, and affected card contexts without exposing diagnostic messages, full JSON snippets, card ids, effect ids, payload bodies, or hidden values.
 
+Future importer planning should support batch validation and reporting before loading.
+
+Batch validation should evaluate named bundle sets, preserve per-bundle readiness in input order, and emit grouped diagnostic summaries. A production loader should accept only batches that pass the future production equivalent of validation/readiness policy.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

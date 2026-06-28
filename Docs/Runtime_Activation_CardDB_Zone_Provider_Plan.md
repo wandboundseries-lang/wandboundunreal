@@ -264,6 +264,8 @@ The current importer-readiness helper is test-only and does not load definitions
 
 For failed bundles, the future provider/import pipeline should surface grouped diagnostics suitable for logs or tooling: readiness reason counts, diagnostic code counts, affected bundle counts, and affected card-context counts. Grouped diagnostics should not expose hidden values or raw source JSON.
 
+Future provider/import pipeline work should accept only bundle sets that pass the future production equivalent of batch readiness. Batch reporting should happen before runtime provider consumption and before any zone-backed activation data is exposed.
+
 ## Implementation Sequence Recommendation
 
 1. Draft Unreal-owned CardDB schema docs only.

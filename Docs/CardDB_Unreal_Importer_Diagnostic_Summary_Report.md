@@ -101,6 +101,12 @@ The summary helper consumes `FWBCardDBImporterReadinessResultForTest` values.
 
 It does not evaluate bundles itself, parse production data, load card definitions, or mutate state. Readiness remains the validation boundary; summaries provide aggregate planning output.
 
+## Relationship To Batch Readiness
+
+The batch-readiness helper now uses diagnostic summaries for grouped output across named bundle sets.
+
+Batch snapshots include the same reason and diagnostic summary arrays used by this helper, while leaving detailed per-bundle diagnostics as diagnostic code strings only.
+
 ## Confirmations
 
 - this remains test-only

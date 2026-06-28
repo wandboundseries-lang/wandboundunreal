@@ -2,6 +2,110 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Test-Only CardDB Importer Batch Readiness Pass
+
+### Scope
+
+This pass added a test-only CardDB importer batch-readiness helper and expected export snapshots.
+
+Implemented:
+
+- `FWBCardDBImporterBatchEntryForTest`
+- `FWBCardDBImporterBatchReadinessResultForTest`
+- `FWBCardDBImporterBatchReadinessForTests`
+- batch export snapshots
+- batch tests for empty input, mixed readiness, all-ready bundles, all-not-ready bundles, source-version mixes, hidden-token safety, input order, deterministic output, missing paths, existing helper compatibility, and source guards
+
+Not implemented:
+
+- production CardDB importer
+- production CardDB loader
+- production zones
+- schema migration logic
+- runtime activation behavior changes
+- rules behavior changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- effect execution
+- activation candidate/action generation in production runtime
+- UI widgets, response windows, Blueprints, `.uasset`, or `.umap` work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 30.74 seconds
+```
+
+### Targeted CardDB Importer Batch Readiness Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBImporterBatchReadiness; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBImporterBatchReadiness'
+```
+
+Final result from `Saved/AutomationReports/CardDBImporterBatchReadiness/index.json`:
+
+```text
+succeeded=16
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=975
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 16 `Wandbound.Core.CardDBImporterBatchReadiness.*` automation tests.
+
+### Notes
+
+- Batch output preserves input order for named bundle entries.
+- Batch output includes per-bundle readiness and grouped diagnostic summary arrays.
+- All-ready and empty batches export empty reason/diagnostic summary arrays.
+- All-not-ready and mixed batches export grouped failure diagnostics.
+- Source-version mixes cover current source readiness, supported transition readiness, unsupported source failure, and unsupported transition failure.
+- Hidden-token export safety found no `SECRET` values.
+- Source guards found no `WBCardDBImporterBatchReadinessForTests` includes in `Source/WandboundCore` or `Source/WandboundRuntime`.
+- Source guards found no `WBEffectRunner`, `GenerateLegalActions`, `WBCardActivationCandidateGenerator`, or `WBCardActivationLegalActionGenerator` references in the batch helper.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+One interim hidden-token scan command used a Windows-incompatible quoted wildcard and failed before reading files. The corrected scan with `--glob` found no `SECRET` values.
+
+### Risks / Unknowns
+
+- This helper is test-only and does not represent production importer batch behavior yet.
+- Future production importer work still needs loader/storage, zone visibility, source-version ownership, migration policy, provider integration, and runtime consumption decisions.
+
 ## Test-Only CardDB Importer Diagnostic Summary Pass
 
 ### Scope
