@@ -2,6 +2,146 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Planning-Only Engine Transfer Pivot Pass
+
+### Scope
+
+This pass creates a strategic pivot plan for the Unreal migration. It does not implement source code, add tests, add fixtures, import Godot CardDB, create production CardDB loading, create production zones, modify rules behavior, modify runtime behavior, modify `WBActionCodec`, modify `WBRules::GenerateLegalActions`, add UI widgets, add response windows, or edit `.uasset` / `.umap` files.
+
+Planning docs added:
+
+- `Docs/Wandbound_Engine_Transfer_Status_Assessment.md`
+- `Docs/Wandbound_Optimal_Engine_Transfer_Plan.md`
+- `Docs/Wandbound_Next_10_Passes_Roadmap.md`
+
+Planning docs updated:
+
+- `Docs/Wandbound_Unreal_Migration_Plan.md`
+- `Docs/Build_Test_Report.md`
+
+### Validation
+
+- No source changes were intended for this pass.
+- No Unreal build was required unless source changed unexpectedly.
+- No automation tests were required unless source changed unexpectedly.
+- Latest reported Wandbound automation baseline remains 1031 succeeded, 0 failed, 0 warnings unless tests are rerun.
+- `git diff --check`: passed with no whitespace errors. Git reported LF-to-CRLF working-copy notices for existing modified files.
+
+### Notes
+
+- Additional test-only CardDB export/reporting work is now deprioritized.
+- The next implementation route should start with production-safe card zone state and player-perspective observation.
+- Production CardDB import remains future work.
+- Source and `Reference/GodotCanon` status entries present during this pass were pre-existing from the prior CardDB importer suite work; this planning pass did not modify source, Godot reference files, `.uasset`, or `.umap` assets.
+
+## Test-Only CardDB Importer Manifest Suite Aggregation Pass
+
+### Scope
+
+This pass added a test-only CardDB importer manifest suite aggregator and deterministic suite export snapshots.
+
+Implemented:
+
+- `EWBCardDBImporterManifestSuiteDiagnostic`
+- `FWBCardDBImporterManifestSuiteDiagnosticForTest`
+- `FWBCardDBImporterManifestSuiteEntryForTest`
+- `FWBCardDBImporterManifestSuiteValidationResultForTest`
+- `FWBCardDBImporterManifestSuiteEvaluationResultForTest`
+- `FWBCardDBImporterManifestSuiteForTests`
+- suite fixtures under `Reference/GodotCanon/CardDBSchemaFixtures/Suites/`
+- suite expected export snapshots
+- suite tests for valid mixed manifests, all-ready manifests, not-ready bundle aggregation, malformed JSON, missing/unsupported schema version, missing id, missing/malformed manifests, duplicate manifest aliases, missing/unsafe/not-found paths, malformed metadata, hidden-token safety, deterministic output, validation-failure skip behavior, aggregate counts, aggregate diagnostic summaries, and source guards
+
+Not implemented:
+
+- production CardDB importer
+- production CardDB loader
+- production zones
+- schema migration logic
+- runtime activation behavior changes
+- rules behavior changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- effect execution
+- activation candidate/action generation in production runtime
+- UI widgets, response windows, Blueprints, `.uasset`, or `.umap` work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 14.36 seconds
+```
+
+### Targeted CardDB Importer Manifest Suite Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBImporterManifestSuite; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBImporterManifestSuite'
+```
+
+Final result from `Saved/AutomationReports/CardDBImporterManifestSuite/index.json`:
+
+```text
+succeeded=28
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1031
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 28 `Wandbound.Core.CardDBImporterManifestSuite.*` automation tests.
+
+### Notes
+
+- Suite validation rejects duplicate manifest aliases and unsafe manifest paths.
+- Duplicate manifest paths are allowed when aliases differ.
+- Suite evaluation skips manifest evaluation when suite validation fails.
+- Suite evaluation preserves manifest order.
+- Suite evaluation aggregates manifest, batch, bundle, ready-bundle, and not-ready-bundle counts.
+- Suite aggregate diagnostic summaries group readiness failures across evaluated manifest batch results.
+- Valid suites with not-ready bundles still evaluate successfully; not-ready remains a batch-readiness result.
+- Hidden-token export safety found no `SECRET` values.
+- Source guards found no `WBCardDBImporterManifestSuiteForTests` includes in `Source/WandboundCore` or `Source/WandboundRuntime`.
+- Source guards found no `WBEffectRunner`, `GenerateLegalActions`, `WBCardActivationCandidateGenerator`, or `WBCardActivationLegalActionGenerator` references in the suite helper.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- This helper is test-only and does not represent production importer suite behavior yet.
+- Future production importer work still needs loader/storage, zone visibility, source-version ownership, migration policy, provider integration, runtime consumption, and production diagnostic routing decisions.
+
 ## Test-Only CardDB Importer Manifest Validation Pass
 
 ### Scope

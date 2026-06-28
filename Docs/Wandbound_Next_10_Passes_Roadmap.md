@@ -1,0 +1,95 @@
+# Wandbound Next 10 Passes Roadmap
+
+Date: 2026-06-28
+
+This roadmap lists the recommended next implementation passes after the engine-transfer pivot. It is intentionally production-facing and ordered to create a playable vertical slice without losing deterministic rules discipline.
+
+## Pass 1 - Production-Safe Card Zone State Structs
+
+- Purpose: Add authoritative C++ state for card zones without importing Godot CardDB or changing gameplay behavior.
+- Files likely touched: `Source/WandboundCore/Public/`, `Source/WandboundCore/Private/`, `Source/WandboundTests/Private/`, `Docs/Build_Test_Report.md`.
+- Guardrails: Do not runtime-load Godot files; do not add UI; do not add production CardDB import; keep runtime from owning mutable rules state.
+- Tests expected: zone construction, deterministic ordering, ownership fields, invalid zone references, empty zone behavior.
+- Out-of-scope: draw rules, hand play rules, discard visibility policy finalization, equipped behavior.
+- Success criteria: Deck, Hand, Discard, Equipped, Board references, and Markers placeholder can be represented deterministically in WandboundCore.
+
+## Pass 2 - Player-Perspective Observation/Public-Private Zone Summary
+
+- Purpose: Add observation APIs that expose only what a viewer is allowed to know.
+- Files likely touched: `Source/WandboundCore/Public/`, `Source/WandboundCore/Private/`, `Source/WandboundTests/Private/`, `Docs/Build_Test_Report.md`.
+- Guardrails: No hidden opponent hand, deck identity, hidden marker identity, source effect ids, or fixture debug metadata in public output.
+- Tests expected: own hand visible to owner, opponent hand hidden, deck identities hidden, public board unchanged, deterministic sort order.
+- Out-of-scope: UI view widgets, network replication, full replay dataset schema.
+- Success criteria: The same state can produce different safe observations for Player 1, Player 2, and public spectators.
+
+## Pass 3 - Minimal Production Card Definition Repository Shell
+
+- Purpose: Create a production-safe query boundary for Unreal-owned card definitions.
+- Files likely touched: `Source/WandboundCore/Public/`, `Source/WandboundCore/Private/`, `Source/WandboundTests/Private/`, `Docs/Build_Test_Report.md`.
+- Guardrails: Do not import Godot CardDB; do not add broad file loading; do not change `WBActionCodec`; fail closed on missing/unsupported definitions.
+- Tests expected: lookup success/failure, duplicate id rejection, deterministic enumeration, unsupported payload diagnostics.
+- Out-of-scope: schema migration, manifest suite evaluation, asset import, runtime provider integration.
+- Success criteria: A small in-memory or fixture-backed repository can return `FWBCardDefinition` data by card id.
+
+## Pass 4 - Minimal Fixture CardDB Repository Loader, Unreal-Owned Only
+
+- Purpose: Load a small Unreal-owned fixture bundle into the repository to support vertical-slice cards.
+- Files likely touched: `Source/WandboundCore/`, `Source/WandboundTests/Private/`, documentation under `Docs/`.
+- Guardrails: Use Unreal-owned fixture data only; do not read `Reference/GodotProject` at runtime; do not build a full importer; keep fixture schema narrow.
+- Tests expected: valid fixture load, malformed fixture failure, unsupported payload failure, deterministic output, hidden-token safety.
+- Out-of-scope: production manifest batches, Godot CardDB import, content pipeline integration.
+- Success criteria: Vertical-slice card definitions can be loaded from a minimal supported fixture path.
+
+## Pass 5 - Production Activation Data Provider Skeleton
+
+- Purpose: Add the first production-shaped provider implementation that supplies runtime with externally owned decision data.
+- Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
+- Guardrails: Runtime remains a consumer; provider does not live in UI; activation remains separate from `FWBAction`; `WBRules::GenerateLegalActions` and `WBActionCodec` remain unchanged.
+- Tests expected: provider current-decision output, provider post-action output, missing dependency diagnostics, hidden-info exclusion, runtime no-generation source guards.
+- Out-of-scope: hand-source activation, draw/discard loop, response windows.
+- Success criteria: Existing runtime facade can refresh from a production-shaped provider result.
+
+## Pass 6 - Board-Source Production Activation Provider Integration
+
+- Purpose: Connect visible board units and card definitions to activation candidate/action generation through the provider.
+- Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
+- Guardrails: Use board-visible public card identity only; no hidden hand/deck reads; no UI target picker; no response windows.
+- Tests expected: legal board activation appears, target options are deterministic, costs filter, usage filters, hidden metadata excluded.
+- Out-of-scope: hand activation, summon, equip, draw/discard.
+- Success criteria: A visible unit can expose a legal activation action through production-shaped provider output.
+
+## Pass 7 - Hand-Source Activation Provider Integration
+
+- Purpose: Let own-hand cards generate activation actions through owner-scoped observation.
+- Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
+- Guardrails: Own hand only; opponent hand hidden; activation output must be scoped to requesting player; no UI widgets.
+- Tests expected: own hand card activation generated, opponent hand hidden, cost/usage filtering, deterministic ordering after board-source actions.
+- Out-of-scope: draw, discard movement after play, response windows, target-picker UI.
+- Success criteria: Provider output can include legal hand-source activation actions for the owning player without leaking them globally.
+
+## Pass 8 - Draw/Hand/Discard Movement Loop
+
+- Purpose: Add deterministic card movement for turn-start draw and post-activation movement where supported.
+- Files likely touched: `Source/WandboundCore/`, `Source/WandboundTests/Private/`, `Reference/GodotCanon/GoldenScenarios/` only if canon fixtures are explicitly needed, `Docs/`.
+- Guardrails: Do not add random shuffle; keep deck order explicit in tests; confirm discard visibility policy before public exposure.
+- Tests expected: draw from deck to hand, first-player first-turn exception, empty deck behavior, played card to discard where supported, trace coverage.
+- Out-of-scope: full CardDB import, response discard timing, graveyard/death-trigger interaction.
+- Success criteria: A deterministic vertical-slice turn can move cards through Deck, Hand, and Discard.
+
+## Pass 9 - Runtime Vertical-Slice Harness for Hand/Board Activation
+
+- Purpose: Prove the provider, runtime facade, activation execution, and post-action refresh work together in one production-shaped C++ flow.
+- Files likely touched: `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
+- Guardrails: Harness only; no Blueprints, widgets, `.uasset`, or `.umap`; runtime still does not generate legal actions internally.
+- Tests expected: board activation execute/refresh, hand activation execute/refresh, stale provider failure, hidden-info exclusion, trace/public summary parity.
+- Out-of-scope: actual UI target picking, camera, animation, VFX, response windows.
+- Success criteria: A test harness can run a small playable decision sequence using the same contracts future UI will use.
+
+## Pass 10 - Summon/Equip/RL Foundation Planning Or First Implementation Pass
+
+- Purpose: Decide and begin the next production mechanic after the board/hand activation slice is stable.
+- Files likely touched: `Docs/`, then likely `Source/WandboundCore/`, `Source/WandboundTests/Private/`, and provider integration files if implementation begins.
+- Guardrails: Consult Rules Bible v2 and Godot reference first; do not copy Godot architecture blindly; keep Rules/EffectRunner/UI boundaries intact.
+- Tests expected: if planning-only, no source tests; if implementation, summon adjacency/unit cap or equip/RL availability tests with replay traces.
+- Out-of-scope: full wand destruction, response windows, marker/NPC phase unless explicitly selected.
+- Success criteria: The project has a clear next mechanic route, or the first focused summon/equip/RL foundation slice lands with deterministic tests.
