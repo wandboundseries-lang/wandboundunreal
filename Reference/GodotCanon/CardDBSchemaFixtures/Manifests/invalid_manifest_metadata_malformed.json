@@ -1,0 +1,18 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "invalid_manifest_metadata_malformed",
+  "metadata": {
+    "unknown": "not allowed"
+  },
+  "batches": [
+    {
+      "batch_name": "core",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json"
+        }
+      ]
+    }
+  ]
+}

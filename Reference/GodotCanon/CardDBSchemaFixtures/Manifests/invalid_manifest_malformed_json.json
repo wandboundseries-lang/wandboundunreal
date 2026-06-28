@@ -1,0 +1,5 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "invalid_manifest_malformed_json",
+  "batches": [
+}

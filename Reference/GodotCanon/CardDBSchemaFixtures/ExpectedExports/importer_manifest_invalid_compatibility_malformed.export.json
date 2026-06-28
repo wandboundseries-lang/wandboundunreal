@@ -1,0 +1,1 @@
+{"ok":false,"reason":"manifest_validation_failed","manifest_id":"invalid_manifest_compatibility_malformed","batch_count":0,"batches":[],"diagnostics":[{"code":"manifest_compatibility_malformed","manifest_id":"invalid_manifest_compatibility_malformed","batch_name":"","bundle_name":"","json_path":"$.default_compatibility.enable"}]}

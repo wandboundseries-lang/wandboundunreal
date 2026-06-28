@@ -1,0 +1,24 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "invalid_manifest_batch_name_duplicate",
+  "batches": [
+    {
+      "batch_name": "dupe",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json"
+        }
+      ]
+    },
+    {
+      "batch_name": "dupe",
+      "bundles": [
+        {
+          "name": "valid_dependency",
+          "path": "Bundles/valid_bundle_dependency_order_simple_chain.json"
+        }
+      ]
+    }
+  ]
+}

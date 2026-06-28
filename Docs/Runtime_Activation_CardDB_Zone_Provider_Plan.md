@@ -266,6 +266,8 @@ For failed bundles, the future provider/import pipeline should surface grouped d
 
 Future provider/import pipeline work should accept only bundle sets that pass the future production equivalent of batch readiness. Batch reporting should happen before runtime provider consumption and before any zone-backed activation data is exposed.
 
+Future provider/import pipeline work should accept only manifest-approved batch outputs. Manifest approval should validate duplicate names, safe relative paths, compatibility overrides, metadata, and hidden-information policy before any provider receives loaded CardDB definitions.
+
 ## Implementation Sequence Recommendation
 
 1. Draft Unreal-owned CardDB schema docs only.

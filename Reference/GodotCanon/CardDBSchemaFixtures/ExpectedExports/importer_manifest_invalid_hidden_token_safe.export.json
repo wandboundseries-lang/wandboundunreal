@@ -1,0 +1,1 @@
+{"ok":false,"reason":"manifest_validation_failed","manifest_id":"","batch_count":0,"batches":[],"diagnostics":[{"code":"manifest_hidden_info_policy_violation","manifest_id":"","batch_name":"","bundle_name":"","json_path":"$.manifest_id"}]}

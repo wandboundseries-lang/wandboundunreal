@@ -2,6 +2,117 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Test-Only CardDB Importer Manifest Validation Pass
+
+### Scope
+
+This pass added a test-only CardDB importer manifest validator and deterministic manifest export snapshots.
+
+Implemented:
+
+- `EWBCardDBImporterManifestDiagnostic`
+- `FWBCardDBImporterManifestDiagnosticForTest`
+- `FWBCardDBImporterManifestBundleEntryForTest`
+- `FWBCardDBImporterManifestBatchForTest`
+- `FWBCardDBImporterManifestValidationResultForTest`
+- `FWBCardDBImporterManifestBatchEvaluationResultForTest`
+- `FWBCardDBImporterManifestForTests`
+- manifest fixtures under `Reference/GodotCanon/CardDBSchemaFixtures/Manifests/`
+- manifest expected export snapshots
+- manifest tests for valid mixed batches, all-ready batches, source-version overrides, malformed JSON, missing/unsupported schema version, missing id, missing/malformed batches, duplicate names, missing/unsafe/not-found paths, malformed compatibility, malformed metadata, hidden-token safety, deterministic output, validation-failure skip behavior, not-ready bundle evaluation, and source guards
+
+Not implemented:
+
+- production CardDB importer
+- production CardDB loader
+- production zones
+- schema migration logic
+- runtime activation behavior changes
+- rules behavior changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- effect execution
+- activation candidate/action generation in production runtime
+- UI widgets, response windows, Blueprints, `.uasset`, or `.umap` work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 8.87 seconds
+```
+
+### Targeted CardDB Importer Manifest Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBImporterManifest; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBImporterManifest'
+```
+
+Final result from `Saved/AutomationReports/CardDBImporterManifest/index.json`:
+
+```text
+succeeded=28
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1003
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 28 `Wandbound.Core.CardDBImporterManifest.*` automation tests.
+
+### Notes
+
+- Manifest validation rejects duplicate batch names and duplicate bundle names within a batch.
+- Manifest validation rejects missing, traversal, absolute, and not-found bundle paths.
+- Manifest validation rejects malformed compatibility and metadata.
+- Compatibility options inherit from manifest default to batch override to bundle-entry override.
+- Manifest evaluation skips batch readiness when validation fails.
+- Valid manifests with not-ready bundles still evaluate successfully; not-ready remains a batch-readiness result.
+- Manifest exports include batch summaries only and omit full per-bundle readiness exports.
+- Hidden-token export safety found no `SECRET` values.
+- Source guards found no `WBCardDBImporterManifestForTests` includes in `Source/WandboundCore` or `Source/WandboundRuntime`.
+- Source guards found no `WBEffectRunner`, `GenerateLegalActions`, `WBCardActivationCandidateGenerator`, or `WBCardActivationLegalActionGenerator` references in the manifest helper.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+An interim build failed because a test helper called `TestFalse` and `TestEqual` without the `FAutomationTestBase` receiver. The helper now calls `Test.TestFalse` and `Test.TestEqual`, and the final build/tests passed.
+
+### Risks / Unknowns
+
+- This helper is test-only and does not represent production importer manifest behavior yet.
+- Future production importer work still needs loader/storage, zone visibility, source-version ownership, migration policy, provider integration, runtime consumption, and production diagnostic routing decisions.
+
 ## Test-Only CardDB Importer Batch Readiness Pass
 
 ### Scope

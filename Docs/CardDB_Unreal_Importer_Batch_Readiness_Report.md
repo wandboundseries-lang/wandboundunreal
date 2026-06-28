@@ -76,6 +76,12 @@ Batch readiness calls `FWBCardDBImporterDiagnosticSummaryForTests` to build grou
 
 The batch helper does not parse production data, load runtime CardDB definitions, create zones, execute effects, mutate game state, generate activation candidates, or generate activation legal actions.
 
+## Manifest Integration
+
+Importer manifests now group named batch-readiness sets for test-only validation.
+
+The manifest helper validates manifest structure, duplicate names, safe relative bundle paths, metadata, and compatibility overrides before calling this batch helper. Manifest exports include batch-level summaries only, not full per-bundle readiness exports.
+
 ## Confirmations
 
 - this remains test-only

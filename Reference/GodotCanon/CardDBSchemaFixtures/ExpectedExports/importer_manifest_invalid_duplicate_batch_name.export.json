@@ -1,0 +1,1 @@
+{"ok":false,"reason":"manifest_validation_failed","manifest_id":"invalid_manifest_batch_name_duplicate","batch_count":0,"batches":[],"diagnostics":[{"code":"manifest_batch_name_duplicate","manifest_id":"invalid_manifest_batch_name_duplicate","batch_name":"dupe","bundle_name":"","json_path":"$.batches[1].batch_name"}]}

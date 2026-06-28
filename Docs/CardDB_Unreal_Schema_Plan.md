@@ -666,6 +666,18 @@ Future importer planning should support batch validation and reporting before lo
 
 Batch validation should evaluate named bundle sets, preserve per-bundle readiness in input order, and emit grouped diagnostic summaries. A production loader should accept only batches that pass the future production equivalent of validation/readiness policy.
 
+Future importer planning should also support a manifest layer before loading:
+
+- `manifest_schema_version`
+- `manifest_id`
+- optional manifest metadata
+- optional default compatibility policy
+- ordered named batches
+- ordered bundle entries with relative fixture paths
+- batch and bundle compatibility overrides
+
+Production import should fail closed on duplicate batch names, duplicate bundle aliases, missing paths, unsafe paths, malformed compatibility, malformed metadata, and hidden-info tokens before any data is loaded.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

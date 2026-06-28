@@ -1,0 +1,14 @@
+{
+  "manifest_schema_version": 1,
+  "batches": [
+    {
+      "batch_name": "core",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json"
+        }
+      ]
+    }
+  ]
+}

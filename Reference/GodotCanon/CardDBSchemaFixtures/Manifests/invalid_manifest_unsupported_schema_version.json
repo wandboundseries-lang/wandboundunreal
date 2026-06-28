@@ -1,0 +1,15 @@
+{
+  "manifest_schema_version": 2,
+  "manifest_id": "invalid_manifest_unsupported_schema_version",
+  "batches": [
+    {
+      "batch_name": "core",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json"
+        }
+      ]
+    }
+  ]
+}

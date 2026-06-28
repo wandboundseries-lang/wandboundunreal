@@ -1,0 +1,1 @@
+{"ok":false,"reason":"manifest_validation_failed","manifest_id":"invalid_manifest_bundle_path_not_found","batch_count":0,"batches":[],"diagnostics":[{"code":"manifest_bundle_path_not_found","manifest_id":"invalid_manifest_bundle_path_not_found","batch_name":"core","bundle_name":"not_found","json_path":"$.batches[0].bundles[0].path"}]}

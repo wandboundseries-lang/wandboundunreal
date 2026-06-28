@@ -1,0 +1,37 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "fixture_manifest_all_ready",
+  "batches": [
+    {
+      "batch_name": "all_ready",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json",
+          "compatibility": {
+            "enable": true,
+            "target_source_version": "wandbound_schema.1"
+          }
+        },
+        {
+          "name": "valid_transition",
+          "path": "Bundles/valid_bundle_source_version_supported_transition.json",
+          "compatibility": {
+            "enable": true,
+            "target_source_version": "wandbound_schema.2",
+            "supported_transitions": [
+              {
+                "from": "legacy_schema.1",
+                "to": "wandbound_schema.2"
+              }
+            ]
+          }
+        },
+        {
+          "name": "valid_dependency",
+          "path": "Bundles/valid_bundle_dependency_order_simple_chain.json"
+        }
+      ]
+    }
+  ]
+}

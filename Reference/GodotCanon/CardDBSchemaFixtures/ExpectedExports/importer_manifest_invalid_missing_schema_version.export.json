@@ -1,0 +1,1 @@
+{"ok":false,"reason":"manifest_validation_failed","manifest_id":"invalid_manifest_missing_schema_version","batch_count":0,"batches":[],"diagnostics":[{"code":"manifest_schema_version_missing","manifest_id":"invalid_manifest_missing_schema_version","batch_name":"","bundle_name":"","json_path":"$.manifest_schema_version"}]}

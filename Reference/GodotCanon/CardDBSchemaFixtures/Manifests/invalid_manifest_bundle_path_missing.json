@@ -1,0 +1,14 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "invalid_manifest_bundle_path_missing",
+  "batches": [
+    {
+      "batch_name": "core",
+      "bundles": [
+        {
+          "name": "missing_path"
+        }
+      ]
+    }
+  ]
+}

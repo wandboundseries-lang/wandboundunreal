@@ -1,0 +1,63 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "fixture_manifest_source_version_overrides",
+  "default_compatibility": {
+    "enable": true,
+    "require_source_version": true,
+    "target_source_version": "wandbound_schema.1",
+    "directly_supported_source_versions": [
+      "wandbound_schema.1"
+    ],
+    "supported_transitions": []
+  },
+  "batches": [
+    {
+      "batch_name": "default_current",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json"
+        }
+      ]
+    },
+    {
+      "batch_name": "batch_transition",
+      "compatibility": {
+        "target_source_version": "wandbound_schema.2",
+        "directly_supported_source_versions": [
+          "wandbound_schema.2"
+        ],
+        "supported_transitions": [
+          {
+            "from": "legacy_schema.1",
+            "to": "wandbound_schema.2"
+          }
+        ]
+      },
+      "bundles": [
+        {
+          "name": "valid_transition",
+          "path": "Bundles/valid_bundle_source_version_supported_transition.json"
+        }
+      ]
+    },
+    {
+      "batch_name": "bundle_transition",
+      "bundles": [
+        {
+          "name": "valid_transition_bundle_override",
+          "path": "Bundles/valid_bundle_source_version_supported_transition.json",
+          "compatibility": {
+            "target_source_version": "wandbound_schema.2",
+            "supported_transitions": [
+              {
+                "from": "legacy_schema.1",
+                "to": "wandbound_schema.2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

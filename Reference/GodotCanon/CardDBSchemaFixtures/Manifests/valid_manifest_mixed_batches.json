@@ -1,0 +1,60 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "fixture_manifest_mixed_batches",
+  "description": "Test-only mixed batch manifest",
+  "metadata": {
+    "notes": "fixture-only",
+    "test_only": true
+  },
+  "default_compatibility": {
+    "enable": true,
+    "require_source_version": false,
+    "target_source_version": "wandbound_schema.1",
+    "directly_supported_source_versions": [
+      "wandbound_schema.1"
+    ],
+    "supported_transitions": [
+      {
+        "from": "legacy_schema.1",
+        "to": "wandbound_schema.1"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "batch_name": "core_ready",
+      "description": "Known-good bundles",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json"
+        },
+        {
+          "name": "valid_dependency",
+          "path": "Bundles/valid_bundle_dependency_order_simple_chain.json"
+        }
+      ]
+    },
+    {
+      "batch_name": "mixed",
+      "bundles": [
+        {
+          "name": "valid_current",
+          "path": "Bundles/valid_bundle_source_version_current.json"
+        },
+        {
+          "name": "unsupported_source",
+          "path": "Bundles/invalid_bundle_source_version_unsupported.json",
+          "compatibility": {
+            "enable": true,
+            "target_source_version": "wandbound_schema.2"
+          }
+        },
+        {
+          "name": "missing_reference",
+          "path": "Bundles/invalid_bundle_dependency_missing_reference_skips_order.json"
+        }
+      ]
+    }
+  ]
+}

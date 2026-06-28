@@ -152,6 +152,12 @@ The batch helper calls this readiness helper for each named bundle entry, preser
 
 Batch readiness is still validation-only. It does not load CardDB data into runtime, create zones, execute effects, or generate activation candidates/actions.
 
+## Manifest Evaluation Integration
+
+Manifest evaluation uses readiness as the per-bundle unit through the existing batch-readiness helper.
+
+Manifests validate structure and path safety first, then evaluate batches. A not-ready bundle remains a readiness result inside a valid manifest evaluation rather than becoming a manifest validation failure.
+
 ## Confirmations
 
 - this remains test-only

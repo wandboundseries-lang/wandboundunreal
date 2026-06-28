@@ -1,0 +1,1 @@
+{"ok":true,"reason":"","manifest_id":"fixture_manifest_all_ready","batch_count":1,"batches":[{"batch_name":"all_ready","ok":true,"total_bundles":3,"ready_bundles":3,"not_ready_bundles":0,"bundle_names":["valid_current","valid_transition","valid_dependency"],"summary":{"reason_summaries":[],"diagnostic_summaries":[]}}],"diagnostics":[]}
