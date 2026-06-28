@@ -648,6 +648,16 @@ Source version compatibility planning should preserve the opt-in test-only matri
 
 This compatibility policy is validation only. It does not implement schema migration, production import, production loading, production zones, runtime activation generation, or `FWBAction` integration.
 
+Future importer readiness criteria should preserve the test-only helper policy:
+
+- bundle validation passes
+- source-version compatibility passes when enabled
+- dependency order is available for the non-empty bundle
+- ordered `FWBCardDefinition` values can be resolved from dependency order
+- diagnostics are empty
+
+Readiness snapshots may expose ordered public card ids and validated definitions for tests only. They should not expose production parser APIs, runtime-loaded CardDB data, zones, payload bodies, diagnostic messages, or hidden values.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

@@ -141,6 +141,14 @@ These exports give future importer work stable review artifacts for dependency o
 
 They do not load CardDB data into runtime and do not become a production export API.
 
+## Importer Readiness Snapshots
+
+Dependency order exports now feed test-only importer-readiness snapshots.
+
+The readiness helper requires a valid non-empty bundle to have dependency order, then emits `ordered_card_ids` from validated `FWBCardDefinition` values in the same order.
+
+Invalid dependency bundles remain not ready and export empty ordered card ids.
+
 ## Confirmations
 
 - this remains test-only

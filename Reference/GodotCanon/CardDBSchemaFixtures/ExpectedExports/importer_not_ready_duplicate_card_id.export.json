@@ -1,0 +1,1 @@
+{"ready":false,"reason":"bundle_validation_failed","source_path":"invalid_bundle_duplicate_card_id.json","carddb_version":"fixture_duplicate_card_id","source_version":"","card_count":0,"dependency_order_card_ids":[],"ordered_card_ids":[],"diagnostics":[{"code":"card_id_duplicate","card_index":1,"card_id":"duplicate_bundle_card","effect_id":"","json_path":"$.cards"}]}

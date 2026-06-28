@@ -98,6 +98,12 @@ Successful compatibility fixtures export normal dependency order.
 
 Matrix target, direct-support entries, transition entries, diagnostic messages, full source JSON, and source values are not exported.
 
+## Importer Readiness Integration
+
+Source-version compatibility now feeds test-only importer-readiness checks.
+
+Ready fixtures pass compatibility before the readiness helper exposes ordered `FWBCardDefinition` values for validation inspection. Unsupported source versions and unsupported transitions fail bundle validation first, so readiness reports `bundle_validation_failed` and does not expose ordered definitions.
+
 ## Hidden-Token Safety
 
 `source_version` values containing hidden-token patterns fail closed with `hidden_info_policy_violation` before compatibility decisions.

@@ -2,6 +2,111 @@
 
 Date of check: 2026-06-27 (America/New_York)
 
+## Test-Only CardDB Importer Readiness Pass
+
+### Scope
+
+This pass added a validation-only, test-only CardDB importer-readiness helper and fixtures.
+
+Implemented:
+
+- `FWBCardDBImporterReadinessResultForTest`
+- `FWBCardDBImporterReadinessForTests`
+- readiness export snapshots
+- readiness tests for compatible current source bundles, compatible transitions, dependency order, unsupported sources, unsupported transitions, missing references, dependency cycles, duplicate card ids, invalid payloads, and hidden-token safety
+- source guards proving the helper remains test-only
+
+Not implemented:
+
+- production CardDB importer
+- production CardDB loader
+- production zones
+- schema migration logic
+- runtime activation behavior changes
+- rules behavior changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- effect execution
+- activation candidate/action generation in production runtime
+- UI widgets, response windows, Blueprints, `.uasset`, or `.umap` work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 50.63 seconds
+```
+
+### Targeted CardDB Importer Readiness Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBImporterReadiness; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBImporterReadiness'
+```
+
+Final result from `Saved/AutomationReports/CardDBImporterReadiness/index.json`:
+
+```text
+succeeded=16
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=944
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 16 `Wandbound.Core.CardDBImporterReadiness.*` automation tests.
+
+### Notes
+
+- Ready bundles expose ordered validated `FWBCardDefinition` values for test inspection only.
+- Unsupported source versions and unsupported transitions fail bundle validation before readiness.
+- Missing references, dependency cycles, duplicate card ids, and invalid payloads are not ready.
+- Readiness snapshots omit full source JSON, diagnostic messages, payload bodies, public labels/text, and hidden values.
+- The current public bundle validator produces dependency order for valid non-empty fixtures; the readiness helper still fails closed with `dependency_order_missing` if a future valid result lacks order.
+- Expected export hidden-token scan found no `SECRET` values.
+- Source guards found no `WBCardDBImporterReadinessForTests` includes in `Source/WandboundCore` or `Source/WandboundRuntime`.
+- Source guards found no `WBEffectRunner`, `GenerateLegalActions`, `WBCardActivationCandidateGenerator`, or `WBCardActivationLegalActionGenerator` references in the readiness helper.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+One interim hidden-token scan command used a Windows-incompatible glob and failed before reading files. The corrected scan over `Reference/GodotCanon/CardDBSchemaFixtures/ExpectedExports` found no `SECRET` values.
+
+### Risks / Unknowns
+
+- This helper is test-only and does not represent production loader behavior.
+- No schema migration is implemented.
+- Future production importer work still needs its own boundary for loading, storage, zone visibility, and provider consumption.
+
 ## Test-Only CardDB Source Version Compatibility Pass
 
 ### Scope

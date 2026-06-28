@@ -252,6 +252,16 @@ The test-only schema fixture validator proves the current fail-closed validation
 
 The provider remains an external-data boundary. It should consume already-loaded definitions, zone observations, normal legal actions, activation legal actions, and public summaries; it should not import CardDB data, mutate rules state, generate legal action families internally, or expose hidden card identity.
 
+Future providers should consume only bundles that satisfy importer-readiness criteria:
+
+- bundle validation passes
+- source-version compatibility passes
+- dependency order is available
+- ordered validated `FWBCardDefinition` values are available
+- diagnostics are empty
+
+The current importer-readiness helper is test-only and does not load definitions into runtime. A future production provider should treat equivalent readiness as a prerequisite, not as provider-owned parsing behavior.
+
 ## Implementation Sequence Recommendation
 
 1. Draft Unreal-owned CardDB schema docs only.
