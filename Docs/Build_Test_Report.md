@@ -1,6 +1,109 @@
 # Build/Test Report
 
-Date of check: 2026-06-27 (America/New_York)
+Date of check: 2026-06-28 (America/New_York)
+
+## Test-Only CardDB Importer Diagnostic Summary Pass
+
+### Scope
+
+This pass added a test-only CardDB importer diagnostic summary adapter for readiness results.
+
+Implemented:
+
+- `FWBCardDBImporterReasonSummaryForTest`
+- `FWBCardDBImporterDiagnosticCodeSummaryForTest`
+- `FWBCardDBImporterDiagnosticSummaryForTest`
+- `FWBCardDBImporterDiagnosticSummaryForTests`
+- summary export snapshots
+- summary tests for mixed readiness, schema failures, card-context affected counts, all-ready bundles, hidden-token safety, deterministic output, sorting, empty input, and source guards
+
+Not implemented:
+
+- production CardDB importer
+- production CardDB loader
+- production zones
+- schema migration logic
+- runtime activation behavior changes
+- rules behavior changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- effect execution
+- activation candidate/action generation in production runtime
+- UI widgets, response windows, Blueprints, `.uasset`, or `.umap` work
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 64.66 seconds
+```
+
+### Targeted CardDB Importer Diagnostic Summary Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardDBImporterDiagnosticSummary; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardDBImporterDiagnosticSummary'
+```
+
+Final result from `Saved/AutomationReports/CardDBImporterDiagnosticSummary/index.json`:
+
+```text
+succeeded=15
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=959
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 15 `Wandbound.Core.CardDBImporterDiagnosticSummary.*` automation tests.
+
+### Notes
+
+- Summary output groups not-ready reasons and schema diagnostic codes.
+- Diagnostic summaries count total diagnostic occurrences, affected bundles, and affected card contexts.
+- Ready and not-ready source paths use sorted sanitized clean filenames.
+- Summary exports omit full source JSON, diagnostic messages, card ids, effect ids, payload bodies, public labels/text, and hidden values.
+- Empty input summary exports deterministically.
+- Expected export hidden-token scan found no `SECRET` values.
+- Source guards found no `WBCardDBImporterDiagnosticSummaryForTests` includes in `Source/WandboundCore` or `Source/WandboundRuntime`.
+- Source guards found no `WBEffectRunner`, `GenerateLegalActions`, `WBCardActivationCandidateGenerator`, or `WBCardActivationLegalActionGenerator` references in the summary helper.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- This helper is test-only and does not represent production importer diagnostics yet.
+- Future production importer work still needs a loader/storage boundary, zone visibility model, and policy for surfacing grouped diagnostics to tools or UI.
 
 ## Test-Only CardDB Importer Readiness Pass
 

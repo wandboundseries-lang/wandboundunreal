@@ -658,6 +658,10 @@ Future importer readiness criteria should preserve the test-only helper policy:
 
 Readiness snapshots may expose ordered public card ids and validated definitions for tests only. They should not expose production parser APIs, runtime-loaded CardDB data, zones, payload bodies, diagnostic messages, or hidden values.
 
+Future importer diagnostics should provide both detailed diagnostics and high-level grouped summaries.
+
+Detailed diagnostics should preserve stable context for authoring fixes. Grouped summaries should count readiness failure reasons, diagnostic codes, affected bundles, and affected card contexts without exposing diagnostic messages, full JSON snippets, card ids, effect ids, payload bodies, or hidden values.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

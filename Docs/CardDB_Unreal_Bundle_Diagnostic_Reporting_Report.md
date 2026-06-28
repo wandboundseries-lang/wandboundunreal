@@ -96,6 +96,12 @@ Exported diagnostics include code, card index, safe card id, safe effect id, and
 
 Bundle-level diagnostics now have stable expected export snapshots for malformed bundle fields, duplicate card ids, strict/non-strict unknown-field behavior, mixed bundle/card diagnostics, and hidden-token-safe missing references.
 
+## Importer Diagnostic Summaries
+
+Test-only importer diagnostic summaries can now group readiness failures by stable reason and diagnostic code.
+
+These summaries count affected bundles and affected card contexts for importer planning while omitting diagnostic messages, card ids, effect ids, full source JSON, and hidden values.
+
 ## Confirmations
 
 - this remains test-only

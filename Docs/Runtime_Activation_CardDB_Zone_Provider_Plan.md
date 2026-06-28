@@ -262,6 +262,8 @@ Future providers should consume only bundles that satisfy importer-readiness cri
 
 The current importer-readiness helper is test-only and does not load definitions into runtime. A future production provider should treat equivalent readiness as a prerequisite, not as provider-owned parsing behavior.
 
+For failed bundles, the future provider/import pipeline should surface grouped diagnostics suitable for logs or tooling: readiness reason counts, diagnostic code counts, affected bundle counts, and affected card-context counts. Grouped diagnostics should not expose hidden values or raw source JSON.
+
 ## Implementation Sequence Recommendation
 
 1. Draft Unreal-owned CardDB schema docs only.
