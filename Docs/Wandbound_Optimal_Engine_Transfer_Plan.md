@@ -35,6 +35,8 @@ Prioritize production-facing gameplay plumbing:
 
 ## Phase 1 - Production Zone State and Observation
 
+Status: started. The production-safe card zone state pass adds the zone data shape and validation scaffolding first. Player-perspective observation remains the next pass.
+
 Milestones:
 
 1. Add production-safe card zone state structs.

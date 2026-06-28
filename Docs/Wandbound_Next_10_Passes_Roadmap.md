@@ -6,6 +6,7 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 1 - Production-Safe Card Zone State Structs
 
+- Status: implemented as production-safe state/query scaffolding. No gameplay movement or observation model was added.
 - Purpose: Add authoritative C++ state for card zones without importing Godot CardDB or changing gameplay behavior.
 - Files likely touched: `Source/WandboundCore/Public/`, `Source/WandboundCore/Private/`, `Source/WandboundTests/Private/`, `Docs/Build_Test_Report.md`.
 - Guardrails: Do not runtime-load Godot files; do not add UI; do not add production CardDB import; keep runtime from owning mutable rules state.
@@ -15,6 +16,7 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 2 - Player-Perspective Observation/Public-Private Zone Summary
 
+- Status: next recommended implementation pass.
 - Purpose: Add observation APIs that expose only what a viewer is allowed to know.
 - Files likely touched: `Source/WandboundCore/Public/`, `Source/WandboundCore/Private/`, `Source/WandboundTests/Private/`, `Docs/Build_Test_Report.md`.
 - Guardrails: No hidden opponent hand, deck identity, hidden marker identity, source effect ids, or fixture debug metadata in public output.

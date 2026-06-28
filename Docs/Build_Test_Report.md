@@ -60,7 +60,8 @@ Command used:
 Final result:
 
 ```text
-Pending final validation.
+Result: Succeeded
+Total execution time: 68.37 seconds
 ```
 
 ### Wandbound Automation Tests
@@ -74,7 +75,10 @@ Command used:
 Final result:
 
 ```text
-Pending final validation.
+succeeded=1051
+succeededWithWarnings=0
+failed=0
+notRun=0
 ```
 
 ### New Tests Added
@@ -83,10 +87,11 @@ Added 20 `Wandbound.Core.CardZoneState.*` automation tests covering zone enum st
 
 ### Validation
 
-- `git diff --check`: pending final validation.
-- Source/WandboundRuntime should remain untouched by this pass.
-- `Reference/GodotProject` should remain untouched.
-- `.uasset` and `.umap` assets should remain untouched.
+- `git diff --check`: passed with no whitespace errors. Git reported LF-to-CRLF working-copy notices for existing modified files.
+- Source/WandboundRuntime was not modified by this pass.
+- `Reference/GodotProject` was not modified by this pass.
+- `.uasset` and `.umap` assets were not modified by this pass.
+- Generated folders `Saved`, `Intermediate`, `Binaries`, `DerivedDataCache`, and `.vs` were not newly tracked.
 
 ### Notes
 
@@ -98,7 +103,7 @@ Added 20 `Wandbound.Core.CardZoneState.*` automation tests covering zone enum st
 
 ### Exact Errors
 
-Pending final validation.
+Final build and automation reported no errors.
 
 ### Risks / Unknowns
 

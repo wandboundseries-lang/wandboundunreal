@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WBCardZoneState.h"
 #include "WBTypes.h"
 
 struct WANDBOUNDCORE_API FWBUnitState
@@ -86,6 +87,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	TArray<FWBPlayerStateData> Players;
 	FWBPendingAttackState PendingAttack;
 	TMap<int32, TSet<FString>> ActivationUsageKeysThisTurn;
+	FWBCardZoneState CardZoneState;
 
 	static bool IsValidPlayerId(int32 PlayerId);
 	static int32 TileToIndex(const FWBTile& Tile);
@@ -95,6 +97,9 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	FWBPlayerStateData* GetMutablePlayerById(int32 PlayerId);
 	const FWBPlayerStateData* GetCurrentPlayer() const;
 	FWBPlayerStateData* GetMutableCurrentPlayer();
+	const FWBCardZoneState& GetCardZoneState() const;
+	FWBCardZoneState& GetMutableCardZoneStateForTest();
+	void ClearCardZoneStateForTest();
 	TArray<const FWBUnitState*> GetUnitsForPlayer(int32 PlayerId) const;
 	TArray<FWBUnitState*> GetMutableUnitsForPlayer(int32 PlayerId);
 	bool IsNormalTurnPhase() const;

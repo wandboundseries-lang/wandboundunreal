@@ -260,6 +260,21 @@ FWBPlayerStateData* FWBGameStateData::GetMutableCurrentPlayer()
 	return GetMutablePlayerById(CurrentPlayer);
 }
 
+const FWBCardZoneState& FWBGameStateData::GetCardZoneState() const
+{
+	return CardZoneState;
+}
+
+FWBCardZoneState& FWBGameStateData::GetMutableCardZoneStateForTest()
+{
+	return CardZoneState;
+}
+
+void FWBGameStateData::ClearCardZoneStateForTest()
+{
+	CardZoneState = FWBCardZoneState();
+}
+
 TArray<const FWBUnitState*> FWBGameStateData::GetUnitsForPlayer(const int32 PlayerId) const
 {
 	TArray<const FWBUnitState*> OwnedUnits;
