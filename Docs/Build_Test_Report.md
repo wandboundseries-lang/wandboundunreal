@@ -2,6 +2,115 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Player-Perspective Card Zone Observation Pass
+
+### Scope
+
+This pass adds read-only WandboundCore observation summaries for `FWBCardZoneState`.
+
+Implemented:
+
+- `EWBZoneObservationVisibility`
+- `FWBObservedCardRef`
+- `FWBObservedZoneSummary`
+- `FWBObservedEquippedSummary`
+- `FWBObservedMarkerSummary`
+- `FWBCardZonePublicSummary`
+- `FWBCardZonePlayerObservation`
+- `WBCardZoneObservation::BuildPublicSummary`
+- `WBCardZoneObservation::BuildObservationForPlayer`
+- hidden-info scan helpers for tests
+
+Not implemented:
+
+- CardDB import
+- production CardDB loading
+- draw
+- shuffle
+- discard movement
+- summon
+- equip gameplay
+- marker reveal or trigger behavior
+- player UI
+- target picking
+- response windows
+- NPC phase
+- passives
+- wands
+- overflow
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- runtime visual/UI changes
+- Blueprint gameplay
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 13.79 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1071
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 20 `Wandbound.Core.CardZoneObservation.*` automation tests covering public deck/hand/discard counts only, own hand visibility, opponent hand hiding, deck identity hiding, own discard visibility, hidden marker identity exclusion, marker public fields, board card references, equipped count-only policy, own equipped fail-closed policy, deterministic ordering, invalid viewer behavior, no mutation, public board summary unchanged, legal generation unchanged, `WBActionCodec` unchanged, runtime source unchanged, and hidden-info source guards.
+
+### Validation
+
+- `git diff --check`: passed with no whitespace errors. Git reported LF-to-CRLF working-copy notices only.
+- Source/WandboundRuntime was not modified by this pass.
+- `Reference/GodotProject` was not modified by this pass.
+- `.uasset` and `.umap` assets were not modified by this pass.
+- Generated folders `Saved`, `Intermediate`, `Binaries`, `DerivedDataCache`, and `.vs` were not newly tracked.
+
+### Notes
+
+- Public Deck, Hand, and Discard summaries expose count only.
+- Own Hand is visible only through the viewer-private observation.
+- Own Discard is visible only through the viewer-private observation while public Discard remains fail-closed count-only.
+- Deck identity remains hidden for all viewers.
+- Opponent Hand and opponent Discard identity remain hidden.
+- Equipped identity remains fail-closed count-only.
+- Marker summaries omit `InternalMarkerCardId`.
+- Board card references remain derived from visible unit state.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- Public Discard visibility remains unresolved and intentionally fail-closed.
+- Equipped owner/public visibility remains unresolved and intentionally fail-closed.
+- Marker reveal/trigger behavior remains future work.
+- Observation is not serialized as production JSON yet; this pass keeps scan helpers test-facing only.
+
 ## Production-Safe Card Zone State Pass
 
 ### Scope

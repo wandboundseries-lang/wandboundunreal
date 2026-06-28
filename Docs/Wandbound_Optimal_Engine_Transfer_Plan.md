@@ -35,7 +35,7 @@ Prioritize production-facing gameplay plumbing:
 
 ## Phase 1 - Production Zone State and Observation
 
-Status: started. The production-safe card zone state pass adds the zone data shape and validation scaffolding first. Player-perspective observation remains the next pass.
+Status: implemented through production-safe zone state and player-perspective observation. The next pass is the minimal production CardDefinitionRepository shell.
 
 Milestones:
 
@@ -62,6 +62,14 @@ Success criteria:
 - WandboundCore has deterministic zone structs and read-only query surfaces.
 - Tests prove own/private and opponent/public observation differ correctly.
 - Source/WandboundRuntime still does not own mutable rules state.
+
+Implemented notes:
+
+- Deck, Hand, Discard, Equipped, board references, and marker placeholders are represented in WandboundCore.
+- Public zone summaries expose counts only.
+- Own hand and own discard are visible only in the owner-private observation.
+- Deck identity, opponent hand identity, opponent discard identity, equipped identity, and hidden marker identity remain hidden.
+- No CardDB import, card movement, runtime UI, action-codec change, or legal-action generation change was added.
 
 ## Phase 2 - Minimal Production Card Definition Repository
 

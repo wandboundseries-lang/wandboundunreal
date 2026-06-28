@@ -16,13 +16,14 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 2 - Player-Perspective Observation/Public-Private Zone Summary
 
-- Status: next recommended implementation pass.
+- Status: implemented as read-only public/player-scoped card zone observation. No gameplay movement, CardDB import, action-codec change, legal-action generation change, or runtime/UI behavior was added.
 - Purpose: Add observation APIs that expose only what a viewer is allowed to know.
 - Files likely touched: `Source/WandboundCore/Public/`, `Source/WandboundCore/Private/`, `Source/WandboundTests/Private/`, `Docs/Build_Test_Report.md`.
 - Guardrails: No hidden opponent hand, deck identity, hidden marker identity, source effect ids, or fixture debug metadata in public output.
 - Tests expected: own hand visible to owner, opponent hand hidden, deck identities hidden, public board unchanged, deterministic sort order.
 - Out-of-scope: UI view widgets, network replication, full replay dataset schema.
 - Success criteria: The same state can produce different safe observations for Player 1, Player 2, and public spectators.
+- Implemented notes: public Deck/Hand/Discard summaries are count-only, own Hand and own Discard are owner-private, Deck identity remains hidden for all viewers, equipped identity is count-only, and hidden marker identity is excluded.
 
 ## Pass 3 - Minimal Production Card Definition Repository Shell
 

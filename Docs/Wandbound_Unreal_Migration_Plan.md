@@ -30,6 +30,24 @@
 - No CardDB import was added.
 - No draw, shuffle, discard movement, summon, equip gameplay, marker reveal, response windows, UI, Blueprint, `.uasset`, or `.umap` work was added.
 
+## Milestone - Player-Perspective Card Zone Observation
+
+- Added `WBCardZoneObservation` as a read-only WandboundCore observation helper for `FWBCardZoneState`.
+- Added public card zone summaries for Deck, Hand, Discard, Equipped, Markers, and board card references.
+- Added player-scoped observations with own Hand visible to the viewer.
+- Added owner-private own Discard visibility while keeping public Discard fail-closed count-only.
+- Opponent Hand identity is hidden.
+- Deck identity is hidden for all viewers.
+- Hidden marker identity is hidden and is not present in public observation structs.
+- Equipped card identity remains fail-closed count-only.
+- Board card references remain derived from visible unit `CardId` through the existing board reference policy.
+- Observation does not mutate `FWBGameStateData`.
+- Observation does not generate legal actions.
+- `WBActionCodec` remains unchanged.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- No CardDB import was added.
+- No draw, shuffle, discard movement, summon, equip gameplay, marker reveal, response windows, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

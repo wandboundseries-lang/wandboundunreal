@@ -76,6 +76,14 @@ The validator is test-facing scaffolding. It is not production card movement log
 - Hidden marker identities are private.
 - Public board summaries remain units/walls/terrain only.
 
+## Observation Follow-Up
+
+`WBCardZoneObservation` now consumes `FWBCardZoneState` to build read-only public and player-scoped summaries.
+
+The observation layer keeps public Deck, Hand, and Discard summaries count-only, exposes own Hand and own Discard only through the viewer-private observation, keeps Deck identity hidden for both players, and keeps equipped identity fail-closed count-only.
+
+`FWBPublicBoardSummary` remains unchanged. Board card references in the card-zone observation are still derived from existing unit state rather than duplicating board truth in card zones.
+
 ## Out Of Scope
 
 - CardDB import
