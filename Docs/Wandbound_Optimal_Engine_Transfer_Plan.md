@@ -108,6 +108,8 @@ Implemented notes:
 
 ## Phase 3 - Production Activation Data Provider Skeleton
 
+Status: started. A production-safe provider skeleton now implements the existing runtime activation data provider interface and emits target-deferred board/own-hand activation source/effect decisions.
+
 Milestones:
 
 1. Implement an `IWBRuntimeActivationDataProvider`-backed skeleton.
@@ -128,6 +130,15 @@ Success criteria:
 
 - The existing runtime activation decision-session facade can refresh from production-shaped provider output.
 - Hidden zones do not leak through provider output.
+
+Implemented notes:
+
+- `FWBProductionActivationDataProvider` consumes const game state, const card definition repository, and viewer id.
+- Board-source activations derive from viewer-owned visible board units and explicit board source gates.
+- Own-hand activations derive only from `WBCardZoneObservation::OwnHand`.
+- Target options are deferred with diagnostics.
+- Runtime sessions still consume externally supplied provider output.
+- No effect execution, normal legal action generation, CardDB import, `WBActionCodec` change, or `WBRules::GenerateLegalActions` change was added.
 
 ## Phase 4 - Playable Board/Hand Activation Vertical Slice
 

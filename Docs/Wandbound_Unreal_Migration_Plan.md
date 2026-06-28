@@ -85,6 +85,26 @@
 - `WBActionCodec` remains unchanged.
 - `WBRules::GenerateLegalActions` remains unchanged.
 
+## Milestone - Production Activation Data Provider Skeleton
+
+- Added `FWBProductionActivationDataProvider` in `WandboundRuntime`.
+- The provider implements `IWBRuntimeActivationDataProvider`.
+- The provider consumes const `FWBGameStateData`, const `FWBCardDefinitionRepository`, and viewer id input.
+- The provider emits existing `FWBRuntimeActivationDecisionSessionRefreshInput`.
+- Board-source activation decision data derives from viewer-owned visible board units and explicit board source gates.
+- Own-hand activation decision data derives only from `WBCardZoneObservation::OwnHand`.
+- Missing definitions, unsupported source zones, rejected public labels, and deferred targets are reported through sanitized diagnostics.
+- Target options are intentionally deferred.
+- Runtime activation sessions can refresh from provider output through the existing adapter/facade path.
+- Hidden opponent hand, deck identity, and marker internal identity remain excluded from provider output.
+- The provider does not mutate game state or repositories.
+- The provider does not execute effects.
+- The provider does not call `WBEffectRunner`.
+- No Godot CardDB import was added.
+- No draw, shuffle, discard movement, summon, equip, marker reveal, NPC phase, response window, passive, wand, overflow, UI, Blueprint, `.uasset`, or `.umap` work was added.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- `WBActionCodec` remains unchanged.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

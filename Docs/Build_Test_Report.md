@@ -2,6 +2,110 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Production Activation Data Provider Skeleton Pass
+
+### Scope
+
+This pass adds a production runtime activation data provider skeleton that implements `IWBRuntimeActivationDataProvider` while keeping rule truth and effect execution outside runtime presentation code.
+
+Implemented:
+
+- `FWBProductionActivationDataProviderInput`
+- `FWBProductionActivationDataProviderConfig`
+- `FWBProductionActivationDataProviderDiagnostic`
+- `FWBProductionActivationDataProvider`
+- Board-source activation decision data for viewer-owned public board units
+- Own-hand activation decision data from `WBCardZoneObservation::BuildObservationForPlayer`
+- Fail-closed diagnostics for missing provider input, missing definitions, unsupported source zones, unsafe public labels, and deferred target options
+- Runtime decision-session integration tests proving the provider output is consumed externally
+
+Not implemented:
+
+- Godot CardDB import
+- effect execution
+- target option enumeration
+- response windows
+- draw/discard/summon/equip mechanics
+- `WBRules::GenerateLegalActions` changes
+- `WBActionCodec` changes
+- Blueprint/UI/assets
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 9.39 seconds
+```
+
+### Targeted Provider Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Runtime.ProductionActivationDataProvider; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\WandboundProductionActivationDataProvider'
+```
+
+Final result:
+
+```text
+succeeded=26
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1143
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Validation
+
+- `WBRules::GenerateLegalActions`, `WBActionCodec`, and `WBEffectRunner` were not changed.
+- `Reference/GodotProject` and `Reference/GodotCanon` were not modified by this pass.
+- `.uasset` and `.umap` assets were not modified.
+- Runtime provider output remains externally owned activation decision data.
+- Hidden zones stay protected: opponent hand, decks, and marker identities are not exposed.
+- Source guards were updated narrowly so only `WBProductionActivationDataProvider` may consume the repository and zone observation bridges in runtime.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+Interim issues fixed before final validation:
+
+- A compile error from assigning `FWBCardActivationSource` directly to `FWBEffectSourceRef`; fixed by explicit source field mapping.
+- A deterministic ordering test expectation mismatch; fixed to match provider action sorting.
+- Two older runtime source guards expected no runtime repository/zone observation references; updated to allow only the production provider bridge while preserving the boundary elsewhere.
+
+### Risks / Unknowns
+
+- Target option enumeration is intentionally deferred.
+- Discard/equipped sources are disabled by default and not generated.
+- Activation actions are not yet integrated into normal `FWBAction` or `WBActionCodec`.
+- Provider diagnostics are production-shaped but not yet surfaced to UI.
+
 ## CardDefinition Fixture Repository Loader Pass
 
 ### Scope

@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This pass adds a production-safe, test-only contract suite for future activation data providers. It defines the shape future CardDB/zone-backed providers must satisfy before any production provider exists.
+This pass adds a production-safe, test-only contract suite for activation data providers. It defines the shape CardDB/zone-backed providers must satisfy.
 
-No production provider, CardDB import, production zones, runtime legal generation, public-summary building from state, UI widgets, response windows, or activation `FWBAction` integration were added.
+`FWBProductionActivationDataProvider` now exercises the same interface as the first production provider skeleton. No CardDB import, production card movement, UI widgets, response windows, or activation `FWBAction` integration were added.
 
 ## Contract Shape
 
@@ -67,11 +67,15 @@ Activation legal actions remain separate from `FWBAction`.
 Runtime production code still does not:
 
 - generate normal legal actions
-- generate activation candidates
-- generate activation legal actions
-- build public summaries from `FWBGameStateData` through the provider path
-- own or cache rules state through the provider shell
+- execute effects
+- own or mutate rules state through the provider shell
 - inspect hidden zones
+
+The production provider may build read-only activation source/effect action-set data from explicit inputs, but runtime sessions still consume that data externally.
+
+## Production Provider Contract Coverage
+
+`WBProductionActivationDataProviderTests.cpp` adds production provider contract coverage for configuration failures, board-source activations, own-hand activations, hidden-info exclusion, deterministic output, session facade refresh, no mutation, no effect execution, no `WBRules::GenerateLegalActions` call, and no `WBActionCodec` dependency.
 
 ## Future Provider Guidance
 

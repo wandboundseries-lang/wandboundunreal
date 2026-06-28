@@ -103,6 +103,16 @@ Supported payload families are damage, heal, status, and armor. Unsupported fiel
 
 The loader calls `WBCardDefinitionRepository::ValidateRepository` after parsing succeeds, so duplicate ids and public-label internal-term failures still use the repository boundary.
 
+## Production Provider Consumption
+
+`FWBProductionActivationDataProvider` consumes `FWBCardDefinitionRepository` definitions by exact `CardId`.
+
+Board-source activations use visible board unit `CardId` values. Own-hand activations use card ids from `WBCardZoneObservation::OwnHand`.
+
+Missing definitions fail closed for that source with `card_definition_not_found`; unsupported source zones are ignored with diagnostics.
+
+The provider also reuses repository public-label guard behavior to reject internal player-facing labels.
+
 ## Game State Policy
 
 The repository is not stored on `FWBGameStateData`.
@@ -138,4 +148,4 @@ Game state owns mutable rules state and card instances. The repository is immuta
 
 ## Next Planned Pass
 
-Add a production activation data provider skeleton that consumes externally supplied zone observations and card definitions without making runtime own rules state.
+Add read-only target option enumeration for provider-emitted activation source/effect choices.

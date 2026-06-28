@@ -415,7 +415,18 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardZoneObservationRuntimeSourceUnchangedTes
 bool FWBCardZoneObservationRuntimeSourceUnchangedTest::RunTest(const FString& Parameters)
 {
 	const FString RuntimeSource = MakeRuntimeSourceText();
-	TestFalse(TEXT("Runtime does not include observation helper"), RuntimeSource.Contains(TEXT("WBCardZoneObservation")));
+	const FString ProviderHeaderPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"), TEXT("Public"), TEXT("WBProductionActivationDataProvider.h"));
+	const FString ProviderSourcePath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"), TEXT("Private"), TEXT("WBProductionActivationDataProvider.cpp"));
+	FString ProviderHeader;
+	FString ProviderSource;
+	TestTrue(TEXT("Production provider header loads"), FFileHelper::LoadFileToString(ProviderHeader, *ProviderHeaderPath));
+	TestTrue(TEXT("Production provider source loads"), FFileHelper::LoadFileToString(ProviderSource, *ProviderSourcePath));
+	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
+
+	TestTrue(TEXT("Production provider consumes observation helper"), ProviderSource.Contains(TEXT("WBCardZoneObservation")));
+	TestFalse(TEXT("Runtime outside production provider does not include observation helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardZoneObservation")));
 	TestFalse(TEXT("Runtime does not mention hidden marker identity"), RuntimeSource.Contains(TEXT("InternalMarkerCardId")));
 	return true;
 }

@@ -49,12 +49,14 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 5 - Production Activation Data Provider Skeleton
 
+- Status: implemented as an initial provider skeleton with target options deferred. No effect execution, CardDB import, `FWBAction` activation integration, `WBActionCodec` change, or normal legal action generation change was added.
 - Purpose: Add the first production-shaped provider implementation that supplies runtime with externally owned decision data.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
 - Guardrails: Runtime remains a consumer; provider does not live in UI; activation remains separate from `FWBAction`; `WBRules::GenerateLegalActions` and `WBActionCodec` remain unchanged.
 - Tests expected: provider current-decision output, provider post-action output, missing dependency diagnostics, hidden-info exclusion, runtime no-generation source guards.
 - Out-of-scope: hand-source activation, draw/discard loop, response windows.
 - Success criteria: Existing runtime facade can refresh from a production-shaped provider result.
+- Implemented notes: `FWBProductionActivationDataProvider` emits board and own-hand source/effect activation decision data from const state, card-zone observation, and card definition repository input. Hidden opponent hand, deck identity, and marker internal identity stay excluded.
 
 ## Pass 6 - Board-Source Production Activation Provider Integration
 

@@ -4,7 +4,7 @@
 
 This pass adds a production-safe external activation data provider interface shell. The shell gives future systems a runtime-safe way to supply precomputed activation decision-session data to `UWBRuntimeActivationDecisionSessionFacadeComponent`.
 
-It does not implement the real provider.
+`FWBProductionActivationDataProvider` now implements this interface as the first production provider skeleton.
 
 ## Provider Request
 
@@ -71,17 +71,20 @@ It exists only for automation coverage and is not included by production runtime
 
 ## External-Data Ownership
 
-Provider implementations are future work. They are responsible for supplying runtime-safe public/action data. Runtime remains a consumer.
+Provider implementations are responsible for supplying runtime-safe public/action data. Runtime remains a consumer.
 
-The provider shell does not:
+`FWBProductionActivationDataProvider` supplies target-deferred activation source/effect decision data from `FWBGameStateData`, `WBCardZoneObservation`, and `FWBCardDefinitionRepository`.
 
-- own or cache `FWBGameStateData`
+The production provider skeleton does not:
+
+- own or mutate `FWBGameStateData`
 - generate normal legal actions
 - generate activation candidates
-- generate activation legal actions
-- build public summaries from state
+- execute effects
 - call `WBEffectRunner` directly
 - call `WBActionCodec`
+
+It does emit a target-deferred `FWBCardActivationLegalActionSet` for source/effect presentation.
 
 ## Hidden Information
 
@@ -95,7 +98,7 @@ The verifier and contract provider variants live under `WandboundTests` only and
 
 ## CardDB/Zone Provider Planning
 
-`Docs/Runtime_Activation_CardDB_Zone_Provider_Plan.md` now defines the future CardDB/zone-backed provider plan. The production provider is still not implemented, and runtime remains a consumer of externally supplied normal legal actions, activation legal actions, and public summaries.
+`Docs/Runtime_Activation_CardDB_Zone_Provider_Plan.md` defines the future CardDB/zone-backed provider plan. The production provider skeleton is now implemented, and runtime remains a consumer of externally supplied normal legal actions, activation legal actions, and public summaries.
 
 ## Action Family Boundary
 
@@ -105,7 +108,7 @@ Activation legal actions remain separate from `FWBAction`.
 
 ## Out Of Scope
 
-- production provider implementation
+- target option enumeration
 - production zones
 - CardDB import
 - UI widgets

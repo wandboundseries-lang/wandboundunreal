@@ -403,8 +403,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionRepositoryRuntimeSourceUnchang
 bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FString& Parameters)
 {
 	const FString RuntimeSource = LoadRuntimeSourceText();
-	TestFalse(TEXT("Runtime does not include repository helper"), RuntimeSource.Contains(TEXT("WBCardDefinitionRepository")));
-	TestFalse(TEXT("Runtime does not own repository struct"), RuntimeSource.Contains(TEXT("FWBCardDefinitionRepository")));
+	const FString ProviderHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionActivationDataProvider.h"));
+	const FString ProviderSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationDataProvider.cpp"));
+	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
+
+	TestTrue(TEXT("Production provider accepts repository input"), ProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Production provider consumes repository helper"), ProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
+	TestFalse(TEXT("Runtime outside production provider does not include repository helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardDefinitionRepository")));
+	TestFalse(TEXT("Runtime outside production provider does not own repository struct"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("FWBCardDefinitionRepository")));
 	return true;
 }
 

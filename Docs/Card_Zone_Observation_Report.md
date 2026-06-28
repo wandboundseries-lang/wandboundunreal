@@ -39,6 +39,12 @@ The viewer's own hand is visible through `OwnHand`.
 
 Own hand cards include `InstanceId`, `CardId`, and `OwnerPlayerId`, ordered by `ZoneIndex`, then instance id, then card id.
 
+## Production Provider Consumption
+
+`FWBProductionActivationDataProvider` consumes `WBCardZoneObservation::BuildObservationForPlayer` for own-hand activation sources.
+
+Only `OwnHand.Cards` are used for hand-source activations. Opponent hand, deck identity, and hidden marker identity remain outside provider output.
+
 ## Opponent Hand Policy
 
 Opponent hand identity is hidden.
@@ -124,4 +130,4 @@ Source guards also verify that public observation structs do not contain `Intern
 
 ## Next Planned Pass
 
-The next production-facing pass should add a minimal Unreal-owned `CardDefinitionRepository` shell that can query a small deterministic card definition set without importing Godot CardDB data or changing action-codec/rules generation contracts.
+Add read-only target option enumeration for provider-emitted activation source/effect choices without changing hidden-information policy.

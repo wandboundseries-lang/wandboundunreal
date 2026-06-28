@@ -147,6 +147,12 @@ This pass did not add:
 
 The loader is data ingestion only.
 
+## Production Provider Test Use
+
+Fixture-loaded repositories can be supplied to `FWBProductionActivationDataProvider` tests.
+
+The provider still consumes only Unreal-owned `FWBCardDefinitionRepository` data after loading; it does not import Godot CardDB or inspect `Reference/GodotProject`.
+
 ## Next Planned Pass
 
-Add a production activation data provider skeleton that consumes externally supplied card definitions and zone observations while keeping runtime a consumer of provider output.
+Add read-only target option enumeration for provider-emitted activation source/effect choices.
