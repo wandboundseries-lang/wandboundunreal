@@ -27,12 +27,14 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 3 - Minimal Production Card Definition Repository Shell
 
+- Status: implemented as a production-safe in-memory repository shell. No file loading, Godot CardDB import, provider integration, action-codec change, legal-action generation change, or runtime/UI behavior was added.
 - Purpose: Create a production-safe query boundary for Unreal-owned card definitions.
 - Files likely touched: `Source/WandboundCore/Public/`, `Source/WandboundCore/Private/`, `Source/WandboundTests/Private/`, `Docs/Build_Test_Report.md`.
 - Guardrails: Do not import Godot CardDB; do not add broad file loading; do not change `WBActionCodec`; fail closed on missing/unsupported definitions.
 - Tests expected: lookup success/failure, duplicate id rejection, deterministic enumeration, unsupported payload diagnostics.
 - Out-of-scope: schema migration, manifest suite evaluation, asset import, runtime provider integration.
 - Success criteria: A small in-memory or fixture-backed repository can return `FWBCardDefinition` data by card id.
+- Implemented notes: repository validation covers repository id, card id, public name, effect id, duplicate ids, supported target requirement, and internal public-label terms; lookup/order helpers are deterministic by `CardId`.
 
 ## Pass 4 - Minimal Fixture CardDB Repository Loader, Unreal-Owned Only
 

@@ -2,6 +2,115 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## CardDefinitionRepository Shell Pass
+
+### Scope
+
+This pass adds a minimal production-safe WandboundCore repository shell for Unreal-owned `FWBCardDefinition` values.
+
+Implemented:
+
+- `FWBCardDefinitionRepository`
+- `FWBCardDefinitionRepositoryValidationResult`
+- `FWBCardDefinitionRepositoryLookupResult`
+- `WBCardDefinitionRepository::ValidateRepository`
+- `WBCardDefinitionRepository::BuildRepositoryFromDefinitions`
+- `WBCardDefinitionRepository::ContainsCardId`
+- `WBCardDefinitionRepository::FindCardById`
+- `WBCardDefinitionRepository::GetCardIdsInDeterministicOrder`
+- `WBCardDefinitionRepository::GetDefinitionsInDeterministicOrder`
+- `WBCardDefinitionRepository::HasDuplicateCardIds`
+- `WBCardDefinitionRepository::ContainsForbiddenPublicLabelTermForTest`
+
+Not implemented:
+
+- Godot CardDB import
+- production JSON/CardDB loading
+- schema parser
+- zone movement
+- draw
+- shuffle
+- discard movement
+- summon
+- equip gameplay
+- activation legal action generation changes
+- activation provider skeleton
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- response windows
+- UI widgets
+- target picking
+- marker reveal behavior
+- NPC phase
+- passives
+- wands
+- overflow
+- Blueprint gameplay
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 14.75 seconds
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1093
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### New Tests Added
+
+Added 22 `Wandbound.Core.CardDefinitionRepository.*` automation tests covering repository id validation, valid single/multiple repositories, duplicate card ids, empty card ids, missing public names, missing/duplicate effect ids, public label internal-term rejection, contains/lookup helpers, empty/missing lookup reasons, deterministic card id and definition ordering, build/copy behavior, input immutability, separation from `FWBGameStateData`, legal generation unchanged, `WBActionCodec` unchanged, runtime source unchanged, and schema-validator boundary separation.
+
+### Validation
+
+- `git diff --check`: passed with no whitespace errors. Git reported LF-to-CRLF working-copy notices only.
+- Source/WandboundRuntime was not modified by this pass.
+- `Reference/GodotProject` was not modified by this pass.
+- `.uasset` and `.umap` assets were not modified by this pass.
+- Generated folders `Saved`, `Intermediate`, `Binaries`, `DerivedDataCache`, and `.vs` were not newly tracked.
+
+### Notes
+
+- Repository lookup is exact-match by `CardId`.
+- Public enumeration helpers sort by `CardId`.
+- Repository validation is intentionally shallower than the test-only CardDB schema validator.
+- Repository remains separate from `FWBGameStateData`; game state owns card instances and zones, while repository owns static definitions.
+- Future provider work should bridge card-zone observations to repository definitions without bypassing hidden-information policy.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- Future production loader diagnostics must align with repository validation without duplicating every test-only schema diagnostic.
+- Public label guards may need expansion once real card public text exists.
+- Repository metadata may need richer source/version/dependency information once production loading begins.
+
 ## Player-Perspective Card Zone Observation Pass
 
 ### Scope

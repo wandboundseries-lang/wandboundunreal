@@ -35,7 +35,7 @@ Prioritize production-facing gameplay plumbing:
 
 ## Phase 1 - Production Zone State and Observation
 
-Status: implemented through production-safe zone state and player-perspective observation. The next pass is the minimal production CardDefinitionRepository shell.
+Status: implemented through production-safe zone state and player-perspective observation.
 
 Milestones:
 
@@ -73,6 +73,8 @@ Implemented notes:
 
 ## Phase 2 - Minimal Production Card Definition Repository
 
+Status: started. The production-safe `CardDefinitionRepository` shell is implemented; the minimal Unreal-owned fixture repository loader remains the next pass.
+
 Milestones:
 
 1. Add production-safe `CardDefinitionRepository` shell.
@@ -93,6 +95,13 @@ Success criteria:
 - A small production-safe card definition set can be queried by card id.
 - It is not Godot runtime loading.
 - It is enough to drive one or two board/hand activations.
+
+Implemented notes:
+
+- `FWBCardDefinitionRepository` stores Unreal-owned `FWBCardDefinition` values outside `FWBGameStateData`.
+- Repository validation fails closed on missing ids, duplicate card ids, missing public names, malformed effect ids, duplicate effect ids, and internal player-facing labels.
+- Lookup and enumeration are deterministic by `CardId`.
+- No loader, file parsing, CardDB import, provider integration, runtime changes, legal-action generation change, or action-codec change was added.
 
 ## Phase 3 - Production Activation Data Provider Skeleton
 

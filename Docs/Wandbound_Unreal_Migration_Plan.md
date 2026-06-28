@@ -48,6 +48,24 @@
 - No CardDB import was added.
 - No draw, shuffle, discard movement, summon, equip gameplay, marker reveal, response windows, UI, Blueprint, `.uasset`, or `.umap` work was added.
 
+## Milestone - CardDefinitionRepository Shell
+
+- Added `FWBCardDefinitionRepository` as a production-safe static definition container.
+- Added `WBCardDefinitionRepository` deterministic validation, build, lookup, and ordering helpers.
+- Repository stores Unreal-owned `FWBCardDefinition` values outside `FWBGameStateData`.
+- Repository validation fails closed on missing repository id, missing/duplicate card ids, missing public names, missing/duplicate effect ids, unsupported target requirement values, and player-facing labels containing internal terms.
+- Deterministic query helpers sort by `CardId`.
+- Empty lookups fail with `card_id_missing`; missing cards fail with `card_definition_not_found`.
+- Repository does not inspect hidden zones.
+- Repository does not mutate `FWBGameStateData`.
+- Repository does not generate legal actions or activation candidates.
+- `WBActionCodec` remains unchanged.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- No CardDB import was added.
+- No file loader or JSON parser was added.
+- No runtime/provider integration was added.
+- No draw, shuffle, discard movement, summon, equip gameplay, marker reveal, response windows, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

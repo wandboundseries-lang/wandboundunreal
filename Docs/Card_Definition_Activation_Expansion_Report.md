@@ -108,3 +108,9 @@ FWBCardDefinition -> FWBCardActivationCandidate -> FWBCardActivationLegalAction
 The future Unreal-owned CardDB schema maps imported card records into `FWBCardDefinition` and imported activated effects into `FWBCardEffectDefinition`.
 
 Schema validation should occur before expansion. Unsupported card kinds, target requirements, payload types, or payload operations must fail closed instead of producing partial activation commands.
+
+## Follow-Up - CardDefinitionRepository Shell
+
+Activation expansion can later consume `FWBCardDefinition` values supplied by `FWBCardDefinitionRepository`.
+
+The repository remains a static definition lookup boundary. It does not expand activations, generate candidates, mutate state, load files, import Godot CardDB data, or change `FWBAction` / `WBActionCodec` contracts.

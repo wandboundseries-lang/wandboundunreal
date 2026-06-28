@@ -12,6 +12,8 @@ This is not the importer. This schema is the target for future CardDB import and
 - `FWBCardActivationCostGateDefinition`
 - `FWBGenericEffectPayload`
 
+Future validated schema data should be stored behind `FWBCardDefinitionRepository` before any provider or activation layer consumes it.
+
 Unsupported effects must fail closed.
 
 ## Non-Goals
@@ -498,6 +500,7 @@ Future flow:
 CardDB JSON
 -> schema validation
 -> Unreal FWBCardDefinition
+-> FWBCardDefinitionRepository
 -> source gates
 -> candidate generation
 -> activation legal action family
