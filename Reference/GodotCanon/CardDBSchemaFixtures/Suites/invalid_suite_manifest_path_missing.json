@@ -1,0 +1,9 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "invalid_suite_manifest_path_missing",
+  "manifests": [
+    {
+      "name": "missing_path"
+    }
+  ]
+}

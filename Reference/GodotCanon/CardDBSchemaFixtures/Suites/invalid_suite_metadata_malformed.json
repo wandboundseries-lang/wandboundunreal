@@ -1,0 +1,13 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "invalid_suite_metadata_malformed",
+  "metadata": {
+    "unknown": "not allowed"
+  },
+  "manifests": [
+    {
+      "name": "core",
+      "path": "Manifests/valid_manifest_all_ready.json"
+    }
+  ]
+}

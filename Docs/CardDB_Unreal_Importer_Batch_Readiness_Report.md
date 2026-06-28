@@ -82,6 +82,12 @@ Importer manifests now group named batch-readiness sets for test-only validation
 
 The manifest helper validates manifest structure, duplicate names, safe relative bundle paths, metadata, and compatibility overrides before calling this batch helper. Manifest exports include batch-level summaries only, not full per-bundle readiness exports.
 
+## Suite Aggregation Integration
+
+Manifest suite evaluation aggregates batch-readiness output across all evaluated manifest fixtures.
+
+Suite exports summarize manifest counts, batch counts, total bundle counts, ready bundles, not-ready bundles, and grouped readiness diagnostics without exposing full batch exports.
+
 ## Confirmations
 
 - this remains test-only

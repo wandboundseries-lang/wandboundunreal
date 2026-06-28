@@ -1,0 +1,10 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "fixture_suite_with_not_ready_bundles",
+  "manifests": [
+    {
+      "name": "mixed_manifest",
+      "path": "Manifests/valid_manifest_mixed_batches.json"
+    }
+  ]
+}

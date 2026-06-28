@@ -1,0 +1,9 @@
+{
+  "suite_id": "invalid_suite_missing_schema_version",
+  "manifests": [
+    {
+      "name": "core",
+      "path": "Manifests/valid_manifest_all_ready.json"
+    }
+  ]
+}

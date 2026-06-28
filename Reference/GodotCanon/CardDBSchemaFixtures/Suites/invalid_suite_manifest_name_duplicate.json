@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "invalid_suite_manifest_name_duplicate",
+  "manifests": [
+    {
+      "name": "dupe",
+      "path": "Manifests/valid_manifest_all_ready.json"
+    },
+    {
+      "name": "dupe",
+      "path": "Manifests/valid_manifest_mixed_batches.json"
+    }
+  ]
+}

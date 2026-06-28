@@ -107,6 +107,12 @@ The batch-readiness helper now uses diagnostic summaries for grouped output acro
 
 Batch snapshots include the same reason and diagnostic summary arrays used by this helper, while leaving detailed per-bundle diagnostics as diagnostic code strings only.
 
+## Relationship To Manifest Suites
+
+Manifest suite evaluation uses diagnostic summaries for aggregate output across all readiness results produced by evaluated manifests.
+
+Suite snapshots include grouped reason and diagnostic summary arrays only. They do not include manifest exports, batch exports, bundle readiness exports, diagnostic messages, card ids, effect ids, payload bodies, or hidden values.
+
 ## Confirmations
 
 - this remains test-only

@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "fixture_suite_all_ready",
+  "manifests": [
+    {
+      "name": "all_ready_manifest",
+      "path": "Manifests/valid_manifest_all_ready.json"
+    },
+    {
+      "name": "source_override_manifest",
+      "path": "Manifests/valid_manifest_source_version_overrides.json"
+    }
+  ]
+}

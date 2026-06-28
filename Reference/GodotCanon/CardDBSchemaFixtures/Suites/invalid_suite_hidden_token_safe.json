@@ -1,0 +1,10 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "SECRET_suite",
+  "manifests": [
+    {
+      "name": "core",
+      "path": "Manifests/valid_manifest_all_ready.json"
+    }
+  ]
+}

@@ -17,6 +17,19 @@
 - `WBRules::GenerateLegalActions` remains unchanged unless an explicit future pass changes the action-family contract.
 - The canonical boundary stays: Rules validate legality, EffectRunner mutates state, UI selects only.
 
+## Milestone - Production-Safe Card Zone State
+
+- Added `FWBCardZoneState` as production-facing card zone state on `FWBGameStateData`.
+- Added Deck, Hand, Discard, Equipped, and Marker placeholder state structs.
+- Added card instance refs with stable instance id, card id, and owner id.
+- Added deterministic ordered-zone sorting and test-facing validation helpers.
+- Added board card reference helper that derives visible board card references from existing unit records.
+- Board occupancy remains unit-state truth and is not duplicated in card zone state.
+- Hidden marker identity is stored as future-only internal marker data and is not exposed publicly.
+- Public board summaries remain unchanged and do not include card zones or marker identity.
+- No CardDB import was added.
+- No draw, shuffle, discard movement, summon, equip gameplay, marker reveal, response windows, UI, Blueprint, `.uasset`, or `.umap` work was added.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

@@ -2,6 +2,111 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Production-Safe Card Zone State Pass
+
+### Scope
+
+This pass adds production-facing WandboundCore card zone data/query scaffolding only.
+
+Implemented:
+
+- `EWBCardZone`
+- `FWBCardInstanceRef`
+- `FWBZoneCardEntry`
+- `FWBEquippedCardEntry`
+- `FWBBoardCardReference`
+- `EWBMarkerPublicState`
+- `FWBMarkerPlaceholderEntry`
+- `FWBPlayerCardZoneState`
+- `FWBCardZoneState`
+- `WBCardZoneState`
+- `FWBGameStateData::CardZoneState`
+- test-facing `FWBGameStateData` card zone access/clear helpers
+- board card reference derivation from existing unit records
+- marker placeholder lookup and validation
+
+Not implemented:
+
+- CardDB import
+- production CardDB loading
+- draw
+- shuffle
+- discard movement
+- summon
+- equip gameplay
+- activation legal action generation changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- response windows
+- UI widgets
+- target picking
+- marker reveal behavior
+- NPC phase
+- passives
+- wands
+- overflow
+- card-specific behavior
+- Blueprint gameplay
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Pending final validation.
+```
+
+### Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result:
+
+```text
+Pending final validation.
+```
+
+### New Tests Added
+
+Added 20 `Wandbound.Core.CardZoneState.*` automation tests covering zone enum string round-trip, private-zone policy, player zone lookup, player zone counts, deterministic ordered-zone sorting, duplicate instance validation, empty card id validation, invalid owner validation, equipped reference storage, board references excluding removed units, board reference deterministic ordering, marker placeholder lookup, duplicate marker tile validation, hidden marker identity exclusion from public board summary, public board summary unchanged by card zones, `FWBGameStateData` integration and clearing, legal action generation unchanged, `WBActionCodec` unchanged, runtime source unchanged, and hidden-info source guards.
+
+### Validation
+
+- `git diff --check`: pending final validation.
+- Source/WandboundRuntime should remain untouched by this pass.
+- `Reference/GodotProject` should remain untouched.
+- `.uasset` and `.umap` assets should remain untouched.
+
+### Notes
+
+- Deck and Hand are private by default.
+- Discard visibility remains unresolved for the future observation model, so this pass treats it as fail-closed private.
+- Equipped cards store attachment shape but do not enforce equip legality.
+- Board card references derive from units and do not duplicate board occupancy.
+- Marker placeholders keep `InternalMarkerCardId` hidden for future reveal/trap/NPC work.
+
+### Exact Errors
+
+Pending final validation.
+
+### Risks / Unknowns
+
+- Discard visibility must be confirmed before player-perspective observation exposes discard contents.
+- Equipped visibility and wand-specific rules remain future work.
+- Marker reveal/trigger/NPC behavior remains future work.
+- Legacy `FWBPlayerStateData::Deck`, `Hand`, and `Discard` arrays still exist for older tests and should be migrated separately.
+
 ## Planning-Only Engine Transfer Pivot Pass
 
 ### Scope

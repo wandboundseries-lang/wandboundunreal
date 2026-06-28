@@ -268,6 +268,8 @@ Future provider/import pipeline work should accept only bundle sets that pass th
 
 Future provider/import pipeline work should accept only manifest-approved batch outputs. Manifest approval should validate duplicate names, safe relative paths, compatibility overrides, metadata, and hidden-information policy before any provider receives loaded CardDB definitions.
 
+Future provider/import pipeline work should accept only suite-approved manifest and bundle outputs. Suite approval should validate manifest aliases and paths before importer/provider code receives any manifest-approved bundle set.
+
 ## Implementation Sequence Recommendation
 
 1. Draft Unreal-owned CardDB schema docs only.

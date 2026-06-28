@@ -124,6 +124,12 @@ The batch-readiness helper calls the readiness helper for each bundle and uses t
 
 The manifest helper does not parse production data, load runtime CardDB definitions, create zones, execute effects, mutate game state, generate activation candidates, or generate activation legal actions.
 
+## Suite Integration
+
+Importer manifest suites now group multiple manifest fixtures for test-only evaluation.
+
+The suite helper validates duplicate manifest aliases, safe relative manifest paths, and metadata before calling this manifest helper. Suite exports include manifest-level counts and aggregate readiness summaries only, not full manifest exports.
+
 ## Confirmations
 
 - this remains test-only

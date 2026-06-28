@@ -678,6 +678,18 @@ Future importer planning should also support a manifest layer before loading:
 
 Production import should fail closed on duplicate batch names, duplicate bundle aliases, missing paths, unsafe paths, malformed compatibility, malformed metadata, and hidden-info tokens before any data is loaded.
 
+Future importer planning can use manifest suites for validation batches:
+
+- `suite_schema_version`
+- `suite_id`
+- optional suite metadata
+- ordered named manifest entries
+- relative manifest fixture paths
+- aggregate manifest, batch, and bundle readiness counts
+- aggregate grouped readiness diagnostics
+
+Production import should fail closed on duplicate manifest aliases, missing manifest paths, unsafe manifest paths, malformed metadata, and hidden-info tokens before any manifest or bundle data is loaded.
+
 ## Future CardDB Import Milestones
 
 1. Add schema validation docs/examples.

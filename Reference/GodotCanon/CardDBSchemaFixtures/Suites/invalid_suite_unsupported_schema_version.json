@@ -1,0 +1,10 @@
+{
+  "suite_schema_version": 2,
+  "suite_id": "invalid_suite_unsupported_schema_version",
+  "manifests": [
+    {
+      "name": "core",
+      "path": "Manifests/valid_manifest_all_ready.json"
+    }
+  ]
+}

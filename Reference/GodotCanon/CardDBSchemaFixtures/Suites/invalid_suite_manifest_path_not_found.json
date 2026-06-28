@@ -1,0 +1,10 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "invalid_suite_manifest_path_not_found",
+  "manifests": [
+    {
+      "name": "not_found",
+      "path": "Manifests/missing_manifest_file.json"
+    }
+  ]
+}
