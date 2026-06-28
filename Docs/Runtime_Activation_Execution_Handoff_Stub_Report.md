@@ -87,6 +87,8 @@ The handoff stub does not:
 
 Runtime activation execution now lives in `WBRuntimeActivationExecutionBridge`, which validates the handoff shape and delegates to `WBEffectRunner::ApplyCardActivationCommand`.
 
+`FWBProductionActivationTargetSelectionBridge` can produce a target-bound copied command for later handoff/execution wiring, but this pass did not change the handoff or execution bridge behavior.
+
 ## Hidden-Information Policy
 
 The returned `ActivationAction.Command` is internal runtime data and may retain command metadata required for future execution wiring.

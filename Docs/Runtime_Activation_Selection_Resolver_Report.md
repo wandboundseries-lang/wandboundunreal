@@ -54,6 +54,8 @@ Resolved activation selections can now be converted into an execution handoff re
 
 The later runtime execution integration pass can execute that handoff through `WBRuntimeActivationExecutionBridge`, while keeping selection resolution itself read-only.
 
+Production unit target selection now lives in the separate `FWBProductionActivationTargetSelectionBridge`. The resolver still resolves only the activation action id; the bridge validates and binds one provider-supplied unit target option after that selection step when a target is required.
+
 ## No Activation Execution Inside Resolver
 
 The resolver does not execute activation commands.

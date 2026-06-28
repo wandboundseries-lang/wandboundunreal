@@ -14,6 +14,7 @@ Added Core activation decision data:
 
 - `EWBCardActivationTargetOptionType`
 - `FWBCardActivationTargetOption`
+- `FWBCardActivationLegalAction::TargetRequirement`
 - `FWBCardActivationLegalAction::TargetOptions`
 
 The only supported option type is `Unit`.
@@ -74,6 +75,8 @@ Runtime sessions receive target options through externally supplied `FWBCardActi
 
 The session facade, owner, coordinator, and activation presentation model do not enumerate targets. They only store and present provider-supplied data. Target presentation entries now recognize actions with unit target options as unit-target choices and expose the option count.
 
+Provider target options can now be selected through the C++ `FWBProductionActivationTargetSelectionBridge`, which binds one provider-supplied unit option into a copied activation command without adding UI or effect execution.
+
 ## Boundaries
 
 This pass did not add:
@@ -91,4 +94,4 @@ This pass did not add:
 
 ## Next Planned Pass
 
-Add a C++ activation selection bridge that binds one provider-supplied unit target option to an activation command for execution, still without UI or response windows.
+Connect the target-bound activation selection result into the next narrow C++ vertical-slice harness, still without UI or response windows.

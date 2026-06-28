@@ -2,6 +2,112 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Production Activation Unit Target Selection Bridge Pass
+
+### Scope
+
+This pass adds a deterministic C++ bridge that binds one provider-supplied unit target option into copied activation command selection data.
+
+Implemented:
+
+- `FWBCardActivationLegalAction::TargetRequirement`
+- `FWBProductionActivationTargetSelectionBridge`
+- `FWBProductionActivationTargetSelectionRequest`
+- `FWBProductionActivationTargetSelectionResult`
+- stable target-selection result codes and reason strings
+- board-source unit target binding
+- own-hand unit target binding
+- no-target activation success without a selected target
+- fail-closed handling for missing, mismatched, stale, unsupported, hidden, and no-target-with-target selections
+- source guards for no game-state/repository mutation, no effect execution, no `FWBAction`, no `WBActionCodec`, and no `WBRules::GenerateLegalActions`
+- runtime harness coverage proving the bridge consumes the same externally supplied activation action set received by the session
+
+Not implemented:
+
+- UI or Blueprint target picking
+- response windows
+- effect execution changes
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- Godot CardDB import
+- draw, discard movement, summon, equip, marker reveal, NPC phase, passives, wands, or RL overflow
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 41.17 seconds
+```
+
+### Targeted Target-Selection Bridge Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Runtime.ProductionActivationTargetSelectionBridge; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\WandboundProductionActivationTargetSelectionBridge'
+```
+
+Final result from `Saved/AutomationReports/WandboundProductionActivationTargetSelectionBridge/index.json`:
+
+```text
+succeeded=24
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1191
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Validation
+
+- Unit target selections are accepted only when they match provider-supplied target options.
+- Board-source and own-hand unit target selections bind `EffectRequest.Target.TargetUnitId`.
+- `None` target requirements accept no selected target and reject provided targets.
+- Tile and wall target requirements remain unsupported/deferred.
+- Hidden opponent hand, deck identity, hidden marker identity, debug activation ids, and usage keys remain excluded from bridge output/reasons.
+- The bridge does not mutate `FWBGameStateData` or `FWBCardDefinitionRepository`.
+- The bridge does not call `WBEffectRunner`, create `FWBAction`, depend on `WBActionCodec`, or call `WBRules::GenerateLegalActions`.
+- `WBRules.cpp`, `WBEffectRunner.cpp`, and `WBActionCodec.cpp` were not modified.
+- `Reference/GodotProject` and `Reference/GodotCanon` were not modified by this pass.
+- `.uasset` and `.umap` assets were not modified.
+- `git diff --check` passed with no whitespace errors; Git reported LF-to-CRLF working-copy notices only.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+### Risks / Unknowns
+
+- Tile and wall target picking remain deferred.
+- The bridge returns a safe target-bound command copy for selection; a later pass must decide how this flows into the existing internal execution handoff without exposing scrubbed debug/usage metadata.
+- Provider commands are still only as complete as the activation entries supplied by the provider.
+- No UI target picker exists yet.
+
 ## Production Activation Unit Target Options Pass
 
 ### Scope

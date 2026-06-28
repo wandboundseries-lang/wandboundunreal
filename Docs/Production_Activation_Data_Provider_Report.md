@@ -43,6 +43,8 @@ Successful output fills `FWBRuntimeActivationDecisionSessionRefreshInput` with:
 
 Normal `FWBAction` generation remains external and unchanged.
 
+The provider decision data now feeds `FWBProductionActivationTargetSelectionBridge`, which validates one selected provider unit target option and binds it into a copied activation command.
+
 ## Board-Source Behavior
 
 Board-source activations are derived from visible board unit summaries.
@@ -140,4 +142,4 @@ This pass did not add:
 
 ## Next Planned Pass
 
-Add a C++ activation selection bridge that binds a selected unit target option to an activation command for execution, still without UI or response windows.
+Connect target-bound activation selection results into the next narrow C++ vertical-slice harness, still without UI or response windows.

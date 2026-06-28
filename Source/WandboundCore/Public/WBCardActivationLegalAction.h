@@ -31,6 +31,7 @@ struct WANDBOUNDCORE_API FWBCardActivationLegalAction
 
 	FString PublicLabel;
 
+	EWBCardEffectTargetRequirement TargetRequirement = EWBCardEffectTargetRequirement::None;
 	FWBEffectTargetRef Target;
 	TArray<FWBCardActivationTargetOption> TargetOptions;
 	FWBCardActivationCandidate Candidate;

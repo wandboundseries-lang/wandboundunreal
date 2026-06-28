@@ -274,6 +274,7 @@ FWBCardActivationLegalAction MakeTargetDeferredAction(
 	Action.PlayerId = PlayerId;
 	Action.SourceUnitId = SourceUnitId;
 	Action.PublicLabel = PublicLabelForEffect(Effect);
+	Action.TargetRequirement = Effect.TargetRequirement;
 	Action.TargetOptions = TargetOptions;
 
 	Action.Candidate.ActivationCandidateId = Action.ActivationActionId;

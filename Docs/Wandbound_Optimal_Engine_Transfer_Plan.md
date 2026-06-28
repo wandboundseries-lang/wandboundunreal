@@ -143,7 +143,7 @@ Implemented notes:
 
 ## Phase 4 - Playable Board/Hand Activation Vertical Slice
 
-Status: preparation started. Provider-owned unit target options now exist, but activation selection/execution is still future work.
+Status: preparation advanced. Provider-owned unit target options and the C++ unit target-selection bridge now exist; execution wiring is still future work.
 
 Milestones:
 
@@ -164,6 +164,14 @@ Scope:
 Success criteria:
 
 - A C++ vertical-slice harness can present legal board/hand activations, select one, execute it, mutate state, and refresh presentation from post-action provider data.
+
+Implemented notes:
+
+- `FWBProductionActivationTargetSelectionBridge` validates one provider-supplied unit target option against the selected activation entry.
+- Board-source and own-hand unit-target activations can bind the selected unit into a copied activation command.
+- No-target activations succeed without a selected target.
+- Tile and wall targets remain unsupported/deferred.
+- The bridge does not mutate state or repositories, execute effects, create `FWBAction`, call `WBRules::GenerateLegalActions`, or depend on `WBActionCodec`.
 
 ## Phase 5 - Draw / Hand / Discard Loop
 

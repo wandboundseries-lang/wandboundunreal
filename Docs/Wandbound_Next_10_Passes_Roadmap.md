@@ -71,12 +71,14 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 7 - Activation Unit Target Selection Bridge
 
+- Status: implemented as a C++ bridge that binds provider-supplied unit target options to copied activation commands. No UI, response windows, effect execution, `FWBAction`, `WBActionCodec`, or normal legal-action generation changes were added.
 - Purpose: Bind a selected provider-supplied unit target option to an activation command so the C++ vertical slice can execute a chosen target.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundRuntime/`, `Source/WandboundTests/Private/`, `Docs/`.
 - Guardrails: Use provider-owned target option data only; no UI widgets; no response windows; keep activation separate from normal `FWBAction` unless explicitly changed.
 - Tests expected: target option selection succeeds/fails deterministically, command target is filled, hidden data remains excluded, no `WBActionCodec` change.
 - Out-of-scope: draw, discard movement after play, response windows, target-picker UI.
 - Success criteria: A C++ harness can select a unit target option and produce an executable activation command without runtime target computation.
+- Implemented notes: Board-source and own-hand unit target selection succeed, no-target activations succeed without a target, tile/wall targets fail closed, hidden zones remain hidden, and source guards prove the bridge does not call rules generation, EffectRunner, or ActionCodec.
 
 ## Pass 8 - Draw/Hand/Discard Movement Loop
 

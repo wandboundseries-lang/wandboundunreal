@@ -127,6 +127,28 @@
 - `WBRules::GenerateLegalActions` remains unchanged.
 - `WBActionCodec` remains unchanged.
 
+## Milestone - Production Activation Unit Target Selection Bridge
+
+- Added `FWBProductionActivationTargetSelectionBridge` in `WandboundRuntime`.
+- Added stable target-selection request/result structs and result codes.
+- Added `FWBCardActivationLegalAction::TargetRequirement` so provider entries can distinguish unit, no-target, tile, and wall requirements without rules/state inspection.
+- Provider-supplied unit targets can now bind to copied activation command selection data.
+- Board-source unit-target activations are supported.
+- Own-hand unit-target activations are supported.
+- No-target activations are supported without a selected target.
+- Providing a target for a no-target activation fails closed.
+- Tile and wall targets remain unsupported/deferred.
+- Invalid, missing, mismatched, stale, unsupported, or hidden target selections fail closed with stable reason strings.
+- Hidden opponent hand, deck identity, hidden marker identity, debug activation ids, and usage keys remain excluded from bridge output/reasons.
+- A runtime harness test proves the bridge can consume the same externally supplied activation action set that the runtime session receives.
+- The bridge does not mutate game state or repositories.
+- The bridge does not execute effects or call `WBEffectRunner`.
+- No activation `FWBAction` integration was added.
+- No Godot CardDB import was added.
+- No draw, shuffle, discard movement, summon, equip, marker reveal, NPC phase, response window, passive, wand, overflow, UI, Blueprint, `.uasset`, or `.umap` work was added.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- `WBActionCodec` remains unchanged.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

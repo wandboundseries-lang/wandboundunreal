@@ -90,6 +90,21 @@ FWBCardActivationLegalActionGenerationResult WBCardActivationLegalActionGenerato
 		Action.PlayerId = Candidate.PlayerId;
 		Action.SourceUnitId = Candidate.SourceUnitId;
 		Action.PublicLabel = PublicLabel;
+		if (Candidate.Target.TargetUnitId >= 0)
+		{
+			Action.TargetRequirement = EWBCardEffectTargetRequirement::Unit;
+		}
+		else if (Candidate.Target.TargetTile.X >= 0 && Candidate.Target.TargetTile.Y >= 0)
+		{
+			Action.TargetRequirement = EWBCardEffectTargetRequirement::Tile;
+		}
+		else if (Candidate.Target.TargetWallEdge.A.X >= 0
+			&& Candidate.Target.TargetWallEdge.A.Y >= 0
+			&& Candidate.Target.TargetWallEdge.B.X >= 0
+			&& Candidate.Target.TargetWallEdge.B.Y >= 0)
+		{
+			Action.TargetRequirement = EWBCardEffectTargetRequirement::WallEdge;
+		}
 		Action.Target = Candidate.Target;
 		Action.Candidate = Candidate;
 		Action.Command = Candidate.Command;
