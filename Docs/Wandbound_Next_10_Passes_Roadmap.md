@@ -104,11 +104,11 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 10 - Summon/Equip/RL Foundation
 
-- Status: implemented as minimal production metadata, read-only RL/RR helper, and read-only own-hand summon/equip option generation. Execution remains future work.
+- Status: implemented as minimal production metadata, read-only RL/RR helper, read-only own-hand summon/equip option generation, and deterministic own-Hand Character summon execution. Equip execution remains future work.
 - Purpose: Decide and begin the next production mechanic after the board/hand activation slice is stable.
 - Files likely touched: `Docs/`, then likely `Source/WandboundCore/`, `Source/WandboundTests/Private/`, and provider integration files if implementation begins.
 - Guardrails: Consult Rules Bible v2 and Godot reference first; do not copy Godot architecture blindly; keep Rules/EffectRunner/UI boundaries intact.
 - Tests expected: if planning-only, no source tests; if implementation, summon adjacency/unit cap or equip/RL availability tests with replay traces.
 - Out-of-scope: full wand destruction, response windows, marker/NPC phase unless explicitly selected.
 - Success criteria: The project has a clear next mechanic route, or the first focused summon/equip/RL foundation slice lands with deterministic tests.
-- Implemented notes: `FWBCardDefinition` now carries Character HP/ATK/AR/RL and Wand RR metadata, `WBResonanceLoad` reports available RL without mutation, and `FWBProductionSummonEquipDataProvider` emits hidden-info-safe summon/equip options from `OwnHand` only. No summon/equip execution, overflow, `FWBAction`, `WBActionCodec`, `WBRules::GenerateLegalActions`, UI, or Godot CardDB import was added.
+- Implemented notes: `FWBCardDefinition` now carries Character HP/ATK/AR/RL and Wand RR metadata, `WBResonanceLoad` reports available RL without mutation, and `FWBProductionSummonEquipDataProvider` emits hidden-info-safe summon/equip options from `OwnHand` only. `WBSummonExecution` and `FWBProductionSummonExecutionHandoff` now validate provider-supplied summon choices, create Character units from Hand, remove the Hand source, emit safe summon traces, and refresh summon/equip provider data after success. No equip execution, overflow, marker trigger, summon effect, `FWBAction`, `WBActionCodec`, `WBRules::GenerateLegalActions`, UI, or Godot CardDB import was added.

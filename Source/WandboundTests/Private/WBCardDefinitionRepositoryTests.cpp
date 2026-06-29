@@ -494,6 +494,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	const FString ExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationExecutionHandoff.cpp"));
 	const FString SummonEquipProviderHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionSummonEquipDataProvider.h"));
 	const FString SummonEquipProviderSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionSummonEquipDataProvider.cpp"));
+	const FString SummonExecutionHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionSummonExecutionHandoff.h"));
+	const FString SummonExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionSummonExecutionHandoff.cpp"));
 	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
@@ -501,6 +503,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ExecutionHandoffSource, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderSource, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonExecutionHandoffHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonExecutionHandoffSource, TEXT(""));
 
 	TestTrue(TEXT("Production provider accepts repository input"), ProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Production provider consumes repository helper"), ProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
@@ -508,6 +512,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	TestTrue(TEXT("Production execution handoff consumes repository helper"), ExecutionHandoffSource.Contains(TEXT("WBCardDefinitionRepository")));
 	TestTrue(TEXT("Summon/equip provider accepts repository input"), SummonEquipProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Summon/equip provider consumes repository helper"), SummonEquipProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
+	TestTrue(TEXT("Summon execution handoff accepts repository input"), SummonExecutionHandoffHeader.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Summon execution handoff passes repository through"), SummonExecutionHandoffSource.Contains(TEXT("Repository")));
 	TestFalse(TEXT("Runtime outside production providers/handoff does not include repository helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardDefinitionRepository")));
 	TestFalse(TEXT("Runtime outside production providers/handoff does not own repository struct"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("FWBCardDefinitionRepository")));
 	return true;

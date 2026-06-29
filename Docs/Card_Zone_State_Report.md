@@ -49,6 +49,8 @@ The helper excludes defeated or removed units, uses `UnitId`, `OwnerId`, and vis
 
 Board unit state remains the source of truth. `FWBCardZoneState` does not duplicate board occupancy.
 
+Deterministic summon execution creates a new `FWBUnitState` from Character stats and removes the source card from Hand. No separate Board zone card entry is created; board card references continue to derive from active unit state.
+
 ## Marker Placeholder Behavior
 
 Marker placeholders store marker id, owner player id, tile, public state, and hidden internal marker card id.
@@ -93,7 +95,6 @@ The observation layer keeps public Deck, Hand, and Discard summaries count-only,
 - CardDB import
 - production CardDB loading
 - shuffle
-- summon
 - equip gameplay
 - activation legal action generation changes
 - activation `FWBAction` integration

@@ -42,6 +42,8 @@ The movement happens only after successful execution and only when the provider 
 
 Future summon/equip execution is expected to use the same lifecycle boundary for Hand-source card movement, but the summon/equip/RL foundation pass only generates read-only options and does not move cards.
 
+The deterministic summon execution pass adds a separate Hand-to-Board transition for Character summon. It removes the source card from Hand, normalizes remaining Hand indexes, creates a board unit from Character stats, and does not move the card to Discard.
+
 ## Deterministic Ordering Policy
 
 - Source and destination zones are sorted before movement.
@@ -69,7 +71,7 @@ This pass did not add:
 - shuffle
 - full setup
 - mulligans
-- summon or equip gameplay
+- equip gameplay
 - marker reveal behavior
 - NPC phase
 - passives or wands

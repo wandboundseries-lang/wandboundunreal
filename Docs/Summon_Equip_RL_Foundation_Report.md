@@ -59,6 +59,8 @@ Summon options:
 
 Walls do not block summon adjacency in this foundation pass.
 
+Follow-up summon execution now consumes these read-only options through `FWBProductionSummonExecutionHandoff`. Runtime handoff validates the selected source and target tile against provider data before the core summon execution helper revalidates state safety and mutates `FWBGameStateData`.
+
 ## Equip Options
 
 The same provider emits equip options for viewer-owned Hand cards whose repository definition is `Wand`.
@@ -134,4 +136,4 @@ notRun=0
 
 ## Next Planned Pass
 
-Add deterministic summon execution from own Hand to board using the provider's read-only summon option data, with lifecycle movement, trace events, provider refresh, and hidden-info tests.
+Add deterministic equip execution from own Hand to equipped state using provider-owned equip option data, with RLUsed mutation and refreshed summon/equip provider data while keeping overflow policy deferred unless explicitly selected.

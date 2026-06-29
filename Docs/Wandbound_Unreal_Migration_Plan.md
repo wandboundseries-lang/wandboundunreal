@@ -219,6 +219,34 @@
 - `WBRules::GenerateLegalActions` remains unchanged.
 - `WBActionCodec` remains unchanged.
 
+## Milestone - Deterministic Summon Execution
+
+- Added `WBSummonExecution` in `WandboundCore`.
+- Added `FWBProductionSummonExecutionHandoff` in `WandboundRuntime`.
+- Own-Hand Character cards can summon from provider-supplied legal tiles.
+- Runtime handoff validates selected source instance, source card id, and target tile against current summon option data.
+- Core execution revalidates player, player zones, source card, Character definition, Character stats, Hero, unit cap, target bounds, adjacency, unit occupancy, marker placeholders, and unit id allocation.
+- Source card leaves Hand on success.
+- Remaining Hand entries are sorted deterministically and reindexed.
+- The source card does not move to Discard.
+- Board unit is created with Character HP, MaxHP, ATK, AR, RLTotal, and RLUsed 0.
+- Created UnitId uses deterministic max existing UnitId plus one.
+- Successful execution emits a safe `summon_unit` trace event.
+- Summon/equip provider data refreshes after success.
+- Refreshed provider data removes the used Hand source, reflects unit cap changes, and can make the new unit eligible for equip options when it has available RL.
+- Hidden opponent Hand, Deck, and hidden marker identities remain excluded.
+- Marker-triggered summon is deferred with `marker_trigger_deferred`.
+- No equip execution was added.
+- No overflow resolution was added.
+- No summon effects were added.
+- No marker triggers were added.
+- No UI was added.
+- No response windows were added.
+- No `FWBAction` creation was added.
+- No Godot CardDB import was added.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- `WBActionCodec` remains unchanged.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

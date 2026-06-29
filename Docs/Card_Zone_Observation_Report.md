@@ -73,6 +73,8 @@ The viewer's own discard is visible through `OwnDiscard` for now. Opponent disca
 
 Lifecycle tests now prove that draw updates public Deck/Hand counts while keeping Deck identity hidden, and that hand-to-discard updates public Discard count while keeping Discard identity hidden publicly.
 
+Summon execution also requires no observation code change. After a successful summon, public Hand count decreases, the owner-private Hand no longer includes the source card, opponent observations still hide Hand identity, and board references include the newly created unit's public card id.
+
 ## Equipped Policy
 
 Equipped card identity is fail-closed in this pass.
@@ -118,7 +120,6 @@ Source guards also verify that public observation structs do not contain `Intern
 - CardDB import
 - production CardDB loading
 - shuffle
-- summon
 - equip gameplay
 - marker reveal behavior
 - marker trigger behavior

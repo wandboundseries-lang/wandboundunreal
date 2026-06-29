@@ -2,6 +2,112 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Deterministic Summon Execution Pass
+
+### Scope
+
+This pass adds deterministic own-Hand Character summon execution from production summon/equip provider output.
+
+Implemented:
+
+- `WBSummonExecution`
+- `FWBSummonExecutionRequest`
+- `FWBSummonExecutionResult`
+- `FWBSummonExecutionTraceEvent`
+- `FWBProductionSummonExecutionHandoff`
+- provider-option source/tile validation before execution
+- core execution-time revalidation for player, zones, source card, Character definition, Character stats, Hero, unit cap, tile bounds, adjacency, occupancy, marker placeholders, and unit id allocation
+- deterministic unit creation from Character HP/ATK/AR/RL
+- deterministic `UnitId = max existing UnitId + 1`
+- Hand source removal without Discard movement
+- Hand `ZoneIndex` normalization after removal
+- safe `summon_unit` trace event data
+- post-success summon/equip provider refresh
+- hidden-info tests for opponent Hand, Deck, and hidden marker identity
+- source guards for no `FWBAction`, no `WBEffectRunner`, no `WBActionCodec`, and no `WBRules::GenerateLegalActions`
+
+Not implemented:
+
+- equip execution
+- Wand attachment movement
+- `RLUsed` mutation
+- overflow resolution
+- marker trigger or reveal behavior
+- summon effects
+- response windows
+- UI, Blueprint, `.uasset`, or `.umap` changes
+- `FWBAction` summon integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- Godot CardDB import
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 38.54 seconds
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1298
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Validation
+
+- Own-Hand Character summon succeeds from provider-approved legal tiles.
+- Source card leaves Hand and does not enter Discard.
+- Created board unit matches Character stats.
+- Hand ordering normalizes after source removal.
+- Board references derive from the created unit.
+- Public and player observations update after summon while preserving hidden zones.
+- Runtime handoff rejects missing provider options and tiles not in provider `LegalTiles`.
+- Runtime handoff revalidates stale provider data and fails safely if the tile becomes occupied.
+- Provider refresh removes the used source option, reflects unit cap, and can make the new unit eligible for equip options.
+- Marker placeholders reject summon with `marker_trigger_deferred`.
+- `WBActionCodec.cpp` was not modified.
+- `WBRules::GenerateLegalActions` was not modified.
+- `WBEffectRunner.cpp` was not modified.
+- `Reference/GodotProject` was not modified.
+- `.uasset` and `.umap` files were not modified.
+- `git diff --check` passed with only LF-to-CRLF working-copy notices.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+Interim automation failures fixed before final validation:
+
+- `Wandbound.Core.CardDefinitionRepository.RuntimeSourceUnchanged` needed to recognize `FWBProductionSummonExecutionHandoff` as an approved runtime repository consumer.
+- `Wandbound.Core.SummonExecution.TraceEventDeterministicAndSafe` used overly strict compact-JSON substring checks; the test now asserts trace fields structurally and keeps JSON hidden-token scans.
+
+### Risks / Unknowns
+
+- Equip execution and `RLUsed` mutation remain future work.
+- Overflow and wand destruction policy remain future work.
+- Marker-triggered summon behavior remains deferred.
+- Summon `FWBAction` id design and replay-verifier integration remain future work.
+
 ## Summon / Equip / RL Foundation Pass
 
 ### Scope

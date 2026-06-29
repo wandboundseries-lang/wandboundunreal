@@ -216,7 +216,7 @@ Implemented notes:
 
 ## Phase 6 - Summon / Equip / Wand / RL Overflow Foundation
 
-Status: foundation implemented for metadata, RL/RR query, and read-only summon/equip option generation. Summon execution, equip execution, overflow, and UI remain future work.
+Status: foundation implemented for metadata, RL/RR query, read-only summon/equip option generation, and deterministic own-Hand Character summon execution. Equip execution, overflow, and UI remain future work.
 
 Milestones:
 
@@ -243,8 +243,10 @@ Implemented notes:
 - Wand definitions now carry RR metadata.
 - `WBResonanceLoad` exposes read-only RL/RR summaries and affordability checks.
 - `FWBProductionSummonEquipDataProvider` emits own-hand Character summon options adjacent to the viewer Hero and own-hand Wand equip options for affordable viewer-owned units.
+- `WBSummonExecution` creates board units from own-Hand Character cards after revalidating source, Hero, unit cap, target tile, occupancy, marker placeholders, and Character stats.
+- `FWBProductionSummonExecutionHandoff` validates selected source/tile against provider-owned summon options and refreshes summon/equip provider data after success.
 - Hidden opponent Hand, Deck, and marker identity stay excluded.
-- No summon/equip execution, overflow resolution, `FWBAction`, `WBActionCodec`, `WBRules::GenerateLegalActions`, Godot CardDB import, UI, Blueprint, `.uasset`, or `.umap` work was added.
+- No equip execution, overflow resolution, marker trigger, summon effect, `FWBAction`, `WBActionCodec`, `WBRules::GenerateLegalActions`, Godot CardDB import, UI, Blueprint, `.uasset`, or `.umap` work was added.
 
 ## Phase 7 - Markers and NPC Phase
 
