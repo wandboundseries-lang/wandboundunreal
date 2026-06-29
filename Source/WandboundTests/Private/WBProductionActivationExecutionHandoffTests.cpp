@@ -4,6 +4,8 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "WBCardDefinitionRepository.h"
+#include "WBCardZoneObservation.h"
+#include "WBCardZoneState.h"
 #include "WBProductionActivationDataProvider.h"
 #include "WBProductionActivationExecutionHandoff.h"
 
@@ -86,46 +88,55 @@ FWBZoneCardEntry MakeHandoffZoneEntry(
 	return Entry;
 }
 
+FWBPlayerCardZoneState& FindOrAddHandoffPlayerZones(
+	FWBGameStateData& State,
+	const int32 PlayerId)
+{
+	FWBCardZoneState& ZoneState = State.GetMutableCardZoneStateForTest();
+	if (FWBPlayerCardZoneState* Existing = WBCardZoneState::FindMutablePlayerZones(ZoneState, PlayerId))
+	{
+		return *Existing;
+	}
+
+	FWBPlayerCardZoneState PlayerZones;
+	PlayerZones.PlayerId = PlayerId;
+	return ZoneState.PlayerZones.Add_GetRef(PlayerZones);
+}
+
 void AddOwnHandCard(
 	FWBGameStateData& State,
 	const FString& InstanceId,
 	const FString& CardId)
 {
-	FWBPlayerCardZoneState PlayerZones;
-	PlayerZones.PlayerId = 0;
+	FWBPlayerCardZoneState& PlayerZones = FindOrAddHandoffPlayerZones(State, 0);
 	PlayerZones.Hand.Add(MakeHandoffZoneEntry(
 		InstanceId,
 		CardId,
 		0,
 		EWBCardZone::Hand,
-		0));
-	State.GetMutableCardZoneStateForTest().PlayerZones.Add(PlayerZones);
+		PlayerZones.Hand.Num()));
 }
 
 void AddOpponentSecretHandCard(FWBGameStateData& State)
 {
-	FWBPlayerCardZoneState OpponentZones;
-	OpponentZones.PlayerId = 1;
+	FWBPlayerCardZoneState& OpponentZones = FindOrAddHandoffPlayerZones(State, 1);
 	OpponentZones.Hand.Add(MakeHandoffZoneEntry(
 		TEXT("SECRET_OPPONENT_HAND_INSTANCE_DO_NOT_LEAK"),
 		TEXT("SECRET_OPPONENT_HAND_CARD_DO_NOT_LEAK"),
 		1,
 		EWBCardZone::Hand,
-		0));
-	State.GetMutableCardZoneStateForTest().PlayerZones.Add(OpponentZones);
+		OpponentZones.Hand.Num()));
 }
 
 void AddSecretDeckCard(FWBGameStateData& State)
 {
-	FWBPlayerCardZoneState PlayerZones;
-	PlayerZones.PlayerId = 0;
+	FWBPlayerCardZoneState& PlayerZones = FindOrAddHandoffPlayerZones(State, 0);
 	PlayerZones.Deck.Add(MakeHandoffZoneEntry(
 		TEXT("SECRET_DECK_INSTANCE_DO_NOT_LEAK"),
 		TEXT("SECRET_DECK_CARD_DO_NOT_LEAK"),
 		0,
 		EWBCardZone::Deck,
-		0));
-	State.GetMutableCardZoneStateForTest().PlayerZones.Add(PlayerZones);
+		PlayerZones.Deck.Num()));
 }
 
 void AddSecretMarker(FWBGameStateData& State)
@@ -650,7 +661,98 @@ bool FWBProductionActivationExecutionHandoffOwnHandSuccessTest::RunTest(const FS
 		EWBProductionActivationExecutionHandoffResultCode::Success,
 		TEXT("Own hand source"));
 	TestEqual(TEXT("Target HP changed"), State.GetUnitById(HandoffEnemyUnitId)->HP, BeforeHP - 1);
-	TestTrue(TEXT("Refresh returned entries"), Result.RefreshedActivationEntries.Num() > 0);
+	const FWBPlayerCardZoneState* PlayerZones = WBCardZoneState::FindPlayerZones(State.GetCardZoneState(), 0);
+	TestEqual(TEXT("Used card left hand"), PlayerZones != nullptr ? PlayerZones->Hand.Num() : -1, 0);
+	TestEqual(TEXT("Used card entered discard"), PlayerZones != nullptr ? PlayerZones->Discard.Num() : -1, 1);
+	TestEqual(TEXT("Discarded instance"), PlayerZones != nullptr ? PlayerZones->Discard[0].Card.InstanceId : FString(), FString(TEXT("hand_instance_0")));
+	TestEqual(TEXT("Refresh no longer exposes spent hand card"), Result.RefreshedActivationEntries.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionActivationExecutionHandoffFailedOwnHandActivationDoesNotDiscardTest, "Wandbound.Runtime.ProductionActivationExecutionHandoff.FailedOwnHandActivationDoesNotDiscard", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBProductionActivationExecutionHandoffFailedOwnHandActivationDoesNotDiscardTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeHandoffState();
+	AddOwnHandCard(State, TEXT("hand_instance_0"), TEXT("handoff_hand_card"));
+	const FWBCardDefinitionRepository Repository = MakeHandRepository();
+	FWBProductionActivationDataProvider Provider;
+	const FWBRuntimeActivationDataProviderResult ProviderResult =
+		RunProvider(State, Repository, Provider);
+	const FWBCardActivationLegalAction* Action = FirstAction(ProviderResult);
+	if (!TestNotNull(TEXT("Hand action emitted"), Action))
+	{
+		return false;
+	}
+
+	const FWBProductionActivationTargetSelectionRequest SelectionRequest =
+		MakeSelectionRequest(*Action);
+	const FWBProductionActivationExecutionHandoffResult Result =
+		FWBProductionActivationExecutionHandoff().ExecuteSelectedActivation(
+			MakeExecutionInput(State, Repository, Provider, SelectionRequest));
+	const FWBPlayerCardZoneState* PlayerZones = WBCardZoneState::FindPlayerZones(State.GetCardZoneState(), 0);
+
+	TestEqual(TEXT("Selection failure"), Result.Code, EWBProductionActivationExecutionHandoffResultCode::SelectionFailed);
+	TestFalse(TEXT("Execution not applied"), Result.bExecutionApplied);
+	TestEqual(TEXT("Card remains in hand"), PlayerZones != nullptr ? PlayerZones->Hand.Num() : -1, 1);
+	TestEqual(TEXT("Discard remains empty"), PlayerZones != nullptr ? PlayerZones->Discard.Num() : -1, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionActivationExecutionHandoffBoardSourceDoesNotDiscardHandCardTest, "Wandbound.Runtime.ProductionActivationExecutionHandoff.BoardSourceDoesNotDiscardHandCard", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBProductionActivationExecutionHandoffBoardSourceDoesNotDiscardHandCardTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeHandoffState();
+	AddOwnHandCard(State, TEXT("unrelated_hand_instance"), TEXT("handoff_hand_card"));
+	const FWBCardDefinitionRepository Repository = MakeBoardRepository();
+	FWBProductionActivationDataProvider Provider;
+	const FWBProductionActivationExecutionHandoffResult Result =
+		ExecuteFirstBoardUnitTarget(State, Repository, Provider);
+	const FWBPlayerCardZoneState* PlayerZones = WBCardZoneState::FindPlayerZones(State.GetCardZoneState(), 0);
+
+	TestTrue(TEXT("Board execution succeeds"), Result.bOk);
+	TestEqual(TEXT("Hand card remains in hand"), PlayerZones != nullptr ? PlayerZones->Hand.Num() : -1, 1);
+	TestEqual(TEXT("Discard remains empty"), PlayerZones != nullptr ? PlayerZones->Discard.Num() : -1, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionActivationExecutionHandoffHandDiscardRefreshHidesSecretsTest, "Wandbound.Runtime.ProductionActivationExecutionHandoff.HandDiscardRefreshHidesSecrets", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBProductionActivationExecutionHandoffHandDiscardRefreshHidesSecretsTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeHandoffState();
+	AddOwnHandCard(State, TEXT("hand_instance_0"), TEXT("handoff_hand_card"));
+	AddOpponentSecretHandCard(State);
+	AddSecretDeckCard(State);
+	AddSecretMarker(State);
+	const FWBCardDefinitionRepository Repository = MakeHandRepository();
+	FWBProductionActivationDataProvider Provider;
+	const FWBRuntimeActivationDataProviderResult ProviderResult =
+		RunProvider(State, Repository, Provider);
+	const FWBCardActivationLegalAction* Action = FirstAction(ProviderResult);
+	if (!TestNotNull(TEXT("Hand action emitted"), Action))
+	{
+		return false;
+	}
+	const FWBCardActivationTargetOption* TargetOption = FindTargetOption(*Action, HandoffEnemyUnitId);
+	if (!TestNotNull(TEXT("Enemy target option"), TargetOption))
+	{
+		return false;
+	}
+
+	const FWBProductionActivationTargetSelectionRequest SelectionRequest =
+		MakeSelectionRequest(*Action, TargetOption, TEXT("hand_instance_0"));
+	const FWBProductionActivationExecutionHandoffResult Result =
+		FWBProductionActivationExecutionHandoff().ExecuteSelectedActivation(
+			MakeExecutionInput(State, Repository, Provider, SelectionRequest));
+	const FWBCardZonePublicSummary PublicSummary = WBCardZoneObservation::BuildPublicSummary(State);
+
+	TestTrue(TEXT("Hand execution succeeds"), Result.bOk);
+	TestEqual(TEXT("Spent hand action absent after refresh"), Result.RefreshedActivationEntries.Num(), 0);
+	const FString Scan = BuildResultScanText(Result);
+	TestFalse(TEXT("Opponent hand secret hidden"), Scan.Contains(TEXT("SECRET_OPPONENT_HAND")));
+	TestFalse(TEXT("Deck secret hidden"), Scan.Contains(TEXT("SECRET_DECK")));
+	TestFalse(TEXT("Marker secret hidden"), Scan.Contains(TEXT("SECRET_MARKER")));
+	TestFalse(TEXT("Public deck secret hidden"), WBCardZoneObservation::PublicSummaryContainsForbiddenSubstringForTest(PublicSummary, TEXT("SECRET_DECK")));
+	TestFalse(TEXT("Public marker secret hidden"), WBCardZoneObservation::PublicSummaryContainsForbiddenSubstringForTest(PublicSummary, TEXT("SECRET_MARKER")));
 	return true;
 }
 

@@ -2,6 +2,148 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Deterministic Draw / Hand / Discard Lifecycle Pass
+
+### Scope
+
+This pass adds deterministic production card lifecycle movement in Core and narrowly integrates successful Hand-source activation discard movement into the production execution handoff.
+
+Implemented:
+
+- `WBCardLifecycle`
+- `FWBCardLifecycleResult`
+- stable lifecycle result codes and reason strings
+- deterministic Deck-to-Hand draw
+- multi-card draw with partial-progress empty-deck policy
+- setup draw helper
+- turn-start draw helper with first-player first-turn skip
+- deterministic Hand-to-Discard movement
+- source zone normalization after removal
+- destination zone append ordering
+- successful Hand-source activation movement to Discard before provider refresh
+- lifecycle observation tests for public counts and owner-private Hand/Discard identity
+- hidden-info scans for deck, opponent hand, and hidden marker identity
+- source guards for no `WBActionCodec`, no `FWBAction`, and no `WBRules` dependency in lifecycle code
+- handoff source guards for no `FWBAction`, no `WBActionCodec`, no `WBRules::GenerateLegalActions`, and no direct `WBEffectRunner`
+
+Not implemented:
+
+- shuffle or RNG
+- full setup or mulligans
+- summon or equip gameplay
+- marker reveal behavior
+- NPC phase
+- passives or wands
+- response windows
+- UI or Blueprint target picking
+- activation `FWBAction` integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- Godot CardDB import
+- broad production CardDB loading
+- `.uasset` or `.umap` edits
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 2.68 seconds
+```
+
+### Targeted Lifecycle Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Core.CardLifecycle; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardLifecycleTargeted'
+```
+
+Final result from `Saved/AutomationReports/CardLifecycleTargeted/index.json`:
+
+```text
+succeeded=25
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Targeted Production Handoff Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound.Runtime.ProductionActivationExecutionHandoff; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\CardLifecycleHandoffTargeted'
+```
+
+Final result from `Saved/AutomationReports/CardLifecycleHandoffTargeted/index.json`:
+
+```text
+succeeded=29
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1245
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Validation
+
+- DrawOne moves the lowest-index Deck card to Hand.
+- DrawCards is deterministic and leaves previous successful draws applied on mid-request empty Deck.
+- Setup draw can produce a 6-card hand.
+- Turn-start draw skips first player's first turn with `first_player_first_turn_draw_skipped`.
+- Later/non-first turn-start draw moves one card.
+- Hand-to-Discard movement removes from Hand and appends to Discard.
+- Source zones normalize after removal; destination zones append deterministically.
+- Public observation updates counts without exposing Deck, Hand, or Discard identities.
+- Owner observation sees own Hand and own Discard identities.
+- Opponent hand, deck identity, and hidden marker identity remain hidden.
+- Successful Hand-source activation discards the used hand card before provider refresh.
+- Failed Hand-source activation does not discard.
+- Board-source activation does not discard unrelated hand cards.
+- Provider refresh no longer exposes the spent hand-source activation.
+- `WBActionCodec.cpp` was not modified.
+- `WBRules::GenerateLegalActions` was not modified.
+- `Reference/GodotProject` and `Reference/GodotCanon` were not modified.
+- `.uasset` and `.umap` files were not modified.
+
+### Exact Errors
+
+Final build, targeted automation, and full automation reported no errors.
+
+An interim targeted command attempted two automation runs in one `ExecCmds` string and Unreal logged `Unknown Automation command 'Automation RunTests Wandbound.Runtime.ProductionActivationExecutionHandoff'`. The handoff group was rerun separately and passed.
+
+### Risks / Unknowns
+
+- Turn-start draw is helper-only and not integrated into broad turn orchestration yet.
+- Empty-deck loss/fatigue consequences are not modeled.
+- Replacement effects such as exile/banish/equip instead of discard remain future work.
+- Public discard identity remains count-only until canon confirms a different visibility policy.
+- Shuffle, mulligan, full setup, summon/equip/RL, response timing, and UI remain future work.
+
 ## Production Activation Execution Handoff Pass
 
 ### Scope

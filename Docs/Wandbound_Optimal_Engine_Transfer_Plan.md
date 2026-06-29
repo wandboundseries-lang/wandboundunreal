@@ -143,7 +143,7 @@ Implemented notes:
 
 ## Phase 4 - Playable Board/Hand Activation Vertical Slice
 
-Status: C++ vertical-slice handoff path implemented through provider-owned unit target options, target-selection bridge, production execution handoff, existing runtime execution bridge, and post-action provider refresh. Card lifecycle movement and UI remain future work.
+Status: C++ vertical-slice handoff path implemented through provider-owned unit target options, target-selection bridge, production execution handoff, existing runtime execution bridge, post-action hand-source discard movement, and provider refresh. UI remains future work.
 
 Milestones:
 
@@ -176,9 +176,12 @@ Implemented notes:
 - Board-source and own-hand unit-target activations can execute through the existing command path in C++ tests.
 - Current no-target generic payloads fail through existing core validation when they lack a target unit; no new no-target effect semantics were added.
 - The production handoff adapter does not call `WBEffectRunner` directly, mutate repositories, create `FWBAction`, call `WBRules::GenerateLegalActions`, or depend on `WBActionCodec`.
-- No UI, response windows, CardDB import, draw/discard movement, Blueprint, `.uasset`, or `.umap` work was added.
+- Successful Hand-source activation now moves the used hand card to Discard before provider refresh.
+- No UI, response windows, CardDB import, Blueprint, `.uasset`, or `.umap` work was added.
 
 ## Phase 5 - Draw / Hand / Discard Loop
+
+Status: implemented as deterministic Core lifecycle helper plus hand-source post-resolution discard integration. Turn-start draw is helper-only and not wired into broad turn orchestration.
 
 Milestones:
 
@@ -201,6 +204,15 @@ Success criteria:
 - Turn start can move cards from Deck to Hand.
 - Played cards can leave Hand and enter the correct post-resolution zone when supported.
 - Public/private summaries remain deterministic.
+
+Implemented notes:
+
+- `WBCardLifecycle` supports `DrawOneCard`, `DrawCards`, `ApplySetupDraw`, `ApplyTurnStartDraw`, and `MoveHandCardToDiscard`.
+- First player first turn draw returns `first_player_first_turn_draw_skipped` without movement.
+- Draws use explicit deterministic Deck order and do not shuffle.
+- Used Hand-source activation cards move to Discard after successful execution and before provider refresh.
+- Public summaries remain count-only for Deck, Hand, and Discard; owner observations see own Hand/Discard identities.
+- `WBActionCodec` and `WBRules::GenerateLegalActions` remain unchanged.
 
 ## Phase 6 - Summon / Equip / Wand / RL Overflow Foundation
 

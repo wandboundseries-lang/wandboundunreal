@@ -65,6 +65,12 @@ Public discard visibility remains unresolved, so public discard summaries are fa
 
 The viewer's own discard is visible through `OwnDiscard` for now. Opponent discard identity is not exposed.
 
+## Lifecycle Update Behavior
+
+`WBCardZoneObservation` required no code changes for draw/discard lifecycle movement. It reads the current `FWBCardZoneState`, so public counts, owner-private Hand, and owner-private Discard update after `WBCardLifecycle` moves cards.
+
+Lifecycle tests now prove that draw updates public Deck/Hand counts while keeping Deck identity hidden, and that hand-to-discard updates public Discard count while keeping Discard identity hidden publicly.
+
 ## Equipped Policy
 
 Equipped card identity is fail-closed in this pass.
@@ -109,9 +115,7 @@ Source guards also verify that public observation structs do not contain `Intern
 
 - CardDB import
 - production CardDB loading
-- draw
 - shuffle
-- discard movement
 - summon
 - equip gameplay
 - marker reveal behavior

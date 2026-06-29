@@ -47,6 +47,8 @@ The provider decision data now feeds `FWBProductionActivationTargetSelectionBrid
 
 The provider is also refreshed after successful production execution handoff. `FWBProductionActivationExecutionHandoff` creates a fresh provider after execution using the updated game state, const repository, and viewer id, then returns refreshed activation entries.
 
+For successful Hand-source activations, the production handoff moves the used hand card to Discard before this refresh. Provider output therefore reflects updated Hand/Discard lifecycle state and no longer emits the spent hand-source action.
+
 ## Board-Source Behavior
 
 Board-source activations are derived from visible board unit summaries.
@@ -130,7 +132,7 @@ This pass did not add:
 
 - Godot CardDB import
 - full production CardDB loader
-- draw, shuffle, or discard movement
+- shuffle
 - summon or equip gameplay
 - marker reveal
 - NPC phase

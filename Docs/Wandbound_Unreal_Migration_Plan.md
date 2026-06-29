@@ -173,6 +173,29 @@
 - `WBRules::GenerateLegalActions` remains unchanged.
 - `WBActionCodec` remains unchanged.
 
+## Milestone - Deterministic Draw / Hand / Discard Lifecycle
+
+- Added `WBCardLifecycle` in `WandboundCore`.
+- Added deterministic Deck-to-Hand draw helpers.
+- Added setup draw helper for explicit-count setup hands.
+- Added turn-start draw helper with first-player first-turn skip support.
+- First-player first-turn skip returns `first_player_first_turn_draw_skipped` without movement.
+- Draw order uses explicit Deck `ZoneIndex` ordering and does not shuffle.
+- DrawCards applies previous successful draws when Deck empties mid-request and returns `deck_empty` on the failing draw.
+- Added deterministic Hand-to-Discard movement helper.
+- Successful Hand-source production activations move the used source card from Hand to Discard before provider refresh.
+- Failed selections, failed execution, Board-source activations, unknown source ids, and already-moved hand cards do not discard a hand card.
+- Public observation keeps Deck, Hand, and Discard identities hidden and count-only.
+- Owner observation exposes own Hand and own Discard after lifecycle movement.
+- Opponent hand, deck identity, and hidden marker identity remain hidden.
+- No shuffle was added.
+- No full setup was added.
+- No UI or response windows were added.
+- No activation `FWBAction` creation was added.
+- No Godot CardDB import was added.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- `WBActionCodec` remains unchanged.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

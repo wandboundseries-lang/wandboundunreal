@@ -1,6 +1,7 @@
 #include "WBProductionActivationExecutionHandoff.h"
 
 #include "WBCardActivationExpansion.h"
+#include "WBCardLifecycle.h"
 #include "WBRuntimeActivationExecutionBridge.h"
 #include "WBRuntimeActivationExecutionHandoff.h"
 
@@ -65,6 +66,31 @@ bool MatchesRequestedSourceInstance(
 
 	const FString HandInstancePart = FString::Printf(TEXT(":i%s:"), *SourceInstanceId);
 	return Action.ActivationActionId.Contains(HandInstancePart, ESearchCase::CaseSensitive);
+}
+
+FString ExtractHandSourceInstanceId(const FWBCardActivationLegalAction& Action)
+{
+	const FString HandPrefix = TEXT(":zhand:i");
+	const int32 PrefixIndex = Action.ActivationActionId.Find(
+		*HandPrefix,
+		ESearchCase::CaseSensitive);
+	if (PrefixIndex == INDEX_NONE)
+	{
+		return FString();
+	}
+
+	const int32 InstanceStart = PrefixIndex + HandPrefix.Len();
+	const int32 InstanceEnd = Action.ActivationActionId.Find(
+		TEXT(":c"),
+		ESearchCase::CaseSensitive,
+		ESearchDir::FromStart,
+		InstanceStart);
+	if (InstanceEnd == INDEX_NONE || InstanceEnd <= InstanceStart)
+	{
+		return FString();
+	}
+
+	return Action.ActivationActionId.Mid(InstanceStart, InstanceEnd - InstanceStart);
 }
 
 bool MatchesSelectionRequest(
@@ -344,6 +370,37 @@ FWBProductionActivationExecutionHandoff::ExecuteSelectedActivation(
 			: ExecutionResult.Reason;
 		Result.bExecutionApplied = false;
 		return Result;
+	}
+
+	if (InferSourceZone(*ProviderAction) == EWBCardActivationSourceZone::Hand)
+	{
+		const FString SourceInstanceId = ExtractHandSourceInstanceId(*ProviderAction);
+		if (SourceInstanceId.IsEmpty())
+		{
+			Result.bOk = false;
+			Result.Code = EWBProductionActivationExecutionHandoffResultCode::ExecutionFailed;
+			Result.Reason = WBCardLifecycle::ResultCodeToString(
+				EWBCardLifecycleResultCode::CardInstanceMissing);
+			Result.bExecutionApplied = true;
+			Result.Diagnostics.Add(Result.Reason);
+			return Result;
+		}
+
+		const FWBCardLifecycleResult LifecycleResult = WBCardLifecycle::MoveHandCardToDiscard(
+			*Input.GameState,
+			Input.ViewerPlayerId,
+			SourceInstanceId);
+		if (!LifecycleResult.bOk)
+		{
+			Result.bOk = false;
+			Result.Code = EWBProductionActivationExecutionHandoffResultCode::ExecutionFailed;
+			Result.Reason = LifecycleResult.Reason.IsEmpty()
+				? WBCardLifecycle::ResultCodeToString(LifecycleResult.Code)
+				: LifecycleResult.Reason;
+			Result.bExecutionApplied = true;
+			Result.Diagnostics.Add(Result.Reason);
+			return Result;
+		}
 	}
 
 	FWBProductionActivationDataProvider PostProvider;

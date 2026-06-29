@@ -93,12 +93,14 @@ This roadmap lists the recommended next implementation passes after the engine-t
 
 ## Pass 9 - Draw/Hand/Discard Movement Loop
 
+- Status: implemented as deterministic Core card lifecycle movement plus production hand-source post-resolution discard integration. Turn-start draw is exposed as a helper only.
 - Purpose: Add deterministic card movement for turn-start draw and post-activation movement where supported.
 - Files likely touched: `Source/WandboundCore/`, `Source/WandboundTests/Private/`, `Reference/GodotCanon/GoldenScenarios/` only if canon fixtures are explicitly needed, `Docs/`.
 - Guardrails: Do not add random shuffle; keep deck order explicit in tests; confirm discard visibility policy before public exposure.
 - Tests expected: draw from deck to hand, first-player first-turn exception, empty deck behavior, played card to discard where supported, trace coverage.
 - Out-of-scope: full CardDB import, response discard timing, graveyard/death-trigger interaction.
 - Success criteria: A deterministic vertical-slice turn can move cards through Deck, Hand, and Discard.
+- Implemented notes: `WBCardLifecycle` draws deterministically from Deck to Hand, supports setup draw and first-player first-turn skip, moves used Hand-source activations to Discard after successful production execution, keeps provider refresh after that movement, and leaves `WBActionCodec` and `WBRules::GenerateLegalActions` unchanged.
 
 ## Pass 10 - Summon/Equip/RL Foundation Planning Or First Implementation Pass
 

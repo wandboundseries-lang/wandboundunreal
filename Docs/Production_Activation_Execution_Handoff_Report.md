@@ -63,6 +63,10 @@ After successful execution, the adapter configures a fresh `FWBProductionActivat
 
 It returns refreshed activation entries from that provider result. A once-per-turn test proves refresh observes updated usage state.
 
+Successful Hand-source activation now moves the used hand source instance from Hand to Discard through `WBCardLifecycle::MoveHandCardToDiscard` before this provider refresh. The refreshed provider snapshot therefore no longer exposes the spent hand card as an own-hand activation source.
+
+Failed selection, failed execution, Board-source activations, and unknown or already-moved hand source instances do not discard a hand card.
+
 ## Hidden-Info Policy
 
 Tests cover opponent hand identity, deck identity, hidden marker identity, debug activation ids, and usage keys staying out of handoff result strings, diagnostics, and refreshed provider entries.
@@ -89,9 +93,9 @@ This pass did not add:
 - Godot CardDB import
 - UI target picking
 - response windows
-- draw, discard movement, summon, equip, marker reveal, NPC phase, passives, wands, or RL overflow
+- shuffle, summon, equip, marker reveal, NPC phase, passives, wands, or RL overflow
 - `.uasset` or `.umap` edits
 
 ## Next Planned Pass
 
-Add deterministic draw/hand/discard movement for the production card lifecycle, including turn-start draw and post-resolution movement policy, without adding response windows or UI.
+Add the next production vertical-slice lifecycle/setup step, likely summon/equip/RL foundation or a safe turn-start draw orchestration hook, without adding response windows or UI.

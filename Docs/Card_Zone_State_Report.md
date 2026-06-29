@@ -29,7 +29,9 @@ Each entry carries card instance id, card id, owner player id, zone, and determi
 
 Deck and Hand are private by default. Discard visibility remains unresolved for the full observation model, so this pass treats Discard as fail-closed private until a player-perspective policy is implemented.
 
-No draw, shuffle, discard movement, hand play, or card movement rules were added.
+Follow-up lifecycle work now uses `WBCardLifecycle` to move cards deterministically between Deck, Hand, and Discard. It draws from Deck to Hand, moves used hand-source activation cards from Hand to Discard, normalizes source zone indexes after removal, and appends destination zone indexes deterministically.
+
+No shuffle, summon, equip gameplay, response-window timing, or normal legal-action generation was added.
 
 ## Equipped Behavior
 
@@ -88,9 +90,7 @@ The observation layer keeps public Deck, Hand, and Discard summaries count-only,
 
 - CardDB import
 - production CardDB loading
-- draw
 - shuffle
-- discard movement
 - summon
 - equip gameplay
 - activation legal action generation changes
