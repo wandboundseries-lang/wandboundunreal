@@ -2,6 +2,114 @@
 
 Date of check: 2026-06-28 (America/New_York)
 
+## Summon / Equip / RL Foundation Pass
+
+### Scope
+
+This pass adds minimal production Character/Wand metadata, a read-only RL/RR helper, and a read-only runtime provider for own-hand summon/equip options.
+
+Implemented:
+
+- `FWBCardCharacterStatsDefinition`
+- `FWBCardWandStatsDefinition`
+- repository validation for Character HP/ATK/AR/RL and Wand RR
+- fixture loader support for `character_stats` and `wand_stats`
+- legacy activation-only fixture compatibility for old `kind: character` activation fixtures
+- `WBResonanceLoad`
+- `FWBProductionSummonEquipDataProvider`
+- own-hand Character summon options adjacent to Hero
+- own-hand Wand equip options for affordable viewer-owned units
+- hidden-info scans for opponent Hand, Deck, and hidden marker identity
+- source guards for no `FWBAction`, no `WBEffectRunner`, no lifecycle movement, no `WBRules::GenerateLegalActions`, and no `WBActionCodec` dependency
+
+Not implemented:
+
+- summon execution
+- equip execution
+- card movement for summon/equip
+- `RLUsed` mutation
+- overflow resolution
+- wand destruction
+- response windows
+- UI, Blueprint, `.uasset`, or `.umap` changes
+- `FWBAction` summon/equip integration
+- `WBActionCodec` changes
+- `WBRules::GenerateLegalActions` changes
+- Godot CardDB import
+
+### Build
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' WandboundUEEditor Win64 Development -Project='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -WaitMutex -NoHotReloadFromIDE
+```
+
+Final result:
+
+```text
+Result: Succeeded
+Total execution time: 9.28 seconds
+```
+
+### Full Wandbound Automation Tests
+
+Command used:
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\WandboundUE.uproject' -unattended -nop4 -NullRHI -nosplash -ExecCmds='Automation RunTests Wandbound; Quit' -TestExit='Automation Test Queue Empty' -ReportExportPath='C:\Users\rnhof\OneDrive\Documents\Unreal Projects\WandboundUE\Saved\AutomationReports\Wandbound'
+```
+
+Final result from `Saved/AutomationReports/Wandbound/index.json`:
+
+```text
+succeeded=1281
+succeededWithWarnings=0
+failed=0
+notRun=0
+```
+
+### Validation
+
+- Character metadata validates `HP > 0`, `ATK >= 0`, `AR >= 0`, and `RL >= 0`.
+- Wand metadata validates `RR >= 0`.
+- Fixture loader supports stat-bearing Character/Wand fixture JSON.
+- Existing activation fixture repositories still load.
+- `WBResonanceLoad` reports current RL, used RL, available RL, invalid RR, invalid RL, missing unit, and overflow pending without mutation.
+- Summon options use own-hand Character cards only.
+- Summon tiles are orthogonally adjacent to the viewer Hero, in bounds, empty, and deterministic.
+- Unit cap suppresses summon options at 4 owned on-board units including Hero.
+- Equip options use own-hand Wand cards only.
+- Eligible equip units are viewer-owned and affordable by available RL.
+- Provider output excludes opponent Hand identity, Deck identity, and hidden marker identity.
+- Provider does not mutate `FWBGameStateData` or `FWBCardDefinitionRepository`.
+- `WBActionCodec.cpp` was not modified.
+- `WBRules::GenerateLegalActions` was not modified.
+- `WBEffectRunner.cpp` was not modified.
+- `Reference/GodotProject` was not modified.
+- `.uasset` and `.umap` files were not modified.
+
+### Exact Errors
+
+Final build and automation reported no errors.
+
+Interim build errors fixed before final validation:
+
+- Unreal pointer-array `Sort` dereferences element pointers before invoking the predicate, so the provider eligible-unit comparator was changed back to `const FWBUnitState&`.
+- A Unity-build helper-name collision between existing production activation target-selection and execution-handoff source files was fixed by renaming the target-selection helper.
+
+Interim automation failures fixed before final validation:
+
+- Existing CardDefinition fixtures used legacy activation-only `kind: character` entries without stat blocks. The fixture loader now treats that exact activation-only shape as Fixture internally while stat-bearing Character/Wand entries still validate strictly.
+- Existing runtime source-guard tests now explicitly allow the new read-only summon/equip provider as a repository/observation consumer.
+
+### Risks / Unknowns
+
+- Summon execution, equip execution, hand movement, equipped-state mutation, and replay traces remain future work.
+- Overflow and wand destruction policy remain future work.
+- Wall-blocking behavior for summon adjacency remains deferred.
+- Future summon/equip `FWBAction` id design remains deferred.
+
 ## Deterministic Draw / Hand / Discard Lifecycle Pass
 
 ### Scope

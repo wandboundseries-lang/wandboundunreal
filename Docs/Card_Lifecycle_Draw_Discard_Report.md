@@ -40,6 +40,8 @@ Otherwise it draws one card for the active player. Existing turn transition code
 
 The movement happens only after successful execution and only when the provider action is a Hand source with a known source instance id. Failed selection, failed execution, Board-source activation, and already-moved hand cards do not discard.
 
+Future summon/equip execution is expected to use the same lifecycle boundary for Hand-source card movement, but the summon/equip/RL foundation pass only generates read-only options and does not move cards.
+
 ## Deterministic Ordering Policy
 
 - Source and destination zones are sorted before movement.

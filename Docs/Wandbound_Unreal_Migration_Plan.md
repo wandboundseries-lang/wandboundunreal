@@ -196,6 +196,29 @@
 - `WBRules::GenerateLegalActions` remains unchanged.
 - `WBActionCodec` remains unchanged.
 
+## Milestone - Summon / Equip / RL Foundation
+
+- Added minimal Character metadata on `FWBCardDefinition` with HP, ATK, AR, and RL.
+- Added minimal Wand metadata on `FWBCardDefinition` with RR.
+- Repository validation fails closed on invalid Character/Wand stat values.
+- Fixture loader supports `character_stats` and `wand_stats` for Unreal-owned stat-bearing fixtures.
+- Legacy activation-only fixture entries with `kind: character` and `activated_effects` remain compatible as Fixture definitions.
+- Added `WBResonanceLoad` for read-only RL/RR summaries and affordability checks.
+- Added `FWBProductionSummonEquipDataProvider` for read-only own-hand Character summon options.
+- Added read-only own-hand Wand equip options using viewer-owned eligible units and `WBResonanceLoad::CanPayRR`.
+- Summon tiles are orthogonally adjacent to the viewer Hero, in bounds, empty, and sorted by Y then X.
+- Equip eligible units are viewer-owned, on board, affordable by available RL, and sorted deterministically.
+- Hidden opponent Hand, Deck, and hidden marker identities remain excluded.
+- No summon execution was added.
+- No equip execution was added.
+- No overflow resolution was added.
+- No UI was added.
+- No response windows were added.
+- No `FWBAction` creation was added.
+- No Godot CardDB import was added.
+- `WBRules::GenerateLegalActions` remains unchanged.
+- `WBActionCodec` remains unchanged.
+
 ## Phase 1 - Project Setup
 
 - AGENTS.md

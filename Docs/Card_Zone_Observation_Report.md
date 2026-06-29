@@ -47,6 +47,8 @@ Only `OwnHand.Cards` are used for hand-source activations. Opponent hand, deck i
 
 Provider unit target options use visible board units from `FWBPublicBoardSummary`. They do not inspect hidden card zones.
 
+`FWBProductionSummonEquipDataProvider` also consumes `WBCardZoneObservation::BuildObservationForPlayer` and reads `OwnHand` only. It emits read-only summon/equip options for viewer-owned Character/Wand cards while keeping opponent Hand, Deck, and hidden marker identities out of provider output.
+
 ## Opponent Hand Policy
 
 Opponent hand identity is hidden.
@@ -109,7 +111,7 @@ Automation coverage asserts that public and player observations do not include:
 - hidden marker identity
 - removed board unit card ids
 
-Source guards also verify that public observation structs do not contain `InternalMarkerCardId` and that runtime code does not include the observation helper.
+Source guards also verify that public observation structs do not contain `InternalMarkerCardId` and that only approved production providers consume the observation helper in runtime code.
 
 ## Out Of Scope
 

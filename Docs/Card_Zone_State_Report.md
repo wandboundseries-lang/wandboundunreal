@@ -39,6 +39,8 @@ Equipped cards are modeled as `FWBEquippedCardEntry` records with card instance 
 
 This stores future equip/wand attachment shape only. It does not enforce equip legality, RL overflow, wand destruction, or source-zone activation behavior.
 
+The summon/equip/RL foundation pass now generates read-only equip options from own-hand Wand definitions, but it still does not mutate `EquippedCards`, move Hand cards, change `RLUsed`, or resolve overflow.
+
 ## Board Reference Behavior
 
 Board card references are derived from existing `FWBUnitState` records using `WBCardZoneState::BuildBoardCardReferencesForTest`.
