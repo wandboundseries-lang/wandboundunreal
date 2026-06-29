@@ -128,6 +128,11 @@ FWBGameStateData MakeFixtureLoaderState()
 	State.AddUnitForTest(MakeFixtureLoaderUnit(2, 1, FWBTile(5, 4)));
 	return State;
 }
+
+FWBCardDefinitionFixtureLoadResult LoadFixtureJsonString(const FString& Json)
+{
+	return WBCardDefinitionFixtureLoader::LoadRepositoryFromJsonString(Json, TEXT("inline_metadata_fixture.json"));
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionFixtureLoaderValidDamageTest, "Wandbound.Core.CardDefinitionFixtureLoader.ValidDamageRepositoryLoads", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -205,6 +210,73 @@ bool FWBCardDefinitionFixtureLoaderValidMixedTest::RunTest(const FString& Parame
 	TestEqual(TEXT("Second card"), CardIds[1], FString(TEXT("fixture_beta_armor")));
 	TestEqual(TEXT("Third card"), CardIds[2], FString(TEXT("fixture_zeta_heal")));
 	TestEqual(TEXT("Expected export"), ExportFixtureResult(Result), LoadExpectedFixtureExport(TEXT("valid_fixture_repository_mixed.export.json")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionFixtureLoaderCharacterStatsTest, "Wandbound.Core.CardDefinitionFixtureLoader.CharacterStatsLoads", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionFixtureLoaderCharacterStatsTest::RunTest(const FString& Parameters)
+{
+	const FString Json = TEXT("{\"repository_id\":\"metadata_repo\",\"source_version\":\"test_v1\",\"cards\":[{\"card_id\":\"character_alpha\",\"public_name\":\"Brave Student\",\"kind\":\"character\",\"character_stats\":{\"hp\":3,\"atk\":1,\"ar\":1,\"rl\":2}}]}");
+	const FWBCardDefinitionFixtureLoadResult Result = LoadFixtureJsonString(Json);
+
+	TestTrue(TEXT("Load succeeds"), Result.bOk);
+	if (!Result.bOk)
+	{
+		return false;
+	}
+
+	TestEqual(TEXT("Kind"), Result.Repository.Definitions[0].Kind, EWBCardDefinitionKind::Character);
+	TestEqual(TEXT("HP"), Result.Repository.Definitions[0].CharacterStats.HP, 3);
+	TestEqual(TEXT("ATK"), Result.Repository.Definitions[0].CharacterStats.ATK, 1);
+	TestEqual(TEXT("AR"), Result.Repository.Definitions[0].CharacterStats.AR, 1);
+	TestEqual(TEXT("RL"), Result.Repository.Definitions[0].CharacterStats.RL, 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionFixtureLoaderWandStatsTest, "Wandbound.Core.CardDefinitionFixtureLoader.WandStatsLoads", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionFixtureLoaderWandStatsTest::RunTest(const FString& Parameters)
+{
+	const FString Json = TEXT("{\"repository_id\":\"metadata_repo\",\"source_version\":\"test_v1\",\"cards\":[{\"card_id\":\"wand_alpha\",\"public_name\":\"Copper Wand\",\"kind\":\"wand\",\"wand_stats\":{\"rr\":2}}]}");
+	const FWBCardDefinitionFixtureLoadResult Result = LoadFixtureJsonString(Json);
+
+	TestTrue(TEXT("Load succeeds"), Result.bOk);
+	if (!Result.bOk)
+	{
+		return false;
+	}
+
+	TestEqual(TEXT("Kind"), Result.Repository.Definitions[0].Kind, EWBCardDefinitionKind::Wand);
+	TestEqual(TEXT("RR"), Result.Repository.Definitions[0].WandStats.RR, 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionFixtureLoaderBadCharacterStatsTest, "Wandbound.Core.CardDefinitionFixtureLoader.BadCharacterStatsFail", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionFixtureLoaderBadCharacterStatsTest::RunTest(const FString& Parameters)
+{
+	const FString MissingJson = TEXT("{\"repository_id\":\"metadata_repo\",\"cards\":[{\"card_id\":\"character_alpha\",\"public_name\":\"Brave Student\",\"kind\":\"character\"}]}");
+	const FString MalformedJson = TEXT("{\"repository_id\":\"metadata_repo\",\"cards\":[{\"card_id\":\"character_alpha\",\"public_name\":\"Brave Student\",\"kind\":\"character\",\"character_stats\":{\"hp\":\"bad\",\"atk\":1,\"ar\":1,\"rl\":2}}]}");
+	const FWBCardDefinitionFixtureLoadResult MissingResult = LoadFixtureJsonString(MissingJson);
+	const FWBCardDefinitionFixtureLoadResult MalformedResult = LoadFixtureJsonString(MalformedJson);
+
+	TestFalse(TEXT("Missing stats fail"), MissingResult.bOk);
+	TestTrue(TEXT("Missing diagnostic present"), HasFixtureDiagnostic(MissingResult, TEXT("character_stats_malformed")));
+	TestFalse(TEXT("Malformed stats fail"), MalformedResult.bOk);
+	TestTrue(TEXT("Malformed diagnostic present"), HasFixtureDiagnostic(MalformedResult, TEXT("character_stats_malformed")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionFixtureLoaderBadWandStatsTest, "Wandbound.Core.CardDefinitionFixtureLoader.BadWandStatsFail", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionFixtureLoaderBadWandStatsTest::RunTest(const FString& Parameters)
+{
+	const FString MissingJson = TEXT("{\"repository_id\":\"metadata_repo\",\"cards\":[{\"card_id\":\"wand_alpha\",\"public_name\":\"Copper Wand\",\"kind\":\"wand\"}]}");
+	const FString MalformedJson = TEXT("{\"repository_id\":\"metadata_repo\",\"cards\":[{\"card_id\":\"wand_alpha\",\"public_name\":\"Copper Wand\",\"kind\":\"wand\",\"wand_stats\":{\"rr\":\"bad\"}}]}");
+	const FWBCardDefinitionFixtureLoadResult MissingResult = LoadFixtureJsonString(MissingJson);
+	const FWBCardDefinitionFixtureLoadResult MalformedResult = LoadFixtureJsonString(MalformedJson);
+
+	TestFalse(TEXT("Missing stats fail"), MissingResult.bOk);
+	TestTrue(TEXT("Missing diagnostic present"), HasFixtureDiagnostic(MissingResult, TEXT("wand_stats_malformed")));
+	TestFalse(TEXT("Malformed stats fail"), MalformedResult.bOk);
+	TestTrue(TEXT("Malformed diagnostic present"), HasFixtureDiagnostic(MalformedResult, TEXT("wand_stats_malformed")));
 	return true;
 }
 

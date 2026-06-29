@@ -32,10 +32,25 @@ struct WANDBOUNDCORE_API FWBCardEffectDefinition
 	FWBCardActivationSourceGateDefinition SourceGate;
 };
 
+struct WANDBOUNDCORE_API FWBCardCharacterStatsDefinition
+{
+	int32 HP = 0;
+	int32 ATK = 0;
+	int32 AR = 0;
+	int32 RL = 0;
+};
+
+struct WANDBOUNDCORE_API FWBCardWandStatsDefinition
+{
+	int32 RR = 0;
+};
+
 struct WANDBOUNDCORE_API FWBCardDefinition
 {
 	FString CardId;
 	FString PublicName;
 	EWBCardDefinitionKind Kind = EWBCardDefinitionKind::Unknown;
+	FWBCardCharacterStatsDefinition CharacterStats;
+	FWBCardWandStatsDefinition WandStats;
 	TArray<FWBCardEffectDefinition> ActivatedEffects;
 };

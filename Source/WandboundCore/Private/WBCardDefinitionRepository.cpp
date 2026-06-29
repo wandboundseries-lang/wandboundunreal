@@ -92,6 +92,38 @@ bool HasDuplicateEffectIds(const FWBCardDefinition& Definition)
 	}
 	return false;
 }
+
+bool HasValidKindMetadata(const FWBCardDefinition& Definition, FString& OutReason)
+{
+	switch (Definition.Kind)
+	{
+	case EWBCardDefinitionKind::Character:
+		if (Definition.CharacterStats.HP <= 0)
+		{
+			OutReason = TEXT("invalid_character_stats");
+			return false;
+		}
+		if (Definition.CharacterStats.ATK < 0
+			|| Definition.CharacterStats.AR < 0
+			|| Definition.CharacterStats.RL < 0)
+		{
+			OutReason = TEXT("invalid_character_stats");
+			return false;
+		}
+		return true;
+
+	case EWBCardDefinitionKind::Wand:
+		if (Definition.WandStats.RR < 0)
+		{
+			OutReason = TEXT("invalid_wand_stats");
+			return false;
+		}
+		return true;
+
+	default:
+		return true;
+	}
+}
 }
 
 FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::ValidateRepository(
@@ -128,6 +160,12 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 		if (ContainsForbiddenPublicLabelTermForTest(Definition.PublicName, ForbiddenTerm))
 		{
 			return MakeValidationFailure(Repository, TEXT("public_label_contains_internal_term"));
+		}
+
+		FString KindMetadataReason;
+		if (!HasValidKindMetadata(Definition, KindMetadataReason))
+		{
+			return MakeValidationFailure(Repository, *KindMetadataReason);
 		}
 
 		for (const FWBCardEffectDefinition& Effect : Definition.ActivatedEffects)

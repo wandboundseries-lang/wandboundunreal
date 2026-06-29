@@ -29,7 +29,15 @@ Card fields:
 - `card_id` required
 - `public_name` required
 - `kind` optional
+- `character_stats` required for stat-bearing Character definitions
+- `wand_stats` required for stat-bearing Wand definitions
 - `activated_effects` optional
+
+Character stats use `{ "hp", "atk", "ar", "rl" }`.
+
+Wand stats use `{ "rr" }`.
+
+Legacy activation-only fixture entries that used `kind: character` plus `activated_effects` without `character_stats` are preserved as Fixture definitions to keep existing activation fixtures compatible. New stat-bearing Character/Wand fixtures fail closed on missing or malformed stats.
 
 Effect fields:
 

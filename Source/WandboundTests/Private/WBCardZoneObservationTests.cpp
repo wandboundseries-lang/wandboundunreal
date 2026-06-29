@@ -417,16 +417,25 @@ bool FWBCardZoneObservationRuntimeSourceUnchangedTest::RunTest(const FString& Pa
 	const FString RuntimeSource = MakeRuntimeSourceText();
 	const FString ProviderHeaderPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"), TEXT("Public"), TEXT("WBProductionActivationDataProvider.h"));
 	const FString ProviderSourcePath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"), TEXT("Private"), TEXT("WBProductionActivationDataProvider.cpp"));
+	const FString SummonEquipProviderHeaderPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"), TEXT("Public"), TEXT("WBProductionSummonEquipDataProvider.h"));
+	const FString SummonEquipProviderSourcePath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"), TEXT("Private"), TEXT("WBProductionSummonEquipDataProvider.cpp"));
 	FString ProviderHeader;
 	FString ProviderSource;
+	FString SummonEquipProviderHeader;
+	FString SummonEquipProviderSource;
 	TestTrue(TEXT("Production provider header loads"), FFileHelper::LoadFileToString(ProviderHeader, *ProviderHeaderPath));
 	TestTrue(TEXT("Production provider source loads"), FFileHelper::LoadFileToString(ProviderSource, *ProviderSourcePath));
+	TestTrue(TEXT("Summon/equip provider header loads"), FFileHelper::LoadFileToString(SummonEquipProviderHeader, *SummonEquipProviderHeaderPath));
+	TestTrue(TEXT("Summon/equip provider source loads"), FFileHelper::LoadFileToString(SummonEquipProviderSource, *SummonEquipProviderSourcePath));
 	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderSource, TEXT(""));
 
 	TestTrue(TEXT("Production provider consumes observation helper"), ProviderSource.Contains(TEXT("WBCardZoneObservation")));
-	TestFalse(TEXT("Runtime outside production provider does not include observation helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardZoneObservation")));
+	TestTrue(TEXT("Summon/equip provider consumes observation helper"), SummonEquipProviderSource.Contains(TEXT("WBCardZoneObservation")));
+	TestFalse(TEXT("Runtime outside production providers does not include observation helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardZoneObservation")));
 	TestFalse(TEXT("Runtime does not mention hidden marker identity"), RuntimeSource.Contains(TEXT("InternalMarkerCardId")));
 	return true;
 }

@@ -48,8 +48,20 @@ The repository owns definitions only. It does not own card instances or zones.
 - `duplicate_effect_id`
 - `public_label_contains_internal_term`
 - `unsupported_target_requirement`
+- `invalid_character_stats`
+- `invalid_wand_stats`
 
 Activated effects may be empty. Payload family validation remains deliberately minimal here and is left to schema validation plus activation expansion/execution paths.
+
+## Summon / Equip Metadata Update
+
+The repository now supports minimal production metadata for summon/equip foundation work:
+
+- Character definitions carry `CharacterStats` with HP, ATK, AR, and RL.
+- Wand definitions carry `WandStats` with RR.
+- Invalid Character or Wand stats fail closed at repository validation.
+
+This is still Unreal-owned metadata only, not a Godot CardDB import.
 
 ## Deterministic Ordering Policy
 

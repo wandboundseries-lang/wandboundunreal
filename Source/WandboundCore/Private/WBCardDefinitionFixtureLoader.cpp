@@ -250,6 +250,28 @@ bool TryGetObjectField(
 	return false;
 }
 
+bool TryGetRequiredObjectField(
+	const TSharedPtr<FJsonObject>& Object,
+	const TCHAR* FieldName,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const TCHAR* MalformedCode,
+	const FString& CardId,
+	const FString& EffectId,
+	const FString& Path,
+	TSharedPtr<FJsonObject>& OutObject)
+{
+	OutObject.Reset();
+	const TSharedPtr<FJsonValue>* Value = Object.IsValid() ? Object->Values.Find(FieldName) : nullptr;
+	if (Value == nullptr || !Value->IsValid() || (*Value)->Type != EJson::Object)
+	{
+		AddDiagnostic(Result, MalformedCode, CardId, EffectId, JoinPath(Path, FieldName));
+		return false;
+	}
+
+	OutObject = (*Value)->AsObject();
+	return OutObject.IsValid();
+}
+
 bool TryGetArrayField(
 	const TSharedPtr<FJsonObject>& Object,
 	const TCHAR* FieldName,
@@ -295,6 +317,113 @@ EWBCardDefinitionKind ParseCardKind(
 
 	bOutSupported = false;
 	return EWBCardDefinitionKind::Unknown;
+}
+
+void ParseCharacterStats(
+	const TSharedPtr<FJsonObject>& CardObject,
+	FWBCardDefinition& OutDefinition,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const FString& CardId,
+	const FString& Path)
+{
+	TSharedPtr<FJsonObject> StatsObject;
+	if (!TryGetRequiredObjectField(
+		CardObject,
+		TEXT("character_stats"),
+		Result,
+		TEXT("character_stats_malformed"),
+		CardId,
+		TEXT(""),
+		Path,
+		StatsObject))
+	{
+		return;
+	}
+
+	ValidateKnownFields(
+		StatsObject,
+		{ TEXT("hp"), TEXT("atk"), TEXT("ar"), TEXT("rl") },
+		Result,
+		CardId,
+		TEXT(""),
+		JoinPath(Path, TEXT("character_stats")));
+
+	TryReadRequiredInteger(
+		StatsObject,
+		TEXT("hp"),
+		Result,
+		TEXT("character_stats_malformed"),
+		CardId,
+		TEXT(""),
+		JoinPath(Path, TEXT("character_stats")),
+		OutDefinition.CharacterStats.HP);
+	TryReadRequiredInteger(
+		StatsObject,
+		TEXT("atk"),
+		Result,
+		TEXT("character_stats_malformed"),
+		CardId,
+		TEXT(""),
+		JoinPath(Path, TEXT("character_stats")),
+		OutDefinition.CharacterStats.ATK);
+	TryReadRequiredInteger(
+		StatsObject,
+		TEXT("ar"),
+		Result,
+		TEXT("character_stats_malformed"),
+		CardId,
+		TEXT(""),
+		JoinPath(Path, TEXT("character_stats")),
+		OutDefinition.CharacterStats.AR);
+	TryReadRequiredInteger(
+		StatsObject,
+		TEXT("rl"),
+		Result,
+		TEXT("character_stats_malformed"),
+		CardId,
+		TEXT(""),
+		JoinPath(Path, TEXT("character_stats")),
+		OutDefinition.CharacterStats.RL);
+}
+
+void ParseWandStats(
+	const TSharedPtr<FJsonObject>& CardObject,
+	FWBCardDefinition& OutDefinition,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const FString& CardId,
+	const FString& Path)
+{
+	TSharedPtr<FJsonObject> StatsObject;
+	if (!TryGetRequiredObjectField(
+		CardObject,
+		TEXT("wand_stats"),
+		Result,
+		TEXT("wand_stats_malformed"),
+		CardId,
+		TEXT(""),
+		Path,
+		StatsObject))
+	{
+		return;
+	}
+
+	ValidateKnownFields(
+		StatsObject,
+		{ TEXT("rr") },
+		Result,
+		CardId,
+		TEXT(""),
+		JoinPath(Path, TEXT("wand_stats")));
+
+	TryReadRequiredInteger(
+		StatsObject,
+		TEXT("rr"),
+		Result,
+		TEXT("wand_stats_malformed"),
+		CardId,
+		TEXT(""),
+		JoinPath(Path, TEXT("wand_stats")),
+		OutDefinition.WandStats.RR);
 }
 
 EWBCardEffectTargetRequirement ParseTargetRequirement(
@@ -937,7 +1066,14 @@ void ParseCard(
 
 	ValidateKnownFields(
 		Object,
-		{ TEXT("card_id"), TEXT("public_name"), TEXT("kind"), TEXT("activated_effects") },
+		{
+			TEXT("card_id"),
+			TEXT("public_name"),
+			TEXT("kind"),
+			TEXT("character_stats"),
+			TEXT("wand_stats"),
+			TEXT("activated_effects")
+		},
 		Result,
 		CardId,
 		TEXT(""),
@@ -958,6 +1094,37 @@ void ParseCard(
 	else if (Kind.IsEmpty())
 	{
 		OutDefinition.Kind = EWBCardDefinitionKind::Fixture;
+	}
+
+	if (OutDefinition.Kind == EWBCardDefinitionKind::Character)
+	{
+		if (Object->Values.Contains(TEXT("character_stats")))
+		{
+			ParseCharacterStats(Object, OutDefinition, Result, CardId, Path);
+		}
+		else if (Object->Values.Contains(TEXT("activated_effects")))
+		{
+			OutDefinition.Kind = EWBCardDefinitionKind::Fixture;
+		}
+		else
+		{
+			ParseCharacterStats(Object, OutDefinition, Result, CardId, Path);
+		}
+	}
+	else if (OutDefinition.Kind == EWBCardDefinitionKind::Wand)
+	{
+		if (Object->Values.Contains(TEXT("wand_stats")))
+		{
+			ParseWandStats(Object, OutDefinition, Result, CardId, Path);
+		}
+		else if (Object->Values.Contains(TEXT("activated_effects")))
+		{
+			OutDefinition.Kind = EWBCardDefinitionKind::Fixture;
+		}
+		else
+		{
+			ParseWandStats(Object, OutDefinition, Result, CardId, Path);
+		}
 	}
 
 	const TSharedPtr<FJsonValue>* EffectsValue = Object->Values.Find(TEXT("activated_effects"));
@@ -1028,6 +1195,20 @@ void AddRepositoryValidationDiagnostic(
 			{
 				CardId = Definition.CardId;
 				Path = JoinPath(CardPath, TEXT("public_name"));
+				break;
+			}
+			if (ValidationResult.Reason == TEXT("invalid_character_stats")
+				&& Definition.Kind == EWBCardDefinitionKind::Character)
+			{
+				CardId = Definition.CardId;
+				Path = JoinPath(CardPath, TEXT("character_stats"));
+				break;
+			}
+			if (ValidationResult.Reason == TEXT("invalid_wand_stats")
+				&& Definition.Kind == EWBCardDefinitionKind::Wand)
+			{
+				CardId = Definition.CardId;
+				Path = JoinPath(CardPath, TEXT("wand_stats"));
 				break;
 			}
 

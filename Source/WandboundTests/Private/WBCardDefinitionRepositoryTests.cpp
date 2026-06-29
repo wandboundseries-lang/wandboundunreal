@@ -58,6 +58,38 @@ FWBCardDefinition MakeRepositoryDefinition(
 	return Definition;
 }
 
+FWBCardDefinition MakeRepositoryCharacterDefinition(
+	const FString& CardId = TEXT("character_alpha"),
+	const FString& PublicName = TEXT("Brave Student"),
+	const int32 HP = 3,
+	const int32 ATK = 1,
+	const int32 AR = 1,
+	const int32 RL = 2)
+{
+	FWBCardDefinition Definition;
+	Definition.CardId = CardId;
+	Definition.PublicName = PublicName;
+	Definition.Kind = EWBCardDefinitionKind::Character;
+	Definition.CharacterStats.HP = HP;
+	Definition.CharacterStats.ATK = ATK;
+	Definition.CharacterStats.AR = AR;
+	Definition.CharacterStats.RL = RL;
+	return Definition;
+}
+
+FWBCardDefinition MakeRepositoryWandDefinition(
+	const FString& CardId = TEXT("wand_alpha"),
+	const FString& PublicName = TEXT("Copper Wand"),
+	const int32 RR = 2)
+{
+	FWBCardDefinition Definition;
+	Definition.CardId = CardId;
+	Definition.PublicName = PublicName;
+	Definition.Kind = EWBCardDefinitionKind::Wand;
+	Definition.WandStats.RR = RR;
+	return Definition;
+}
+
 FWBCardDefinitionRepository MakeRepository(
 	const TArray<FWBCardDefinition>& Definitions,
 	const FString& RepositoryId = TEXT("fixture_repository"),
@@ -216,6 +248,59 @@ bool FWBCardDefinitionRepositoryMissingPublicNameTest::RunTest(const FString& Pa
 		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryDefinition(TEXT("card_alpha"), TEXT("")) }));
 	TestFalse(TEXT("Repository invalid"), Result.bOk);
 	TestEqual(TEXT("Reason"), Result.Reason, FString(TEXT("public_name_missing")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionRepositoryCharacterMetadataTest, "Wandbound.Core.CardDefinitionRepository.ValidCharacterMetadata", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionRepositoryCharacterMetadataTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDefinitionRepositoryValidationResult Result =
+		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryCharacterDefinition() }));
+	TestTrue(TEXT("Repository valid"), Result.bOk);
+	TestEqual(TEXT("Definition count"), Result.DefinitionCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionRepositoryWandMetadataTest, "Wandbound.Core.CardDefinitionRepository.ValidWandMetadata", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionRepositoryWandMetadataTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDefinitionRepositoryValidationResult Result =
+		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryWandDefinition() }));
+	TestTrue(TEXT("Repository valid"), Result.bOk);
+	TestEqual(TEXT("Definition count"), Result.DefinitionCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionRepositoryInvalidCharacterStatsTest, "Wandbound.Core.CardDefinitionRepository.InvalidCharacterStatsFail", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionRepositoryInvalidCharacterStatsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDefinitionRepositoryValidationResult MissingHPResult =
+		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryCharacterDefinition(TEXT("character_alpha"), TEXT("Brave Student"), 0) }));
+	const FWBCardDefinitionRepositoryValidationResult NegativeATKResult =
+		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryCharacterDefinition(TEXT("character_beta"), TEXT("Clever Student"), 3, -1) }));
+	const FWBCardDefinitionRepositoryValidationResult NegativeARResult =
+		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryCharacterDefinition(TEXT("character_gamma"), TEXT("Steady Student"), 3, 1, -1) }));
+	const FWBCardDefinitionRepositoryValidationResult NegativeRLResult =
+		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryCharacterDefinition(TEXT("character_delta"), TEXT("Bright Student"), 3, 1, 1, -1) }));
+
+	TestFalse(TEXT("Missing HP invalid"), MissingHPResult.bOk);
+	TestEqual(TEXT("Missing HP reason"), MissingHPResult.Reason, FString(TEXT("invalid_character_stats")));
+	TestFalse(TEXT("Negative ATK invalid"), NegativeATKResult.bOk);
+	TestEqual(TEXT("Negative ATK reason"), NegativeATKResult.Reason, FString(TEXT("invalid_character_stats")));
+	TestFalse(TEXT("Negative AR invalid"), NegativeARResult.bOk);
+	TestEqual(TEXT("Negative AR reason"), NegativeARResult.Reason, FString(TEXT("invalid_character_stats")));
+	TestFalse(TEXT("Negative RL invalid"), NegativeRLResult.bOk);
+	TestEqual(TEXT("Negative RL reason"), NegativeRLResult.Reason, FString(TEXT("invalid_character_stats")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBCardDefinitionRepositoryInvalidWandStatsTest, "Wandbound.Core.CardDefinitionRepository.InvalidWandStatsFail", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBCardDefinitionRepositoryInvalidWandStatsTest::RunTest(const FString& Parameters)
+{
+	const FWBCardDefinitionRepositoryValidationResult Result =
+		WBCardDefinitionRepository::ValidateRepository(MakeRepository({ MakeRepositoryWandDefinition(TEXT("wand_alpha"), TEXT("Copper Wand"), -1) }));
+	TestFalse(TEXT("Repository invalid"), Result.bOk);
+	TestEqual(TEXT("Reason"), Result.Reason, FString(TEXT("invalid_wand_stats")));
 	return true;
 }
 
@@ -407,18 +492,24 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	const FString ProviderSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationDataProvider.cpp"));
 	const FString ExecutionHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionActivationExecutionHandoff.h"));
 	const FString ExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationExecutionHandoff.cpp"));
+	const FString SummonEquipProviderHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionSummonEquipDataProvider.h"));
+	const FString SummonEquipProviderSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionSummonEquipDataProvider.cpp"));
 	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ExecutionHandoffHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ExecutionHandoffSource, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderSource, TEXT(""));
 
 	TestTrue(TEXT("Production provider accepts repository input"), ProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Production provider consumes repository helper"), ProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
 	TestTrue(TEXT("Production execution handoff accepts repository input"), ExecutionHandoffHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Production execution handoff consumes repository helper"), ExecutionHandoffSource.Contains(TEXT("WBCardDefinitionRepository")));
-	TestFalse(TEXT("Runtime outside production provider/handoff does not include repository helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardDefinitionRepository")));
-	TestFalse(TEXT("Runtime outside production provider/handoff does not own repository struct"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Summon/equip provider accepts repository input"), SummonEquipProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Summon/equip provider consumes repository helper"), SummonEquipProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
+	TestFalse(TEXT("Runtime outside production providers/handoff does not include repository helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardDefinitionRepository")));
+	TestFalse(TEXT("Runtime outside production providers/handoff does not own repository struct"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("FWBCardDefinitionRepository")));
 	return true;
 }
 

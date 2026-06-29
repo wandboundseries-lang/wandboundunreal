@@ -39,7 +39,7 @@ FString SafeEffectIdFromAction(const FWBCardActivationLegalAction& Action)
 	return Action.Command.Source.SourceEffectId;
 }
 
-bool MatchesRequestedSourceInstance(
+bool TargetSelectionMatchesRequestedSourceInstance(
 	const FWBCardActivationLegalAction& Action,
 	const FString& SourceInstanceId)
 {
@@ -74,7 +74,7 @@ bool MatchesRequest(
 		return false;
 	}
 
-	return MatchesRequestedSourceInstance(Action, Request.SourceInstanceId);
+	return TargetSelectionMatchesRequestedSourceInstance(Action, Request.SourceInstanceId);
 }
 
 bool TargetOptionMatchesProviderOption(
