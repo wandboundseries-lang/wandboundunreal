@@ -8,12 +8,12 @@
 
 namespace
 {
-constexpr int32 BoardSize = 9;
+constexpr int32 SummonBoardSize = 9;
 constexpr int32 MaxOwnedUnitsIncludingHero = 4;
 
 bool IsTileInBounds(const FWBTile& Tile)
 {
-	return Tile.X >= 0 && Tile.X < BoardSize && Tile.Y >= 0 && Tile.Y < BoardSize;
+	return Tile.X >= 0 && Tile.X < SummonBoardSize && Tile.Y >= 0 && Tile.Y < SummonBoardSize;
 }
 
 bool AreOrthogonallyAdjacent(const FWBTile& A, const FWBTile& B)
@@ -122,7 +122,7 @@ void SortHandAndNormalizeIndexes(FWBPlayerCardZoneState& PlayerZones)
 	}
 }
 
-TSharedRef<FJsonObject> TileToJsonObject(const FWBTile& Tile)
+TSharedRef<FJsonObject> SummonTileToJsonObject(const FWBTile& Tile)
 {
 	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 	Object->SetNumberField(TEXT("x"), Tile.X);
@@ -138,7 +138,7 @@ TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBSummonExecutionTraceEven
 	Object->SetStringField(TEXT("source_instance_id"), Event.SourceInstanceId);
 	Object->SetStringField(TEXT("source_card_id"), Event.SourceCardId);
 	Object->SetNumberField(TEXT("created_unit_id"), Event.CreatedUnitId);
-	Object->SetObjectField(TEXT("target_tile"), TileToJsonObject(Event.TargetTile));
+	Object->SetObjectField(TEXT("target_tile"), SummonTileToJsonObject(Event.TargetTile));
 	return Object;
 }
 }
@@ -315,7 +315,7 @@ bool WBSummonExecution::SummonExecutionResultToJsonStringForTest(
 	Object->SetStringField(TEXT("source_instance_id"), Result.SourceInstanceId);
 	Object->SetStringField(TEXT("source_card_id"), Result.SourceCardId);
 	Object->SetNumberField(TEXT("created_unit_id"), Result.CreatedUnitId);
-	Object->SetObjectField(TEXT("target_tile"), TileToJsonObject(Result.TargetTile));
+	Object->SetObjectField(TEXT("target_tile"), SummonTileToJsonObject(Result.TargetTile));
 
 	TArray<TSharedPtr<FJsonValue>> TraceEvents;
 	TraceEvents.Reserve(Result.TraceEvents.Num());
