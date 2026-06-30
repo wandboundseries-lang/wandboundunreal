@@ -498,6 +498,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	const FString SummonExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionSummonExecutionHandoff.cpp"));
 	const FString EquipExecutionHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionEquipExecutionHandoff.h"));
 	const FString EquipExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionEquipExecutionHandoff.cpp"));
+	const FString OverflowHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionResonanceOverflowHandoff.h"));
+	const FString OverflowHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionResonanceOverflowHandoff.cpp"));
 	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
@@ -509,6 +511,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonExecutionHandoffSource, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*EquipExecutionHandoffHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*EquipExecutionHandoffSource, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*OverflowHandoffHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*OverflowHandoffSource, TEXT(""));
 
 	TestTrue(TEXT("Production provider accepts repository input"), ProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Production provider consumes repository helper"), ProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
@@ -520,6 +524,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	TestTrue(TEXT("Summon execution handoff passes repository through"), SummonExecutionHandoffSource.Contains(TEXT("Repository")));
 	TestTrue(TEXT("Equip execution handoff accepts repository input"), EquipExecutionHandoffHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Equip execution handoff passes repository through"), EquipExecutionHandoffSource.Contains(TEXT("Repository")));
+	TestTrue(TEXT("Overflow handoff accepts repository input"), OverflowHandoffHeader.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Overflow handoff passes repository through"), OverflowHandoffSource.Contains(TEXT("Repository")));
 	TestFalse(TEXT("Runtime outside production providers/handoff does not include repository helper"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("WBCardDefinitionRepository")));
 	TestFalse(TEXT("Runtime outside production providers/handoff does not own repository struct"), RuntimeSourceWithoutProductionProvider.Contains(TEXT("FWBCardDefinitionRepository")));
 	return true;

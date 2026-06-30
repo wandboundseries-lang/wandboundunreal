@@ -78,6 +78,20 @@ FString BuildNextWandSlotId(const FWBCardZoneState& ZoneState, const int32 UnitI
 	return TEXT("wand_overflow");
 }
 
+int32 BuildNextEquipOrder(const FWBCardZoneState& ZoneState, const int32 UnitId)
+{
+	int32 MaxEquipOrder = INDEX_NONE;
+	for (const FWBEquippedCardEntry& Entry : ZoneState.EquippedCards)
+	{
+		if (Entry.EquippedToUnitId == UnitId)
+		{
+			MaxEquipOrder = FMath::Max(MaxEquipOrder, Entry.EquipOrder);
+		}
+	}
+
+	return MaxEquipOrder + 1;
+}
+
 TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBEquipExecutionTraceEvent& Event)
 {
 	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
@@ -213,12 +227,14 @@ FWBEquipExecutionResult WBEquipExecution::ExecuteWandEquipFromHand(
 	const int32 RLUsedBefore = MutableTargetUnit->RLUsed;
 	const int32 RLUsedAfter = RLUsedBefore + RR;
 	const FString SlotId = BuildNextWandSlotId(State.GetCardZoneState(), Request.TargetUnitId);
+	const int32 EquipOrder = BuildNextEquipOrder(State.GetCardZoneState(), Request.TargetUnitId);
 
 	FWBEquippedCardEntry EquippedEntry;
 	EquippedEntry.Card = SourceEntry.Card;
 	EquippedEntry.Card.OwnerPlayerId = Request.PlayerId;
 	EquippedEntry.EquippedToUnitId = Request.TargetUnitId;
 	EquippedEntry.SlotId = SlotId;
+	EquippedEntry.EquipOrder = EquipOrder;
 
 	MutablePlayerZones->Hand.RemoveAt(SourceHandIndex, 1, EAllowShrinking::No);
 	SortHandAndNormalizeIndexes(*MutablePlayerZones);

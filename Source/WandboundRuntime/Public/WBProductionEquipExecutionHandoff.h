@@ -4,6 +4,7 @@
 #include "WBCardDefinitionRepository.h"
 #include "WBEquipExecution.h"
 #include "WBGameStateData.h"
+#include "WBProductionResonanceOverflowHandoff.h"
 #include "WBProductionSummonEquipDataProvider.h"
 
 struct WANDBOUNDRUNTIME_API FWBProductionEquipExecutionRequest
@@ -28,6 +29,7 @@ struct WANDBOUNDRUNTIME_API FWBProductionEquipExecutionHandoffResult
 	int32 RLUsedAfter = 0;
 
 	TArray<FWBEquipExecutionTraceEvent> TraceEvents;
+	FWBProductionResonanceOverflowHandoffResult ResonanceOverflowResult;
 	FWBProductionSummonEquipDecisionData RefreshedSummonEquipData;
 };
 

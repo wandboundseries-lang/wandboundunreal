@@ -35,6 +35,7 @@ struct WANDBOUNDCORE_API FWBEquippedCardEntry
 	FWBCardInstanceRef Card;
 	int32 EquippedToUnitId = -1;
 	FString SlotId;
+	int32 EquipOrder = INDEX_NONE;
 };
 
 struct WANDBOUNDCORE_API FWBBoardCardReference

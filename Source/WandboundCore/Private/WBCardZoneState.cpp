@@ -392,6 +392,11 @@ void WBCardZoneState::SortOrderedZonesDeterministically(FWBCardZoneState& ZoneSt
 			return A.SlotId < B.SlotId;
 		}
 
+		if (A.EquipOrder != B.EquipOrder)
+		{
+			return A.EquipOrder < B.EquipOrder;
+		}
+
 		return A.Card.InstanceId < B.Card.InstanceId;
 	});
 

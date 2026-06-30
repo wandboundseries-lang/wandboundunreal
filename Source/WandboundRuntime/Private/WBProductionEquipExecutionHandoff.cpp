@@ -95,10 +95,23 @@ FWBProductionEquipExecutionHandoff::ExecuteEquipFromProviderOption(
 	Result.RLUsedBefore = CoreResult.RLUsedBefore;
 	Result.RLUsedAfter = CoreResult.RLUsedAfter;
 	Result.TraceEvents = CoreResult.TraceEvents;
-	Result.RefreshedSummonEquipData =
-		FWBProductionSummonEquipDataProvider().BuildDecisionData(
+	FWBProductionResonanceOverflowRequest OverflowRequest;
+	OverflowRequest.ViewerPlayerId = Request.ViewerPlayerId;
+	OverflowRequest.UnitId = CoreResult.EquippedToUnitId;
+	OverflowRequest.ExpectedRLUsedBeforeResolution = CoreResult.RLUsedAfter;
+	Result.ResonanceOverflowResult =
+		FWBProductionResonanceOverflowHandoff().ResolveOverflowAndRefresh(
 			State,
 			Repository,
-			Request.ViewerPlayerId);
+			CurrentDecisionData,
+			OverflowRequest);
+	if (!Result.ResonanceOverflowResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = Result.ResonanceOverflowResult.Reason;
+		return Result;
+	}
+
+	Result.RefreshedSummonEquipData = Result.ResonanceOverflowResult.RefreshedSummonEquipData;
 	return Result;
 }

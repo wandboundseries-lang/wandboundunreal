@@ -250,6 +250,89 @@ FWBCardLifecycleResult WBCardLifecycle::MoveHandCardToDiscard(
 		DestinationCountAfter);
 }
 
+FWBCardLifecycleResult WBCardLifecycle::MoveEquippedCardToDiscard(
+	FWBGameStateData& State,
+	const int32 PlayerId,
+	const FString& CardInstanceId)
+{
+	FWBCardZoneState* ZoneState = nullptr;
+	FWBPlayerCardZoneState* PlayerZones = nullptr;
+	FWBCardLifecycleResult ValidationResult = ValidatePlayerAndZones(State, PlayerId, ZoneState, PlayerZones);
+	if (!ValidationResult.bOk)
+	{
+		return ValidationResult;
+	}
+
+	if (CardInstanceId.IsEmpty())
+	{
+		return MakeResult(EWBCardLifecycleResultCode::CardInstanceMissing, PlayerId);
+	}
+
+	int32 EquippedIndex = INDEX_NONE;
+	for (int32 Index = 0; Index < ZoneState->EquippedCards.Num(); ++Index)
+	{
+		const FWBEquippedCardEntry& Entry = ZoneState->EquippedCards[Index];
+		if (Entry.Card.InstanceId == CardInstanceId)
+		{
+			if (Entry.Card.OwnerPlayerId != PlayerId)
+			{
+				FWBCardLifecycleResult Result = MakeResult(
+					EWBCardLifecycleResultCode::CardNotInExpectedZone,
+					PlayerId);
+				Result.CardInstanceId = CardInstanceId;
+				Result.CardId = Entry.Card.CardId;
+				Result.SourceZoneCountAfter = ZoneState->EquippedCards.Num();
+				Result.DestinationZoneCountAfter = PlayerZones->Discard.Num();
+				return Result;
+			}
+
+			EquippedIndex = Index;
+			break;
+		}
+	}
+
+	if (EquippedIndex == INDEX_NONE)
+	{
+		FWBZoneCardEntry ExistingEntry;
+		if (WBCardZoneState::FindCardByInstanceId(*ZoneState, CardInstanceId, ExistingEntry))
+		{
+			FWBCardLifecycleResult Result = MakeResult(
+				EWBCardLifecycleResultCode::CardNotInExpectedZone,
+				PlayerId);
+			Result.CardInstanceId = CardInstanceId;
+			Result.CardId = ExistingEntry.Card.CardId;
+			Result.SourceZoneCountAfter = ZoneState->EquippedCards.Num();
+			Result.DestinationZoneCountAfter = PlayerZones->Discard.Num();
+			return Result;
+		}
+
+		FWBCardLifecycleResult Result = MakeResult(EWBCardLifecycleResultCode::CardInstanceMissing, PlayerId);
+		Result.CardInstanceId = CardInstanceId;
+		Result.SourceZoneCountAfter = ZoneState->EquippedCards.Num();
+		Result.DestinationZoneCountAfter = PlayerZones->Discard.Num();
+		return Result;
+	}
+
+	const FWBEquippedCardEntry EquippedCard = ZoneState->EquippedCards[EquippedIndex];
+	ZoneState->EquippedCards.RemoveAt(EquippedIndex, 1, EAllowShrinking::No);
+
+	FWBZoneCardEntry DiscardedCard;
+	DiscardedCard.Card = EquippedCard.Card;
+	DiscardedCard.Card.OwnerPlayerId = PlayerId;
+	DiscardedCard.Zone = EWBCardZone::Discard;
+	DiscardedCard.ZoneIndex = MaxZoneIndex(PlayerZones->Discard) + 1;
+	PlayerZones->Discard.Add(DiscardedCard);
+
+	const int32 SourceCountAfter = ZoneState->EquippedCards.Num();
+	const int32 DestinationCountAfter = PlayerZones->Discard.Num();
+	SortOrderedZones(*ZoneState);
+	return MakeSuccessfulMoveResult(
+		PlayerId,
+		DiscardedCard,
+		SourceCountAfter,
+		DestinationCountAfter);
+}
+
 FWBCardLifecycleResult WBCardLifecycle::ApplySetupDraw(
 	FWBGameStateData& State,
 	const int32 PlayerId,
