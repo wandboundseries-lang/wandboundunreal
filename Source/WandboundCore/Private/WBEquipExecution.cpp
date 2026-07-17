@@ -6,6 +6,7 @@
 #include "Serialization/JsonWriter.h"
 #include "WBCardZoneState.h"
 #include "WBResonanceLoad.h"
+#include "WBResonanceRecalculation.h"
 
 namespace
 {
@@ -27,7 +28,7 @@ FWBEquipExecutionResult MakeResult(
 	return Result;
 }
 
-void SortHandAndNormalizeIndexes(FWBPlayerCardZoneState& PlayerZones)
+void SortEquipHandAndNormalizeIndexes(FWBPlayerCardZoneState& PlayerZones)
 {
 	PlayerZones.Hand.Sort([](const FWBZoneCardEntry& A, const FWBZoneCardEntry& B)
 	{
@@ -198,17 +199,26 @@ FWBEquipExecutionResult WBEquipExecution::ExecuteWandEquipFromHand(
 		return MakeResult(EWBEquipExecutionResultCode::TargetUnitNotOwned, Request);
 	}
 
-	FWBResonanceLoadSummary LoadSummary;
-	if (!WBResonanceLoad::CanPayRR(State, Request.TargetUnitId, RR, LoadSummary))
+	const FWBResonanceRecalculationResult PreEquipRL =
+		WBResonanceRecalculation::CalculateUnit(State, Request.TargetUnitId, Repository);
+	if (!PreEquipRL.bSucceeded)
+	{
+		FWBEquipExecutionResult Result =
+			MakeResult(EWBEquipExecutionResultCode::RLRecalculationFailed, Request, PreEquipRL.FailureReason);
+		Result.RR = RR;
+		Result.RLUsedBefore = PreEquipRL.PreviousRLUsed;
+		Result.RLUsedAfter = PreEquipRL.PreviousRLUsed;
+		return Result;
+	}
+
+	if (PreEquipRL.bIsOverflowing || RR > PreEquipRL.AvailableRL)
 	{
 		FWBEquipExecutionResult Result = MakeResult(
-			LoadSummary.Reason == TEXT("invalid_rr")
-				? EWBEquipExecutionResultCode::InvalidRR
-				: EWBEquipExecutionResultCode::InsufficientRL,
+			EWBEquipExecutionResultCode::InsufficientRL,
 			Request);
 		Result.RR = RR;
-		Result.RLUsedBefore = LoadSummary.RLUsed;
-		Result.RLUsedAfter = LoadSummary.RLUsed;
+		Result.RLUsedBefore = PreEquipRL.RecalculatedRLUsed;
+		Result.RLUsedAfter = PreEquipRL.RecalculatedRLUsed;
 		return Result;
 	}
 
@@ -224,10 +234,10 @@ FWBEquipExecutionResult WBEquipExecution::ExecuteWandEquipFromHand(
 		return MakeResult(EWBEquipExecutionResultCode::TargetUnitNotFound, Request);
 	}
 
-	const int32 RLUsedBefore = MutableTargetUnit->RLUsed;
-	const int32 RLUsedAfter = RLUsedBefore + RR;
+	const int32 RLUsedBefore = PreEquipRL.RecalculatedRLUsed;
 	const FString SlotId = BuildNextWandSlotId(State.GetCardZoneState(), Request.TargetUnitId);
 	const int32 EquipOrder = BuildNextEquipOrder(State.GetCardZoneState(), Request.TargetUnitId);
+	const FWBGameStateData StateBeforeMutation = State;
 
 	FWBEquippedCardEntry EquippedEntry;
 	EquippedEntry.Card = SourceEntry.Card;
@@ -237,10 +247,24 @@ FWBEquipExecutionResult WBEquipExecution::ExecuteWandEquipFromHand(
 	EquippedEntry.EquipOrder = EquipOrder;
 
 	MutablePlayerZones->Hand.RemoveAt(SourceHandIndex, 1, EAllowShrinking::No);
-	SortHandAndNormalizeIndexes(*MutablePlayerZones);
-	MutableTargetUnit->RLUsed = RLUsedAfter;
+	SortEquipHandAndNormalizeIndexes(*MutablePlayerZones);
 	State.GetMutableCardZoneStateForTest().EquippedCards.Add(EquippedEntry);
 	WBCardZoneState::SortOrderedZonesDeterministically(State.GetMutableCardZoneStateForTest());
+
+	const FWBResonanceRecalculationResult PostEquipRL =
+		WBResonanceRecalculation::RecalculateUnit(State, Request.TargetUnitId, Repository);
+	if (!PostEquipRL.bSucceeded)
+	{
+		State = StateBeforeMutation;
+		FWBEquipExecutionResult Result =
+			MakeResult(EWBEquipExecutionResultCode::RLRecalculationFailed, Request, PostEquipRL.FailureReason);
+		Result.RR = RR;
+		Result.RLUsedBefore = RLUsedBefore;
+		Result.RLUsedAfter = RLUsedBefore;
+		return Result;
+	}
+
+	const int32 RLUsedAfter = PostEquipRL.RecalculatedRLUsed;
 
 	FWBEquipExecutionTraceEvent TraceEvent;
 	TraceEvent.EventType = TEXT("equip_wand");
@@ -320,6 +344,8 @@ FString WBEquipExecution::ResultCodeToString(const EWBEquipExecutionResultCode C
 		return TEXT("insufficient_rl");
 	case EWBEquipExecutionResultCode::ZoneStateInvalid:
 		return TEXT("zone_state_invalid");
+	case EWBEquipExecutionResultCode::RLRecalculationFailed:
+		return TEXT("rl_recalculation_failed");
 	case EWBEquipExecutionResultCode::UnsupportedEquipOperation:
 	default:
 		return TEXT("unsupported_equip_operation");

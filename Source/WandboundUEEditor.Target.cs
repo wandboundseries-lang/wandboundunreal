@@ -10,6 +10,6 @@ public class WandboundUEEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V6;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_7;
-		ExtraModuleNames.AddRange(new string[] { "WandboundUE", "WandboundCore", "WandboundTests" });
+		ExtraModuleNames.AddRange(new string[] { "WandboundUE", "WandboundCore", "WandboundRuntime", "WandboundTests" });
 	}
 }

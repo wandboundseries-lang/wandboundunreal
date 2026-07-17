@@ -99,7 +99,7 @@ int32 AllocateNextUnitId(const FWBGameStateData& State)
 	return MaxUnitId + 1;
 }
 
-void SortHandAndNormalizeIndexes(FWBPlayerCardZoneState& PlayerZones)
+void SortSummonHandAndNormalizeIndexes(FWBPlayerCardZoneState& PlayerZones)
 {
 	PlayerZones.Hand.Sort([](const FWBZoneCardEntry& A, const FWBZoneCardEntry& B)
 	{
@@ -272,6 +272,8 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 	NewUnit.MaxHP = Lookup.Definition.CharacterStats.HP;
 	NewUnit.ATK = Lookup.Definition.CharacterStats.ATK;
 	NewUnit.AR = Lookup.Definition.CharacterStats.AR;
+	NewUnit.BaseRL = Lookup.Definition.CharacterStats.RL;
+	NewUnit.CurrentRL = Lookup.Definition.CharacterStats.RL;
 	NewUnit.RLTotal = Lookup.Definition.CharacterStats.RL;
 	NewUnit.RLUsed = 0;
 	NewUnit.AttacksLeft = 0;
@@ -287,7 +289,7 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 
 	State.Units.Add(NewUnit);
 	MutablePlayerZones->Hand.RemoveAt(SourceHandIndex, 1, EAllowShrinking::No);
-	SortHandAndNormalizeIndexes(*MutablePlayerZones);
+	SortSummonHandAndNormalizeIndexes(*MutablePlayerZones);
 	WBCardZoneState::SortOrderedZonesDeterministically(State.GetMutableCardZoneStateForTest());
 
 	FWBSummonExecutionTraceEvent TraceEvent;
