@@ -321,6 +321,26 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetBoolField(TEXT("hero_unit"), Event.bHeroUnit);
 	}
 
+	if (Event.RandomSeed != -1)
+	{
+		Object->SetNumberField(TEXT("random_seed"), Event.RandomSeed);
+	}
+
+	if (Event.CardCount != -1)
+	{
+		Object->SetNumberField(TEXT("card_count"), Event.CardCount);
+	}
+
+	if (!Event.MatchPhase.IsNone())
+	{
+		Object->SetStringField(TEXT("match_phase"), Event.MatchPhase.ToString());
+	}
+
+	if (Event.bDeferredBoundary)
+	{
+		Object->SetBoolField(TEXT("deferred_boundary"), Event.bDeferredBoundary);
+	}
+
 	if (IsReplayTraceSetTile(Event.FromTile))
 	{
 		Object->SetObjectField(TEXT("from_tile"), TileToJsonObject(Event.FromTile));

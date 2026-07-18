@@ -68,6 +68,10 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 DiscardIndex = -1;
 	int32 ResolutionOrder = -1;
 	bool bHeroUnit = false;
+	int32 RandomSeed = -1;
+	int32 CardCount = -1;
+	FName MatchPhase;
+	bool bDeferredBoundary = false;
 	FWBTile FromTile;
 	FWBTile ToTile;
 	bool bOk = false;

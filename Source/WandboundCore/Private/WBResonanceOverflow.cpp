@@ -40,7 +40,7 @@ FWBResonanceOverflowResult MakeResult(
 	return Result;
 }
 
-int32 SlotSortRank(const FString& SlotId)
+int32 OverflowSlotSortRank(const FString& SlotId)
 {
 	if (SlotId == TEXT("wand"))
 	{
@@ -64,8 +64,8 @@ bool SortByOverflowRemovalOrder(
 	const FWBResonanceOverflowRemoval& A,
 	const FWBResonanceOverflowRemoval& B)
 {
-	const int32 SlotRankA = SlotSortRank(A.SlotId);
-	const int32 SlotRankB = SlotSortRank(B.SlotId);
+	const int32 SlotRankA = OverflowSlotSortRank(A.SlotId);
+	const int32 SlotRankB = OverflowSlotSortRank(B.SlotId);
 	if (SlotRankA != SlotRankB)
 	{
 		return SlotRankA < SlotRankB;
