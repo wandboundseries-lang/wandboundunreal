@@ -6,6 +6,7 @@
 #include "Serialization/JsonWriter.h"
 #include "WBCardLifecycle.h"
 #include "WBCardZoneState.h"
+#include "WBResonanceRecalculation.h"
 
 namespace
 {
@@ -100,6 +101,49 @@ TSharedRef<FJsonObject> TraceEventToJsonObject(const FWBResonanceOverflowTraceEv
 	Object->SetNumberField(TEXT("rl_used_after"), Event.RLUsedAfter);
 	return Object;
 }
+
+EWBResonanceOverflowResultCode RecalculationFailureToOverflowCode(const FString& Reason)
+{
+	if (Reason == TEXT("unit_not_found"))
+	{
+		return EWBResonanceOverflowResultCode::TargetUnitNotFound;
+	}
+
+	if (Reason == TEXT("invalid_unit_owner"))
+	{
+		return EWBResonanceOverflowResultCode::InvalidPlayer;
+	}
+
+	if (Reason == TEXT("invalid_rl_state") || Reason == TEXT("rl_used_overflow"))
+	{
+		return EWBResonanceOverflowResultCode::InvalidRLState;
+	}
+
+	if (Reason == TEXT("current_rl_overflow")
+		|| Reason == TEXT("invalid_modifier_source")
+		|| Reason == TEXT("unsupported_modifier_target")
+		|| Reason == TEXT("unsupported_modifier_operation"))
+	{
+		return EWBResonanceOverflowResultCode::InvalidRLState;
+	}
+
+	if (Reason == TEXT("card_definition_not_found"))
+	{
+		return EWBResonanceOverflowResultCode::CardDefinitionNotFound;
+	}
+
+	if (Reason == TEXT("equipped_card_not_wand"))
+	{
+		return EWBResonanceOverflowResultCode::EquippedCardNotWand;
+	}
+
+	if (Reason == TEXT("invalid_rr"))
+	{
+		return EWBResonanceOverflowResultCode::InvalidRR;
+	}
+
+	return EWBResonanceOverflowResultCode::ZoneStateInvalid;
+}
 }
 
 FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
@@ -113,11 +157,18 @@ FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
 		return MakePlan(EWBResonanceOverflowResultCode::TargetUnitNotFound, UnitId);
 	}
 
+	const FWBResonanceRecalculationResult RLResult =
+		WBResonanceRecalculation::CalculateUnit(State, UnitId, Repository);
+	if (!RLResult.bSucceeded)
+	{
+		return MakePlan(RecalculationFailureToOverflowCode(RLResult.FailureReason), UnitId, RLResult.FailureReason);
+	}
+
 	FWBResonanceOverflowPlan Plan = MakePlan(EWBResonanceOverflowResultCode::Success, UnitId);
 	Plan.PlayerId = Unit->OwnerId;
-	Plan.RLTotal = Unit->RLTotal;
-	Plan.RLUsedBefore = Unit->RLUsed;
-	Plan.RLUsedAfter = Unit->RLUsed;
+	Plan.RLTotal = RLResult.RecalculatedCurrentRL;
+	Plan.RLUsedBefore = RLResult.RecalculatedRLUsed;
+	Plan.RLUsedAfter = RLResult.RecalculatedRLUsed;
 
 	if (!FWBGameStateData::IsValidPlayerId(Unit->OwnerId)
 		|| State.GetPlayerById(Unit->OwnerId) == nullptr)
@@ -125,7 +176,7 @@ FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
 		return MakePlan(EWBResonanceOverflowResultCode::InvalidPlayer, UnitId);
 	}
 
-	if (Unit->RLTotal < 0 || Unit->RLUsed < 0)
+	if (RLResult.RecalculatedCurrentRL < 0 || RLResult.RecalculatedRLUsed < 0)
 	{
 		Plan.bOk = false;
 		Plan.Code = EWBResonanceOverflowResultCode::InvalidRLState;
@@ -142,13 +193,13 @@ FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
 		return Plan;
 	}
 
-	if (Unit->RLUsed <= Unit->RLTotal)
+	if (RLResult.RecalculatedRLUsed <= RLResult.RecalculatedCurrentRL)
 	{
 		return Plan;
 	}
 
 	Plan.bHasOverflow = true;
-	Plan.OverflowAmount = Unit->RLUsed - Unit->RLTotal;
+	Plan.OverflowAmount = RLResult.RecalculatedRLUsed - RLResult.RecalculatedCurrentRL;
 
 	TArray<FWBResonanceOverflowRemoval> Candidates;
 	for (const FWBEquippedCardEntry& Entry : State.GetCardZoneState().EquippedCards)
@@ -198,7 +249,7 @@ FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
 
 	Candidates.Sort(SortByOverflowRemovalOrder);
 
-	int32 RunningRLUsed = Unit->RLUsed;
+	int32 RunningRLUsed = RLResult.RecalculatedRLUsed;
 	for (FWBResonanceOverflowRemoval& Candidate : Candidates)
 	{
 		Candidate.RLUsedBefore = RunningRLUsed;
@@ -206,7 +257,7 @@ FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
 		Candidate.RLUsedAfter = RunningRLUsed;
 		Plan.Removals.Add(Candidate);
 
-		if (RunningRLUsed <= Unit->RLTotal)
+		if (RunningRLUsed <= RLResult.RecalculatedCurrentRL)
 		{
 			Plan.RLUsedAfter = RunningRLUsed;
 			return Plan;
@@ -225,6 +276,15 @@ FWBResonanceOverflowResult WBResonanceOverflow::ResolveOverflowForUnit(
 	const FWBCardDefinitionRepository& Repository,
 	const int32 UnitId)
 {
+	const FWBResonanceRecalculationResult InitialRLResult =
+		WBResonanceRecalculation::RecalculateUnit(State, UnitId, Repository);
+	if (!InitialRLResult.bSucceeded)
+	{
+		const FWBResonanceOverflowPlan FailurePlan =
+			MakePlan(RecalculationFailureToOverflowCode(InitialRLResult.FailureReason), UnitId, InitialRLResult.FailureReason);
+		return MakeResult(FailurePlan.Code, FailurePlan, FailurePlan.Reason);
+	}
+
 	const FWBResonanceOverflowPlan Plan = BuildOverflowPlanForUnit(State, Repository, UnitId);
 	if (!Plan.bOk)
 	{
@@ -264,12 +324,15 @@ FWBResonanceOverflowResult WBResonanceOverflow::ResolveOverflowForUnit(
 				LifecycleResult.Reason);
 		}
 
-		FWBUnitState* MutableUnit = State.GetMutableUnitById(Removal.UnitId);
-		if (MutableUnit == nullptr || !MutableUnit->IsUnitOnBoard())
+		const FWBResonanceRecalculationResult RemovalRLResult =
+			WBResonanceRecalculation::RecalculateUnit(State, Removal.UnitId, Repository);
+		if (!RemovalRLResult.bSucceeded)
 		{
-			return MakeResult(EWBResonanceOverflowResultCode::TargetUnitNotFound, Plan);
+			return MakeResult(
+				RecalculationFailureToOverflowCode(RemovalRLResult.FailureReason),
+				Plan,
+				RemovalRLResult.FailureReason);
 		}
-		MutableUnit->RLUsed = Removal.RLUsedAfter;
 
 		FWBResonanceOverflowTraceEvent RemoveEvent;
 		RemoveEvent.EventType = TEXT("rl_overflow_remove_wand");
@@ -283,8 +346,18 @@ FWBResonanceOverflowResult WBResonanceOverflow::ResolveOverflowForUnit(
 		RemoveEvent.EquipOrder = Removal.EquipOrder;
 		RemoveEvent.RR = Removal.RR;
 		RemoveEvent.RLUsedBefore = Removal.RLUsedBefore;
-		RemoveEvent.RLUsedAfter = Removal.RLUsedAfter;
+		RemoveEvent.RLUsedAfter = RemovalRLResult.RecalculatedRLUsed;
 		Result.TraceEvents.Add(RemoveEvent);
+	}
+
+	const FWBResonanceRecalculationResult FinalRLResult =
+		WBResonanceRecalculation::RecalculateUnit(State, Plan.UnitId, Repository);
+	if (!FinalRLResult.bSucceeded)
+	{
+		return MakeResult(
+			RecalculationFailureToOverflowCode(FinalRLResult.FailureReason),
+			Plan,
+			FinalRLResult.FailureReason);
 	}
 
 	FWBResonanceOverflowTraceEvent EndEvent;
@@ -294,7 +367,7 @@ FWBResonanceOverflowResult WBResonanceOverflow::ResolveOverflowForUnit(
 	EndEvent.RLTotal = Plan.RLTotal;
 	EndEvent.OverflowAmount = Plan.OverflowAmount;
 	EndEvent.RLUsedBefore = Plan.RLUsedBefore;
-	EndEvent.RLUsedAfter = Plan.RLUsedAfter;
+	EndEvent.RLUsedAfter = FinalRLResult.RecalculatedRLUsed;
 	Result.TraceEvents.Add(EndEvent);
 	return Result;
 }

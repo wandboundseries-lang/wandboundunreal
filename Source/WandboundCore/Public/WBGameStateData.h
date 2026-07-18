@@ -4,6 +4,24 @@
 #include "WBCardZoneState.h"
 #include "WBTypes.h"
 
+enum class EWBResonanceModifierTarget : uint8
+{
+	CurrentRL
+};
+
+enum class EWBResonanceModifierOperation : uint8
+{
+	Add
+};
+
+struct WANDBOUNDCORE_API FWBResonanceModifierState
+{
+	FString SourceId;
+	EWBResonanceModifierTarget Target = EWBResonanceModifierTarget::CurrentRL;
+	EWBResonanceModifierOperation Operation = EWBResonanceModifierOperation::Add;
+	int32 Amount = 0;
+};
+
 struct WANDBOUNDCORE_API FWBUnitState
 {
 	int32 UnitId = -1;
@@ -17,6 +35,9 @@ struct WANDBOUNDCORE_API FWBUnitState
 	int32 MaxArmor = 0;
 	int32 ATK = 1;
 	int32 AR = 1;
+	int32 BaseRL = 0;
+	int32 CurrentRL = 0;
+	// Compatibility mirror for older tests and serializers. Rules truth uses CurrentRL.
 	int32 RLTotal = 0;
 	int32 RLUsed = 0;
 	int32 AttacksLeft = 0;
@@ -27,8 +48,13 @@ struct WANDBOUNDCORE_API FWBUnitState
 	TSet<FName> Statuses;
 	TMap<FName, int32> StatusTurnsRemaining;
 	TSet<FName> Passives;
+	TArray<FWBResonanceModifierState> ResonanceModifiers;
 
 	bool IsUnitOnBoard() const;
+	int32 GetBaseRLForRules() const;
+	int32 GetCurrentRLForRules() const;
+	int32 GetAvailableRLForRules() const;
+	void SetCanonicalRL(int32 InBaseRL, int32 InCurrentRL, int32 InRLUsed);
 	int32 GetCurrentArmor() const;
 	int32 GetMaxArmor() const;
 	void SetArmorForTest(int32 InCurrentArmor, int32 InMaxArmor);
