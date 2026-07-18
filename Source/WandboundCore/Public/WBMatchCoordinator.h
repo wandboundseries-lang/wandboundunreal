@@ -6,6 +6,7 @@
 #include "WBCardDefinitionRepository.h"
 #include "WBCardZoneObservation.h"
 #include "WBEquipExecution.h"
+#include "WBMarkerResolution.h"
 #include "WBPublicBoardSummary.h"
 #include "WBPublicTurnSummary.h"
 #include "WBReplayTrace.h"
@@ -44,9 +45,9 @@ struct WANDBOUNDCORE_API FWBMatchInitializationRequest
 {
 	int32 Seed = 1;
 	int32 FirstPlayerId = INDEX_NONE;
-	bool bDeferMarkerSetup = true;
 	FWBCardDefinitionRepository Repository;
 	TArray<FWBMatchPlayerSetup> Players;
+	TArray<FWBSetupMarkerPlacement> MarkerPlacements;
 };
 
 struct WANDBOUNDCORE_API FWBMatchLegalAction

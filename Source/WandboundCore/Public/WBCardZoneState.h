@@ -52,14 +52,23 @@ enum class EWBMarkerPublicState : uint8
 	Revealed
 };
 
+enum class EWBMarkerType : uint8
+{
+	Unknown,
+	Trap,
+	NPC
+};
+
 struct WANDBOUNDCORE_API FWBMarkerPlaceholderEntry
 {
 	int32 MarkerId = -1;
 	int32 OwnerPlayerId = -1;
+	EWBMarkerType Type = EWBMarkerType::Unknown;
 	FWBTile Tile;
+	int32 PlacementOrder = INDEX_NONE;
 	EWBMarkerPublicState PublicState = EWBMarkerPublicState::Hidden;
 
-	// Hidden identity for future marker reveal/trap/NPC behavior. Public summaries must not expose this.
+	// Authoritative hidden identity. Player and public observations must not expose this.
 	FString InternalMarkerCardId;
 };
 

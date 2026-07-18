@@ -79,6 +79,41 @@ FWBCardDefinition MakeMatchFillerDefinition()
 	return Definition;
 }
 
+FWBCardDefinition MakeMatchTrapDefinition()
+{
+	FWBCardDefinition Definition;
+	Definition.CardId = TEXT("basic_trap");
+	Definition.PublicName = TEXT("Basic Trap");
+	Definition.Kind = EWBCardDefinitionKind::Trap;
+	return Definition;
+}
+
+FWBCardDefinition MakeMatchNPCDefinition()
+{
+	FWBCardDefinition Definition = MakeMatchCharacterDefinition(TEXT("basic_npc"), TEXT("Basic NPC"));
+	Definition.Kind = EWBCardDefinitionKind::NPC;
+	Definition.CharacterStats.HP = 5;
+	Definition.CharacterStats.ATK = 2;
+	Definition.CharacterStats.AR = 1;
+	Definition.CharacterStats.RL = 2;
+	return Definition;
+}
+
+FWBSetupMarkerPlacement MakeMatchMarker(
+	const int32 PlayerId,
+	const EWBMarkerType Type,
+	const FWBTile& Tile,
+	const int32 PlacementOrder)
+{
+	FWBSetupMarkerPlacement Placement;
+	Placement.PlayerId = PlayerId;
+	Placement.Type = Type;
+	Placement.Tile = Tile;
+	Placement.DefinitionId = Type == EWBMarkerType::Trap ? TEXT("basic_trap") : TEXT("basic_npc");
+	Placement.PlacementOrder = PlacementOrder;
+	return Placement;
+}
+
 FWBCardInstanceRef MakeMatchCard(
 	const FString& InstanceId,
 	const FString& CardId,
@@ -116,7 +151,6 @@ FWBMatchInitializationRequest MakeMatchRequest(const bool bReverseRepositoryOrde
 	FWBMatchInitializationRequest Request;
 	Request.Seed = 424242;
 	Request.FirstPlayerId = FirstPlayerId;
-	Request.bDeferMarkerSetup = true;
 	Request.Repository.RepositoryId = TEXT("match_test_repository");
 	Request.Repository.SourceVersion = TEXT("match_test_v1");
 	Request.Repository.Definitions = {
@@ -124,13 +158,25 @@ FWBMatchInitializationRequest MakeMatchRequest(const bool bReverseRepositoryOrde
 		MakeMatchCharacterDefinition(TEXT("hero_beta"), TEXT("Briar Hero")),
 		MakeMatchCharacterDefinition(TEXT("student"), TEXT("Student")),
 		MakeMatchWandDefinition(),
-		MakeMatchFillerDefinition()
+		MakeMatchFillerDefinition(),
+		MakeMatchTrapDefinition(),
+		MakeMatchNPCDefinition()
 	};
 	if (bReverseRepositoryOrder)
 	{
 		Algo::Reverse(Request.Repository.Definitions);
 	}
 	Request.Players = { MakeMatchPlayerSetup(FirstPlayerId), MakeMatchPlayerSetup(SecondPlayerId) };
+	Request.MarkerPlacements = {
+		MakeMatchMarker(0, EWBMarkerType::Trap, FWBTile(0, 8), 0),
+		MakeMatchMarker(0, EWBMarkerType::Trap, FWBTile(1, 8), 1),
+		MakeMatchMarker(0, EWBMarkerType::NPC, FWBTile(2, 8), 2),
+		MakeMatchMarker(0, EWBMarkerType::NPC, FWBTile(3, 7), 3),
+		MakeMatchMarker(1, EWBMarkerType::Trap, FWBTile(0, 0), 4),
+		MakeMatchMarker(1, EWBMarkerType::Trap, FWBTile(1, 0), 5),
+		MakeMatchMarker(1, EWBMarkerType::NPC, FWBTile(2, 0), 6),
+		MakeMatchMarker(1, EWBMarkerType::NPC, FWBTile(3, 1), 7)
+	};
 	return Request;
 }
 
@@ -291,6 +337,37 @@ FString MatchStateFingerprint(const FWBGameStateData& State)
 			*Entry.SlotId,
 			Entry.EquipOrder);
 	}
+	for (const FWBMarkerPlaceholderEntry& Marker : State.GetCardZoneState().MarkerPlaceholders)
+	{
+		Result += FString::Printf(
+			TEXT("M%d:p%d:t%d:%d,%d:o%d:%s|"),
+			Marker.MarkerId,
+			Marker.OwnerPlayerId,
+			static_cast<int32>(Marker.Type),
+			Marker.Tile.X,
+			Marker.Tile.Y,
+			Marker.PlacementOrder,
+			*Marker.InternalMarkerCardId);
+	}
+	TArray<FWBPendingNPCSpawnState> Pending = State.PendingNPCSpawns;
+	Pending.Sort([](const FWBPendingNPCSpawnState& A, const FWBPendingNPCSpawnState& B)
+	{
+		return A.SpawnOrder != B.SpawnOrder
+			? A.SpawnOrder < B.SpawnOrder
+			: A.PendingSpawnId < B.PendingSpawnId;
+	});
+	for (const FWBPendingNPCSpawnState& Spawn : Pending)
+	{
+		Result += FString::Printf(
+			TEXT("N%d:o%d:m%d:%d,%d:r%d:%s|"),
+			Spawn.PendingSpawnId,
+			Spawn.SpawnOrder,
+			Spawn.SourceMarkerId,
+			Spawn.OriginTile.X,
+			Spawn.OriginTile.Y,
+			Spawn.RetryCount,
+			*Spawn.NPCDefinitionId);
+	}
 	return Result;
 }
 
@@ -356,7 +433,11 @@ bool FWBMatchCoordinatorDeterministicInitializationTest::RunTest(const FString& 
 	}
 	TestEqual(TEXT("First player explicit"), First.GetFirstPlayerId(), FirstPlayerId);
 	TestEqual(TEXT("Action phase begins"), First.GetMatchPhase(), EWBMatchLoopPhase::Action);
-	TestTrue(TEXT("Marker boundary explicit"), HasTraceKind(First.GetTraceLog(), FName(TEXT("setup_markers_deferred"))));
+	TestTrue(TEXT("Marker setup completed"), HasTraceKind(First.GetTraceLog(), FName(TEXT("marker_setup_completed"))));
+	TestEqual(TEXT("Eight authoritative markers"), First.GetState().GetCardZoneState().MarkerPlaceholders.Num(), 8);
+	const FString SetupTrace = WBReplayTrace::SerializeEvents(First.GetTraceLog());
+	TestFalse(TEXT("Concealed Trap definition absent from setup trace"), SetupTrace.Contains(TEXT("basic_trap")));
+	TestFalse(TEXT("Concealed NPC definition absent from setup trace"), SetupTrace.Contains(TEXT("basic_npc")));
 	return true;
 }
 
@@ -396,6 +477,10 @@ bool FWBMatchCoordinatorSetupAndObservationTest::RunTest(const FString& Paramete
 		TEXT("SECRET_P1")));
 	TestTrue(TEXT("Only priority player receives legal actions"), !Observation.LegalActions.IsEmpty());
 	TestTrue(TEXT("Non-priority observation has no legal actions"), Coordinator.BuildObservation(SecondPlayerId).LegalActions.IsEmpty());
+	TestEqual(TEXT("Concealed markers are observed"), Observation.CardZones.PublicSummary.Markers.Num(), 8);
+	TestFalse(TEXT("Marker definition remains hidden"), WBCardZoneObservation::PlayerObservationContainsForbiddenSubstringForTest(
+		Observation.CardZones,
+		TEXT("basic_trap")));
 	return true;
 }
 
@@ -705,10 +790,11 @@ bool FWBMatchCoordinatorTurnTransitionTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("MP assigned in deterministic range"), State.GetPlayerById(SecondPlayerId)->RemainingMP >= 1 && State.GetPlayerById(SecondPlayerId)->RemainingMP <= 6);
 	TestEqual(TEXT("Hero attacks reset"), State.GetUnitById(SecondPlayerId)->AttacksLeft, State.GetUnitById(SecondPlayerId)->MaxAttacksPerTurn);
 	TestTrue(TEXT("Turn ended traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("turn_ended"))));
-	TestTrue(TEXT("NPC boundary traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_phase_deferred"))));
+	TestTrue(TEXT("NPC phase traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_phase_started"))));
+	TestTrue(TEXT("NPC action boundary traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_action_deferred"))));
 	TestTrue(TEXT("Player advanced traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("player_advanced"))));
 	TestTrue(TEXT("Next turn started traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("turn_started"))));
-	TestTrue(TEXT("NPC boundary precedes player advance"), FindTraceIndex(Result.TraceEvents, FName(TEXT("npc_phase_deferred"))) < FindTraceIndex(Result.TraceEvents, FName(TEXT("player_advanced"))));
+	TestTrue(TEXT("NPC phase precedes player advance"), FindTraceIndex(Result.TraceEvents, FName(TEXT("npc_phase_started"))) < FindTraceIndex(Result.TraceEvents, FName(TEXT("player_advanced"))));
 	return true;
 }
 
@@ -737,7 +823,7 @@ bool FWBMatchCoordinatorBurnTerminalTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Opponent wins"), Result.WinnerPlayerId, SecondPlayerId);
 	TestEqual(TEXT("Player does not advance"), Coordinator.GetState().CurrentPlayer, FirstPlayerId);
 	TestEqual(TEXT("Turn does not advance"), Coordinator.GetState().TurnNumber, 1);
-	TestFalse(TEXT("NPC phase skipped after game over"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_phase_deferred"))));
+	TestFalse(TEXT("NPC phase skipped after game over"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_phase_started"))));
 	TestFalse(TEXT("Next player skipped after game over"), HasTraceKind(Result.TraceEvents, FName(TEXT("player_advanced"))));
 	TestTrue(TEXT("Game over traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("game_over"))));
 	return true;
@@ -800,6 +886,190 @@ bool FWBMatchCoordinatorHeadlessSourceGuardTest::RunTest(const FString& Paramete
 	TestFalse(TEXT("No Component dependency"), Combined.Contains(TEXT("UActorComponent")));
 	TestFalse(TEXT("No global random API"), Combined.Contains(TEXT("FMath::Rand")));
 	TestTrue(TEXT("Explicit deterministic RNG state"), Combined.Contains(TEXT("WorkingRandomState")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBMatchCoordinatorMoveTrapIntegrationTest,
+	"Wandbound.Core.MatchCoordinator.Marker.MoveTrapResolvesAndRefreshes",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBMatchCoordinatorMoveTrapIntegrationTest::RunTest(const FString& Parameters)
+{
+	WBMatchCoordinator Coordinator;
+	TestTrue(TEXT("Initialization succeeds"), Coordinator.InitializeMatch(MakeMatchRequest()).bOk);
+	FWBGameStateData& State = Coordinator.GetMutableStateForTest();
+	State.GetMutableUnitById(FirstPlayerId)->HP = 5;
+	const FWBMatchLegalActionGenerationResult InitialLegal = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Move = FindCoreAction(InitialLegal, EWBActionType::Move);
+	TestNotNull(TEXT("Move exists"), Move);
+	if (Move == nullptr)
+	{
+		return false;
+	}
+	FWBMarkerPlaceholderEntry* Trap = State.GetMutableCardZoneStateForTest().MarkerPlaceholders.FindByPredicate([](const FWBMarkerPlaceholderEntry& Marker)
+	{
+		return Marker.Type == EWBMarkerType::Trap;
+	});
+	TestNotNull(TEXT("Trap marker exists"), Trap);
+	if (Trap == nullptr)
+	{
+		return false;
+	}
+	Trap->Tile = Move->CoreAction.ToTile;
+
+	const FWBMatchOperationResult Result = Coordinator.SubmitActionId(FirstPlayerId, Move->ActionId);
+	TestTrue(TEXT("Move and Trap resolve"), Result.bOk);
+	TestEqual(TEXT("Trap deals two HP damage"), Coordinator.GetState().GetUnitById(FirstPlayerId)->HP, 3);
+	TestEqual(TEXT("Trap consumed"), Coordinator.GetState().GetCardZoneState().MarkerPlaceholders.Num(), 7);
+	TestTrue(TEXT("Trap trace emitted"), HasTraceKind(Result.TraceEvents, FName(TEXT("trap_damage_resolved"))));
+	TestTrue(TEXT("Legal actions refresh"), !Result.NextLegalActions.IsEmpty());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBMatchCoordinatorSummonNPCIntegrationTest,
+	"Wandbound.Core.MatchCoordinator.Marker.SummonSchedulesAndEndTurnSpawnsNPC",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBMatchCoordinatorSummonNPCIntegrationTest::RunTest(const FString& Parameters)
+{
+	WBMatchCoordinator Coordinator;
+	TestTrue(TEXT("Initialization succeeds"), Coordinator.InitializeMatch(MakeMatchRequest()).bOk);
+	const FWBMatchLegalActionGenerationResult InitialLegal = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Summon = FindFamilyAction(InitialLegal, EWBMatchActionFamily::Summon);
+	TestNotNull(TEXT("Summon exists"), Summon);
+	if (Summon == nullptr)
+	{
+		return false;
+	}
+	FWBGameStateData& State = Coordinator.GetMutableStateForTest();
+	FWBMarkerPlaceholderEntry* NPCMarker = State.GetMutableCardZoneStateForTest().MarkerPlaceholders.FindByPredicate([](const FWBMarkerPlaceholderEntry& Marker)
+	{
+		return Marker.Type == EWBMarkerType::NPC;
+	});
+	TestNotNull(TEXT("NPC marker exists"), NPCMarker);
+	if (NPCMarker == nullptr)
+	{
+		return false;
+	}
+	NPCMarker->Tile = Summon->SummonRequest.TargetTile;
+
+	const FWBMatchOperationResult SummonResult = Coordinator.SubmitActionId(FirstPlayerId, Summon->ActionId);
+	TestTrue(TEXT("Summon succeeds"), SummonResult.bOk);
+	TestEqual(TEXT("Spawn remains pending"), Coordinator.GetState().PendingNPCSpawns.Num(), 1);
+	TestTrue(TEXT("Schedule trace emitted"), HasTraceKind(SummonResult.TraceEvents, FName(TEXT("npc_spawn_scheduled"))));
+	TestEqual(TEXT("No neutral NPC before phase"), Coordinator.GetState().Units.FilterByPredicate([](const FWBUnitState& Unit)
+	{
+		return Unit.OwnerId == -1 && Unit.IsUnitOnBoard();
+	}).Num(), 0);
+
+	const FWBMatchLegalActionGenerationResult LegalAfterSummon = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* EndTurn = FindCoreAction(LegalAfterSummon, EWBActionType::EndTurn);
+	TestNotNull(TEXT("End turn exists"), EndTurn);
+	if (EndTurn == nullptr)
+	{
+		return false;
+	}
+	const FWBMatchOperationResult EndResult = Coordinator.SubmitActionId(FirstPlayerId, EndTurn->ActionId);
+	TestTrue(TEXT("End turn succeeds"), EndResult.bOk);
+	TestEqual(TEXT("Pending spawn consumed"), Coordinator.GetState().PendingNPCSpawns.Num(), 0);
+	TestEqual(TEXT("One neutral NPC spawned"), Coordinator.GetState().Units.FilterByPredicate([](const FWBUnitState& Unit)
+	{
+		return Unit.OwnerId == -1 && Unit.IsUnitOnBoard();
+	}).Num(), 1);
+	TestTrue(TEXT("NPC phase spawn traced"), HasTraceKind(EndResult.TraceEvents, FName(TEXT("npc_spawn_succeeded"))));
+	TestTrue(TEXT("NPC actions deferred"), HasTraceKind(EndResult.TraceEvents, FName(TEXT("npc_action_deferred"))));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBMatchCoordinatorTrapHeroTerminalIntegrationTest,
+	"Wandbound.Core.MatchCoordinator.Marker.TrapHeroDeathStopsAutomaticProcessing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBMatchCoordinatorTrapHeroTerminalIntegrationTest::RunTest(const FString& Parameters)
+{
+	WBMatchCoordinator Coordinator;
+	TestTrue(TEXT("Initialization succeeds"), Coordinator.InitializeMatch(MakeMatchRequest()).bOk);
+	FWBGameStateData& State = Coordinator.GetMutableStateForTest();
+	State.GetMutableUnitById(FirstPlayerId)->HP = 2;
+	const FWBMatchLegalActionGenerationResult InitialLegal = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Move = FindCoreAction(InitialLegal, EWBActionType::Move);
+	TestNotNull(TEXT("Move exists"), Move);
+	if (Move == nullptr)
+	{
+		return false;
+	}
+	FWBMarkerPlaceholderEntry* Trap = State.GetMutableCardZoneStateForTest().MarkerPlaceholders.FindByPredicate([](const FWBMarkerPlaceholderEntry& Marker)
+	{
+		return Marker.Type == EWBMarkerType::Trap;
+	});
+	TestNotNull(TEXT("Trap exists"), Trap);
+	if (Trap == nullptr)
+	{
+		return false;
+	}
+	Trap->Tile = Move->CoreAction.ToTile;
+
+	const FWBMatchOperationResult Result = Coordinator.SubmitActionId(FirstPlayerId, Move->ActionId);
+	TestTrue(TEXT("Terminal action resolves"), Result.bOk);
+	TestTrue(TEXT("Match ends"), Result.bGameOver);
+	TestEqual(TEXT("Opponent wins"), Result.WinnerPlayerId, SecondPlayerId);
+	TestTrue(TEXT("Hero removed"), Coordinator.GetState().GetUnitById(FirstPlayerId)->bRemovedFromBoard);
+	TestTrue(TEXT("Marker game-over trace emitted"), HasTraceKind(Result.TraceEvents, FName(TEXT("marker_triggered_game_over"))));
+	TestTrue(TEXT("No legal actions after terminal marker"), Result.NextLegalActions.IsEmpty());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBMatchCoordinatorSummonTrapDeathIntegrationTest,
+	"Wandbound.Core.MatchCoordinator.Marker.SummonTrapDeathLeavesNoOccupancy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBMatchCoordinatorSummonTrapDeathIntegrationTest::RunTest(const FString& Parameters)
+{
+	FWBMatchInitializationRequest Request = MakeMatchRequest();
+	FWBCardDefinition* StudentDefinition = Request.Repository.Definitions.FindByPredicate([](const FWBCardDefinition& Definition)
+	{
+		return Definition.CardId == TEXT("student");
+	});
+	TestNotNull(TEXT("Student definition exists"), StudentDefinition);
+	if (StudentDefinition == nullptr)
+	{
+		return false;
+	}
+	StudentDefinition->CharacterStats.HP = 2;
+
+	WBMatchCoordinator Coordinator;
+	TestTrue(TEXT("Initialization succeeds"), Coordinator.InitializeMatch(Request).bOk);
+	const FWBMatchLegalActionGenerationResult InitialLegal = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Summon = FindFamilyAction(InitialLegal, EWBMatchActionFamily::Summon);
+	TestNotNull(TEXT("Summon exists"), Summon);
+	if (Summon == nullptr)
+	{
+		return false;
+	}
+	const FWBTile SummonTile = Summon->SummonRequest.TargetTile;
+	const FString SummonInstanceId = Summon->SummonRequest.SourceInstanceId;
+	FWBMarkerPlaceholderEntry* Trap = Coordinator.GetMutableStateForTest().GetMutableCardZoneStateForTest().MarkerPlaceholders.FindByPredicate([](const FWBMarkerPlaceholderEntry& Marker)
+	{
+		return Marker.Type == EWBMarkerType::Trap;
+	});
+	TestNotNull(TEXT("Trap exists"), Trap);
+	if (Trap == nullptr)
+	{
+		return false;
+	}
+	Trap->Tile = SummonTile;
+
+	const FWBMatchOperationResult Result = Coordinator.SubmitActionId(FirstPlayerId, Summon->ActionId);
+	const FWBPlayerCardZoneState* Zones = WBCardZoneState::FindPlayerZones(Coordinator.GetState().GetCardZoneState(), FirstPlayerId);
+	TestTrue(TEXT("Summon action resolves"), Result.bOk);
+	TestEqual(TEXT("Dead summon leaves no occupancy"), Coordinator.GetState().UnitIdAt(SummonTile), -1);
+	TestEqual(TEXT("Trap consumed"), Coordinator.GetState().GetCardZoneState().MarkerPlaceholders.Num(), 7);
+	TestTrue(TEXT("Marker-triggered death traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("marker_triggered_death"))));
+	TestFalse(TEXT("Summoned card no longer in hand"), Zones->Hand.ContainsByPredicate([&SummonInstanceId](const FWBZoneCardEntry& Entry)
+	{
+		return Entry.Card.InstanceId == SummonInstanceId;
+	}));
+	TestFalse(TEXT("Non-Hero death does not end match"), Result.bGameOver);
 	return true;
 }
 

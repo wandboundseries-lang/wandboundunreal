@@ -23,19 +23,6 @@ bool AreOrthogonallyAdjacent(const FWBTile& A, const FWBTile& B)
 	return DeltaX + DeltaY == 1;
 }
 
-bool HasMarkerAtTile(const FWBCardZoneState& ZoneState, const FWBTile& Tile)
-{
-	for (const FWBMarkerPlaceholderEntry& Marker : ZoneState.MarkerPlaceholders)
-	{
-		if (Marker.Tile == Tile)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
 bool AreCharacterStatsValid(const FWBCardCharacterStatsDefinition& Stats)
 {
 	return Stats.HP > 0
@@ -251,11 +238,6 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 		return MakeResult(EWBSummonExecutionResultCode::TargetTileOccupied, Request);
 	}
 
-	if (HasMarkerAtTile(State.GetCardZoneState(), Request.TargetTile))
-	{
-		return MakeResult(EWBSummonExecutionResultCode::MarkerTriggerDeferred, Request);
-	}
-
 	const int32 NewUnitId = AllocateNextUnitId(State);
 	if (NewUnitId < 0 || State.GetUnitById(NewUnitId) != nullptr)
 	{
@@ -367,8 +349,6 @@ FString WBSummonExecution::ResultCodeToString(const EWBSummonExecutionResultCode
 		return TEXT("target_tile_not_adjacent_to_hero");
 	case EWBSummonExecutionResultCode::TargetTileOccupied:
 		return TEXT("target_tile_occupied");
-	case EWBSummonExecutionResultCode::MarkerTriggerDeferred:
-		return TEXT("marker_trigger_deferred");
 	case EWBSummonExecutionResultCode::TargetTileNotAllowed:
 		return TEXT("target_tile_not_allowed");
 	case EWBSummonExecutionResultCode::UnitIdAllocationFailed:

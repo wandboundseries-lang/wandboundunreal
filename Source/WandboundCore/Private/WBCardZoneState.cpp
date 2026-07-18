@@ -402,17 +402,19 @@ void WBCardZoneState::SortOrderedZonesDeterministically(FWBCardZoneState& ZoneSt
 
 	ZoneState.MarkerPlaceholders.Sort([](const FWBMarkerPlaceholderEntry& A, const FWBMarkerPlaceholderEntry& B)
 	{
-		if (A.Tile.Y != B.Tile.Y)
+		if (A.PlacementOrder != B.PlacementOrder)
 		{
-			return A.Tile.Y < B.Tile.Y;
+			return A.PlacementOrder < B.PlacementOrder;
 		}
-
-		if (A.Tile.X != B.Tile.X)
+		if (A.MarkerId != B.MarkerId)
 		{
-			return A.Tile.X < B.Tile.X;
+			return A.MarkerId < B.MarkerId;
 		}
-
-		return A.MarkerId < B.MarkerId;
+		if (A.OwnerPlayerId != B.OwnerPlayerId)
+		{
+			return A.OwnerPlayerId < B.OwnerPlayerId;
+		}
+		return FWBGameStateData::TileToIndex(A.Tile) < FWBGameStateData::TileToIndex(B.Tile);
 	});
 }
 

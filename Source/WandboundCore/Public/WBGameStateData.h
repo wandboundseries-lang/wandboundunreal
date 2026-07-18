@@ -98,6 +98,20 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	FString DeclarationActionId;
 };
 
+struct WANDBOUNDCORE_API FWBPendingNPCSpawnState
+{
+	int32 PendingSpawnId = -1;
+	int32 SourceMarkerId = -1;
+	int32 MarkerOwnerPlayerId = -1;
+	FString NPCDefinitionId;
+	FWBTile OriginTile;
+	int32 SpawnOrder = INDEX_NONE;
+	int32 TriggeredByUnitId = -1;
+	int32 TriggeredByOwnerId = -1;
+	int32 CreatedTurnNumber = -1;
+	int32 RetryCount = 0;
+};
+
 struct WANDBOUNDCORE_API FWBGameStateData
 {
 	int32 CurrentPlayer = 0;
@@ -112,6 +126,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	TMap<int32, FName> TerrainByTileIndex;
 	TArray<FWBPlayerStateData> Players;
 	FWBPendingAttackState PendingAttack;
+	TArray<FWBPendingNPCSpawnState> PendingNPCSpawns;
 	TMap<int32, TSet<FString>> ActivationUsageKeysThisTurn;
 	FWBCardZoneState CardZoneState;
 

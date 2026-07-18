@@ -460,12 +460,14 @@ bool FWBSummonExecutionValidationCasesTest::RunTest(const FString& Parameters)
 	FWBGameStateData MarkerState = MakeSummonState();
 	AddSummonMarker(MarkerState, FWBTile(4, 3));
 	AddSummonHandCard(MarkerState, SummonPlayerId, TEXT("hand_character"), TEXT("summon_character"));
-	ExpectFailure(
-		TEXT("marker"),
-		MarkerState,
-		MakeSummonRepository({ MakeSummonCharacterDefinition() }),
-		MakeSummonRequest(),
-		EWBSummonExecutionResultCode::MarkerTriggerDeferred);
+	const FWBSummonExecutionResult MarkerResult =
+		WBSummonExecution::ExecuteCharacterSummonFromHand(
+			MarkerState,
+			MakeSummonRepository({ MakeSummonCharacterDefinition() }),
+			MakeSummonRequest());
+	TestTrue(TEXT("Marker tile remains summon-legal"), MarkerResult.bOk);
+	TestEqual(TEXT("Summoned unit enters marker tile"), MarkerState.UnitIdAt(FWBTile(4, 3)), MarkerResult.CreatedUnitId);
+	TestEqual(TEXT("Executor leaves marker for coordinator resolution"), MarkerState.GetCardZoneState().MarkerPlaceholders.Num(), 1);
 
 	return true;
 }

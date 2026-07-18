@@ -23,7 +23,6 @@ enum class EWBSummonExecutionResultCode : uint8
 	TargetTileOutOfBounds,
 	TargetTileNotAdjacentToHero,
 	TargetTileOccupied,
-	MarkerTriggerDeferred,
 	TargetTileNotAllowed,
 	UnitIdAllocationFailed,
 	ZoneStateInvalid,

@@ -7,6 +7,7 @@
 #include "WBCardZoneState.h"
 #include "WBDeathResolution.h"
 #include "WBEffectRunner.h"
+#include "WBMarkerResolution.h"
 #include "WBResonanceOverflow.h"
 #include "WBRules.h"
 
@@ -305,11 +306,6 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 		return MakeOperationFailure(RepositoryValidation.Reason);
 	}
 
-	if (!Request.bDeferMarkerSetup)
-	{
-		return MakeOperationFailure(TEXT("marker_setup_not_supported"));
-	}
-
 	if (Request.Players.Num() != 2)
 	{
 		return MakeOperationFailure(TEXT("expected_two_players"));
@@ -485,13 +481,16 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 		WorkingTraceEvents.Add(OpeningDrawn);
 	}
 
-	FWBTraceEvent MarkerBoundary = MakeMatchTrace(
-		FName(TEXT("setup_markers_deferred")),
-		SelectedFirstPlayer,
-		1,
-		PhaseToName(EWBMatchLoopPhase::Setup));
-	MarkerBoundary.bDeferredBoundary = true;
-	WorkingTraceEvents.Add(MarkerBoundary);
+	const FWBMarkerResolutionResult MarkerSetupResult =
+		WBMarkerResolution::ApplyCanonicalSetup(
+			WorkingState,
+			Request.Repository,
+			Request.MarkerPlacements);
+	if (!MarkerSetupResult.bOk)
+	{
+		return MakeOperationFailure(MarkerSetupResult.Reason);
+	}
+	WorkingTraceEvents.Append(MarkerSetupResult.TraceEvents);
 
 	const FWBApplyActionResult StartStatusResult =
 		WBEffectRunner::ApplyStartOfTurnStatusTicks(WorkingState, SelectedFirstPlayer);
@@ -876,6 +875,17 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			bActionApplied = ApplyResult.bOk;
 			FailureReason = ApplyResult.Reason;
 			WorkingTraceEvents.Append(ApplyResult.TraceEvents);
+			if (bActionApplied && SelectedAction->CoreAction.Type == EWBActionType::Move)
+			{
+				const FWBMarkerResolutionResult MarkerResult =
+					WBMarkerResolution::ResolveMarkerAtUnitTile(
+						WorkingState,
+						Repository,
+						SelectedAction->CoreAction.SourceUnitId);
+				bActionApplied = MarkerResult.bOk;
+				FailureReason = MarkerResult.Reason;
+				WorkingTraceEvents.Append(MarkerResult.TraceEvents);
+			}
 			if (bActionApplied
 				&& SelectedAction->CoreAction.Type == EWBActionType::Attack
 				&& WorkingState.HasPendingAttack())
@@ -898,6 +908,17 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			bActionApplied = ApplyResult.bOk;
 			FailureReason = ApplyResult.Reason;
 			AppendSummonTraceEvents(ApplyResult, WorkingTraceEvents);
+			if (bActionApplied)
+			{
+				const FWBMarkerResolutionResult MarkerResult =
+					WBMarkerResolution::ResolveMarkerAtUnitTile(
+						WorkingState,
+						Repository,
+						ApplyResult.CreatedUnitId);
+				bActionApplied = MarkerResult.bOk;
+				FailureReason = MarkerResult.Reason;
+				WorkingTraceEvents.Append(MarkerResult.TraceEvents);
+			}
 			break;
 		}
 		case EWBMatchActionFamily::Equip:
@@ -1023,7 +1044,7 @@ bool WBMatchCoordinator::ApplyAutomaticResolution(
 		TArray<const FWBUnitState*> Units;
 		for (const FWBUnitState& Unit : WorkingState.Units)
 		{
-			if (Unit.IsUnitOnBoard())
+			if (Unit.IsUnitOnBoard() && FWBGameStateData::IsValidPlayerId(Unit.OwnerId))
 			{
 				Units.Add(&Unit);
 			}
@@ -1124,13 +1145,17 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 		PhaseToName(EWBMatchLoopPhase::TurnEnd)));
 
 	WorkingPhase = EWBMatchLoopPhase::NPCPhase;
-	FWBTraceEvent NPCBoundary = MakeMatchTrace(
-		FName(TEXT("npc_phase_deferred")),
-		EndingPlayerId,
-		EndingTurnNumber,
-		PhaseToName(WorkingPhase));
-	NPCBoundary.bDeferredBoundary = true;
-	OutTraceEvents.Add(NPCBoundary);
+	const FWBNPCPhaseResult NPCPhaseResult =
+		WBMarkerResolution::ProcessPendingNPCSpawns(
+			WorkingState,
+			Repository,
+			EndingPlayerId);
+	if (!NPCPhaseResult.bOk)
+	{
+		OutReason = NPCPhaseResult.Reason;
+		return false;
+	}
+	OutTraceEvents.Append(NPCPhaseResult.TraceEvents);
 
 	const int32 NextPlayerId = WorkingState.CurrentPlayer;
 	WorkingPhase = EWBMatchLoopPhase::TurnStart;

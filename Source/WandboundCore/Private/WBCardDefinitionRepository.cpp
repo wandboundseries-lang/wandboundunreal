@@ -98,6 +98,7 @@ bool HasValidKindMetadata(const FWBCardDefinition& Definition, FString& OutReaso
 	switch (Definition.Kind)
 	{
 	case EWBCardDefinitionKind::Character:
+	case EWBCardDefinitionKind::NPC:
 		if (Definition.CharacterStats.HP <= 0)
 		{
 			OutReason = TEXT("invalid_character_stats");

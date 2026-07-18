@@ -67,6 +67,13 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 EquipOrder = -1;
 	int32 DiscardIndex = -1;
 	int32 ResolutionOrder = -1;
+	int32 MarkerId = -1;
+	int32 MarkerOwnerId = -1;
+	FName MarkerType;
+	int32 PlacementOrder = -1;
+	int32 PendingSpawnId = -1;
+	int32 SpawnOrder = -1;
+	int32 RetryCount = -1;
 	bool bHeroUnit = false;
 	int32 RandomSeed = -1;
 	int32 CardCount = -1;

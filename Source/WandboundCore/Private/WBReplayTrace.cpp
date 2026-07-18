@@ -316,6 +316,41 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("resolution_order"), Event.ResolutionOrder);
 	}
 
+	if (Event.MarkerId != -1)
+	{
+		Object->SetNumberField(TEXT("marker_id"), Event.MarkerId);
+	}
+
+	if (Event.MarkerOwnerId != -1)
+	{
+		Object->SetNumberField(TEXT("marker_owner_id"), Event.MarkerOwnerId);
+	}
+
+	if (!Event.MarkerType.IsNone())
+	{
+		Object->SetStringField(TEXT("marker_type"), Event.MarkerType.ToString());
+	}
+
+	if (Event.PlacementOrder != -1)
+	{
+		Object->SetNumberField(TEXT("placement_order"), Event.PlacementOrder);
+	}
+
+	if (Event.PendingSpawnId != -1)
+	{
+		Object->SetNumberField(TEXT("pending_spawn_id"), Event.PendingSpawnId);
+	}
+
+	if (Event.SpawnOrder != -1)
+	{
+		Object->SetNumberField(TEXT("spawn_order"), Event.SpawnOrder);
+	}
+
+	if (Event.RetryCount != -1)
+	{
+		Object->SetNumberField(TEXT("retry_count"), Event.RetryCount);
+	}
+
 	if (Event.bHeroUnit)
 	{
 		Object->SetBoolField(TEXT("hero_unit"), Event.bHeroUnit);

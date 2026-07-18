@@ -12,6 +12,8 @@ enum class EWBCardDefinitionKind : uint8
 	Action,
 	Terrain,
 	Wall,
+	Trap,
+	NPC,
 	Fixture
 };
 
