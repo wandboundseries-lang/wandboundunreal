@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBGameStateData.h"
+#include "WBReplayTrace.h"
 
 struct WANDBOUNDCORE_API FWBDeathPreventionResult
 {
@@ -22,4 +23,6 @@ public:
 	static FWBDeathPreventionResult EvaluateDeathPrevention(
 		const FWBGameStateData& State,
 		const FWBDeathResolutionCandidate& Candidate);
+
+	static FWBApplyActionResult ApplyZeroHPDeathResolution(FWBGameStateData& State);
 };

@@ -198,36 +198,6 @@ void AppendAttackDamageResolvedTrace(
 	TraceEvents.Add(Event);
 }
 
-void AppendUnitDefeatedTrace(
-	TArray<FWBTraceEvent>& TraceEvents,
-	const FWBUnitState& Unit,
-	const int32 PreviousHP)
-{
-	FWBTraceEvent Event;
-	Event.Kind = FName(TEXT("unit_defeated"));
-	Event.PlayerId = Unit.OwnerId;
-	Event.TargetUnitId = Unit.UnitId;
-	Event.PreviousHP = PreviousHP;
-	Event.NewHP = Unit.HP;
-	Event.bAtOrBelowZeroHP = true;
-	Event.bOk = true;
-	TraceEvents.Add(Event);
-}
-
-void AppendUnitRemovedFromBoardTrace(
-	TArray<FWBTraceEvent>& TraceEvents,
-	const FWBUnitState& Unit,
-	const FWBTile& PreviousTile)
-{
-	FWBTraceEvent Event;
-	Event.Kind = FName(TEXT("unit_removed_from_board"));
-	Event.PlayerId = Unit.OwnerId;
-	Event.TargetUnitId = Unit.UnitId;
-	Event.FromTile = PreviousTile;
-	Event.bOk = true;
-	TraceEvents.Add(Event);
-}
-
 void AppendArmorModifiedTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const FWBArmorEffectResult& ArmorResult,
@@ -384,67 +354,6 @@ void AppendCardActivationCostPaidTrace(
 	Event.CostKind = PaymentResult.Request.CostKind;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
-}
-
-void AppendHeroDefeatedTrace(
-	TArray<FWBTraceEvent>& TraceEvents,
-	const FWBUnitState& Unit,
-	const int32 WinningPlayerId)
-{
-	FWBTraceEvent Event;
-	Event.Kind = FName(TEXT("hero_defeated"));
-	Event.PlayerId = Unit.OwnerId;
-	Event.TargetUnitId = Unit.UnitId;
-	Event.WinningPlayerId = WinningPlayerId;
-	Event.bOk = true;
-	TraceEvents.Add(Event);
-}
-
-bool IsHeroUnitForOwner(const FWBGameStateData& State, const FWBUnitState& Unit)
-{
-	const FWBPlayerStateData* Player = State.GetPlayerById(Unit.OwnerId);
-	return Player != nullptr && Player->HeroUnitId == Unit.UnitId;
-}
-
-FWBDeathResolutionCandidate MakeDeathResolutionCandidate(
-	const FWBGameStateData& State,
-	const FWBUnitState& Unit)
-{
-	FWBDeathResolutionCandidate Candidate;
-	Candidate.UnitId = Unit.UnitId;
-	Candidate.OwnerId = Unit.OwnerId;
-	Candidate.bIsHero = IsHeroUnitForOwner(State, Unit);
-	return Candidate;
-}
-
-int32 OpposingPlayerId(const int32 PlayerId)
-{
-	if (PlayerId == 0)
-	{
-		return 1;
-	}
-
-	if (PlayerId == 1)
-	{
-		return 0;
-	}
-
-	return -1;
-}
-
-bool UnitTilePointerLess(const FWBUnitState& A, const FWBUnitState& B)
-{
-	if (A.Y != B.Y)
-	{
-		return A.Y < B.Y;
-	}
-
-	if (A.X != B.X)
-	{
-		return A.X < B.X;
-	}
-
-	return A.UnitId < B.UnitId;
 }
 
 bool DecayTimedStatus(FWBUnitState& Unit, const FName StatusId, int32& OutPreviousStatusTurns, int32& OutNewStatusTurns)
@@ -705,65 +614,7 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 
 FWBApplyActionResult WBEffectRunner::ApplyZeroHPDeathRemoval(FWBGameStateData& State)
 {
-	FWBApplyActionResult Result;
-
-	const FWBActionQueryResult CleanupQuery = WBRules::CanApplyZeroHPDeathRemoval(State);
-	if (!CleanupQuery.bOk)
-	{
-		Result.bOk = false;
-		Result.Reason = CleanupQuery.Reason;
-		return Result;
-	}
-
-	TArray<FWBUnitState*> UnitsToRemove;
-	for (FWBUnitState& Unit : State.Units)
-	{
-		if (WBRules::ShouldUnitBeDefeatedAtZeroHP(State, Unit))
-		{
-			UnitsToRemove.Add(&Unit);
-		}
-	}
-
-	UnitsToRemove.Sort([](const FWBUnitState& A, const FWBUnitState& B)
-	{
-		return UnitTilePointerLess(A, B);
-	});
-
-	for (FWBUnitState* Unit : UnitsToRemove)
-	{
-		if (Unit == nullptr)
-		{
-			continue;
-		}
-
-		const int32 PreviousHP = Unit->HP;
-		const FWBTile PreviousTile(Unit->X, Unit->Y);
-		const bool bHeroUnit = IsHeroUnitForOwner(State, *Unit);
-		const FWBDeathPreventionResult DeathPrevention = WBDeathResolution::EvaluateDeathPrevention(
-			State,
-			MakeDeathResolutionCandidate(State, *Unit));
-		if (DeathPrevention.bPrevented)
-		{
-			continue;
-		}
-
-		Unit->MarkUnitDefeated();
-		Unit->RemoveUnitFromBoard();
-
-		AppendUnitDefeatedTrace(Result.TraceEvents, *Unit, PreviousHP);
-		AppendUnitRemovedFromBoardTrace(Result.TraceEvents, *Unit, PreviousTile);
-
-		if (bHeroUnit && !State.bGameOver)
-		{
-			const int32 WinningPlayerId = OpposingPlayerId(Unit->OwnerId);
-			State.bGameOver = true;
-			State.WinnerPlayerId = WinningPlayerId;
-			AppendHeroDefeatedTrace(Result.TraceEvents, *Unit, WinningPlayerId);
-		}
-	}
-
-	Result.bOk = true;
-	return Result;
+	return WBDeathResolution::ApplyZeroHPDeathResolution(State);
 }
 
 FWBApplyActionResult WBEffectRunner::ApplyArmorEffect(
@@ -1194,6 +1045,18 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 		}
 	}
 
+	const FWBActionQueryResult CleanupQuery = WBRules::CanApplyZeroHPDeathRemoval(State);
+	if (CleanupQuery.bOk)
+	{
+		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
+		Result.TraceEvents.Append(CleanupResult.TraceEvents);
+		if (!CleanupResult.bOk)
+		{
+			Result.bOk = false;
+			Result.Reason = CleanupResult.Reason;
+		}
+	}
+
 	return Result;
 }
 
@@ -1276,6 +1139,18 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 			{
 				AppendStatusExpiredTrace(Result.TraceEvents, PlayerId, StatusId, Unit.UnitId, PreviousStatusTurns);
 			}
+		}
+	}
+
+	const FWBActionQueryResult CleanupQuery = WBRules::CanApplyZeroHPDeathRemoval(State);
+	if (CleanupQuery.bOk)
+	{
+		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
+		Result.TraceEvents.Append(CleanupResult.TraceEvents);
+		if (!CleanupResult.bOk)
+		{
+			Result.bOk = false;
+			Result.Reason = CleanupResult.Reason;
 		}
 	}
 

@@ -6,11 +6,13 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "WBActionCodec.h"
+#include "WBCardZoneState.h"
 #include "WBEffectRunner.h"
 #include "WBGameStateData.h"
 #include "WBPublicBoardSummary.h"
 #include "WBPublicTurnSummary.h"
 #include "WBReplayFixtureTestUtils.h"
+#include "WBReplayTrace.h"
 #include "WBRules.h"
 #include "WBRuntimeResultSerializer.h"
 #include "WBRuntimeTurnResolutionAdapter.h"
@@ -67,6 +69,46 @@ FWBGameStateData MakeZeroHPState()
 	State.AddUnitForTest(MakeZeroHPUnit(2, 1, FWBTile(5, 4), 5, 1, 1, 1));
 	State.AddUnitForTest(MakeZeroHPUnit(3, 1, FWBTile(7, 4), 5, 1, 1, 1));
 	return State;
+}
+
+void AddZeroHPPlayerZones(FWBGameStateData& State)
+{
+	if (State.GetCardZoneState().PlayerZones.Num() > 0)
+	{
+		return;
+	}
+
+	FWBPlayerCardZoneState Player0Zones;
+	Player0Zones.PlayerId = 0;
+	State.GetMutableCardZoneStateForTest().PlayerZones.Add(Player0Zones);
+
+	FWBPlayerCardZoneState Player1Zones;
+	Player1Zones.PlayerId = 1;
+	State.GetMutableCardZoneStateForTest().PlayerZones.Add(Player1Zones);
+}
+
+void AddZeroHPEquippedCard(
+	FWBGameStateData& State,
+	const int32 OwnerPlayerId,
+	const int32 UnitId,
+	const FString& InstanceId,
+	const FString& CardId,
+	const FString& SlotId,
+	const int32 EquipOrder)
+{
+	FWBEquippedCardEntry Entry;
+	Entry.Card.InstanceId = InstanceId;
+	Entry.Card.CardId = CardId;
+	Entry.Card.OwnerPlayerId = OwnerPlayerId;
+	Entry.EquippedToUnitId = UnitId;
+	Entry.SlotId = SlotId;
+	Entry.EquipOrder = EquipOrder;
+	State.GetMutableCardZoneStateForTest().EquippedCards.Add(Entry);
+}
+
+const FWBPlayerCardZoneState* GetZeroHPPlayerZones(const FWBGameStateData& State, const int32 PlayerId)
+{
+	return WBCardZoneState::FindPlayerZones(State.GetCardZoneState(), PlayerId);
 }
 
 FWBAction MakeMoveAction(const int32 UnitId, const FWBTile& FromTile, const FWBTile& ToTile)
@@ -312,10 +354,175 @@ bool FWBZeroHPMultipleOrderTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Six traces"), Result.TraceEvents.Num(), 6);
 	if (Result.TraceEvents.Num() >= 5)
 	{
-		TestEqual(TEXT("First removed unit"), Result.TraceEvents[0].TargetUnitId, 3);
-		TestEqual(TEXT("Second removed unit"), Result.TraceEvents[2].TargetUnitId, 2);
+		TestEqual(TEXT("First removed unit"), Result.TraceEvents[0].TargetUnitId, 2);
+		TestEqual(TEXT("Second removed unit"), Result.TraceEvents[2].TargetUnitId, 3);
 		TestEqual(TEXT("Third removed unit"), Result.TraceEvents[4].TargetUnitId, 4);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBZeroHPEquippedCardsDiscardedTest, "Wandbound.Core.ZeroHPDeathRemoval.EquippedCardsDiscarded", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBZeroHPEquippedCardsDiscardedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeZeroHPState();
+	AddZeroHPPlayerZones(State);
+	AddZeroHPEquippedCard(State, 1, 2, TEXT("wand_b"), TEXT("test_wand_b"), TEXT("wand_2"), 2);
+	AddZeroHPEquippedCard(State, 1, 2, TEXT("wand_a"), TEXT("test_wand_a"), TEXT("wand_1"), 1);
+	AddZeroHPEquippedCard(State, 0, 1, TEXT("survivor_wand"), TEXT("test_survivor_wand"), TEXT("wand_1"), 1);
+
+	FWBUnitState* DefeatedUnit = State.GetMutableUnitById(2);
+	DefeatedUnit->HP = 0;
+	DefeatedUnit->SetCanonicalRL(3, 5, 2);
+	FWBResonanceModifierState Modifier;
+	Modifier.SourceId = TEXT("temporary_rl");
+	Modifier.Amount = 2;
+	DefeatedUnit->ResonanceModifiers.Add(Modifier);
+
+	const FWBApplyActionResult Result = WBEffectRunner::ApplyZeroHPDeathRemoval(State);
+	TestTrue(TEXT("Cleanup succeeds"), Result.bOk);
+	TestEqual(TEXT("Survivor equipment remains"), State.GetCardZoneState().EquippedCards.Num(), 1);
+	if (State.GetCardZoneState().EquippedCards.Num() == 1)
+	{
+		TestEqual(TEXT("Survivor equipment identity"), State.GetCardZoneState().EquippedCards[0].Card.InstanceId, FString(TEXT("survivor_wand")));
+	}
+
+	const FWBPlayerCardZoneState* PlayerZones = GetZeroHPPlayerZones(State, 1);
+	TestTrue(TEXT("Defeated owner zones remain"), PlayerZones != nullptr);
+	if (PlayerZones != nullptr)
+	{
+		TestEqual(TEXT("Two cards discarded"), PlayerZones->Discard.Num(), 2);
+		if (PlayerZones->Discard.Num() == 2)
+		{
+			TestEqual(TEXT("First discard follows equip order"), PlayerZones->Discard[0].Card.InstanceId, FString(TEXT("wand_a")));
+			TestEqual(TEXT("Second discard follows equip order"), PlayerZones->Discard[1].Card.InstanceId, FString(TEXT("wand_b")));
+		}
+	}
+
+	DefeatedUnit = State.GetMutableUnitById(2);
+	TestEqual(TEXT("RL used cleared"), DefeatedUnit->RLUsed, 0);
+	TestEqual(TEXT("Current RL reset to base"), DefeatedUnit->CurrentRL, DefeatedUnit->BaseRL);
+	TestEqual(TEXT("RL total mirror reset"), DefeatedUnit->RLTotal, DefeatedUnit->BaseRL);
+	TestEqual(TEXT("Temporary RL modifiers cleared"), DefeatedUnit->ResonanceModifiers.Num(), 0);
+
+	TestEqual(TEXT("Four cleanup traces"), Result.TraceEvents.Num(), 4);
+	if (Result.TraceEvents.Num() == 4)
+	{
+		TestEqual(TEXT("First card trace"), Result.TraceEvents[0].Kind, FName(TEXT("equipped_card_discarded_on_death")));
+		TestEqual(TEXT("First card identity"), Result.TraceEvents[0].CardInstanceId, FString(TEXT("wand_a")));
+		TestEqual(TEXT("First discard index"), Result.TraceEvents[0].DiscardIndex, 0);
+		TestEqual(TEXT("Second card identity"), Result.TraceEvents[1].CardInstanceId, FString(TEXT("wand_b")));
+		TestEqual(TEXT("Defeat follows equipment"), Result.TraceEvents[2].Kind, FName(TEXT("unit_defeated")));
+		TestEqual(TEXT("Removal is last"), Result.TraceEvents[3].Kind, FName(TEXT("unit_removed_from_board")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBZeroHPEquipmentCleanupDeterministicTest, "Wandbound.Core.ZeroHPDeathRemoval.EquipmentCleanupDeterministic", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBZeroHPEquipmentCleanupDeterministicTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData StateA = MakeZeroHPState();
+	FWBGameStateData StateB = MakeZeroHPState();
+	AddZeroHPPlayerZones(StateA);
+	AddZeroHPPlayerZones(StateB);
+	AddZeroHPEquippedCard(StateA, 1, 2, TEXT("wand_b"), TEXT("test_wand_b"), TEXT("wand_2"), 2);
+	AddZeroHPEquippedCard(StateA, 1, 2, TEXT("wand_a"), TEXT("test_wand_a"), TEXT("wand_1"), 1);
+	AddZeroHPEquippedCard(StateB, 1, 2, TEXT("wand_a"), TEXT("test_wand_a"), TEXT("wand_1"), 1);
+	AddZeroHPEquippedCard(StateB, 1, 2, TEXT("wand_b"), TEXT("test_wand_b"), TEXT("wand_2"), 2);
+	StateA.GetMutableUnitById(2)->HP = 0;
+	StateB.GetMutableUnitById(2)->HP = 0;
+
+	const FWBApplyActionResult ResultA = WBEffectRunner::ApplyZeroHPDeathRemoval(StateA);
+	const FWBApplyActionResult ResultB = WBEffectRunner::ApplyZeroHPDeathRemoval(StateB);
+	TestTrue(TEXT("First cleanup succeeds"), ResultA.bOk);
+	TestTrue(TEXT("Second cleanup succeeds"), ResultB.bOk);
+	TestEqual(TEXT("Trace serialization is insertion-order independent"), WBReplayTrace::SerializeEvents(ResultA.TraceEvents), WBReplayTrace::SerializeEvents(ResultB.TraceEvents));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBZeroHPEquipmentCleanupFailureAtomicTest, "Wandbound.Core.ZeroHPDeathRemoval.EquipmentCleanupFailureAtomic", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBZeroHPEquipmentCleanupFailureAtomicTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeZeroHPState();
+	AddZeroHPPlayerZones(State);
+	AddZeroHPEquippedCard(State, 1, 2, TEXT("duplicate_wand"), TEXT("test_wand_a"), TEXT("wand_1"), 1);
+	AddZeroHPEquippedCard(State, 1, 2, TEXT("duplicate_wand"), TEXT("test_wand_b"), TEXT("wand_2"), 2);
+	State.GetMutableUnitById(2)->HP = 0;
+
+	const FWBApplyActionResult Result = WBEffectRunner::ApplyZeroHPDeathRemoval(State);
+	TestFalse(TEXT("Cleanup fails closed"), Result.bOk);
+	TestTrue(TEXT("Failure identifies duplicate instance"), Result.Reason.Contains(TEXT("duplicate_instance_id")));
+	const FWBUnitState* Unit = State.GetUnitById(2);
+	TestTrue(TEXT("Unit remains on board"), Unit != nullptr && Unit->IsUnitOnBoard());
+	TestFalse(TEXT("Unit remains undefeated"), Unit != nullptr && Unit->bDefeated);
+	TestEqual(TEXT("Equipped cards unchanged"), State.GetCardZoneState().EquippedCards.Num(), 2);
+	const FWBPlayerCardZoneState* PlayerZones = GetZeroHPPlayerZones(State, 1);
+	TestEqual(TEXT("Discard remains unchanged"), PlayerZones != nullptr ? PlayerZones->Discard.Num() : -1, 0);
+	TestEqual(TEXT("No partial traces"), Result.TraceEvents.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBZeroHPPendingAttackClearedTest, "Wandbound.Core.ZeroHPDeathRemoval.PendingAttackCleared", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBZeroHPPendingAttackClearedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeZeroHPState();
+	State.GetMutableUnitById(2)->HP = 0;
+	State.SetPendingAttackForTest(MakePendingAttack());
+
+	const FWBApplyActionResult Result = WBEffectRunner::ApplyZeroHPDeathRemoval(State);
+	TestTrue(TEXT("Cleanup succeeds"), Result.bOk);
+	TestFalse(TEXT("Pending attack involving removed unit is cleared"), State.HasPendingAttack());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBZeroHPSimultaneousHeroDeathFailsClosedTest, "Wandbound.Core.ZeroHPDeathRemoval.SimultaneousHeroDeathFailsClosed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBZeroHPSimultaneousHeroDeathFailsClosedTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeZeroHPState();
+	State.GetMutablePlayerById(0)->HeroUnitId = 1;
+	State.GetMutablePlayerById(1)->HeroUnitId = 2;
+	State.GetMutableUnitById(1)->HP = 0;
+	State.GetMutableUnitById(2)->HP = 0;
+
+	const FWBApplyActionResult Result = WBEffectRunner::ApplyZeroHPDeathRemoval(State);
+	TestFalse(TEXT("Unsupported simultaneous hero death fails"), Result.bOk);
+	TestEqual(TEXT("Explicit reason"), Result.Reason, FString(TEXT("simultaneous_hero_death_unsupported")));
+	TestTrue(TEXT("First hero remains on board"), State.GetUnitById(1)->IsUnitOnBoard());
+	TestTrue(TEXT("Second hero remains on board"), State.GetUnitById(2)->IsUnitOnBoard());
+	TestFalse(TEXT("Game over is not partially committed"), State.bGameOver);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBZeroHPBurnInvokesEquipmentCleanupTest, "Wandbound.Core.ZeroHPDeathRemoval.BurnInvokesEquipmentCleanup", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBZeroHPBurnInvokesEquipmentCleanupTest::RunTest(const FString& Parameters)
+{
+	FWBGameStateData State = MakeZeroHPState();
+	AddZeroHPPlayerZones(State);
+	AddZeroHPEquippedCard(State, 1, 2, TEXT("burn_wand"), TEXT("test_burn_wand"), TEXT("wand_1"), 1);
+	FWBUnitState* Unit = State.GetMutableUnitById(2);
+	Unit->HP = 1;
+	Unit->AddStatus(FName(TEXT("Burn")), 1);
+
+	const FWBApplyActionResult Result = WBEffectRunner::ApplyEndOfTurnStatusTicks(State, 0);
+	TestTrue(TEXT("End-turn ticks succeed"), Result.bOk);
+	Unit = State.GetMutableUnitById(2);
+	TestTrue(TEXT("Burned unit defeated"), Unit != nullptr && Unit->bDefeated);
+	TestTrue(TEXT("Burned unit removed"), Unit != nullptr && Unit->bRemovedFromBoard);
+	const FWBPlayerCardZoneState* PlayerZones = GetZeroHPPlayerZones(State, 1);
+	TestEqual(TEXT("Equipment discarded"), PlayerZones != nullptr ? PlayerZones->Discard.Num() : -1, 1);
+	TestEqual(TEXT("No equipped cards remain"), State.GetCardZoneState().EquippedCards.Num(), 0);
+
+	bool bSawStatusTick = false;
+	bool bSawEquipmentCleanup = false;
+	bool bSawUnitRemoval = false;
+	for (const FWBTraceEvent& Event : Result.TraceEvents)
+	{
+		bSawStatusTick |= Event.Kind == FName(TEXT("status_tick"));
+		bSawEquipmentCleanup |= Event.Kind == FName(TEXT("equipped_card_discarded_on_death"));
+		bSawUnitRemoval |= Event.Kind == FName(TEXT("unit_removed_from_board"));
+	}
+	TestTrue(TEXT("Burn trace emitted"), bSawStatusTick);
+	TestTrue(TEXT("Equipment cleanup trace emitted"), bSawEquipmentCleanup);
+	TestTrue(TEXT("Removal trace emitted"), bSawUnitRemoval);
 	return true;
 }
 

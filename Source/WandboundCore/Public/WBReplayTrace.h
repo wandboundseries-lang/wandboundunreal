@@ -61,6 +61,13 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	TArray<FName> RemovedStatuses;
 	bool bExpiredStatus = false;
 	bool bAtOrBelowZeroHP = false;
+	FString CardInstanceId;
+	FString CardId;
+	FString SlotId;
+	int32 EquipOrder = -1;
+	int32 DiscardIndex = -1;
+	int32 ResolutionOrder = -1;
+	bool bHeroUnit = false;
 	FWBTile FromTile;
 	FWBTile ToTile;
 	bool bOk = false;

@@ -286,6 +286,41 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetBoolField(TEXT("at_or_below_zero_hp"), Event.bAtOrBelowZeroHP);
 	}
 
+	if (!Event.CardInstanceId.IsEmpty())
+	{
+		Object->SetStringField(TEXT("card_instance_id"), Event.CardInstanceId);
+	}
+
+	if (!Event.CardId.IsEmpty())
+	{
+		Object->SetStringField(TEXT("card_id"), Event.CardId);
+	}
+
+	if (!Event.SlotId.IsEmpty())
+	{
+		Object->SetStringField(TEXT("slot_id"), Event.SlotId);
+	}
+
+	if (Event.EquipOrder != -1)
+	{
+		Object->SetNumberField(TEXT("equip_order"), Event.EquipOrder);
+	}
+
+	if (Event.DiscardIndex != -1)
+	{
+		Object->SetNumberField(TEXT("discard_index"), Event.DiscardIndex);
+	}
+
+	if (Event.ResolutionOrder != -1)
+	{
+		Object->SetNumberField(TEXT("resolution_order"), Event.ResolutionOrder);
+	}
+
+	if (Event.bHeroUnit)
+	{
+		Object->SetBoolField(TEXT("hero_unit"), Event.bHeroUnit);
+	}
+
 	if (IsReplayTraceSetTile(Event.FromTile))
 	{
 		Object->SetObjectField(TEXT("from_tile"), TileToJsonObject(Event.FromTile));
