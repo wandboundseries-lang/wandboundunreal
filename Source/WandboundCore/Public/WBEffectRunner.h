@@ -13,7 +13,9 @@ class WANDBOUNDCORE_API WBEffectRunner
 public:
 	static FWBApplyActionResult ApplyAction(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyMove(FWBGameStateData& State, const FWBAction& Action);
+	static FWBApplyActionResult ApplyNPCMove(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyAttackDeclare(FWBGameStateData& State, const FWBAction& Action);
+	static FWBApplyActionResult ApplyNPCAttackDeclare(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPendingAttackDamage(FWBGameStateData& State);
 	static FWBApplyActionResult ApplyZeroHPDeathRemoval(FWBGameStateData& State);
 	static FWBApplyActionResult ApplyEndTurn(FWBGameStateData& State, const FWBAction& Action);

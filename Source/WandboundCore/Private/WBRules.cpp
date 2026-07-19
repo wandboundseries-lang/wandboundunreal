@@ -247,7 +247,13 @@ bool WBRules::HasOrthogonalLineOfSight(
 	return true;
 }
 
-FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAction& Action)
+namespace
+{
+FWBMoveQueryResult QueryMoveWithAuthority(
+	const FWBGameStateData& State,
+	const FWBAction& Action,
+	const bool bNPCAuthority,
+	const int32 AvailableMP)
 {
 	if (Action.Type != EWBActionType::Move)
 	{
@@ -259,7 +265,7 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 		return FWBMoveQueryResult::Deny(TEXT("game_over"));
 	}
 
-	if (!State.IsNormalTurnPhase())
+	if (!bNPCAuthority && !State.IsNormalTurnPhase())
 	{
 		return FWBMoveQueryResult::Deny(TEXT("not_normal_turn"));
 	}
@@ -280,35 +286,37 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 		return FWBMoveQueryResult::Deny(TEXT("cannot_move"));
 	}
 
-	if (Unit->OwnerId == -1)
+	const FWBPlayerStateData* Player = nullptr;
+	if (bNPCAuthority)
 	{
-		return FWBMoveQueryResult::Deny(TEXT("bad_player"));
+		if (Action.PlayerId != -1 || Unit->OwnerId != -1)
+		{
+			return FWBMoveQueryResult::Deny(TEXT("npc_authority_required"));
+		}
 	}
-
-	if (!FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+	else
 	{
-		return FWBMoveQueryResult::Deny(TEXT("bad_player"));
-	}
-
-	if (Action.PlayerId != State.CurrentPlayer)
-	{
-		return FWBMoveQueryResult::Deny(TEXT("not_active_player"));
-	}
-
-	if (Action.PlayerId != State.PriorityPlayer)
-	{
-		return FWBMoveQueryResult::Deny(TEXT("no_priority"));
-	}
-
-	if (Action.PlayerId != Unit->OwnerId)
-	{
-		return FWBMoveQueryResult::Deny(TEXT("wrong_player"));
-	}
-
-	const FWBPlayerStateData* Player = State.GetPlayerById(Action.PlayerId);
-	if (Player == nullptr)
-	{
-		return FWBMoveQueryResult::Deny(TEXT("missing_player_state"));
+		if (Unit->OwnerId == -1 || !FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+		{
+			return FWBMoveQueryResult::Deny(TEXT("bad_player"));
+		}
+		if (Action.PlayerId != State.CurrentPlayer)
+		{
+			return FWBMoveQueryResult::Deny(TEXT("not_active_player"));
+		}
+		if (Action.PlayerId != State.PriorityPlayer)
+		{
+			return FWBMoveQueryResult::Deny(TEXT("no_priority"));
+		}
+		if (Action.PlayerId != Unit->OwnerId)
+		{
+			return FWBMoveQueryResult::Deny(TEXT("wrong_player"));
+		}
+		Player = State.GetPlayerById(Action.PlayerId);
+		if (Player == nullptr)
+		{
+			return FWBMoveQueryResult::Deny(TEXT("missing_player_state"));
+		}
 	}
 
 	const FWBTile UnitTile(Unit->X, Unit->Y);
@@ -317,27 +325,28 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 		return FWBMoveQueryResult::Deny(TEXT("source_tile_mismatch"));
 	}
 
-	if (!IsTileInBounds(Action.ToTile))
+	if (!WBRules::IsTileInBounds(Action.ToTile))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("out_of_bounds"));
 	}
 
-	if (IsTileOccupied(State, Action.ToTile))
+	if (WBRules::IsTileOccupied(State, Action.ToTile))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("tile_occupied"));
 	}
 
-	if (!AreOrthogonallyAdjacent(Action.FromTile, Action.ToTile))
+	if (!WBRules::AreOrthogonallyAdjacent(Action.FromTile, Action.ToTile))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("illegal_move_distance"));
 	}
 
-	if (HasWallBetween(State, Action.FromTile, Action.ToTile))
+	if (WBRules::HasWallBetween(State, Action.FromTile, Action.ToTile))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("blocked_by_wall"));
 	}
 
-	if (Player->RemainingMP <= 0)
+	const int32 MovementPoints = bNPCAuthority ? AvailableMP : Player->RemainingMP;
+	if (MovementPoints <= 0)
 	{
 		return FWBMoveQueryResult::Deny(TEXT("insufficient_mp"));
 	}
@@ -345,7 +354,10 @@ FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAc
 	return FWBMoveQueryResult::Ok(1);
 }
 
-FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action)
+FWBActionQueryResult CanDeclareAttackWithAuthority(
+	const FWBGameStateData& State,
+	const FWBAction& Action,
+	const bool bNPCAuthority)
 {
 	if (Action.Type != EWBActionType::Attack)
 	{
@@ -357,22 +369,22 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 		return FWBActionQueryResult::Deny(TEXT("game_over"));
 	}
 
-	if (!FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+	if (!bNPCAuthority && !FWBGameStateData::IsValidPlayerId(Action.PlayerId))
 	{
 		return FWBActionQueryResult::Deny(TEXT("bad_player"));
 	}
 
-	if (Action.PlayerId != State.CurrentPlayer)
+	if (!bNPCAuthority && Action.PlayerId != State.CurrentPlayer)
 	{
 		return FWBActionQueryResult::Deny(TEXT("not_active_player"));
 	}
 
-	if (Action.PlayerId != State.PriorityPlayer)
+	if (!bNPCAuthority && Action.PlayerId != State.PriorityPlayer)
 	{
 		return FWBActionQueryResult::Deny(TEXT("no_priority"));
 	}
 
-	if (!State.IsNormalTurnPhase())
+	if (!bNPCAuthority && !State.IsNormalTurnPhase())
 	{
 		return FWBActionQueryResult::Deny(TEXT("not_normal_turn"));
 	}
@@ -409,12 +421,23 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 		return FWBActionQueryResult::Deny(TEXT("same_unit"));
 	}
 
-	if (Attacker->OwnerId != Action.PlayerId)
+	if (bNPCAuthority)
+	{
+		if (Action.PlayerId != -1 || Attacker->OwnerId != -1)
+		{
+			return FWBActionQueryResult::Deny(TEXT("npc_authority_required"));
+		}
+		if (!FWBGameStateData::IsValidPlayerId(Defender->OwnerId))
+		{
+			return FWBActionQueryResult::Deny(TEXT("npc_target_not_player_controlled"));
+		}
+	}
+	else if (Attacker->OwnerId != Action.PlayerId)
 	{
 		return FWBActionQueryResult::Deny(TEXT("wrong_player"));
 	}
 
-	if (Defender->OwnerId == Attacker->OwnerId)
+	if (!bNPCAuthority && Defender->OwnerId == Attacker->OwnerId)
 	{
 		if (!IsFrozen(*Defender))
 		{
@@ -424,7 +447,7 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 
 	const FWBTile AttackerTile(Attacker->X, Attacker->Y);
 	const FWBTile DefenderTile(Defender->X, Defender->Y);
-	if (!IsTileInBounds(AttackerTile) || !IsTileInBounds(DefenderTile))
+	if (!WBRules::IsTileInBounds(AttackerTile) || !WBRules::IsTileInBounds(DefenderTile))
 	{
 		return FWBActionQueryResult::Deny(TEXT("out_of_bounds"));
 	}
@@ -439,23 +462,47 @@ FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, co
 		return FWBActionQueryResult::Deny(TEXT("cannot_attack"));
 	}
 
-	if (!AreTilesOrthogonallyAligned(AttackerTile, DefenderTile))
+	if (!WBRules::AreTilesOrthogonallyAligned(AttackerTile, DefenderTile))
 	{
 		return FWBActionQueryResult::Deny(TEXT("not_in_line"));
 	}
 
-	if (OrthogonalDistance(AttackerTile, DefenderTile) > Attacker->AR)
+	if (WBRules::OrthogonalDistance(AttackerTile, DefenderTile) > Attacker->AR)
 	{
 		return FWBActionQueryResult::Deny(TEXT("out_of_range"));
 	}
 
 	FString LOSReason;
-	if (!HasOrthogonalLineOfSight(State, AttackerTile, DefenderTile, LOSReason))
+	if (!WBRules::HasOrthogonalLineOfSight(State, AttackerTile, DefenderTile, LOSReason))
 	{
 		return FWBActionQueryResult::Deny(*LOSReason);
 	}
 
 	return FWBActionQueryResult::Ok();
+}
+}
+
+FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAction& Action)
+{
+	return QueryMoveWithAuthority(State, Action, false, 0);
+}
+
+FWBMoveQueryResult WBRules::QueryNPCMove(
+	const FWBGameStateData& State,
+	const FWBAction& Action,
+	const int32 AvailableMP)
+{
+	return QueryMoveWithAuthority(State, Action, true, AvailableMP);
+}
+
+FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action)
+{
+	return CanDeclareAttackWithAuthority(State, Action, false);
+}
+
+FWBActionQueryResult WBRules::CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action)
+{
+	return CanDeclareAttackWithAuthority(State, Action, true);
 }
 
 FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateData& State)
@@ -470,7 +517,8 @@ FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateDa
 		return FWBActionQueryResult::Deny(TEXT("missing_pending_attack"));
 	}
 
-	if (!FWBGameStateData::IsValidPlayerId(State.PendingAttack.AttackingPlayerId))
+	if (!FWBGameStateData::IsValidPlayerId(State.PendingAttack.AttackingPlayerId)
+		&& State.PendingAttack.AttackingPlayerId != -1)
 	{
 		return FWBActionQueryResult::Deny(TEXT("bad_player"));
 	}

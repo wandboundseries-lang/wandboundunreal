@@ -130,6 +130,14 @@ int32 AllocateNextPendingSpawnId(const FWBGameStateData& State)
 int32 AllocateNextSpawnOrder(const FWBGameStateData& State)
 {
 	int32 MaxOrder = -1;
+	for (const FWBUnitState& Unit : State.Units)
+	{
+		if (Unit.NPCSpawnOrder == MAX_int32)
+		{
+			return INDEX_NONE;
+		}
+		MaxOrder = FMath::Max(MaxOrder, Unit.NPCSpawnOrder);
+	}
 	for (const FWBPendingNPCSpawnState& Pending : State.PendingNPCSpawns)
 	{
 		if (Pending.SpawnOrder == MAX_int32)
@@ -569,13 +577,7 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 
 	FWBGameStateData WorkingState = State;
 	TArray<FWBTraceEvent> TraceEvents;
-	FWBTraceEvent Started;
-	Started.Kind = FName(TEXT("npc_phase_started"));
-	Started.PlayerId = PhaseOwnerPlayerId;
-	Started.TurnNumber = WorkingState.TurnNumber;
-	Started.MatchPhase = FName(TEXT("NPCPhase"));
-	Started.bOk = true;
-	TraceEvents.Add(Started);
+	(void)PhaseOwnerPlayerId;
 
 	TArray<FWBPendingNPCSpawnState> OrderedPending = WorkingState.PendingNPCSpawns;
 	OrderedPending.Sort(PendingSpawnLess);
@@ -653,6 +655,9 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 		NPC.SetArmorForTest(0, 0);
 		NPC.AttacksLeft = 0;
 		NPC.MaxAttacksPerTurn = 1;
+		NPC.NPCSpawnOrder = PendingSnapshot.SpawnOrder;
+		NPC.NPCCreationTurnNumber = WorkingState.TurnNumber;
+		NPC.NPCTriggeredByUnitId = PendingSnapshot.TriggeredByUnitId;
 		WorkingState.Units.Add(NPC);
 		WorkingState.PendingNPCSpawns.RemoveAt(PendingIndex, 1, EAllowShrinking::No);
 
@@ -662,15 +667,6 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 		TraceEvents.Add(Spawned);
 		++SpawnedCount;
 	}
-
-	FWBTraceEvent Deferred;
-	Deferred.Kind = FName(TEXT("npc_action_deferred"));
-	Deferred.PlayerId = PhaseOwnerPlayerId;
-	Deferred.TurnNumber = WorkingState.TurnNumber;
-	Deferred.MatchPhase = FName(TEXT("NPCPhase"));
-	Deferred.bDeferredBoundary = true;
-	Deferred.bOk = true;
-	TraceEvents.Add(Deferred);
 
 	if (!ValidateAuthoritativeState(WorkingState, Repository, ValidationReason))
 	{

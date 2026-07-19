@@ -41,7 +41,9 @@ public:
 	static bool AreTilesOrthogonallyAligned(const FWBTile& A, const FWBTile& B);
 	static bool HasOrthogonalLineOfSight(const FWBGameStateData& State, const FWBTile& From, const FWBTile& To, FString& OutReason);
 	static FWBMoveQueryResult QueryMove(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBMoveQueryResult QueryNPCMove(const FWBGameStateData& State, const FWBAction& Action, int32 AvailableMP);
 	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBActionQueryResult CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanResolvePendingAttackDamage(const FWBGameStateData& State);
 	static bool ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit);
 	static FWBActionQueryResult CanApplyZeroHPDeathRemoval(const FWBGameStateData& State);

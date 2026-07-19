@@ -43,6 +43,9 @@ struct WANDBOUNDCORE_API FWBUnitState
 	int32 AttacksLeft = 0;
 	int32 MaxAttacksPerTurn = 1;
 	int32 MPRemaining = 0;
+	int32 NPCSpawnOrder = INDEX_NONE;
+	int32 NPCCreationTurnNumber = INDEX_NONE;
+	int32 NPCTriggeredByUnitId = INDEX_NONE;
 	bool bDefeated = false;
 	bool bRemovedFromBoard = false;
 	TSet<FName> Statuses;

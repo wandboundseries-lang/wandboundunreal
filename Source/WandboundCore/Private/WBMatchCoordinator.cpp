@@ -8,6 +8,7 @@
 #include "WBDeathResolution.h"
 #include "WBEffectRunner.h"
 #include "WBMarkerResolution.h"
+#include "WBNPCPhaseResolution.h"
 #include "WBResonanceOverflow.h"
 #include "WBRules.h"
 
@@ -1145,10 +1146,11 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 		PhaseToName(EWBMatchLoopPhase::TurnEnd)));
 
 	WorkingPhase = EWBMatchLoopPhase::NPCPhase;
-	const FWBNPCPhaseResult NPCPhaseResult =
-		WBMarkerResolution::ProcessPendingNPCSpawns(
+	const FWBNPCPhaseResolutionResult NPCPhaseResult =
+		WBNPCPhaseResolution::ResolvePhase(
 			WorkingState,
 			Repository,
+			WorkingRandomState,
 			EndingPlayerId);
 	if (!NPCPhaseResult.bOk)
 	{
@@ -1156,6 +1158,24 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 		return false;
 	}
 	OutTraceEvents.Append(NPCPhaseResult.TraceEvents);
+	if (WorkingState.bGameOver)
+	{
+		WorkingPhase = EWBMatchLoopPhase::GameOver;
+		FWBTraceEvent GameOver = MakeMatchTrace(
+			FName(TEXT("game_over")),
+			EndingPlayerId,
+			WorkingState.TurnNumber,
+			PhaseToName(WorkingPhase));
+		GameOver.WinningPlayerId = WorkingState.WinnerPlayerId;
+		OutTraceEvents.Add(GameOver);
+		OutTraceEvents.Add(MakeMatchTrace(
+			FName(TEXT("automatic_resolution")),
+			EndingPlayerId,
+			WorkingState.TurnNumber,
+			PhaseToName(WorkingPhase)));
+		OutReason.Reset();
+		return true;
+	}
 
 	const int32 NextPlayerId = WorkingState.CurrentPlayer;
 	WorkingPhase = EWBMatchLoopPhase::TurnStart;
@@ -1310,8 +1330,7 @@ FWBGameStateData& WBMatchCoordinator::GetMutableStateForTest()
 
 int32 WBMatchCoordinator::RollD6(uint32& InOutRandomState)
 {
-	InOutRandomState = InOutRandomState * 1664525u + 1013904223u;
-	return static_cast<int32>((InOutRandomState % 6u) + 1u);
+	return WBNPCPhaseResolution::RollD6(InOutRandomState);
 }
 
 FName WBMatchCoordinator::PhaseToName(const EWBMatchLoopPhase Phase)

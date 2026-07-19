@@ -73,6 +73,8 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 PlacementOrder = -1;
 	int32 PendingSpawnId = -1;
 	int32 SpawnOrder = -1;
+	int32 ActionSequence = -1;
+	int32 PathStepIndex = -1;
 	int32 RetryCount = -1;
 	bool bHeroUnit = false;
 	int32 RandomSeed = -1;

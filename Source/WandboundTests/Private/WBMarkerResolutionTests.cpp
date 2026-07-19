@@ -417,7 +417,8 @@ bool FWBNPCPhaseSpawnTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("NPC occupies spawn tile"), State.IsTileOccupied(FWBTile(3, 8)));
 	TestEqual(TEXT("Pending consumed"), State.PendingNPCSpawns.Num(), 0);
 	TestTrue(TEXT("Spawn traced"), HasTrace(Result.TraceEvents, FName(TEXT("npc_spawn_succeeded"))));
-	TestTrue(TEXT("Action deferral traced"), HasTrace(Result.TraceEvents, FName(TEXT("npc_action_deferred"))));
+	TestFalse(TEXT("Retired action deferral is absent"), HasTrace(Result.TraceEvents, FName(TEXT("npc_action_deferred"))));
+	TestEqual(TEXT("Spawn order retained on unit"), NPC->NPCSpawnOrder, 0);
 	return true;
 }
 

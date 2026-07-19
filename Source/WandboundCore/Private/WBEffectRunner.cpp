@@ -448,6 +448,43 @@ FWBApplyActionResult WBEffectRunner::ApplyMove(FWBGameStateData& State, const FW
 	return Result;
 }
 
+FWBApplyActionResult WBEffectRunner::ApplyNPCMove(FWBGameStateData& State, const FWBAction& Action)
+{
+	FWBApplyActionResult Result;
+	const FWBUnitState* ExistingUnit = State.GetUnitById(Action.SourceUnitId);
+	const int32 AvailableMP = ExistingUnit == nullptr ? 0 : ExistingUnit->MPRemaining;
+	const FWBMoveQueryResult MoveQuery = WBRules::QueryNPCMove(State, Action, AvailableMP);
+	if (!MoveQuery.bOk)
+	{
+		Result.Reason = MoveQuery.Reason;
+		return Result;
+	}
+
+	FWBUnitState* Unit = State.GetMutableUnitById(Action.SourceUnitId);
+	if (Unit == nullptr)
+	{
+		Result.Reason = TEXT("npc_disappeared_before_movement");
+		return Result;
+	}
+
+	const FWBTile OriginalTile(Unit->X, Unit->Y);
+	Unit->X = Action.ToTile.X;
+	Unit->Y = Action.ToTile.Y;
+	Unit->MPRemaining = FMath::Max(Unit->MPRemaining - MoveQuery.CostMP, 0);
+
+	FWBTraceEvent MoveEvent;
+	MoveEvent.Kind = FName(TEXT("npc_moved"));
+	MoveEvent.PlayerId = -1;
+	MoveEvent.SourceUnitId = Action.SourceUnitId;
+	MoveEvent.FromTile = OriginalTile;
+	MoveEvent.ToTile = Action.ToTile;
+	MoveEvent.RemainingMP = Unit->MPRemaining;
+	MoveEvent.bOk = true;
+	Result.bOk = true;
+	Result.TraceEvents.Add(MoveEvent);
+	return Result;
+}
+
 FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State, const FWBAction& Action)
 {
 	FWBApplyActionResult Result;
@@ -491,6 +528,56 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State,
 	PendingAttack.AttackerTile = FWBTile(Attacker->X, Attacker->Y);
 	PendingAttack.DefenderTile = FWBTile(Defender->X, Defender->Y);
 	PendingAttack.DeclarationActionId = WBActionCodec::MakeActionId(Action);
+	State.PendingAttack = PendingAttack;
+
+	Result.bOk = true;
+	Result.TraceEvents.Add(AttackEvent);
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(FWBGameStateData& State, const FWBAction& Action)
+{
+	FWBApplyActionResult Result;
+	const FWBActionQueryResult AttackQuery = WBRules::CanDeclareNPCAttack(State, Action);
+	if (!AttackQuery.bOk)
+	{
+		Result.Reason = AttackQuery.Reason;
+		return Result;
+	}
+
+	FWBUnitState* Attacker = State.GetMutableUnitById(Action.SourceUnitId);
+	const FWBUnitState* Defender = State.GetUnitById(Action.TargetUnitId);
+	if (Attacker == nullptr || Defender == nullptr)
+	{
+		Result.Reason = TEXT("unit_disappeared_before_npc_attack_declaration");
+		return Result;
+	}
+
+	const int32 AttacksLeftBefore = Attacker->AttacksLeft;
+	Attacker->AttacksLeft = FMath::Max(Attacker->AttacksLeft - 1, 0);
+
+	FWBTraceEvent AttackEvent;
+	AttackEvent.Kind = FName(TEXT("npc_attack_declared"));
+	AttackEvent.PlayerId = -1;
+	AttackEvent.SourceUnitId = Attacker->UnitId;
+	AttackEvent.TargetUnitId = Defender->UnitId;
+	AttackEvent.FromTile = FWBTile(Attacker->X, Attacker->Y);
+	AttackEvent.ToTile = FWBTile(Defender->X, Defender->Y);
+	AttackEvent.AttacksLeftBefore = AttacksLeftBefore;
+	AttackEvent.AttacksLeftAfter = Attacker->AttacksLeft;
+	AttackEvent.bOk = true;
+
+	FWBPendingAttackState PendingAttack;
+	PendingAttack.bActive = true;
+	PendingAttack.AttackerUnitId = Attacker->UnitId;
+	PendingAttack.DefenderUnitId = Defender->UnitId;
+	PendingAttack.AttackingPlayerId = -1;
+	PendingAttack.AttackerTile = FWBTile(Attacker->X, Attacker->Y);
+	PendingAttack.DefenderTile = FWBTile(Defender->X, Defender->Y);
+	PendingAttack.DeclarationActionId = FString::Printf(
+		TEXT("npc_attack:u%d:t%d"),
+		Attacker->UnitId,
+		Defender->UnitId);
 	State.PendingAttack = PendingAttack;
 
 	Result.bOk = true;

@@ -791,7 +791,7 @@ bool FWBMatchCoordinatorTurnTransitionTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Hero attacks reset"), State.GetUnitById(SecondPlayerId)->AttacksLeft, State.GetUnitById(SecondPlayerId)->MaxAttacksPerTurn);
 	TestTrue(TEXT("Turn ended traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("turn_ended"))));
 	TestTrue(TEXT("NPC phase traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_phase_started"))));
-	TestTrue(TEXT("NPC action boundary traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_action_deferred"))));
+	TestTrue(TEXT("NPC phase completion traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_phase_ended"))));
 	TestTrue(TEXT("Player advanced traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("player_advanced"))));
 	TestTrue(TEXT("Next turn started traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("turn_started"))));
 	TestTrue(TEXT("NPC phase precedes player advance"), FindTraceIndex(Result.TraceEvents, FName(TEXT("npc_phase_started"))) < FindTraceIndex(Result.TraceEvents, FName(TEXT("player_advanced"))));
@@ -977,7 +977,7 @@ bool FWBMatchCoordinatorSummonNPCIntegrationTest::RunTest(const FString& Paramet
 		return Unit.OwnerId == -1 && Unit.IsUnitOnBoard();
 	}).Num(), 1);
 	TestTrue(TEXT("NPC phase spawn traced"), HasTraceKind(EndResult.TraceEvents, FName(TEXT("npc_spawn_succeeded"))));
-	TestTrue(TEXT("NPC actions deferred"), HasTraceKind(EndResult.TraceEvents, FName(TEXT("npc_action_deferred"))));
+	TestTrue(TEXT("NPC action starts in same phase"), HasTraceKind(EndResult.TraceEvents, FName(TEXT("npc_action_started"))));
 	return true;
 }
 
@@ -1070,6 +1070,49 @@ bool FWBMatchCoordinatorSummonTrapDeathIntegrationTest::RunTest(const FString& P
 		return Entry.Card.InstanceId == SummonInstanceId;
 	}));
 	TestFalse(TEXT("Non-Hero death does not end match"), Result.bGameOver);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBMatchCoordinatorNPCHeroTerminalIntegrationTest,
+	"Wandbound.Core.MatchCoordinator.NPC.HeroDefeatPreventsNextTurnStart",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBMatchCoordinatorNPCHeroTerminalIntegrationTest::RunTest(const FString& Parameters)
+{
+	WBMatchCoordinator Coordinator;
+	TestTrue(TEXT("Initialization succeeds"), Coordinator.InitializeMatch(MakeMatchRequest()).bOk);
+	FWBGameStateData& State = Coordinator.GetMutableStateForTest();
+	FWBUnitState* Hero = State.GetMutableUnitById(FirstPlayerId);
+	Hero->HP = 1;
+	FWBUnitState NPC;
+	NPC.UnitId = 100;
+	NPC.OwnerId = -1;
+	NPC.CardId = TEXT("basic_npc");
+	NPC.X = Hero->X;
+	NPC.Y = Hero->Y - 1;
+	NPC.HP = 5;
+	NPC.MaxHP = 5;
+	NPC.ATK = 2;
+	NPC.AR = 1;
+	NPC.MaxAttacksPerTurn = 1;
+	NPC.NPCSpawnOrder = 0;
+	NPC.NPCCreationTurnNumber = State.TurnNumber;
+	State.Units.Add(NPC);
+
+	const FWBMatchLegalActionGenerationResult LegalActions = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* EndTurn = FindCoreAction(LegalActions, EWBActionType::EndTurn);
+	TestNotNull(TEXT("End turn exists"), EndTurn);
+	if (EndTurn == nullptr)
+	{
+		return false;
+	}
+	const FWBMatchOperationResult Result = Coordinator.SubmitActionId(FirstPlayerId, EndTurn->ActionId);
+	TestTrue(*FString::Printf(TEXT("Terminal NPC phase commits (%s)"), *Result.Reason), Result.bOk);
+	TestTrue(TEXT("NPC attack ends match"), Result.bGameOver);
+	TestEqual(TEXT("Opponent wins"), Result.WinnerPlayerId, SecondPlayerId);
+	TestTrue(TEXT("No next-turn legal actions"), Result.NextLegalActions.IsEmpty());
+	TestFalse(TEXT("No next-player draw"), HasTraceKind(Result.TraceEvents, FName(TEXT("turn_start_card_drawn"))));
+	TestFalse(TEXT("No player advance"), HasTraceKind(Result.TraceEvents, FName(TEXT("player_advanced"))));
 	return true;
 }
 

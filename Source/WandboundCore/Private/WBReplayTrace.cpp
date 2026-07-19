@@ -346,6 +346,16 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetNumberField(TEXT("spawn_order"), Event.SpawnOrder);
 	}
 
+	if (Event.ActionSequence != -1)
+	{
+		Object->SetNumberField(TEXT("action_sequence"), Event.ActionSequence);
+	}
+
+	if (Event.PathStepIndex != -1)
+	{
+		Object->SetNumberField(TEXT("path_step_index"), Event.PathStepIndex);
+	}
+
 	if (Event.RetryCount != -1)
 	{
 		Object->SetNumberField(TEXT("retry_count"), Event.RetryCount);
