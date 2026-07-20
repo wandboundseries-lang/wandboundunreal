@@ -6,6 +6,7 @@
 #include "WBRuntimePlayerController.generated.h"
 
 class AWBBoardViewActor;
+class AWBRuntimeMatchBootstrapActor;
 class UWBRuntimeMatchHostComponent;
 class UWBRuntimeMatchHUDWidget;
 
@@ -32,8 +33,26 @@ public:
 		AWBBoardViewActor* InBoardActor,
 		UWBRuntimeMatchHUDWidget* InHUDWidget);
 
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Runtime")
+	void ClearRuntimeReferences(bool bRemoveHUDFromViewport = false);
+
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Runtime")
 	UWBRuntimeMatchHUDWidget* GetRuntimeHUD() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Runtime")
+	UWBRuntimeMatchHostComponent* GetRuntimeMatchHost() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Runtime")
+	AWBBoardViewActor* GetRuntimeBoardActor() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Runtime")
+	bool IsRuntimeInteractionBound() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Runtime")
+	bool IsRuntimeInputModeConfigured() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Runtime")
+	void SetRuntimeInteractionEnabled(bool bEnabled);
 
 	UFUNCTION(BlueprintCallable, Category = "Wandbound|Runtime")
 	FWBRuntimeMatchCommandResult ForwardTileSelection(FIntPoint Tile);
@@ -64,7 +83,11 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UWBRuntimeMatchHUDWidget> RuntimeHUD;
 
+	bool bRuntimeInteractionEnabled = false;
+	bool bRuntimeInputModeConfigured = false;
+
 	void ResolveRuntimeReferences();
+	FWBRuntimeMatchCommandResult MakeUnboundResult() const;
 	void HandlePrimaryClick();
 	void HandleClearInput();
 	void HandleSubmitInput();

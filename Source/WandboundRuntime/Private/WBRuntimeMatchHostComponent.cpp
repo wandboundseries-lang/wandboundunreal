@@ -227,6 +227,27 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeDevelopment
 #endif
 }
 
+void UWBRuntimeMatchHostComponent::ResetMatch()
+{
+	ClearSelectionInternal(false);
+	Coordinator.Reset();
+	InitializationRequest = FWBMatchInitializationRequest();
+	CurrentObservation = FWBMatchObservation();
+	LatestOperationResult = FWBMatchOperationResult();
+	CurrentLegalDecisions.Reset();
+	HeroDefinitionIds.Reset();
+	CurrentPresentation = FWBRuntimeMatchPresentation();
+	LegalActionPresentations.Reset();
+	HandCardPresentations.Reset();
+	UnitPresentations.Reset();
+	TilePresentations.Reset();
+	CurrentViewerPlayerId = -1;
+	DecisionRevision = 0;
+	PresentationRevision = 0;
+	TerminalBroadcastGeneration = INDEX_NONE;
+	if (BoardActor != nullptr) BoardActor->ClearBoardView();
+}
+
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeMatch(
 	const FWBMatchInitializationRequest& Request,
 	const int32 InitialViewerPlayerId)

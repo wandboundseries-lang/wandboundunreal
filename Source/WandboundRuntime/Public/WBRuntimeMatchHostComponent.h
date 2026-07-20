@@ -74,6 +74,9 @@ public:
 		int32 InitialViewerPlayerId = 0,
 		bool bFragileFirstHero = false);
 
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Match")
+	void ResetMatch();
+
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
 	bool IsMatchInitialized() const;
 

@@ -48,6 +48,10 @@ void AWBRuntimePlayerController::SetRuntimeReferences(
 	AWBBoardViewActor* InBoardActor,
 	UWBRuntimeMatchHUDWidget* InHUDWidget)
 {
+	if (RuntimeHUD != nullptr && RuntimeHUD != InHUDWidget)
+	{
+		RuntimeHUD->UnbindFromMatchHost();
+	}
 	MatchHost = InMatchHost;
 	BoardActor = InBoardActor;
 	RuntimeHUD = InHUDWidget;
@@ -56,18 +60,60 @@ void AWBRuntimePlayerController::SetRuntimeReferences(
 		RuntimeHUD->bAllowDevelopmentViewerSwitch = bEnableDevelopmentViewerSwitch;
 		RuntimeHUD->BindToMatchHost(MatchHost);
 	}
+	bRuntimeInteractionEnabled = MatchHost != nullptr && BoardActor != nullptr && RuntimeHUD != nullptr;
+	bRuntimeInputModeConfigured = bRuntimeInteractionEnabled;
+	if (IsLocalController())
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+		bEnableClickEvents = true;
+		bEnableMouseOverEvents = true;
+	}
 }
 
 UWBRuntimeMatchHUDWidget* AWBRuntimePlayerController::GetRuntimeHUD() const { return RuntimeHUD; }
+UWBRuntimeMatchHostComponent* AWBRuntimePlayerController::GetRuntimeMatchHost() const { return MatchHost; }
+AWBBoardViewActor* AWBRuntimePlayerController::GetRuntimeBoardActor() const { return BoardActor; }
+bool AWBRuntimePlayerController::IsRuntimeInteractionBound() const { return bRuntimeInteractionEnabled && MatchHost && BoardActor && RuntimeHUD; }
+bool AWBRuntimePlayerController::IsRuntimeInputModeConfigured() const { return bRuntimeInputModeConfigured; }
+
+void AWBRuntimePlayerController::SetRuntimeInteractionEnabled(const bool bEnabled)
+{
+	bRuntimeInteractionEnabled = bEnabled && MatchHost != nullptr && BoardActor != nullptr && RuntimeHUD != nullptr;
+}
+
+void AWBRuntimePlayerController::ClearRuntimeReferences(const bool bRemoveHUDFromViewport)
+{
+	bRuntimeInteractionEnabled = false;
+	if (RuntimeHUD != nullptr)
+	{
+		RuntimeHUD->UnbindFromMatchHost();
+		if (bRemoveHUDFromViewport) RuntimeHUD->RemoveFromParent();
+	}
+	MatchHost = nullptr;
+	BoardActor = nullptr;
+	RuntimeHUD = nullptr;
+	bRuntimeInputModeConfigured = false;
+}
+
+FWBRuntimeMatchCommandResult AWBRuntimePlayerController::MakeUnboundResult() const
+{
+	FWBRuntimeMatchCommandResult Result;
+	Result.Reason = TEXT("runtime_interaction_not_bound");
+	return Result;
+}
 
 FWBRuntimeMatchCommandResult AWBRuntimePlayerController::ForwardTileSelection(const FIntPoint Tile)
 {
-	return RuntimeHUD != nullptr ? RuntimeHUD->SelectTileTarget(Tile) : FWBRuntimeMatchCommandResult();
+	return IsRuntimeInteractionBound() ? RuntimeHUD->SelectTileTarget(Tile) : MakeUnboundResult();
 }
 
 FWBRuntimeMatchCommandResult AWBRuntimePlayerController::ForwardUnitSelection(const int32 UnitId)
 {
-	if (RuntimeHUD == nullptr) return FWBRuntimeMatchCommandResult();
+	if (!IsRuntimeInteractionBound()) return MakeUnboundResult();
 	const FWBRuntimeSelectionPresentation Selection = RuntimeHUD->GetDisplayedSelection();
 	return Selection.SelectedUnitId >= 0 || !Selection.SelectedCardInstanceId.IsEmpty()
 		? RuntimeHUD->SelectUnitTarget(UnitId)
@@ -76,17 +122,17 @@ FWBRuntimeMatchCommandResult AWBRuntimePlayerController::ForwardUnitSelection(co
 
 void AWBRuntimePlayerController::ForwardClearSelection()
 {
-	if (RuntimeHUD != nullptr) RuntimeHUD->ClearSelection();
+	if (IsRuntimeInteractionBound()) RuntimeHUD->ClearSelection();
 }
 
 FWBRuntimeMatchCommandResult AWBRuntimePlayerController::ForwardSubmit()
 {
-	return RuntimeHUD != nullptr ? RuntimeHUD->SubmitResolvedAction() : FWBRuntimeMatchCommandResult();
+	return IsRuntimeInteractionBound() ? RuntimeHUD->SubmitResolvedAction() : MakeUnboundResult();
 }
 
 FWBRuntimeMatchCommandResult AWBRuntimePlayerController::ForwardEndTurn()
 {
-	return RuntimeHUD != nullptr ? RuntimeHUD->RequestEndTurn() : FWBRuntimeMatchCommandResult();
+	return IsRuntimeInteractionBound() ? RuntimeHUD->RequestEndTurn() : MakeUnboundResult();
 }
 
 void AWBRuntimePlayerController::ResolveRuntimeReferences()
@@ -116,6 +162,7 @@ void AWBRuntimePlayerController::ResolveRuntimeReferences()
 
 void AWBRuntimePlayerController::HandlePrimaryClick()
 {
+	if (!IsRuntimeInteractionBound()) return;
 	FHitResult Hit;
 	if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit)) return;
 	if (const AWBRuntimeUnitPresentationActor* UnitActor = Cast<AWBRuntimeUnitPresentationActor>(Hit.GetActor()))
@@ -135,5 +182,5 @@ void AWBRuntimePlayerController::HandleSubmitInput() { ForwardSubmit(); }
 void AWBRuntimePlayerController::HandleEndTurnInput() { ForwardEndTurn(); }
 void AWBRuntimePlayerController::HandleViewerSwitchInput()
 {
-	if (bEnableDevelopmentViewerSwitch && RuntimeHUD != nullptr) RuntimeHUD->RequestViewerSwitch();
+	if (bEnableDevelopmentViewerSwitch && IsRuntimeInteractionBound()) RuntimeHUD->RequestViewerSwitch();
 }
