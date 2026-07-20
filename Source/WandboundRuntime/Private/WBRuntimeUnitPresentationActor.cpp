@@ -11,7 +11,9 @@ AWBRuntimeUnitPresentationActor::AWBRuntimeUnitPresentationActor()
 	SetRootComponent(SceneRoot);
 	VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualMesh"));
 	VisualMesh->SetupAttachment(SceneRoot);
-	VisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	VisualMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	VisualMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	VisualMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	VisualMesh->SetCanEverAffectNavigation(false);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMesh(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	if (CylinderMesh.Succeeded())

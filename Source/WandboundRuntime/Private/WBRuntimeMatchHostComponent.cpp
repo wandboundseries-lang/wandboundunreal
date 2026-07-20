@@ -4,6 +4,138 @@
 
 namespace
 {
+FWBCardDefinition MakeDevelopmentCharacter(
+	const FString& CardId,
+	const EWBCardDefinitionKind Kind = EWBCardDefinitionKind::Character)
+{
+	FWBCardDefinition Definition;
+	Definition.CardId = CardId;
+	Definition.PublicName = CardId;
+	Definition.Kind = Kind;
+	Definition.CharacterStats.HP = Kind == EWBCardDefinitionKind::NPC ? 5 : 8;
+	Definition.CharacterStats.ATK = Kind == EWBCardDefinitionKind::NPC ? 2 : 3;
+	Definition.CharacterStats.AR = 1;
+	Definition.CharacterStats.RL = 3;
+	return Definition;
+}
+
+FWBCardInstanceRef MakeDevelopmentCard(
+	const FString& InstanceId,
+	const FString& CardId,
+	const int32 OwnerId)
+{
+	FWBCardInstanceRef Card;
+	Card.InstanceId = InstanceId;
+	Card.CardId = CardId;
+	Card.OwnerPlayerId = OwnerId;
+	return Card;
+}
+
+FWBMatchPlayerSetup MakeDevelopmentPlayer(const int32 PlayerId)
+{
+	const FString Prefix = FString::Printf(TEXT("p%d"), PlayerId);
+	FWBMatchPlayerSetup Player;
+	Player.PlayerId = PlayerId;
+	Player.HeroInstanceId = Prefix + TEXT("_hero_instance");
+	Player.HeroCardId = PlayerId == 0 ? TEXT("hero_alpha") : TEXT("hero_beta");
+	Player.OrderedDeck.Add(MakeDevelopmentCard(Player.HeroInstanceId, Player.HeroCardId, PlayerId));
+	Player.OrderedDeck.Add(MakeDevelopmentCard(Prefix + TEXT("_student"), TEXT("student"), PlayerId));
+	Player.OrderedDeck.Add(MakeDevelopmentCard(Prefix + TEXT("_wand"), TEXT("test_wand"), PlayerId));
+	for (int32 Index = 0; Index < 10; ++Index)
+	{
+		Player.OrderedDeck.Add(MakeDevelopmentCard(
+			FString::Printf(TEXT("%s_private_%d"), *Prefix, Index),
+			TEXT("filler"),
+			PlayerId));
+	}
+	return Player;
+}
+
+FWBSetupMarkerPlacement MakeDevelopmentMarker(
+	const int32 PlayerId,
+	const EWBMarkerType Type,
+	const FWBTile& Tile,
+	const int32 Order)
+{
+	FWBSetupMarkerPlacement Marker;
+	Marker.PlayerId = PlayerId;
+	Marker.Type = Type;
+	Marker.Tile = Tile;
+	Marker.DefinitionId = Type == EWBMarkerType::Trap ? TEXT("basic_trap") : TEXT("basic_npc");
+	Marker.PlacementOrder = Order;
+	return Marker;
+}
+
+FWBMatchInitializationRequest BuildDeterministicDevelopmentSetup(const bool bFragileFirstHero)
+{
+	FWBMatchInitializationRequest Request;
+	Request.Seed = 91234;
+	Request.FirstPlayerId = 0;
+	Request.Repository.RepositoryId = TEXT("runtime_development_match");
+	Request.Repository.SourceVersion = TEXT("1");
+
+	FWBCardDefinition Wand;
+	Wand.CardId = TEXT("test_wand");
+	Wand.PublicName = TEXT("Test Wand");
+	Wand.Kind = EWBCardDefinitionKind::Wand;
+	Wand.WandStats.RR = 1;
+	FWBCardDefinition Filler;
+	Filler.CardId = TEXT("filler");
+	Filler.PublicName = TEXT("Filler");
+	Filler.Kind = EWBCardDefinitionKind::Action;
+	FWBCardDefinition Trap;
+	Trap.CardId = TEXT("basic_trap");
+	Trap.PublicName = TEXT("Basic Trap");
+	Trap.Kind = EWBCardDefinitionKind::Trap;
+	FWBCardDefinition HeroAlpha = MakeDevelopmentCharacter(TEXT("hero_alpha"));
+	for (const TPair<FString, FString>& EffectIdentity : {
+		TPair<FString, FString>(TEXT("arc_bolt"), TEXT("Arc Bolt")),
+		TPair<FString, FString>(TEXT("ember_bolt"), TEXT("Ember Bolt")) })
+	{
+		FWBCardEffectDefinition Effect;
+		Effect.EffectId = EffectIdentity.Key;
+		Effect.PublicLabel = EffectIdentity.Value;
+		Effect.TargetRequirement = EWBCardEffectTargetRequirement::Unit;
+		FWBGenericEffectPayload Payload;
+		Payload.Operation = EWBGenericEffectOp::DamageEffect;
+		Payload.DamageEffect.Amount = 1;
+		Payload.DamageEffect.bBypassArmor = true;
+		Payload.DamageEffect.DamageCause = FName(TEXT("Effect"));
+		Payload.DamageEffect.SourceReason = FName(TEXT("development_match"));
+		Effect.Payloads.Add(Payload);
+		Effect.SourceGate.RequiredZone = EWBCardActivationSourceZone::Board;
+		Effect.SourceGate.Timing = EWBCardActivationTimingRequirement::NormalTurnPriority;
+		Effect.SourceGate.bRequiresFixtureZoneOwnership = true;
+		Effect.SourceGate.bRequiresSourceUnit = true;
+		Effect.SourceGate.bRequiresSourceUnitOwnership = true;
+		Effect.SourceGate.bHasExplicitSourceGate = true;
+		HeroAlpha.ActivatedEffects.Add(Effect);
+	}
+
+	Request.Repository.Definitions = {
+		HeroAlpha,
+		MakeDevelopmentCharacter(TEXT("hero_beta")),
+		MakeDevelopmentCharacter(TEXT("student")),
+		Wand,
+		Filler,
+		Trap,
+		MakeDevelopmentCharacter(TEXT("basic_npc"), EWBCardDefinitionKind::NPC)
+	};
+	if (bFragileFirstHero) Request.Repository.Definitions[0].CharacterStats.HP = 1;
+	Request.Players = { MakeDevelopmentPlayer(0), MakeDevelopmentPlayer(1) };
+	Request.MarkerPlacements = {
+		MakeDevelopmentMarker(0, EWBMarkerType::Trap, FWBTile(0, 8), 0),
+		MakeDevelopmentMarker(0, EWBMarkerType::Trap, FWBTile(1, 8), 1),
+		MakeDevelopmentMarker(0, EWBMarkerType::NPC, FWBTile(2, 8), 2),
+		MakeDevelopmentMarker(0, EWBMarkerType::NPC, FWBTile(3, 7), 3),
+		MakeDevelopmentMarker(1, EWBMarkerType::Trap, FWBTile(0, 0), 4),
+		MakeDevelopmentMarker(1, EWBMarkerType::Trap, FWBTile(1, 0), 5),
+		MakeDevelopmentMarker(1, EWBMarkerType::NPC, FWBTile(2, 0), 6),
+		MakeDevelopmentMarker(1, EWBMarkerType::NPC, FWBTile(3, 1), 7)
+	};
+	return Request;
+}
+
 FName CoreActionName(const EWBActionType Type)
 {
 	switch (Type)
@@ -17,15 +149,44 @@ FName CoreActionName(const EWBActionType Type)
 	}
 }
 
-EWBRuntimeMatchActionFamily RuntimeFamily(const EWBMatchActionFamily Family)
+EWBRuntimeMatchActionFamily RuntimeFamily(const FWBMatchLegalAction& Action)
 {
-	switch (Family)
+	if (Action.Family == EWBMatchActionFamily::CoreAction)
+	{
+		switch (Action.CoreAction.Type)
+		{
+		case EWBActionType::Move: return EWBRuntimeMatchActionFamily::Move;
+		case EWBActionType::Attack: return EWBRuntimeMatchActionFamily::Attack;
+		case EWBActionType::Pass: return EWBRuntimeMatchActionFamily::Pass;
+		case EWBActionType::PassResponse: return EWBRuntimeMatchActionFamily::PassResponse;
+		case EWBActionType::EndTurn: return EWBRuntimeMatchActionFamily::EndTurn;
+		default: return EWBRuntimeMatchActionFamily::CoreAction;
+		}
+	}
+	switch (Action.Family)
 	{
 	case EWBMatchActionFamily::Summon: return EWBRuntimeMatchActionFamily::Summon;
 	case EWBMatchActionFamily::Equip: return EWBRuntimeMatchActionFamily::Equip;
 	case EWBMatchActionFamily::Activation: return EWBRuntimeMatchActionFamily::Activation;
 	case EWBMatchActionFamily::Discard: return EWBRuntimeMatchActionFamily::Discard;
 	default: return EWBRuntimeMatchActionFamily::CoreAction;
+	}
+}
+
+FString PublicActionLabel(const FWBMatchLegalAction& Action)
+{
+	switch (RuntimeFamily(Action))
+	{
+	case EWBRuntimeMatchActionFamily::Move: return TEXT("Move");
+	case EWBRuntimeMatchActionFamily::Attack: return TEXT("Attack");
+	case EWBRuntimeMatchActionFamily::Pass:
+	case EWBRuntimeMatchActionFamily::PassResponse: return TEXT("Pass");
+	case EWBRuntimeMatchActionFamily::EndTurn: return TEXT("End Turn");
+	case EWBRuntimeMatchActionFamily::Summon: return TEXT("Summon");
+	case EWBRuntimeMatchActionFamily::Equip: return TEXT("Equip");
+	case EWBRuntimeMatchActionFamily::Activation: return TEXT("Activate");
+	case EWBRuntimeMatchActionFamily::Discard: return TEXT("Discard");
+	default: return TEXT("Action");
 	}
 }
 
@@ -55,6 +216,17 @@ UWBRuntimeMatchHostComponent::UWBRuntimeMatchHostComponent()
 
 UWBRuntimeMatchHostComponent::~UWBRuntimeMatchHostComponent() = default;
 
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeDevelopmentMatch(
+	const int32 InitialViewerPlayerId,
+	const bool bFragileFirstHero)
+{
+#if UE_BUILD_SHIPPING
+	return MakeResult(false, TEXT("development_match_unavailable"));
+#else
+	return InitializeMatch(BuildDeterministicDevelopmentSetup(bFragileFirstHero), InitialViewerPlayerId);
+#endif
+}
+
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeMatch(
 	const FWBMatchInitializationRequest& Request,
 	const int32 InitialViewerPlayerId)
@@ -69,6 +241,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeMatch(
 	}
 
 	Coordinator = MoveTemp(Candidate);
+	InitializationRequest = Request;
 	LatestOperationResult = Result;
 	CurrentViewerPlayerId = InitialViewerPlayerId;
 	++MatchGeneration;
@@ -92,7 +265,6 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeMatch(
 		return RefreshResult;
 	}
 
-	InitializationRequest = Request;
 	OnMatchInitialized.Broadcast();
 	return RefreshResult;
 }
@@ -127,6 +299,33 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SetCurrentViewerPlaye
 
 FWBRuntimeMatchPresentation UWBRuntimeMatchHostComponent::GetCurrentPresentation() const { return CurrentPresentation; }
 TArray<FWBRuntimeLegalActionPresentation> UWBRuntimeMatchHostComponent::GetCurrentLegalActions() const { return LegalActionPresentations; }
+TArray<FWBRuntimeHandCardPresentation> UWBRuntimeMatchHostComponent::GetCurrentHandCards() const { return HandCardPresentations; }
+
+FWBRuntimeSelectionPresentation UWBRuntimeMatchHostComponent::GetCurrentSelection() const
+{
+	FWBRuntimeSelectionPresentation Selection;
+	Selection.SelectedUnitId = SelectedUnitId;
+	Selection.SelectedCardInstanceId = SelectedCardInstanceId;
+	Selection.bHasActionFamilyFilter = bHasSelectedActionFamily;
+	Selection.ActionFamilyFilter = SelectedActionFamily;
+	Selection.ResolvedActionId = PendingSelectedActionId;
+	Selection.AmbiguousActionIds = AmbiguousActionIds;
+	Selection.StatusReason = SelectionStatusReason;
+	return Selection;
+}
+
+TArray<FWBRuntimeLegalActionPresentation> UWBRuntimeMatchHostComponent::GetActionsForCurrentSelection() const
+{
+	TArray<FWBRuntimeLegalActionPresentation> Result;
+	for (int32 Index = 0; Index < CurrentLegalDecisions.Num() && Index < LegalActionPresentations.Num(); ++Index)
+	{
+		if (ActionMatchesCurrentSelection(CurrentLegalDecisions[Index]))
+		{
+			Result.Add(LegalActionPresentations[Index]);
+		}
+	}
+	return Result;
+}
 TArray<FWBRuntimeUnitPresentation> UWBRuntimeMatchHostComponent::GetCurrentUnits() const { return UnitPresentations; }
 TArray<FWBRuntimeBoardTilePresentation> UWBRuntimeMatchHostComponent::GetCurrentTiles() const { return TilePresentations; }
 
@@ -171,7 +370,11 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectUnit(const int3
 	SelectedUnitId = UnitId;
 	SelectedCardInstanceId.Reset();
 	PendingSelectedActionId.Reset();
+	AmbiguousActionIds.Reset();
+	bHasSelectedActionFamily = false;
+	SelectionStatusReason = TEXT("unit_selected");
 	RebuildHighlights();
+	RebuildHandPresentations();
 	OnSelectionChanged.Broadcast();
 	return MakeResult(true, TEXT("unit_selected"));
 }
@@ -182,7 +385,11 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectCardInstance(co
 	SelectedUnitId = -1;
 	SelectedCardInstanceId = CardInstanceId;
 	PendingSelectedActionId.Reset();
+	AmbiguousActionIds.Reset();
+	bHasSelectedActionFamily = false;
+	SelectionStatusReason = TEXT("card_selected");
 	RebuildHighlights();
+	RebuildHandPresentations();
 	OnSelectionChanged.Broadcast();
 	return MakeResult(true, TEXT("card_selected"));
 }
@@ -201,17 +408,131 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectTile(const FInt
 	if (Result.CandidateActionIds.Num() > 1)
 	{
 		Result.Reason = TEXT("selected_tile_action_ambiguous");
+		AmbiguousActionIds = Result.CandidateActionIds;
+		PendingSelectedActionId.Reset();
+		SelectionStatusReason = Result.Reason;
+		OnSelectionChanged.Broadcast();
 		return Result;
 	}
-	if (Result.CandidateActionIds.Num() == 0) return Result;
+	if (Result.CandidateActionIds.Num() == 0)
+	{
+		SelectionStatusReason = Result.Reason;
+		return Result;
+	}
 	PendingSelectedActionId = Result.CandidateActionIds[0];
+	AmbiguousActionIds.Reset();
 	Result.bOk = true;
 	Result.Reason = TEXT("action_selected");
+	SelectionStatusReason = Result.Reason;
 	Result.ActionId = PendingSelectedActionId;
 	for (FWBRuntimeBoardTilePresentation& Entry : TilePresentations) Entry.bSelected = Entry.Tile == Tile;
 	SynchronizeBoardActor();
 	OnSelectionChanged.Broadcast();
 	return Result;
+}
+
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectUnitTarget(const int32 UnitId)
+{
+	if (SelectedUnitId < 0 && SelectedCardInstanceId.IsEmpty())
+	{
+		return SelectUnit(UnitId);
+	}
+
+	FWBRuntimeMatchCommandResult Result = MakeResult(false, TEXT("selected_unit_has_no_legal_action"));
+	for (const FWBMatchLegalAction& Action : CurrentLegalDecisions)
+	{
+		int32 TargetUnitId = -1;
+		if (Action.Family == EWBMatchActionFamily::CoreAction) TargetUnitId = Action.CoreAction.TargetUnitId;
+		else if (Action.Family == EWBMatchActionFamily::Equip) TargetUnitId = Action.EquipRequest.TargetUnitId;
+		else if (Action.Family == EWBMatchActionFamily::Activation) TargetUnitId = Action.ActivationCommand.EffectRequest.Target.TargetUnitId;
+		if (ActionMatchesCurrentSelection(Action) && TargetUnitId == UnitId)
+		{
+			Result.CandidateActionIds.Add(Action.ActionId);
+		}
+	}
+	Result.CandidateActionIds.Sort();
+	if (Result.CandidateActionIds.Num() > 1)
+	{
+		Result.Reason = TEXT("selected_unit_action_ambiguous");
+		AmbiguousActionIds = Result.CandidateActionIds;
+		PendingSelectedActionId.Reset();
+		SelectionStatusReason = Result.Reason;
+		OnSelectionChanged.Broadcast();
+		return Result;
+	}
+	if (Result.CandidateActionIds.Num() == 0)
+	{
+		SelectionStatusReason = Result.Reason;
+		return Result;
+	}
+	PendingSelectedActionId = Result.CandidateActionIds[0];
+	AmbiguousActionIds.Reset();
+	Result.bOk = true;
+	Result.Reason = TEXT("action_selected");
+	Result.ActionId = PendingSelectedActionId;
+	SelectionStatusReason = Result.Reason;
+	OnSelectionChanged.Broadcast();
+	return Result;
+}
+
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectActionFamily(const EWBRuntimeMatchActionFamily Family)
+{
+	const bool bAvailable = GetActionsForCurrentSelection().ContainsByPredicate([Family](const FWBRuntimeLegalActionPresentation& Action)
+	{
+		return Action.Family == Family;
+	});
+	if (!bAvailable)
+	{
+		return MakeResult(false, TEXT("action_family_not_available"));
+	}
+	bHasSelectedActionFamily = true;
+	SelectedActionFamily = Family;
+	PendingSelectedActionId.Reset();
+	AmbiguousActionIds.Reset();
+	SelectionStatusReason = TEXT("action_family_selected");
+	const TArray<FWBRuntimeLegalActionPresentation> FamilyActions = GetActionsForCurrentSelection();
+	const bool bAllNoTarget = !FamilyActions.IsEmpty() && !FamilyActions.ContainsByPredicate([](const FWBRuntimeLegalActionPresentation& Action)
+	{
+		return Action.bRequiresTargetSelection;
+	});
+	if (FamilyActions.Num() == 1 && bAllNoTarget)
+	{
+		PendingSelectedActionId = FamilyActions[0].ActionId;
+		SelectionStatusReason = TEXT("action_selected");
+	}
+	else if (FamilyActions.Num() > 1 && bAllNoTarget)
+	{
+		for (const FWBRuntimeLegalActionPresentation& Action : FamilyActions)
+		{
+			AmbiguousActionIds.Add(Action.ActionId);
+		}
+		AmbiguousActionIds.Sort();
+		SelectionStatusReason = TEXT("action_family_ambiguous");
+	}
+	RebuildHighlights();
+	OnSelectionChanged.Broadcast();
+	FWBRuntimeMatchCommandResult Result = MakeResult(true, SelectionStatusReason, PendingSelectedActionId);
+	Result.CandidateActionIds = AmbiguousActionIds;
+	return Result;
+}
+
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::ChooseActionCandidate(const FString& ActionId)
+{
+	if (!AmbiguousActionIds.Contains(ActionId))
+	{
+		return MakeResult(false, TEXT("ambiguous_action_candidate_not_found"), ActionId);
+	}
+	int32 MatchCount = 0;
+	FindCurrentAction(ActionId, MatchCount);
+	if (MatchCount != 1)
+	{
+		return MakeResult(false, TEXT("stale_or_illegal_action"), ActionId);
+	}
+	PendingSelectedActionId = ActionId;
+	AmbiguousActionIds.Reset();
+	SelectionStatusReason = TEXT("ambiguity_resolved");
+	OnSelectionChanged.Broadcast();
+	return MakeResult(true, TEXT("ambiguity_resolved"), ActionId);
 }
 
 void UWBRuntimeMatchHostComponent::ClearSelection() { ClearSelectionInternal(true); }
@@ -439,9 +760,12 @@ void UWBRuntimeMatchHostComponent::RebuildPresentationModels(const FString& Stat
 	{
 		FWBRuntimeLegalActionPresentation Presentation;
 		Presentation.ActionId = Action.ActionId;
-		Presentation.Family = RuntimeFamily(Action.Family);
+		Presentation.Family = RuntimeFamily(Action);
 		Presentation.ActionType = ActionTypeName(Action);
+		Presentation.PublicLabel = PublicActionLabel(Action);
 		Presentation.PlayerId = Action.PlayerId;
+		Presentation.MatchGeneration = MatchGeneration;
+		Presentation.DecisionRevision = DecisionRevision;
 		if (Action.Family == EWBMatchActionFamily::CoreAction)
 		{
 			Presentation.SourceUnitId = Action.CoreAction.SourceUnitId;
@@ -457,18 +781,73 @@ void UWBRuntimeMatchHostComponent::RebuildPresentationModels(const FString& Stat
 		{
 			Presentation.SourceUnitId = Action.ActivationCommand.Source.SourceUnitId;
 			Presentation.TargetUnitId = Action.ActivationCommand.EffectRequest.Target.TargetUnitId;
+			if (!Action.ActivationCommand.Source.SourceEffectId.IsEmpty())
+			{
+				Presentation.PublicLabel = Action.ActivationCommand.Source.SourceEffectId;
+			}
 		}
 		else if (Action.Family == EWBMatchActionFamily::Discard) Presentation.SourceCardInstanceId = Action.DiscardCardInstanceId;
 		Presentation.TargetTile = TargetTileForAction(Action);
+		Presentation.bRequiresTargetSelection = Presentation.TargetUnitId >= 0
+			|| (Presentation.TargetTile.X >= 0 && Presentation.TargetTile.Y >= 0);
 		LegalActionPresentations.Add(Presentation);
 	}
+	RebuildHandPresentations();
 	if (CurrentPresentation.bGameOver)
 	{
 		CurrentLegalDecisions.Reset();
 		LegalActionPresentations.Reset();
+		HandCardPresentations.Reset();
 		ClearSelectionInternal(false);
 	}
 	else RebuildHighlights();
+}
+
+void UWBRuntimeMatchHostComponent::RebuildHandPresentations()
+{
+	HandCardPresentations.Reset();
+	TSet<FString> SelectableCards;
+	for (const FString& CardInstanceId : GetSelectableCardInstanceIds())
+	{
+		SelectableCards.Add(CardInstanceId);
+	}
+	for (int32 Index = 0; Index < CurrentObservation.CardZones.OwnHand.Cards.Num(); ++Index)
+	{
+		const FWBObservedCardRef& Card = CurrentObservation.CardZones.OwnHand.Cards[Index];
+		FWBRuntimeHandCardPresentation Presentation;
+		Presentation.CardInstanceId = Card.InstanceId;
+		Presentation.DefinitionId = Card.CardId;
+		Presentation.DisplayName = Card.CardId;
+		Presentation.HandIndex = Index;
+		Presentation.bSelectable = !CurrentPresentation.bGameOver && SelectableCards.Contains(Card.InstanceId);
+		Presentation.bSelected = SelectedCardInstanceId == Card.InstanceId;
+
+		for (const FWBRuntimeLegalActionPresentation& Action : LegalActionPresentations)
+		{
+			if (Action.SourceCardInstanceId == Card.InstanceId)
+			{
+				Presentation.AvailableActionFamilies.AddUnique(Action.Family);
+			}
+		}
+		if (Presentation.AvailableActionFamilies.Contains(EWBRuntimeMatchActionFamily::Summon))
+		{
+			Presentation.CardType = FName(TEXT("Character"));
+		}
+		else if (Presentation.AvailableActionFamilies.Contains(EWBRuntimeMatchActionFamily::Equip))
+		{
+			Presentation.CardType = FName(TEXT("Wand"));
+		}
+		else
+		{
+			Presentation.CardType = FName(TEXT("Card"));
+		}
+
+		Presentation.AvailableActionFamilies.Sort([](const EWBRuntimeMatchActionFamily A, const EWBRuntimeMatchActionFamily B)
+		{
+			return static_cast<uint8>(A) < static_cast<uint8>(B);
+		});
+		HandCardPresentations.Add(Presentation);
+	}
 }
 
 void UWBRuntimeMatchHostComponent::RebuildHighlights()
@@ -484,6 +863,15 @@ void UWBRuntimeMatchHostComponent::RebuildHighlights()
 		const FIntPoint Target = TargetTileForAction(Action);
 		const int32 Index = Target.Y * CurrentObservation.PublicBoard.BoardWidth + Target.X;
 		if (!TilePresentations.IsValidIndex(Index)) continue;
+		const int32 TargetMatchCount = CurrentLegalDecisions.FilterByPredicate([this, Target](const FWBMatchLegalAction& Candidate)
+		{
+			return ActionMatchesCurrentSelection(Candidate) && TargetTileForAction(Candidate) == Target;
+		}).Num();
+		if (TargetMatchCount > 1)
+		{
+			TilePresentations[Index].Highlight = EWBRuntimeBoardHighlight::Ambiguous;
+			continue;
+		}
 		switch (Action.Family)
 		{
 		case EWBMatchActionFamily::Summon: TilePresentations[Index].Highlight = EWBRuntimeBoardHighlight::Summon; break;
@@ -546,18 +934,19 @@ FIntPoint UWBRuntimeMatchHostComponent::TargetTileForAction(const FWBMatchLegalA
 
 bool UWBRuntimeMatchHostComponent::ActionMatchesCurrentSelection(const FWBMatchLegalAction& Action) const
 {
+	bool bSourceMatches = false;
 	if (SelectedUnitId >= 0)
 	{
-		return (Action.Family == EWBMatchActionFamily::CoreAction && Action.CoreAction.SourceUnitId == SelectedUnitId)
+		bSourceMatches = (Action.Family == EWBMatchActionFamily::CoreAction && Action.CoreAction.SourceUnitId == SelectedUnitId)
 			|| (Action.Family == EWBMatchActionFamily::Activation && Action.ActivationCommand.Source.SourceUnitId == SelectedUnitId);
 	}
-	if (!SelectedCardInstanceId.IsEmpty())
+	else if (!SelectedCardInstanceId.IsEmpty())
 	{
-		return (Action.Family == EWBMatchActionFamily::Summon && Action.SummonRequest.SourceInstanceId == SelectedCardInstanceId)
+		bSourceMatches = (Action.Family == EWBMatchActionFamily::Summon && Action.SummonRequest.SourceInstanceId == SelectedCardInstanceId)
 			|| (Action.Family == EWBMatchActionFamily::Equip && Action.EquipRequest.SourceInstanceId == SelectedCardInstanceId)
 			|| (Action.Family == EWBMatchActionFamily::Discard && Action.DiscardCardInstanceId == SelectedCardInstanceId);
 	}
-	return false;
+	return bSourceMatches && (!bHasSelectedActionFamily || RuntimeFamily(Action) == SelectedActionFamily);
 }
 
 void UWBRuntimeMatchHostComponent::ClearSelectionInternal(const bool bBroadcast)
@@ -565,6 +954,9 @@ void UWBRuntimeMatchHostComponent::ClearSelectionInternal(const bool bBroadcast)
 	SelectedUnitId = -1;
 	SelectedCardInstanceId.Reset();
 	PendingSelectedActionId.Reset();
+	AmbiguousActionIds.Reset();
+	bHasSelectedActionFamily = false;
+	SelectionStatusReason.Reset();
 	for (FWBRuntimeBoardTilePresentation& Tile : TilePresentations)
 	{
 		Tile.Highlight = EWBRuntimeBoardHighlight::None;

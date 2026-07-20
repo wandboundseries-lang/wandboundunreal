@@ -69,6 +69,11 @@ public:
 		const FWBMatchInitializationRequest& Request,
 		int32 InitialViewerPlayerId);
 
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Match", meta = (DevelopmentOnly))
+	FWBRuntimeMatchCommandResult InitializeDevelopmentMatch(
+		int32 InitialViewerPlayerId = 0,
+		bool bFragileFirstHero = false);
+
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
 	bool IsMatchInitialized() const;
 
@@ -83,6 +88,15 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
 	TArray<FWBRuntimeLegalActionPresentation> GetCurrentLegalActions() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
+	TArray<FWBRuntimeHandCardPresentation> GetCurrentHandCards() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
+	FWBRuntimeSelectionPresentation GetCurrentSelection() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
+	TArray<FWBRuntimeLegalActionPresentation> GetActionsForCurrentSelection() const;
 
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
 	TArray<FWBRuntimeUnitPresentation> GetCurrentUnits() const;
@@ -104,6 +118,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Wandbound|Match")
 	FWBRuntimeMatchCommandResult SelectTile(FIntPoint Tile);
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Match")
+	FWBRuntimeMatchCommandResult SelectUnitTarget(int32 UnitId);
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Match")
+	FWBRuntimeMatchCommandResult SelectActionFamily(EWBRuntimeMatchActionFamily Family);
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Match")
+	FWBRuntimeMatchCommandResult ChooseActionCandidate(const FString& ActionId);
 
 	UFUNCTION(BlueprintCallable, Category = "Wandbound|Match")
 	void ClearSelection();
@@ -151,6 +174,9 @@ private:
 	TArray<FWBRuntimeLegalActionPresentation> LegalActionPresentations;
 
 	UPROPERTY(Transient)
+	TArray<FWBRuntimeHandCardPresentation> HandCardPresentations;
+
+	UPROPERTY(Transient)
 	TArray<FWBRuntimeUnitPresentation> UnitPresentations;
 
 	UPROPERTY(Transient)
@@ -164,10 +190,15 @@ private:
 	int32 SelectedUnitId = -1;
 	FString SelectedCardInstanceId;
 	FString PendingSelectedActionId;
+	bool bHasSelectedActionFamily = false;
+	EWBRuntimeMatchActionFamily SelectedActionFamily = EWBRuntimeMatchActionFamily::CoreAction;
+	TArray<FString> AmbiguousActionIds;
+	FString SelectionStatusReason;
 
 	FWBRuntimeMatchCommandResult RefreshFromCoordinator(const FString& StatusMessage);
 	FWBRuntimeMatchCommandResult MakeResult(bool bOk, const FString& Reason, const FString& ActionId = FString()) const;
 	void RebuildPresentationModels(const FString& StatusMessage);
+	void RebuildHandPresentations();
 	void RebuildHighlights();
 	void SynchronizeBoardActor();
 	const FWBMatchLegalAction* FindCurrentAction(const FString& ActionId, int32& OutMatchCount) const;

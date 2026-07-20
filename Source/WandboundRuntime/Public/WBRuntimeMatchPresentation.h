@@ -11,17 +11,59 @@ enum class EWBRuntimeBoardHighlight : uint8
 	Attack,
 	Summon,
 	Equip,
-	Activation
+	Activation,
+	Ambiguous
 };
 
 UENUM(BlueprintType)
 enum class EWBRuntimeMatchActionFamily : uint8
 {
 	CoreAction,
+	Move,
+	Attack,
+	Pass,
+	PassResponse,
+	EndTurn,
 	Summon,
 	Equip,
 	Activation,
 	Discard
+};
+
+USTRUCT(BlueprintType)
+struct WANDBOUNDRUNTIME_API FWBRuntimeHandCardPresentation
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	FString CardInstanceId;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString DefinitionId;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString DisplayName;
+
+	UPROPERTY(BlueprintReadOnly)
+	FName CardType;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 HandIndex = INDEX_NONE;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 RR = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 MPCost = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bSelectable = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bSelected = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<EWBRuntimeMatchActionFamily> AvailableActionFamilies;
 };
 
 USTRUCT(BlueprintType)
@@ -142,6 +184,45 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeLegalActionPresentation
 
 	UPROPERTY(BlueprintReadOnly)
 	FString SourceCardInstanceId;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PublicLabel;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 MatchGeneration = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 DecisionRevision = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bRequiresTargetSelection = false;
+};
+
+USTRUCT(BlueprintType)
+struct WANDBOUNDRUNTIME_API FWBRuntimeSelectionPresentation
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 SelectedUnitId = -1;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString SelectedCardInstanceId;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bHasActionFamilyFilter = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	EWBRuntimeMatchActionFamily ActionFamilyFilter = EWBRuntimeMatchActionFamily::CoreAction;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString ResolvedActionId;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FString> AmbiguousActionIds;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString StatusReason;
 };
 
 USTRUCT(BlueprintType)

@@ -66,6 +66,9 @@ AWBBoardViewActor::AWBBoardViewActor()
 	TileInstances = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("TileInstances"));
 	TileInstances->SetupAttachment(SceneRoot);
 	ConfigureInstanceComponent(TileInstances);
+	TileInstances->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	TileInstances->SetCollisionResponseToAllChannels(ECR_Ignore);
+	TileInstances->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 	UnitInstances = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("UnitInstances"));
 	UnitInstances->SetupAttachment(SceneRoot);
