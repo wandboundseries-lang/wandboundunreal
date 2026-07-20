@@ -36,6 +36,8 @@ class WANDBOUNDRUNTIME_API WBBoardViewTypes
 {
 public:
 	static FVector TileCenterToWorld(const FWBTile& Tile, const FWBBoardViewSettings& Settings);
+	static bool LocalPositionToTile(const FVector& LocalPosition, const FWBBoardViewSettings& Settings, FWBTile& OutTile);
+	static bool IsTileInBounds(const FWBTile& Tile, const FWBBoardViewSettings& Settings);
 	static FTransform TileTransform(const FWBTile& Tile, const FWBBoardViewSettings& Settings);
 	static FTransform UnitTransform(const FWBPublicUnitBoardSummary& Unit, const FWBBoardViewSettings& Settings);
 	static FTransform WallTransform(const FWBPublicWallEdgeSummary& Wall, const FWBBoardViewSettings& Settings);

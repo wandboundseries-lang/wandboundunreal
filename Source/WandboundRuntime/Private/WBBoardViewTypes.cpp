@@ -27,6 +27,39 @@ FVector WBBoardViewTypes::TileCenterToWorld(const FWBTile& Tile, const FWBBoardV
 	return FVector(WorldX, WorldY, 0.0f);
 }
 
+bool WBBoardViewTypes::LocalPositionToTile(
+	const FVector& LocalPosition,
+	const FWBBoardViewSettings& Settings,
+	FWBTile& OutTile)
+{
+	OutTile = FWBTile();
+	if (Settings.BoardWidth <= 0 || Settings.BoardHeight <= 0 || Settings.TileSize <= 0.0f)
+	{
+		return false;
+	}
+
+	const float TileX = LocalPosition.X / Settings.TileSize + BoardCenterOffset(Settings.BoardWidth);
+	const float TileY = LocalPosition.Y / Settings.TileSize + BoardCenterOffset(Settings.BoardHeight);
+	const int32 X = FMath::RoundToInt(TileX);
+	const int32 Y = FMath::RoundToInt(TileY);
+	const FWBTile Candidate(X, Y);
+	if (!IsTileInBounds(Candidate, Settings)
+		|| FMath::Abs(TileX - static_cast<float>(X)) > 0.5f
+		|| FMath::Abs(TileY - static_cast<float>(Y)) > 0.5f)
+	{
+		return false;
+	}
+
+	OutTile = Candidate;
+	return true;
+}
+
+bool WBBoardViewTypes::IsTileInBounds(const FWBTile& Tile, const FWBBoardViewSettings& Settings)
+{
+	return Tile.X >= 0 && Tile.Y >= 0
+		&& Tile.X < Settings.BoardWidth && Tile.Y < Settings.BoardHeight;
+}
+
 FTransform WBBoardViewTypes::TileTransform(const FWBTile& Tile, const FWBBoardViewSettings& Settings)
 {
 	return FTransform(
