@@ -10,5 +10,9 @@ public class WandboundTests : ModuleRules
 		bUseUnity = false;
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Json", "UMG", "Slate", "SlateCore", "WandboundCore", "WandboundRuntime" });
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("UnrealEd");
+		}
 	}
 }

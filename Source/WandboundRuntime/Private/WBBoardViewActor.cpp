@@ -115,6 +115,7 @@ void AWBBoardViewActor::ClearBoardView()
 	LastRenderedUnitCount = 0;
 	LastRenderedWallCount = 0;
 	LastRenderedTerrainCount = 0;
+	AppliedPresentationRevision = 0;
 	TilePresentations.Reset();
 	UnitPresentations.Reset();
 	for (TPair<int32, TObjectPtr<AWBRuntimeUnitPresentationActor>>& Pair : UnitPresentationActors)
@@ -199,6 +200,16 @@ TArray<FWBRuntimeUnitPresentation> AWBBoardViewActor::GetUnitPresentations() con
 int32 AWBBoardViewActor::GetUnitPresentationActorCount() const
 {
 	return UnitPresentationActors.Num();
+}
+
+int32 AWBBoardViewActor::GetAppliedPresentationRevision() const
+{
+	return AppliedPresentationRevision;
+}
+
+void AWBBoardViewActor::SetAppliedPresentationRevision(const int32 InPresentationRevision)
+{
+	AppliedPresentationRevision = InPresentationRevision;
 }
 
 AWBRuntimeUnitPresentationActor* AWBBoardViewActor::FindUnitPresentationActor(const int32 UnitId) const

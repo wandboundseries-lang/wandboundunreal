@@ -6,6 +6,7 @@
 #include "WBRuntimeLocalPlayGameMode.generated.h"
 
 class AWBRuntimePlayerController;
+class UWBRuntimeLocalPlaySmokeCoordinator;
 
 UCLASS()
 class WANDBOUNDRUNTIME_API AWBRuntimeLocalPlayGameMode : public AGameModeBase
@@ -30,6 +31,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Local Play")
 	FString GetStartupFailureReason() const;
 
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Local Play")
+	bool IsPackagedSmokeSequenceStarted() const;
+
 	virtual void StartPlay() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 
@@ -40,8 +44,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AWBRuntimeMatchBootstrapActor> BootstrapActor;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UWBRuntimeLocalPlaySmokeCoordinator> SmokeCoordinator;
+
 	bool bOwnsBootstrapActor = false;
 	FString StartupFailureReason;
 
 	AWBRuntimeMatchBootstrapActor* EnsureSingleBootstrap();
+	void StartPackagedSmokeIfRequested(AWBRuntimeMatchBootstrapActor* Bootstrap);
 };

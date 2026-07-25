@@ -90,6 +90,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Board")
 	int32 GetUnitPresentationActorCount() const;
 
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Board")
+	int32 GetAppliedPresentationRevision() const;
+
+	void SetAppliedPresentationRevision(int32 InPresentationRevision);
+
 	AWBRuntimeUnitPresentationActor* FindUnitPresentationActor(int32 UnitId) const;
 
 	int32 GetRenderedTileCount() const;
@@ -102,6 +107,7 @@ private:
 	int32 LastRenderedUnitCount = 0;
 	int32 LastRenderedWallCount = 0;
 	int32 LastRenderedTerrainCount = 0;
+	int32 AppliedPresentationRevision = 0;
 
 	UPROPERTY(Transient)
 	TArray<FWBRuntimeBoardTilePresentation> TilePresentations;

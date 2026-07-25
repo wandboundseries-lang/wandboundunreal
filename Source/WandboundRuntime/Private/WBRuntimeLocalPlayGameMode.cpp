@@ -1,6 +1,8 @@
 #include "WBRuntimeLocalPlayGameMode.h"
 
 #include "EngineUtils.h"
+#include "Misc/CommandLine.h"
+#include "WBRuntimeLocalPlaySmoke.h"
 #include "WBRuntimePlayerController.h"
 
 AWBRuntimeLocalPlayGameMode::AWBRuntimeLocalPlayGameMode()
@@ -46,7 +48,11 @@ FWBRuntimeLocalPlayResult AWBRuntimeLocalPlayGameMode::StartLocalPlayForControll
 	}
 	const FWBRuntimeLocalPlayResult Result = Bootstrap->InitializeLocalPlay(LocalController);
 	if (!Result.bOk) StartupFailureReason = Result.Reason;
-	else StartupFailureReason.Reset();
+	else
+	{
+		StartupFailureReason.Reset();
+		StartPackagedSmokeIfRequested(Bootstrap);
+	}
 	return Result;
 }
 
@@ -63,6 +69,10 @@ FWBRuntimeLocalPlayResult AWBRuntimeLocalPlayGameMode::RestartDevelopmentMatch()
 
 AWBRuntimeMatchBootstrapActor* AWBRuntimeLocalPlayGameMode::GetBootstrapActor() const { return BootstrapActor; }
 FString AWBRuntimeLocalPlayGameMode::GetStartupFailureReason() const { return StartupFailureReason; }
+bool AWBRuntimeLocalPlayGameMode::IsPackagedSmokeSequenceStarted() const
+{
+	return SmokeCoordinator != nullptr && SmokeCoordinator->HasStarted();
+}
 
 void AWBRuntimeLocalPlayGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
@@ -72,8 +82,16 @@ void AWBRuntimeLocalPlayGameMode::EndPlay(const EEndPlayReason::Type EndPlayReas
 		if (bOwnsBootstrapActor && IsValid(BootstrapActor)) BootstrapActor->Destroy();
 	}
 	BootstrapActor = nullptr;
+	SmokeCoordinator = nullptr;
 	bOwnsBootstrapActor = false;
 	Super::EndPlay(EndPlayReason);
+}
+
+void AWBRuntimeLocalPlayGameMode::StartPackagedSmokeIfRequested(AWBRuntimeMatchBootstrapActor* Bootstrap)
+{
+	if (!UWBRuntimeLocalPlaySmokeCoordinator::IsSmokeRequested(FCommandLine::Get())) return;
+	if (SmokeCoordinator == nullptr) SmokeCoordinator = NewObject<UWBRuntimeLocalPlaySmokeCoordinator>(this);
+	if (!SmokeCoordinator->HasStarted()) SmokeCoordinator->RunSmoke(this, Bootstrap);
 }
 
 AWBRuntimeMatchBootstrapActor* AWBRuntimeLocalPlayGameMode::EnsureSingleBootstrap()

@@ -913,6 +913,7 @@ void UWBRuntimeMatchHostComponent::SynchronizeBoardActor()
 	if (BoardActor != nullptr)
 	{
 		BoardActor->ApplyRuntimePresentation(CurrentObservation.PublicBoard, TilePresentations, UnitPresentations);
+		BoardActor->SetAppliedPresentationRevision(PresentationRevision);
 	}
 }
 
