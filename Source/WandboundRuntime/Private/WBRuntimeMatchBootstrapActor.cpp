@@ -44,6 +44,10 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 	if (!EnsureCamera()) return FailStartup(CameraActorClass == nullptr ? TEXT("camera_actor_class_missing") : TEXT("camera_spawn_failed"));
 
 	MatchHost->BoardActor = BoardActor;
+	MatchHost->ConfigurePresentationAssets(
+		PresentationAssetSet,
+		CameraActor,
+		bEnablePresentationAssetLoading);
 	const FWBRuntimeMatchCommandResult MatchResult = MatchHost->InitializeDevelopmentMatch(InitialViewerPlayerId, false);
 	if (!MatchResult.bOk) return FailStartup(MatchResult.Reason.IsEmpty() ? TEXT("development_match_initialization_failed") : MatchResult.Reason);
 	if (!EnsureHUD()) return FailStartup(HUDWidgetClass == nullptr ? TEXT("hud_widget_class_missing") : TEXT("hud_creation_failed"));
@@ -70,6 +74,10 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::RestartDevelopmentMatch
 	HUDWidget->UnbindFromMatchHost();
 	MatchHost->ClearSelection();
 	BoardActor->ClearBoardView();
+	MatchHost->ConfigurePresentationAssets(
+		PresentationAssetSet,
+		CameraActor,
+		bEnablePresentationAssetLoading);
 	const FWBRuntimeMatchCommandResult MatchResult = MatchHost->InitializeDevelopmentMatch(InitialViewerPlayerId, false);
 	if (!MatchResult.bOk) return FailStartup(MatchResult.Reason);
 	if (!HUDWidget->BindToMatchHost(MatchHost)) return FailStartup(TEXT("hud_host_binding_failed"));

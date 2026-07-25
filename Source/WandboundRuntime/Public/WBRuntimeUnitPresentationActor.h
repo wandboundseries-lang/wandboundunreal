@@ -3,11 +3,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WBRuntimeMatchPresentation.h"
+#include "WBRuntimePresentationAssetBinding.h"
 #include "WBRuntimePresentationEvent.h"
 #include "WBRuntimeUnitPresentationActor.generated.h"
 
 class USceneComponent;
+class USkeletalMeshComponent;
 class UStaticMeshComponent;
+class UWBRuntimePresentationAssetRegistry;
 
 UCLASS()
 class WANDBOUNDRUNTIME_API AWBRuntimeUnitPresentationActor : public AActor
@@ -27,12 +30,31 @@ public:
 		const FWBRuntimePresentationEvent& Event,
 		const FVector& FinalWorldLocation);
 	void SnapToWorldLocation(const FVector& WorldLocation);
+	void ApplyAssetProfile(
+		const FWBRuntimeUnitProfileResolution& Resolution,
+		UWBRuntimePresentationAssetRegistry* Registry,
+		int32 MatchGeneration);
+	bool PlayBoundAnimation(
+		const FWBRuntimePresentationAssetBinding& Binding,
+		UWBRuntimePresentationAssetRegistry* Registry,
+		int32 MatchGeneration);
+	void StopBoundAnimation();
+	USceneComponent* GetAssetAttachmentComponent() const;
 
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation")
 	int32 GetStableUnitId() const;
 
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation")
 	FWBRuntimeUnitPresentation GetPresentation() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	bool IsUsingSkeletalPresentation() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	bool IsUsingPrimitiveFallback() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	FString GetLastAssetDiagnostic() const;
 
 protected:
 	virtual void Tick(float DeltaSeconds) override;
@@ -45,14 +67,27 @@ private:
 	TObjectPtr<UStaticMeshComponent> VisualMesh;
 
 	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USkeletalMeshComponent> SkeletalVisual;
+
+	UPROPERTY(VisibleAnywhere)
 	FWBRuntimeUnitPresentation Presentation;
+
+	UPROPERTY(Transient)
+	FWBRuntimeUnitAssetProfile ActiveAssetProfile;
 
 	FVector PresentationStartLocation = FVector::ZeroVector;
 	FVector PresentationEndLocation = FVector::ZeroVector;
 	FVector PresentationBaseScale = FVector(0.45f, 0.45f, 0.75f);
+	FVector ActiveVisualScale = FVector(0.45f, 0.45f, 0.75f);
 	float PresentationElapsedSeconds = 0.0f;
 	float PresentationDurationSeconds = 0.0f;
 	EWBRuntimePresentationEventType ActivePresentationType =
 		EWBRuntimePresentationEventType::MatchInitialized;
 	bool bPresentationActive = false;
+	bool bHasAssetProfile = false;
+	bool bUsingSkeletalPresentation = false;
+	bool bUsingPrimitiveFallback = true;
+	FString LastAssetDiagnostic;
+
+	void SetVisualScale(const FVector& Scale);
 };

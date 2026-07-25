@@ -9,6 +9,7 @@ class AWBBoardViewActor;
 class AWBRuntimePlayerController;
 class UWBRuntimeMatchHostComponent;
 class UWBRuntimeMatchHUDWidget;
+class UWBRuntimePresentationAssetSet;
 
 UENUM(BlueprintType)
 enum class EWBRuntimeLocalPlayState : uint8
@@ -78,6 +79,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Local Play")
 	TSubclassOf<UWBRuntimeMatchHUDWidget> HUDWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Presentation Assets")
+	TObjectPtr<UWBRuntimePresentationAssetSet> PresentationAssetSet;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Presentation Assets")
+	bool bEnablePresentationAssetLoading = true;
 
 	UFUNCTION(BlueprintCallable, Category = "Wandbound|Local Play", meta = (DevelopmentOnly))
 	FWBRuntimeLocalPlayResult InitializeLocalPlay(AWBRuntimePlayerController* LocalController);

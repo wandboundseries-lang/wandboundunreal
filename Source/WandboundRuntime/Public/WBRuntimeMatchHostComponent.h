@@ -8,6 +8,10 @@
 #include "WBRuntimeMatchHostComponent.generated.h"
 
 class AWBBoardViewActor;
+class ACameraActor;
+class UWBRuntimePresentationAssetPlaybackComponent;
+class UWBRuntimePresentationAssetRegistry;
+class UWBRuntimePresentationAssetSet;
 class UWBRuntimePresentationSequenceComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWBRuntimeMatchEvent);
@@ -24,6 +28,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Match")
 	TObjectPtr<AWBBoardViewActor> BoardActor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Presentation Assets")
+	TObjectPtr<UWBRuntimePresentationAssetSet> PresentationAssetSet;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Presentation Assets")
+	bool bEnablePresentationAssetLoading = true;
 
 	UPROPERTY(BlueprintAssignable, Category = "Wandbound|Match")
 	FWBRuntimeMatchEvent OnMatchInitialized;
@@ -184,6 +194,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation")
 	UWBRuntimePresentationSequenceComponent* GetPresentationSequence() const;
 
+	void ConfigurePresentationAssets(
+		UWBRuntimePresentationAssetSet* InAssetSet,
+		ACameraActor* InBoardCamera,
+		bool bEnableAssetLoading);
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	UWBRuntimePresentationAssetRegistry* GetPresentationAssetRegistry() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	UWBRuntimePresentationAssetPlaybackComponent* GetPresentationAssetPlayback() const;
+
 	const FWBMatchObservation& GetCurrentObservation() const;
 	const FWBMatchOperationResult& GetLatestOperationResult() const;
 	const WBMatchCoordinator* GetCoordinatorForInspection() const;
@@ -214,6 +235,15 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UWBRuntimePresentationSequenceComponent> PresentationSequence;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UWBRuntimePresentationAssetRegistry> PresentationAssetRegistry;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UWBRuntimePresentationAssetPlaybackComponent> PresentationAssetPlayback;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ACameraActor> PresentationCameraActor;
+
 	int32 CurrentViewerPlayerId = -1;
 	int32 MatchGeneration = 0;
 	int32 DecisionRevision = 0;
@@ -241,6 +271,8 @@ private:
 	bool ActionMatchesCurrentSelection(const FWBMatchLegalAction& Action) const;
 	void ClearSelectionInternal(bool bBroadcast);
 	UWBRuntimePresentationSequenceComponent* EnsurePresentationSequence();
+	void EnsurePresentationAssets();
+	void ApplyPresentationAssetDurations(TArray<FWBRuntimePresentationEvent>& Events);
 	void FinishDeferredTerminalBroadcast();
 
 	UFUNCTION()
@@ -254,4 +286,7 @@ private:
 
 	UFUNCTION()
 	void HandlePresentationSequenceCancelled();
+
+protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };

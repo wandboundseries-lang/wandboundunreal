@@ -1,10 +1,13 @@
 #include "WBRuntimeMatchHostComponent.h"
 
+#include "Camera/CameraActor.h"
 #include "GameFramework/Actor.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "WBBoardViewActor.h"
+#include "WBRuntimePresentationAssetPlaybackComponent.h"
+#include "WBRuntimePresentationAssetRegistry.h"
 #include "WBRuntimePresentationSequenceComponent.h"
 #include "WBRuntimeTracePresentationTranslator.h"
 
@@ -239,6 +242,14 @@ void UWBRuntimeMatchHostComponent::ResetMatch()
 	{
 		PresentationSequence->CancelSequence();
 	}
+	if (PresentationAssetPlayback != nullptr)
+	{
+		PresentationAssetPlayback->StopAllPresentationAssets();
+	}
+	if (PresentationAssetRegistry != nullptr)
+	{
+		PresentationAssetRegistry->Clear();
+	}
 	bPresentationInputLocked = false;
 	bLatestSequenceHadNPCEvents = false;
 	PresentationFailureReason.Reset();
@@ -286,6 +297,11 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeMatch(
 	for (const FWBMatchPlayerSetup& Player : Request.Players)
 	{
 		HeroDefinitionIds.Add(Player.HeroCardId);
+	}
+	EnsurePresentationAssets();
+	if (PresentationAssetRegistry != nullptr)
+	{
+		PresentationAssetRegistry->BeginMatchGeneration(MatchGeneration);
 	}
 	ClearSelectionInternal(false);
 
@@ -622,8 +638,9 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SubmitLegalActionAtRe
 	}
 
 	const bool bHadNPCEvents = LatestOperationResult.TraceEvents.ContainsByPredicate(IsNPCTrace);
-	const FWBRuntimePresentationTranslationResult Translation =
+	FWBRuntimePresentationTranslationResult Translation =
 		WBRuntimeTracePresentationTranslator::Translate(LatestOperationResult.TraceEvents);
+	ApplyPresentationAssetDurations(Translation.Events);
 	ClearSelectionInternal(false);
 	bool bSequencePrepared = false;
 	if (Translation.bOk && !Translation.Events.IsEmpty())
@@ -735,6 +752,54 @@ UWBRuntimePresentationSequenceComponent* UWBRuntimeMatchHostComponent::GetPresen
 {
 	return PresentationSequence;
 }
+
+void UWBRuntimeMatchHostComponent::ConfigurePresentationAssets(
+	UWBRuntimePresentationAssetSet* InAssetSet,
+	ACameraActor* InBoardCamera,
+	const bool bEnableAssetLoading)
+{
+	PresentationAssetSet = InAssetSet;
+	PresentationCameraActor = InBoardCamera;
+	bEnablePresentationAssetLoading = bEnableAssetLoading;
+	EnsurePresentationAssets();
+	if (PresentationAssetRegistry != nullptr)
+	{
+		PresentationAssetRegistry->Configure(
+			PresentationAssetSet,
+			bEnablePresentationAssetLoading
+				&& !FApp::IsUnattended()
+				&& !FParse::Param(
+					FCommandLine::Get(),
+					TEXT("WandboundLocalPlaySmoke")));
+		PresentationAssetRegistry->BeginMatchGeneration(MatchGeneration);
+	}
+	if (PresentationAssetPlayback != nullptr)
+	{
+		PresentationAssetPlayback->Configure(
+			PresentationAssetRegistry,
+			PresentationCameraActor);
+	}
+	if (IsValid(BoardActor))
+	{
+		BoardActor->ConfigurePresentationAssets(
+			PresentationAssetRegistry,
+			PresentationAssetPlayback,
+			MatchGeneration);
+	}
+}
+
+UWBRuntimePresentationAssetRegistry*
+UWBRuntimeMatchHostComponent::GetPresentationAssetRegistry() const
+{
+	return PresentationAssetRegistry;
+}
+
+UWBRuntimePresentationAssetPlaybackComponent*
+UWBRuntimeMatchHostComponent::GetPresentationAssetPlayback() const
+{
+	return PresentationAssetPlayback;
+}
+
 const FWBMatchObservation& UWBRuntimeMatchHostComponent::GetCurrentObservation() const { return CurrentObservation; }
 const FWBMatchOperationResult& UWBRuntimeMatchHostComponent::GetLatestOperationResult() const { return LatestOperationResult; }
 const WBMatchCoordinator* UWBRuntimeMatchHostComponent::GetCoordinatorForInspection() const { return Coordinator.Get(); }
@@ -1028,6 +1093,11 @@ void UWBRuntimeMatchHostComponent::SynchronizeBoardActor()
 {
 	if (BoardActor != nullptr)
 	{
+		EnsurePresentationAssets();
+		BoardActor->ConfigurePresentationAssets(
+			PresentationAssetRegistry,
+			PresentationAssetPlayback,
+			MatchGeneration);
 		BoardActor->ApplyRuntimePresentation(CurrentObservation.PublicBoard, TilePresentations, UnitPresentations);
 		BoardActor->SetAppliedPresentationRevision(PresentationRevision);
 	}
@@ -1146,6 +1216,91 @@ UWBRuntimePresentationSequenceComponent* UWBRuntimeMatchHostComponent::EnsurePre
 	return PresentationSequence;
 }
 
+void UWBRuntimeMatchHostComponent::EnsurePresentationAssets()
+{
+	if (PresentationAssetRegistry == nullptr)
+	{
+		PresentationAssetRegistry =
+			NewObject<UWBRuntimePresentationAssetRegistry>(
+				this,
+				TEXT("RuntimePresentationAssetRegistry"));
+	}
+	if (PresentationAssetPlayback == nullptr)
+	{
+		AActor* OwnerActor = GetOwner();
+		UObject* Outer = OwnerActor != nullptr
+			? static_cast<UObject*>(OwnerActor)
+			: static_cast<UObject*>(this);
+		PresentationAssetPlayback =
+			NewObject<UWBRuntimePresentationAssetPlaybackComponent>(
+				Outer,
+				TEXT("RuntimePresentationAssetPlayback"));
+		if (OwnerActor != nullptr && PresentationAssetPlayback != nullptr)
+		{
+			OwnerActor->AddInstanceComponent(PresentationAssetPlayback);
+			PresentationAssetPlayback->RegisterComponent();
+		}
+	}
+
+	const bool bRuntimeLoadingEnabled =
+		bEnablePresentationAssetLoading
+		&& !FApp::IsUnattended()
+		&& !FParse::Param(
+			FCommandLine::Get(),
+			TEXT("WandboundLocalPlaySmoke"));
+	if (PresentationAssetRegistry != nullptr)
+	{
+		PresentationAssetRegistry->Configure(
+			PresentationAssetSet,
+			bRuntimeLoadingEnabled);
+	}
+	if (PresentationAssetPlayback != nullptr)
+	{
+		PresentationAssetPlayback->Configure(
+			PresentationAssetRegistry,
+			PresentationCameraActor);
+	}
+}
+
+void UWBRuntimeMatchHostComponent::ApplyPresentationAssetDurations(
+	TArray<FWBRuntimePresentationEvent>& Events)
+{
+	EnsurePresentationAssets();
+	if (PresentationAssetRegistry == nullptr || PresentationAssetSet == nullptr)
+	{
+		return;
+	}
+
+	for (FWBRuntimePresentationEvent& Event : Events)
+	{
+		const FWBRuntimeUnitPresentation* SourceUnit =
+			UnitPresentations.FindByPredicate([&Event](
+				const FWBRuntimeUnitPresentation& Unit)
+			{
+				return Unit.UnitId == Event.SourceUnitId;
+			});
+		const FWBRuntimeUnitPresentation* TargetUnit =
+			UnitPresentations.FindByPredicate([&Event](
+				const FWBRuntimeUnitPresentation& Unit)
+			{
+				return Unit.UnitId == Event.TargetUnitId;
+			});
+		const FWBRuntimePresentationBindingContext Context =
+			PresentationAssetRegistry->BuildBindingContext(
+				Event,
+				SourceUnit,
+				TargetUnit);
+		const FWBRuntimePresentationBindingResolution Resolution =
+			PresentationAssetRegistry->ResolveEventBinding(Context);
+		if (Resolution.bFoundConfiguredBinding
+			&& Resolution.Binding.PresentationDurationSeconds > 0.0f)
+		{
+			Event.SuggestedDurationSeconds =
+				Resolution.Binding.PresentationDurationSeconds;
+		}
+	}
+}
+
 void UWBRuntimeMatchHostComponent::FinishDeferredTerminalBroadcast()
 {
 	if (CurrentPresentation.bGameOver && TerminalBroadcastGeneration != MatchGeneration)
@@ -1164,6 +1319,18 @@ void UWBRuntimeMatchHostComponent::HandlePresentationEventStarted(
 			static_cast<int64>(Event.Type));
 	CurrentPresentation.PendingPresentationEventCount =
 		PresentationSequence != nullptr ? PresentationSequence->GetPendingEventCount() : 0;
+	CurrentPresentation.CurrentPresentationPublicLabel = Event.PublicLabel;
+	CurrentPresentation.CurrentPresentationDamageAmount = Event.DamageAmount;
+	CurrentPresentation.CurrentPresentationHPDelta =
+		Event.PreviousHP >= 0 && Event.NewHP >= 0
+			? Event.NewHP - Event.PreviousHP
+			: 0;
+	CurrentPresentation.CurrentPresentationArmorDelta =
+		Event.PreviousArmor >= 0 && Event.NewArmor >= 0
+			? Event.NewArmor - Event.PreviousArmor
+			: 0;
+	CurrentPresentation.bTerminalPresentationCue = Event.bTerminal
+		|| Event.Type == EWBRuntimePresentationEventType::HeroDefeated;
 	if (IsValid(BoardActor) && PresentationSequence != nullptr)
 	{
 		const float Speed = PresentationSequence->GetPlaybackSpeed();
@@ -1174,6 +1341,10 @@ void UWBRuntimeMatchHostComponent::HandlePresentationEventStarted(
 			PresentationFailureReason = TEXT("presentation_actor_missing");
 			BoardActor->SnapToAuthoritativePresentation();
 		}
+#if !UE_BUILD_SHIPPING
+		CurrentPresentation.PresentationAssetDiagnostic =
+			BoardActor->GetLastPresentationAssetDiagnostic();
+#endif
 	}
 	OnDecisionChanged.Broadcast();
 }
@@ -1193,6 +1364,12 @@ void UWBRuntimeMatchHostComponent::HandlePresentationSequenceCompleted()
 	CurrentPresentation.bPresentationSequenceActive = false;
 	CurrentPresentation.CurrentPresentationEventLabel.Reset();
 	CurrentPresentation.PendingPresentationEventCount = 0;
+	CurrentPresentation.CurrentPresentationPublicLabel.Reset();
+	CurrentPresentation.CurrentPresentationDamageAmount = 0;
+	CurrentPresentation.CurrentPresentationHPDelta = 0;
+	CurrentPresentation.CurrentPresentationArmorDelta = 0;
+	CurrentPresentation.bTerminalPresentationCue = false;
+	CurrentPresentation.PresentationAssetDiagnostic.Reset();
 	if (IsValid(BoardActor))
 	{
 		BoardActor->CompletePresentationSequence();
@@ -1215,6 +1392,12 @@ void UWBRuntimeMatchHostComponent::HandlePresentationSequenceCancelled()
 	CurrentPresentation.bPresentationSequenceActive = false;
 	CurrentPresentation.CurrentPresentationEventLabel.Reset();
 	CurrentPresentation.PendingPresentationEventCount = 0;
+	CurrentPresentation.CurrentPresentationPublicLabel.Reset();
+	CurrentPresentation.CurrentPresentationDamageAmount = 0;
+	CurrentPresentation.CurrentPresentationHPDelta = 0;
+	CurrentPresentation.CurrentPresentationArmorDelta = 0;
+	CurrentPresentation.bTerminalPresentationCue = false;
+	CurrentPresentation.PresentationAssetDiagnostic.Reset();
 	if (IsValid(BoardActor))
 	{
 		BoardActor->CancelPresentationSequence();
@@ -1224,4 +1407,22 @@ void UWBRuntimeMatchHostComponent::HandlePresentationSequenceCancelled()
 	OnBoardPresentationRefreshed.Broadcast();
 	OnDecisionChanged.Broadcast();
 	FinishDeferredTerminalBroadcast();
+}
+
+void UWBRuntimeMatchHostComponent::EndPlay(
+	const EEndPlayReason::Type EndPlayReason)
+{
+	if (PresentationSequence != nullptr)
+	{
+		PresentationSequence->CancelSequence();
+	}
+	if (PresentationAssetPlayback != nullptr)
+	{
+		PresentationAssetPlayback->StopAllPresentationAssets();
+	}
+	if (PresentationAssetRegistry != nullptr)
+	{
+		PresentationAssetRegistry->Clear();
+	}
+	Super::EndPlay(EndPlayReason);
 }

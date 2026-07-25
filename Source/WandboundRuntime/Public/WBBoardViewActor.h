@@ -12,6 +12,8 @@ class USceneComponent;
 class UInstancedStaticMeshComponent;
 class UStaticMesh;
 class AWBRuntimeUnitPresentationActor;
+class UWBRuntimePresentationAssetPlaybackComponent;
+class UWBRuntimePresentationAssetRegistry;
 
 UCLASS()
 class WANDBOUNDRUNTIME_API AWBBoardViewActor : public AActor
@@ -72,6 +74,13 @@ public:
 	bool PlayPresentationEvent(const FWBRuntimePresentationEvent& Event, float EffectiveDurationSeconds);
 	void CompletePresentationEvent(const FWBRuntimePresentationEvent& Event);
 	void SnapToAuthoritativePresentation();
+	void ConfigurePresentationAssets(
+		UWBRuntimePresentationAssetRegistry* InAssetRegistry,
+		UWBRuntimePresentationAssetPlaybackComponent* InAssetPlayback,
+		int32 InMatchGeneration);
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	FString GetLastPresentationAssetDiagnostic() const;
 
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Board")
 	FVector TileToWorld(FIntPoint Tile) const;
@@ -125,14 +134,32 @@ private:
 	UPROPERTY(Transient)
 	TMap<int32, TObjectPtr<AWBRuntimeUnitPresentationActor>> UnitPresentationActors;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UWBRuntimePresentationAssetRegistry> PresentationAssetRegistry;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UWBRuntimePresentationAssetPlaybackComponent> PresentationAssetPlayback;
+
 	FWBPublicBoardSummary PendingSummary;
 	TArray<FWBRuntimeBoardTilePresentation> PendingTilePresentations;
 	TArray<FWBRuntimeUnitPresentation> PendingUnitPresentations;
 	bool bPresentationSequenceActive = false;
+	int32 PresentationAssetMatchGeneration = INDEX_NONE;
+	FString LastPresentationAssetDiagnostic;
 
 	void SynchronizeUnitActors(const TArray<FWBRuntimeUnitPresentation>& Units);
 	AWBRuntimeUnitPresentationActor* EnsureUnitPresentationActor(int32 UnitId);
 	const FWBRuntimeUnitPresentation* FindPendingUnit(int32 UnitId) const;
+	const FWBRuntimeUnitPresentation* FindPresentedUnit(int32 UnitId) const;
 	FVector UnitWorldLocation(FIntPoint Tile) const;
 	void RenderMarkers();
+	void ApplyUnitAssetProfile(
+		AWBRuntimeUnitPresentationActor* Actor,
+		const FWBRuntimeUnitPresentation& Unit);
+	void BeginBoundAssetPlayback(
+		const FWBRuntimePresentationEvent& Event,
+		AWBRuntimeUnitPresentationActor* SourceActor,
+		AWBRuntimeUnitPresentationActor* TargetActor,
+		const FVector& SourceLocation,
+		const FVector& TargetLocation);
 };

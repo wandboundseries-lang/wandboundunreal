@@ -148,11 +148,40 @@ void UWBRuntimeMatchHUDWidget::RefreshFromHost()
 		DisplayedSelection.SelectedUnitId,
 		DisplayedSelection.SelectedCardInstanceId.IsEmpty() ? TEXT("none") : *DisplayedSelection.SelectedCardInstanceId,
 		DisplayedSelection.StatusReason.IsEmpty() ? TEXT("ready") : *DisplayedSelection.StatusReason)));
+	FString PresentationFeedback = Presentation.CurrentPresentationPublicLabel.IsEmpty()
+		? Presentation.CurrentPresentationEventLabel
+		: Presentation.CurrentPresentationPublicLabel;
+	if (Presentation.CurrentPresentationDamageAmount > 0)
+	{
+		PresentationFeedback += FString::Printf(
+			TEXT("  Damage %d"),
+			Presentation.CurrentPresentationDamageAmount);
+	}
+	if (Presentation.CurrentPresentationArmorDelta != 0)
+	{
+		PresentationFeedback += FString::Printf(
+			TEXT("  Armor %+d"),
+			Presentation.CurrentPresentationArmorDelta);
+	}
+	if (Presentation.CurrentPresentationHPDelta != 0)
+	{
+		PresentationFeedback += FString::Printf(
+			TEXT("  HP %+d"),
+			Presentation.CurrentPresentationHPDelta);
+	}
+#if !UE_BUILD_SHIPPING
+	if (!Presentation.PresentationAssetDiagnostic.IsEmpty())
+	{
+		PresentationFeedback += FString::Printf(
+			TEXT("  Asset fallback: %s"),
+			*Presentation.PresentationAssetDiagnostic);
+	}
+#endif
 	PresentationSequenceText->SetText(FText::FromString(
 		bSequenceActive
 			? FString::Printf(
 				TEXT("Presenting: %s  Pending: %d"),
-				*Presentation.CurrentPresentationEventLabel,
+				*PresentationFeedback,
 				Presentation.PendingPresentationEventCount)
 			: FString(TEXT("Presentation ready"))));
 	RebuildHandWidgets();

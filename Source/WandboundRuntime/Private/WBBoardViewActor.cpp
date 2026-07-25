@@ -4,6 +4,8 @@
 #include "Components/SceneComponent.h"
 #include "Engine/StaticMesh.h"
 #include "UObject/ConstructorHelpers.h"
+#include "WBRuntimePresentationAssetPlaybackComponent.h"
+#include "WBRuntimePresentationAssetRegistry.h"
 #include "WBRuntimeUnitPresentationActor.h"
 
 namespace
@@ -105,6 +107,10 @@ AWBBoardViewActor::AWBBoardViewActor()
 
 void AWBBoardViewActor::ClearBoardView()
 {
+	if (PresentationAssetPlayback != nullptr)
+	{
+		PresentationAssetPlayback->StopAllPresentationAssets();
+	}
 	ClearInstanceComponent(TileInstances);
 	ClearInstanceComponent(UnitInstances);
 	ClearInstanceComponent(WallInstances);
@@ -176,18 +182,19 @@ bool AWBBoardViewActor::PlayPresentationEvent(
 	const FWBRuntimePresentationEvent& Event,
 	const float EffectiveDurationSeconds)
 {
-	int32 UnitId = Event.SourceUnitId;
-	if (Event.Type == EWBRuntimePresentationEventType::DamageApplied
+	const bool bTargetsUnit = Event.Type == EWBRuntimePresentationEventType::DamageApplied
 		|| Event.Type == EWBRuntimePresentationEventType::HPChanged
 		|| Event.Type == EWBRuntimePresentationEventType::ArmorChanged
 		|| Event.Type == EWBRuntimePresentationEventType::AttackImpact
 		|| Event.Type == EWBRuntimePresentationEventType::TrapTriggered
 		|| Event.Type == EWBRuntimePresentationEventType::WandEquipped
 		|| Event.Type == EWBRuntimePresentationEventType::UnitDefeated
-		|| Event.Type == EWBRuntimePresentationEventType::HeroDefeated)
-	{
-		UnitId = Event.TargetUnitId;
-	}
+		|| Event.Type == EWBRuntimePresentationEventType::HeroDefeated;
+	const int32 UnitId = bTargetsUnit ? Event.TargetUnitId : Event.SourceUnitId;
+	AWBRuntimeUnitPresentationActor* SourceActor =
+		FindUnitPresentationActor(Event.SourceUnitId);
+	AWBRuntimeUnitPresentationActor* TargetActor =
+		FindUnitPresentationActor(Event.TargetUnitId);
 
 	if (Event.Type == EWBRuntimePresentationEventType::MarkerConsumed)
 	{
@@ -200,20 +207,18 @@ bool AWBBoardViewActor::PlayPresentationEvent(
 			}
 		}
 		RenderMarkers();
-		return true;
 	}
 
-	if (Event.Type == EWBRuntimePresentationEventType::TurnStarted
+	const bool bDoesNotRequireUnitActor =
+		Event.Type == EWBRuntimePresentationEventType::TurnStarted
 		|| Event.Type == EWBRuntimePresentationEventType::TurnEnded
 		|| Event.Type == EWBRuntimePresentationEventType::NPCPhaseStarted
 		|| Event.Type == EWBRuntimePresentationEventType::NPCPhaseCompleted
 		|| Event.Type == EWBRuntimePresentationEventType::MatchInitialized
 		|| Event.Type == EWBRuntimePresentationEventType::GameOver
 		|| Event.Type == EWBRuntimePresentationEventType::MarkerRevealed
-		|| Event.Type == EWBRuntimePresentationEventType::EquipmentDiscarded)
-	{
-		return true;
-	}
+		|| Event.Type == EWBRuntimePresentationEventType::MarkerConsumed
+		|| Event.Type == EWBRuntimePresentationEventType::EquipmentDiscarded;
 
 	AWBRuntimeUnitPresentationActor* PresentationActor = FindUnitPresentationActor(UnitId);
 	if (PresentationActor == nullptr
@@ -226,15 +231,19 @@ bool AWBBoardViewActor::PlayPresentationEvent(
 			if (PresentationActor != nullptr)
 			{
 				PresentationActor->ApplyPresentation(*Unit, UnitWorldLocation(Unit->Tile));
+				ApplyUnitAssetProfile(PresentationActor, *Unit);
+				SourceActor = PresentationActor;
 			}
 		}
 	}
-	if (PresentationActor == nullptr)
+	if (PresentationActor == nullptr && !bDoesNotRequireUnitActor)
 	{
 		return false;
 	}
 
-	FVector SourceLocation = PresentationActor->GetActorLocation();
+	FVector SourceLocation = SourceActor != nullptr
+		? SourceActor->GetActorLocation()
+		: GetActorLocation();
 	FVector DestinationLocation = SourceLocation;
 	if (Event.SourceTile.X >= 0 && Event.SourceTile.Y >= 0)
 	{
@@ -244,16 +253,35 @@ bool AWBBoardViewActor::PlayPresentationEvent(
 	{
 		DestinationLocation = UnitWorldLocation(Event.DestinationTile);
 	}
-	PresentationActor->BeginPresentationEvent(
+	else if (TargetActor != nullptr)
+	{
+		DestinationLocation = TargetActor->GetActorLocation();
+	}
+	if (PresentationActor != nullptr)
+	{
+		PresentationActor->BeginPresentationEvent(
+			Event,
+			SourceLocation,
+			DestinationLocation,
+			EffectiveDurationSeconds);
+	}
+	BeginBoundAssetPlayback(
 		Event,
+		SourceActor,
+		TargetActor,
 		SourceLocation,
-		DestinationLocation,
-		EffectiveDurationSeconds);
+		DestinationLocation);
 	return true;
 }
 
 void AWBBoardViewActor::CompletePresentationEvent(const FWBRuntimePresentationEvent& Event)
 {
+	if (PresentationAssetPlayback != nullptr)
+	{
+		PresentationAssetPlayback->CompleteEventPlayback(Event.SequenceIndex);
+		LastPresentationAssetDiagnostic =
+			PresentationAssetPlayback->GetLastDiagnostic();
+	}
 	int32 UnitId = Event.SourceUnitId;
 	if (Event.Type == EWBRuntimePresentationEventType::DamageApplied
 		|| Event.Type == EWBRuntimePresentationEventType::HPChanged
@@ -292,6 +320,10 @@ void AWBBoardViewActor::CompletePresentationEvent(const FWBRuntimePresentationEv
 
 void AWBBoardViewActor::SnapToAuthoritativePresentation()
 {
+	if (PresentationAssetPlayback != nullptr)
+	{
+		PresentationAssetPlayback->StopAllPresentationAssets();
+	}
 	if (!bPresentationSequenceActive)
 	{
 		return;
@@ -304,6 +336,35 @@ void AWBBoardViewActor::SnapToAuthoritativePresentation()
 	PendingSummary = FWBPublicBoardSummary();
 	PendingTilePresentations.Reset();
 	PendingUnitPresentations.Reset();
+}
+
+void AWBBoardViewActor::ConfigurePresentationAssets(
+	UWBRuntimePresentationAssetRegistry* InAssetRegistry,
+	UWBRuntimePresentationAssetPlaybackComponent* InAssetPlayback,
+	const int32 InMatchGeneration)
+{
+	if (PresentationAssetRegistry != InAssetRegistry
+		|| PresentationAssetPlayback != InAssetPlayback
+		|| PresentationAssetMatchGeneration != InMatchGeneration)
+	{
+		if (PresentationAssetPlayback != nullptr)
+		{
+			PresentationAssetPlayback->StopAllPresentationAssets();
+		}
+	}
+	PresentationAssetRegistry = InAssetRegistry;
+	PresentationAssetPlayback = InAssetPlayback;
+	PresentationAssetMatchGeneration = InMatchGeneration;
+	LastPresentationAssetDiagnostic.Reset();
+	for (const FWBRuntimeUnitPresentation& Unit : UnitPresentations)
+	{
+		ApplyUnitAssetProfile(FindUnitPresentationActor(Unit.UnitId), Unit);
+	}
+}
+
+FString AWBBoardViewActor::GetLastPresentationAssetDiagnostic() const
+{
+	return LastPresentationAssetDiagnostic;
 }
 
 FVector AWBBoardViewActor::TileToWorld(const FIntPoint Tile) const
@@ -400,6 +461,7 @@ void AWBBoardViewActor::SynchronizeUnitActors(const TArray<FWBRuntimeUnitPresent
 			FVector Location = TileToWorld(Unit.Tile);
 			Location.Z += ViewSettings.UnitHeight;
 			PresentationActor->ApplyPresentation(Unit, Location);
+			ApplyUnitAssetProfile(PresentationActor, Unit);
 		}
 	}
 
@@ -452,6 +514,19 @@ const FWBRuntimeUnitPresentation* AWBBoardViewActor::FindPendingUnit(const int32
 	});
 }
 
+const FWBRuntimeUnitPresentation* AWBBoardViewActor::FindPresentedUnit(
+	const int32 UnitId) const
+{
+	if (const FWBRuntimeUnitPresentation* Pending = FindPendingUnit(UnitId))
+	{
+		return Pending;
+	}
+	return UnitPresentations.FindByPredicate([UnitId](const FWBRuntimeUnitPresentation& Unit)
+	{
+		return Unit.UnitId == UnitId;
+	});
+}
+
 FVector AWBBoardViewActor::UnitWorldLocation(const FIntPoint Tile) const
 {
 	FVector Location = TileToWorld(Tile);
@@ -475,6 +550,62 @@ void AWBBoardViewActor::RenderMarkers()
 		Transform.SetScale3D(FVector(0.25f, 0.25f, 0.1f));
 		AddInstanceIfMeshAvailable(MarkerInstances, MarkerMesh, Transform);
 	}
+}
+
+void AWBBoardViewActor::ApplyUnitAssetProfile(
+	AWBRuntimeUnitPresentationActor* Actor,
+	const FWBRuntimeUnitPresentation& Unit)
+{
+	if (Actor == nullptr)
+	{
+		return;
+	}
+	const FWBRuntimeUnitProfileResolution Resolution =
+		PresentationAssetRegistry != nullptr
+			? PresentationAssetRegistry->ResolveUnitProfile(Unit)
+			: FWBRuntimeUnitProfileResolution();
+	Actor->ApplyAssetProfile(
+		Resolution,
+		PresentationAssetRegistry,
+		PresentationAssetMatchGeneration);
+	if (!Actor->GetLastAssetDiagnostic().IsEmpty())
+	{
+		LastPresentationAssetDiagnostic = Actor->GetLastAssetDiagnostic();
+	}
+}
+
+void AWBBoardViewActor::BeginBoundAssetPlayback(
+	const FWBRuntimePresentationEvent& Event,
+	AWBRuntimeUnitPresentationActor* SourceActor,
+	AWBRuntimeUnitPresentationActor* TargetActor,
+	const FVector& SourceLocation,
+	const FVector& TargetLocation)
+{
+	if (PresentationAssetRegistry == nullptr || PresentationAssetPlayback == nullptr)
+	{
+		return;
+	}
+	const FWBRuntimeUnitPresentation* SourceUnit =
+		FindPresentedUnit(Event.SourceUnitId);
+	const FWBRuntimeUnitPresentation* TargetUnit =
+		FindPresentedUnit(Event.TargetUnitId);
+	const FWBRuntimePresentationBindingContext Context =
+		PresentationAssetRegistry->BuildBindingContext(
+			Event,
+			SourceUnit,
+			TargetUnit);
+	const FWBRuntimePresentationBindingResolution Resolution =
+		PresentationAssetRegistry->ResolveEventBinding(Context);
+	const FWBRuntimePresentationAssetPlaybackResult Playback =
+		PresentationAssetPlayback->BeginEventPlayback(
+			Event,
+			Resolution,
+			SourceActor,
+			TargetActor,
+			SourceLocation,
+			TargetLocation,
+			PresentationAssetMatchGeneration);
+	LastPresentationAssetDiagnostic = Playback.Diagnostic;
 }
 
 void AWBBoardViewActor::RenderPublicBoardSummary(const FWBPublicBoardSummary& Summary)

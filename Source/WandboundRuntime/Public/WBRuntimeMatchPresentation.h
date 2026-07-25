@@ -289,6 +289,24 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeMatchPresentation
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 PendingPresentationEventCount = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString CurrentPresentationPublicLabel;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 CurrentPresentationDamageAmount = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 CurrentPresentationHPDelta = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 CurrentPresentationArmorDelta = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bTerminalPresentationCue = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PresentationAssetDiagnostic;
 };
 
 USTRUCT(BlueprintType)
