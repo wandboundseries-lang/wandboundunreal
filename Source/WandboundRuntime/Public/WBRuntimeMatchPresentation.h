@@ -280,6 +280,15 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeMatchPresentation
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 NPCTraceEventCount = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bPresentationSequenceActive = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString CurrentPresentationEventLabel;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 PendingPresentationEventCount = 0;
 };
 
 USTRUCT(BlueprintType)

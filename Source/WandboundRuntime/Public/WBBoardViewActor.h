@@ -5,6 +5,7 @@
 #include "WBBoardViewTypes.h"
 #include "WBPublicBoardSummary.h"
 #include "WBRuntimeMatchPresentation.h"
+#include "WBRuntimePresentationEvent.h"
 #include "WBBoardViewActor.generated.h"
 
 class USceneComponent;
@@ -65,6 +66,12 @@ public:
 		const TArray<FWBRuntimeBoardTilePresentation>& Tiles,
 		const TArray<FWBRuntimeUnitPresentation>& Units);
 	void ClearBoardView();
+	void BeginPresentationSequence();
+	void CompletePresentationSequence();
+	void CancelPresentationSequence();
+	bool PlayPresentationEvent(const FWBRuntimePresentationEvent& Event, float EffectiveDurationSeconds);
+	void CompletePresentationEvent(const FWBRuntimePresentationEvent& Event);
+	void SnapToAuthoritativePresentation();
 
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Board")
 	FVector TileToWorld(FIntPoint Tile) const;
@@ -118,6 +125,14 @@ private:
 	UPROPERTY(Transient)
 	TMap<int32, TObjectPtr<AWBRuntimeUnitPresentationActor>> UnitPresentationActors;
 
+	FWBPublicBoardSummary PendingSummary;
+	TArray<FWBRuntimeBoardTilePresentation> PendingTilePresentations;
+	TArray<FWBRuntimeUnitPresentation> PendingUnitPresentations;
+	bool bPresentationSequenceActive = false;
+
 	void SynchronizeUnitActors(const TArray<FWBRuntimeUnitPresentation>& Units);
+	AWBRuntimeUnitPresentationActor* EnsureUnitPresentationActor(int32 UnitId);
+	const FWBRuntimeUnitPresentation* FindPendingUnit(int32 UnitId) const;
+	FVector UnitWorldLocation(FIntPoint Tile) const;
 	void RenderMarkers();
 };

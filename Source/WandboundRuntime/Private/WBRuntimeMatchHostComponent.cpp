@@ -1,6 +1,12 @@
 #include "WBRuntimeMatchHostComponent.h"
 
+#include "GameFramework/Actor.h"
+#include "Misc/App.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "WBBoardViewActor.h"
+#include "WBRuntimePresentationSequenceComponent.h"
+#include "WBRuntimeTracePresentationTranslator.h"
 
 namespace
 {
@@ -229,6 +235,13 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeDevelopment
 
 void UWBRuntimeMatchHostComponent::ResetMatch()
 {
+	if (PresentationSequence != nullptr)
+	{
+		PresentationSequence->CancelSequence();
+	}
+	bPresentationInputLocked = false;
+	bLatestSequenceHadNPCEvents = false;
+	PresentationFailureReason.Reset();
 	ClearSelectionInternal(false);
 	Coordinator.Reset();
 	InitializationRequest = FWBMatchInitializationRequest();
@@ -302,6 +315,10 @@ int32 UWBRuntimeMatchHostComponent::GetCurrentViewerPlayerId() const
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SetCurrentViewerPlayerId(const int32 ViewerPlayerId)
 {
+	if (IsPresentationSequenceActive())
+	{
+		return MakeResult(false, TEXT("presentation_sequence_active"));
+	}
 	if (!IsMatchInitialized())
 	{
 		return MakeResult(false, TEXT("match_not_initialized"));
@@ -387,6 +404,7 @@ TArray<int32> UWBRuntimeMatchHostComponent::GetSelectableUnitIds() const
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectUnit(const int32 UnitId)
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	if (!GetSelectableUnitIds().Contains(UnitId)) return MakeResult(false, TEXT("unit_not_selectable"));
 	SelectedUnitId = UnitId;
 	SelectedCardInstanceId.Reset();
@@ -402,6 +420,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectUnit(const int3
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectCardInstance(const FString& CardInstanceId)
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	if (!GetSelectableCardInstanceIds().Contains(CardInstanceId)) return MakeResult(false, TEXT("card_not_selectable"));
 	SelectedUnitId = -1;
 	SelectedCardInstanceId = CardInstanceId;
@@ -417,6 +436,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectCardInstance(co
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectTile(const FIntPoint Tile)
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	FWBRuntimeMatchCommandResult Result = MakeResult(false, TEXT("selected_tile_has_no_legal_action"));
 	for (const FWBMatchLegalAction& Action : CurrentLegalDecisions)
 	{
@@ -454,6 +474,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectTile(const FInt
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectUnitTarget(const int32 UnitId)
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	if (SelectedUnitId < 0 && SelectedCardInstanceId.IsEmpty())
 	{
 		return SelectUnit(UnitId);
@@ -498,6 +519,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectUnitTarget(cons
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectActionFamily(const EWBRuntimeMatchActionFamily Family)
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	const bool bAvailable = GetActionsForCurrentSelection().ContainsByPredicate([Family](const FWBRuntimeLegalActionPresentation& Action)
 	{
 		return Action.Family == Family;
@@ -539,6 +561,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SelectActionFamily(co
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::ChooseActionCandidate(const FString& ActionId)
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	if (!AmbiguousActionIds.Contains(ActionId))
 	{
 		return MakeResult(false, TEXT("ambiguous_action_candidate_not_found"), ActionId);
@@ -580,6 +603,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SubmitLegalActionAtRe
 		OnActionRejected.Broadcast();
 		return Result;
 	};
+	if (IsPresentationSequenceActive()) return Reject(TEXT("presentation_sequence_active"));
 	if (!IsMatchInitialized()) return Reject(TEXT("match_not_initialized"));
 	if (IsGameOver()) return Reject(TEXT("game_over"));
 	if (ExpectedMatchGeneration != MatchGeneration) return Reject(TEXT("stale_match_generation"));
@@ -598,16 +622,53 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SubmitLegalActionAtRe
 	}
 
 	const bool bHadNPCEvents = LatestOperationResult.TraceEvents.ContainsByPredicate(IsNPCTrace);
+	const FWBRuntimePresentationTranslationResult Translation =
+		WBRuntimeTracePresentationTranslator::Translate(LatestOperationResult.TraceEvents);
 	ClearSelectionInternal(false);
+	bool bSequencePrepared = false;
+	if (Translation.bOk && !Translation.Events.IsEmpty())
+	{
+		if (UWBRuntimePresentationSequenceComponent* Sequence = EnsurePresentationSequence())
+		{
+			const FWBRuntimePresentationSequenceResult EnqueueResult =
+				Sequence->EnqueueEvents(Translation.Events, MatchGeneration, DecisionRevision + 1);
+			if (EnqueueResult.bOk)
+			{
+				bPresentationInputLocked = true;
+				bLatestSequenceHadNPCEvents = bHadNPCEvents;
+				bSequencePrepared = true;
+				if (IsValid(BoardActor)) BoardActor->BeginPresentationSequence();
+			}
+			else
+			{
+				PresentationFailureReason = EnqueueResult.Reason;
+			}
+		}
+	}
+	else if (!Translation.bOk)
+	{
+		PresentationFailureReason = Translation.Reason;
+	}
 	FWBRuntimeMatchCommandResult Result = RefreshFromCoordinator(TEXT("action_resolved"));
 	Result.ActionId = ActionId;
 	if (bHadNPCEvents) OnNPCPhaseResolved.Broadcast();
 	OnActionResolved.Broadcast();
+	if (bSequencePrepared)
+	{
+		OnPresentationSequenceStarted.Broadcast();
+		const FWBRuntimePresentationSequenceResult BeginResult = PresentationSequence->BeginSequence();
+		if (!BeginResult.bOk)
+		{
+			PresentationFailureReason = BeginResult.Reason;
+			HandlePresentationSequenceCancelled();
+		}
+	}
 	return Result;
 }
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::EndTurn()
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	TArray<FString> Candidates;
 	for (const FWBMatchLegalAction& Action : CurrentLegalDecisions)
 	{
@@ -627,6 +688,7 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::EndTurn()
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::RefreshPresentation()
 {
+	if (IsPresentationSequenceActive()) return MakeResult(false, TEXT("presentation_sequence_active"));
 	if (!IsMatchInitialized()) return MakeResult(false, TEXT("match_not_initialized"));
 	ClearSelectionInternal(false);
 	return RefreshFromCoordinator(TEXT("presentation_refreshed"));
@@ -634,6 +696,45 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::RefreshPresentation()
 
 bool UWBRuntimeMatchHostComponent::IsGameOver() const { return CurrentPresentation.bGameOver; }
 int32 UWBRuntimeMatchHostComponent::GetWinnerPlayerId() const { return CurrentPresentation.WinnerPlayerId; }
+bool UWBRuntimeMatchHostComponent::IsPresentationSequenceActive() const
+{
+	return bPresentationInputLocked
+		|| (PresentationSequence != nullptr && PresentationSequence->IsSequenceActive());
+}
+
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SkipCurrentPresentationEvent()
+{
+	if (PresentationSequence == nullptr)
+	{
+		return MakeResult(false, TEXT("presentation_sequence_not_active"));
+	}
+	const FWBRuntimePresentationSequenceResult SequenceResult =
+		PresentationSequence->SkipCurrentEvent();
+	return MakeResult(SequenceResult.bOk, SequenceResult.Reason);
+}
+
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SkipAllPresentationEvents()
+{
+	if (PresentationSequence == nullptr)
+	{
+		return MakeResult(false, TEXT("presentation_sequence_not_active"));
+	}
+	const FWBRuntimePresentationSequenceResult SequenceResult = PresentationSequence->SkipAll();
+	return MakeResult(SequenceResult.bOk, SequenceResult.Reason);
+}
+
+void UWBRuntimeMatchHostComponent::SetPresentationPlaybackSpeed(const float PlaybackSpeed)
+{
+	if (UWBRuntimePresentationSequenceComponent* Sequence = EnsurePresentationSequence())
+	{
+		Sequence->SetPlaybackSpeed(PlaybackSpeed);
+	}
+}
+
+UWBRuntimePresentationSequenceComponent* UWBRuntimeMatchHostComponent::GetPresentationSequence() const
+{
+	return PresentationSequence;
+}
 const FWBMatchObservation& UWBRuntimeMatchHostComponent::GetCurrentObservation() const { return CurrentObservation; }
 const FWBMatchOperationResult& UWBRuntimeMatchHostComponent::GetLatestOperationResult() const { return LatestOperationResult; }
 const WBMatchCoordinator* UWBRuntimeMatchHostComponent::GetCoordinatorForInspection() const { return Coordinator.Get(); }
@@ -650,7 +751,9 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::RefreshFromCoordinato
 	OnObservationRefreshed.Broadcast();
 	OnDecisionChanged.Broadcast();
 	OnBoardPresentationRefreshed.Broadcast();
-	if (CurrentPresentation.bGameOver && TerminalBroadcastGeneration != MatchGeneration)
+	if (CurrentPresentation.bGameOver
+		&& !IsPresentationSequenceActive()
+		&& TerminalBroadcastGeneration != MatchGeneration)
 	{
 		TerminalBroadcastGeneration = MatchGeneration;
 		OnGameOver.Broadcast();
@@ -703,6 +806,17 @@ void UWBRuntimeMatchHostComponent::RebuildPresentationModels(const FString& Stat
 		if (Player.PlayerId == CurrentObservation.PublicTurn.CurrentPlayerId) CurrentPresentation.RemainingMP = Player.RemainingMP;
 	}
 	CurrentPresentation.NPCTraceEventCount = LatestOperationResult.TraceEvents.FilterByPredicate(IsNPCTrace).Num();
+	CurrentPresentation.bPresentationSequenceActive = IsPresentationSequenceActive();
+	if (PresentationSequence != nullptr)
+	{
+		CurrentPresentation.PendingPresentationEventCount = PresentationSequence->GetPendingEventCount();
+		if (PresentationSequence->IsSequenceActive())
+		{
+			CurrentPresentation.CurrentPresentationEventLabel =
+				StaticEnum<EWBRuntimePresentationEventType>()->GetNameStringByValue(
+					static_cast<int64>(PresentationSequence->GetCurrentEvent().Type));
+		}
+	}
 
 	UnitPresentations.Reset();
 	for (const FWBPublicUnitBoardSummary& Unit : CurrentObservation.PublicBoard.Units)
@@ -840,7 +954,9 @@ void UWBRuntimeMatchHostComponent::RebuildHandPresentations()
 		Presentation.DefinitionId = Card.CardId;
 		Presentation.DisplayName = Card.CardId;
 		Presentation.HandIndex = Index;
-		Presentation.bSelectable = !CurrentPresentation.bGameOver && SelectableCards.Contains(Card.InstanceId);
+		Presentation.bSelectable = !CurrentPresentation.bGameOver
+			&& !IsPresentationSequenceActive()
+			&& SelectableCards.Contains(Card.InstanceId);
 		Presentation.bSelected = SelectedCardInstanceId == Card.InstanceId;
 
 		for (const FWBRuntimeLegalActionPresentation& Action : LegalActionPresentations)
@@ -986,4 +1102,126 @@ void UWBRuntimeMatchHostComponent::ClearSelectionInternal(const bool bBroadcast)
 	}
 	if (BoardActor != nullptr) BoardActor->ClearHighlights();
 	if (bBroadcast) OnSelectionChanged.Broadcast();
+}
+
+UWBRuntimePresentationSequenceComponent* UWBRuntimeMatchHostComponent::EnsurePresentationSequence()
+{
+	if (PresentationSequence != nullptr)
+	{
+		return PresentationSequence;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	UObject* Outer = OwnerActor != nullptr ? static_cast<UObject*>(OwnerActor) : static_cast<UObject*>(this);
+	PresentationSequence = NewObject<UWBRuntimePresentationSequenceComponent>(
+		Outer,
+		TEXT("RuntimePresentationSequence"));
+	if (PresentationSequence == nullptr)
+	{
+		PresentationFailureReason = TEXT("presentation_sequence_creation_failed");
+		return nullptr;
+	}
+	if (OwnerActor != nullptr)
+	{
+		OwnerActor->AddInstanceComponent(PresentationSequence);
+		PresentationSequence->RegisterComponent();
+	}
+	PresentationSequence->OnPresentationEventStarted.AddDynamic(
+		this,
+		&UWBRuntimeMatchHostComponent::HandlePresentationEventStarted);
+	PresentationSequence->OnPresentationEventCompleted.AddDynamic(
+		this,
+		&UWBRuntimeMatchHostComponent::HandlePresentationEventCompleted);
+	PresentationSequence->OnPresentationSequenceCompleted.AddDynamic(
+		this,
+		&UWBRuntimeMatchHostComponent::HandlePresentationSequenceCompleted);
+	PresentationSequence->OnPresentationSequenceCancelled.AddDynamic(
+		this,
+		&UWBRuntimeMatchHostComponent::HandlePresentationSequenceCancelled);
+	if (FApp::IsUnattended()
+		|| FParse::Param(FCommandLine::Get(), TEXT("WandboundLocalPlaySmoke")))
+	{
+		PresentationSequence->SetPlaybackSpeed(0.0f);
+	}
+	return PresentationSequence;
+}
+
+void UWBRuntimeMatchHostComponent::FinishDeferredTerminalBroadcast()
+{
+	if (CurrentPresentation.bGameOver && TerminalBroadcastGeneration != MatchGeneration)
+	{
+		TerminalBroadcastGeneration = MatchGeneration;
+		OnGameOver.Broadcast();
+	}
+}
+
+void UWBRuntimeMatchHostComponent::HandlePresentationEventStarted(
+	const FWBRuntimePresentationEvent Event)
+{
+	CurrentPresentation.bPresentationSequenceActive = true;
+	CurrentPresentation.CurrentPresentationEventLabel =
+		StaticEnum<EWBRuntimePresentationEventType>()->GetNameStringByValue(
+			static_cast<int64>(Event.Type));
+	CurrentPresentation.PendingPresentationEventCount =
+		PresentationSequence != nullptr ? PresentationSequence->GetPendingEventCount() : 0;
+	if (IsValid(BoardActor) && PresentationSequence != nullptr)
+	{
+		const float Speed = PresentationSequence->GetPlaybackSpeed();
+		const float EffectiveDuration =
+			Speed <= 0.0f ? 0.0f : Event.SuggestedDurationSeconds / Speed;
+		if (!BoardActor->PlayPresentationEvent(Event, EffectiveDuration))
+		{
+			PresentationFailureReason = TEXT("presentation_actor_missing");
+			BoardActor->SnapToAuthoritativePresentation();
+		}
+	}
+	OnDecisionChanged.Broadcast();
+}
+
+void UWBRuntimeMatchHostComponent::HandlePresentationEventCompleted(
+	const FWBRuntimePresentationEvent Event)
+{
+	if (IsValid(BoardActor))
+	{
+		BoardActor->CompletePresentationEvent(Event);
+	}
+}
+
+void UWBRuntimeMatchHostComponent::HandlePresentationSequenceCompleted()
+{
+	bPresentationInputLocked = false;
+	CurrentPresentation.bPresentationSequenceActive = false;
+	CurrentPresentation.CurrentPresentationEventLabel.Reset();
+	CurrentPresentation.PendingPresentationEventCount = 0;
+	if (IsValid(BoardActor))
+	{
+		BoardActor->CompletePresentationSequence();
+		BoardActor->SetAppliedPresentationRevision(PresentationRevision);
+	}
+	OnBoardPresentationRefreshed.Broadcast();
+	OnDecisionChanged.Broadcast();
+	OnPresentationSequenceCompleted.Broadcast();
+	if (bLatestSequenceHadNPCEvents)
+	{
+		OnNPCPhasePresentationCompleted.Broadcast();
+	}
+	bLatestSequenceHadNPCEvents = false;
+	FinishDeferredTerminalBroadcast();
+}
+
+void UWBRuntimeMatchHostComponent::HandlePresentationSequenceCancelled()
+{
+	bPresentationInputLocked = false;
+	CurrentPresentation.bPresentationSequenceActive = false;
+	CurrentPresentation.CurrentPresentationEventLabel.Reset();
+	CurrentPresentation.PendingPresentationEventCount = 0;
+	if (IsValid(BoardActor))
+	{
+		BoardActor->CancelPresentationSequence();
+		BoardActor->SetAppliedPresentationRevision(PresentationRevision);
+	}
+	bLatestSequenceHadNPCEvents = false;
+	OnBoardPresentationRefreshed.Broadcast();
+	OnDecisionChanged.Broadcast();
+	FinishDeferredTerminalBroadcast();
 }

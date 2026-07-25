@@ -9,6 +9,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "WBRuntimeMatchHostComponent.h"
+#include "WBRuntimePresentationSequenceComponent.h"
 
 namespace
 {
@@ -130,6 +131,7 @@ void UWBRuntimeMatchHUDWidget::RefreshFromHost()
 	}
 
 	const FWBRuntimeMatchPresentation Presentation = MatchHost->GetCurrentPresentation();
+	const bool bSequenceActive = MatchHost->IsPresentationSequenceActive();
 	DisplayedHand = MatchHost->GetCurrentHandCards();
 	DisplayedActions = MatchHost->GetActionsForCurrentSelection();
 	DisplayedSelection = MatchHost->GetCurrentSelection();
@@ -146,14 +148,27 @@ void UWBRuntimeMatchHUDWidget::RefreshFromHost()
 		DisplayedSelection.SelectedUnitId,
 		DisplayedSelection.SelectedCardInstanceId.IsEmpty() ? TEXT("none") : *DisplayedSelection.SelectedCardInstanceId,
 		DisplayedSelection.StatusReason.IsEmpty() ? TEXT("ready") : *DisplayedSelection.StatusReason)));
+	PresentationSequenceText->SetText(FText::FromString(
+		bSequenceActive
+			? FString::Printf(
+				TEXT("Presenting: %s  Pending: %d"),
+				*Presentation.CurrentPresentationEventLabel,
+				Presentation.PendingPresentationEventCount)
+			: FString(TEXT("Presentation ready"))));
 	RebuildHandWidgets();
 	RebuildActionWidgets();
 	RebuildTerminalState(Presentation);
-	SubmitButton->SetIsEnabled(!Presentation.bGameOver && !DisplayedSelection.ResolvedActionId.IsEmpty());
-	EndTurnButton->SetIsEnabled(!Presentation.bGameOver && MatchHost->GetCurrentLegalActions().ContainsByPredicate([](const FWBRuntimeLegalActionPresentation& Action)
+	SubmitButton->SetIsEnabled(!bSequenceActive && !Presentation.bGameOver && !DisplayedSelection.ResolvedActionId.IsEmpty());
+	EndTurnButton->SetIsEnabled(!bSequenceActive && !Presentation.bGameOver && MatchHost->GetCurrentLegalActions().ContainsByPredicate([](const FWBRuntimeLegalActionPresentation& Action)
 	{
 		return Action.Family == EWBRuntimeMatchActionFamily::EndTurn;
 	}));
+	ClearButton->SetIsEnabled(!bSequenceActive);
+	RefreshButton->SetIsEnabled(!bSequenceActive);
+	ViewerSwitchButton->SetIsEnabled(!bSequenceActive && bAllowDevelopmentViewerSwitch);
+	SkipCurrentButton->SetIsEnabled(bSequenceActive);
+	SkipAllButton->SetIsEnabled(bSequenceActive);
+	PlaybackSpeedButton->SetIsEnabled(bSequenceActive);
 	OnHandRefreshed.Broadcast();
 	OnTargetHighlightsChanged.Broadcast();
 }
@@ -288,6 +303,33 @@ void UWBRuntimeMatchHUDWidget::ClearSelection()
 	RefreshFromHost();
 }
 
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHUDWidget::SkipCurrentPresentationEvent()
+{
+	const FWBRuntimeMatchCommandResult Result = MatchHost != nullptr
+		? MatchHost->SkipCurrentPresentationEvent()
+		: FWBRuntimeMatchCommandResult();
+	ApplyCommandResult(Result, false);
+	return Result;
+}
+
+FWBRuntimeMatchCommandResult UWBRuntimeMatchHUDWidget::SkipAllPresentationEvents()
+{
+	const FWBRuntimeMatchCommandResult Result = MatchHost != nullptr
+		? MatchHost->SkipAllPresentationEvents()
+		: FWBRuntimeMatchCommandResult();
+	ApplyCommandResult(Result, false);
+	return Result;
+}
+
+void UWBRuntimeMatchHUDWidget::SetPresentationPlaybackSpeed(const float PlaybackSpeed)
+{
+	if (MatchHost != nullptr)
+	{
+		MatchHost->SetPresentationPlaybackSpeed(PlaybackSpeed);
+	}
+	RefreshFromHost();
+}
+
 void UWBRuntimeMatchHUDWidget::EnsureWidgetTreeBuilt()
 {
 	if (WidgetTree == nullptr) WidgetTree = NewObject<UWidgetTree>(this, TEXT("RuntimeWidgetTree"));
@@ -332,6 +374,20 @@ void UWBRuntimeMatchHUDWidget::HandleRefreshPressed()
 	if (MatchHost != nullptr) ApplyCommandResult(MatchHost->RefreshPresentation(), false);
 }
 void UWBRuntimeMatchHUDWidget::HandleViewerSwitchPressed() { RequestViewerSwitch(); }
+void UWBRuntimeMatchHUDWidget::HandleSkipCurrentPressed() { SkipCurrentPresentationEvent(); }
+void UWBRuntimeMatchHUDWidget::HandleSkipAllPressed() { SkipAllPresentationEvents(); }
+void UWBRuntimeMatchHUDWidget::HandlePlaybackSpeedPressed()
+{
+	if (MatchHost == nullptr || MatchHost->GetPresentationSequence() == nullptr)
+	{
+		return;
+	}
+	const float CurrentSpeed = MatchHost->GetPresentationSequence()->GetPlaybackSpeed();
+	const float NextSpeed = CurrentSpeed <= 0.0f
+		? 0.5f
+		: (CurrentSpeed < 0.75f ? 1.0f : (CurrentSpeed < 1.5f ? 2.0f : 0.0f));
+	SetPresentationPlaybackSpeed(NextSpeed);
+}
 
 void UWBRuntimeMatchHUDWidget::BuildStaticLayout()
 {
@@ -358,6 +414,10 @@ void UWBRuntimeMatchHUDWidget::BuildStaticLayout()
 	Main->AddChild(AmbiguityPanel);
 	FeedbackText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("ActionFeedback"));
 	Main->AddChild(FeedbackText);
+	PresentationSequenceText = WidgetTree->ConstructWidget<UTextBlock>(
+		UTextBlock::StaticClass(),
+		TEXT("PresentationSequenceStatus"));
+	Main->AddChild(PresentationSequenceText);
 
 	UHorizontalBox* Controls = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ActionControls"));
 	Main->AddChild(Controls);
@@ -375,11 +435,17 @@ void UWBRuntimeMatchHUDWidget::BuildStaticLayout()
 	EndTurnButton = CreateControl(TEXT("EndTurnButton"), TEXT("End Turn"));
 	RefreshButton = CreateControl(TEXT("RefreshButton"), TEXT("Refresh"));
 	ViewerSwitchButton = CreateControl(TEXT("ViewerButton"), TEXT("Switch Viewer"));
+	SkipCurrentButton = CreateControl(TEXT("SkipCurrentButton"), TEXT("Skip"));
+	SkipAllButton = CreateControl(TEXT("SkipAllButton"), TEXT("Skip All"));
+	PlaybackSpeedButton = CreateControl(TEXT("PlaybackSpeedButton"), TEXT("Speed"));
 	ClearButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandleClearPressed);
 	SubmitButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandleSubmitPressed);
 	EndTurnButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandleEndTurnPressed);
 	RefreshButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandleRefreshPressed);
 	ViewerSwitchButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandleViewerSwitchPressed);
+	SkipCurrentButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandleSkipCurrentPressed);
+	SkipAllButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandleSkipAllPressed);
+	PlaybackSpeedButton->OnClicked.AddDynamic(this, &UWBRuntimeMatchHUDWidget::HandlePlaybackSpeedPressed);
 
 	TerminalOverlay = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("TerminalOverlay"));
 	TerminalText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("TerminalText"));
@@ -399,7 +465,7 @@ void UWBRuntimeMatchHUDWidget::RebuildHandWidgets()
 			Card.CardInstanceId,
 			EWBRuntimeMatchActionFamily::CoreAction,
 			HandCardLabel(Card));
-		Button->SetIsEnabled(Card.bSelectable);
+		Button->SetIsEnabled(Card.bSelectable && MatchHost != nullptr && !MatchHost->IsPresentationSequenceActive());
 	}
 }
 
@@ -415,7 +481,9 @@ void UWBRuntimeMatchHUDWidget::RebuildActionWidgets()
 	});
 	for (const EWBRuntimeMatchActionFamily Family : Families)
 	{
-		AddOptionButton(ActionFamilyPanel, EWBRuntimeHUDOptionKind::ActionFamily, FString(), Family, FamilyLabel(Family));
+		UWBRuntimeHUDOptionButton* Button =
+			AddOptionButton(ActionFamilyPanel, EWBRuntimeHUDOptionKind::ActionFamily, FString(), Family, FamilyLabel(Family));
+		Button->SetIsEnabled(MatchHost != nullptr && !MatchHost->IsPresentationSequenceActive());
 	}
 	for (const FString& ActionId : DisplayedSelection.AmbiguousActionIds)
 	{
@@ -437,7 +505,7 @@ void UWBRuntimeMatchHUDWidget::RebuildActionWidgets()
 
 void UWBRuntimeMatchHUDWidget::RebuildTerminalState(const FWBRuntimeMatchPresentation& Presentation)
 {
-	if (!Presentation.bGameOver)
+	if (!Presentation.bGameOver || (MatchHost != nullptr && MatchHost->IsPresentationSequenceActive()))
 	{
 		TerminalOverlay->SetVisibility(ESlateVisibility::Collapsed);
 		return;

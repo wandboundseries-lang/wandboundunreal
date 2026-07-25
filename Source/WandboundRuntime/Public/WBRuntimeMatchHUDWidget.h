@@ -105,6 +105,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Wandbound|HUD")
 	void ClearSelection();
 
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|HUD")
+	FWBRuntimeMatchCommandResult SkipCurrentPresentationEvent();
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|HUD")
+	FWBRuntimeMatchCommandResult SkipAllPresentationEvents();
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|HUD")
+	void SetPresentationPlaybackSpeed(float PlaybackSpeed);
+
 	void EnsureWidgetTreeBuilt();
 	void HandleOptionPressed(EWBRuntimeHUDOptionKind Kind, const FString& StableId, EWBRuntimeMatchActionFamily Family);
 
@@ -202,6 +211,9 @@ private:
 	TObjectPtr<UTextBlock> FeedbackText;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> PresentationSequenceText;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UBorder> TerminalOverlay;
 
 	UPROPERTY(Transient)
@@ -221,6 +233,15 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> EndTurnButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> SkipCurrentButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> SkipAllButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> PlaybackSpeedButton;
 
 	UPROPERTY(Transient)
 	TArray<FWBRuntimeHandCardPresentation> DisplayedHand;
@@ -256,6 +277,15 @@ private:
 
 	UFUNCTION()
 	void HandleViewerSwitchPressed();
+
+	UFUNCTION()
+	void HandleSkipCurrentPressed();
+
+	UFUNCTION()
+	void HandleSkipAllPressed();
+
+	UFUNCTION()
+	void HandlePlaybackSpeedPressed();
 
 	void BuildStaticLayout();
 	void RebuildHandWidgets();

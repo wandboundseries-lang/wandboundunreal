@@ -4,9 +4,11 @@
 #include "Components/ActorComponent.h"
 #include "WBMatchCoordinator.h"
 #include "WBRuntimeMatchPresentation.h"
+#include "WBRuntimePresentationEvent.h"
 #include "WBRuntimeMatchHostComponent.generated.h"
 
 class AWBBoardViewActor;
+class UWBRuntimePresentationSequenceComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWBRuntimeMatchEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWBRuntimeUnitPresentationEvent, int32, UnitId);
@@ -64,6 +66,15 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Wandbound|Match")
 	FWBRuntimeMatchEvent OnGameOver;
+
+	UPROPERTY(BlueprintAssignable, Category = "Wandbound|Presentation")
+	FWBRuntimeMatchEvent OnPresentationSequenceStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Wandbound|Presentation")
+	FWBRuntimeMatchEvent OnPresentationSequenceCompleted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Wandbound|Presentation")
+	FWBRuntimeMatchEvent OnNPCPhasePresentationCompleted;
 
 	FWBRuntimeMatchCommandResult InitializeMatch(
 		const FWBMatchInitializationRequest& Request,
@@ -158,6 +169,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Match")
 	int32 GetWinnerPlayerId() const;
 
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation")
+	bool IsPresentationSequenceActive() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Presentation")
+	FWBRuntimeMatchCommandResult SkipCurrentPresentationEvent();
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Presentation")
+	FWBRuntimeMatchCommandResult SkipAllPresentationEvents();
+
+	UFUNCTION(BlueprintCallable, Category = "Wandbound|Presentation")
+	void SetPresentationPlaybackSpeed(float PlaybackSpeed);
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation")
+	UWBRuntimePresentationSequenceComponent* GetPresentationSequence() const;
+
 	const FWBMatchObservation& GetCurrentObservation() const;
 	const FWBMatchOperationResult& GetLatestOperationResult() const;
 	const WBMatchCoordinator* GetCoordinatorForInspection() const;
@@ -185,6 +211,9 @@ private:
 	UPROPERTY(Transient)
 	TArray<FWBRuntimeBoardTilePresentation> TilePresentations;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UWBRuntimePresentationSequenceComponent> PresentationSequence;
+
 	int32 CurrentViewerPlayerId = -1;
 	int32 MatchGeneration = 0;
 	int32 DecisionRevision = 0;
@@ -197,6 +226,9 @@ private:
 	EWBRuntimeMatchActionFamily SelectedActionFamily = EWBRuntimeMatchActionFamily::CoreAction;
 	TArray<FString> AmbiguousActionIds;
 	FString SelectionStatusReason;
+	FString PresentationFailureReason;
+	bool bPresentationInputLocked = false;
+	bool bLatestSequenceHadNPCEvents = false;
 
 	FWBRuntimeMatchCommandResult RefreshFromCoordinator(const FString& StatusMessage);
 	FWBRuntimeMatchCommandResult MakeResult(bool bOk, const FString& Reason, const FString& ActionId = FString()) const;
@@ -208,4 +240,18 @@ private:
 	FIntPoint TargetTileForAction(const FWBMatchLegalAction& Action) const;
 	bool ActionMatchesCurrentSelection(const FWBMatchLegalAction& Action) const;
 	void ClearSelectionInternal(bool bBroadcast);
+	UWBRuntimePresentationSequenceComponent* EnsurePresentationSequence();
+	void FinishDeferredTerminalBroadcast();
+
+	UFUNCTION()
+	void HandlePresentationEventStarted(FWBRuntimePresentationEvent Event);
+
+	UFUNCTION()
+	void HandlePresentationEventCompleted(FWBRuntimePresentationEvent Event);
+
+	UFUNCTION()
+	void HandlePresentationSequenceCompleted();
+
+	UFUNCTION()
+	void HandlePresentationSequenceCancelled();
 };
