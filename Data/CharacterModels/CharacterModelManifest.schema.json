@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wandbound.local/schemas/character-model-manifest-v1.json",
+  "title": "Wandbound Character Model Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "character_id",
+    "display_name",
+    "card_definition_id",
+    "approval",
+    "source",
+    "presentation",
+    "import"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "character_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "card_definition_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "maxLength": 128
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved_for_import",
+        "approved_by"
+      ],
+      "properties": {
+        "approved_for_import": {
+          "const": true
+        },
+        "approved_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "approval_note": {
+          "type": "string",
+          "maxLength": 512
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "model_format",
+        "model_type"
+      ],
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/bundlePath"
+        },
+        "model_format": {
+          "enum": [
+            "fbx",
+            "glb",
+            "gltf"
+          ]
+        },
+        "model_type": {
+          "enum": [
+            "static",
+            "skeletal"
+          ]
+        },
+        "textures_directory": {
+          "$ref": "#/$defs/bundlePath"
+        },
+        "animations_directory": {
+          "$ref": "#/$defs/bundlePath"
+        },
+        "textures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "path"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "base_color",
+                  "normal",
+                  "orm",
+                  "roughness",
+                  "metallic",
+                  "opacity",
+                  "emissive",
+                  "additional"
+                ]
+              },
+              "path": {
+                "$ref": "#/$defs/imagePath"
+              },
+              "required": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        "animations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "path"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "idle",
+                  "move",
+                  "attack",
+                  "hit",
+                  "summon",
+                  "death",
+                  "activation"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_./ -]+\\.fbx$"
+              },
+              "required": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "scale",
+        "rotation",
+        "offset",
+        "facing_axis"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "player_hero",
+            "player_unit",
+            "neutral_npc"
+          ]
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "rotation": {
+          "$ref": "#/$defs/vector3"
+        },
+        "offset": {
+          "$ref": "#/$defs/vector3"
+        },
+        "facing_axis": {
+          "enum": [
+            "positive_x",
+            "negative_x",
+            "positive_y",
+            "negative_y"
+          ]
+        }
+      }
+    },
+    "import": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "import_materials",
+        "import_textures",
+        "import_animations",
+        "create_physics_asset",
+        "generate_collision",
+        "skeleton_policy",
+        "normal_policy"
+      ],
+      "properties": {
+        "import_materials": {
+          "type": "boolean"
+        },
+        "import_textures": {
+          "type": "boolean"
+        },
+        "import_animations": {
+          "type": "boolean"
+        },
+        "create_physics_asset": {
+          "type": "boolean"
+        },
+        "generate_collision": {
+          "type": "boolean"
+        },
+        "skeleton_policy": {
+          "enum": [
+            "none",
+            "create",
+            "reuse"
+          ]
+        },
+        "existing_skeleton_package": {
+          "type": "string",
+          "pattern": "^/Game/[A-Za-z0-9_/]+(?:\\.[A-Za-z0-9_]+)?$"
+        },
+        "normal_policy": {
+          "enum": [
+            "compute_normals",
+            "import_normals",
+            "import_normals_and_tangents"
+          ]
+        }
+      }
+    },
+    "previews": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "front": {
+          "$ref": "#/$defs/imagePath"
+        },
+        "side": {
+          "$ref": "#/$defs/imagePath"
+        },
+        "back": {
+          "$ref": "#/$defs/imagePath"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2048
+    }
+  },
+  "$defs": {
+    "bundlePath": {
+      "type": "string",
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!https?://)[A-Za-z0-9_./ -]+$"
+    },
+    "imagePath": {
+      "type": "string",
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_./ -]+\\.(?:png|jpg|jpeg|tga|bmp|exr)$"
+    },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "properties": {
+              "model_type": {
+                "const": "static"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "import": {
+            "properties": {
+              "import_animations": {
+                "const": false
+              },
+              "create_physics_asset": {
+                "const": false
+              },
+              "skeleton_policy": {
+                "const": "none"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "properties": {
+              "model_type": {
+                "const": "skeletal"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "import": {
+            "properties": {
+              "skeleton_policy": {
+                "enum": [
+                  "create",
+                  "reuse"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -14,6 +14,7 @@ public class WandboundTests : ModuleRules
 		{
 			PrivateDependencyModuleNames.Add("UnrealEd");
 			PrivateDependencyModuleNames.Add("AssetRegistry");
+			PrivateDependencyModuleNames.Add("WandboundEditor");
 		}
 	}
 }

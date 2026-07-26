@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "character_id": "pipeline_validation_fixture",
+  "display_name": "Pipeline Validation Fixture",
+  "card_definition_id": "CHAR_PIPELINE_VALIDATION_FIXTURE",
+  "approval": {
+    "approved_for_import": true,
+    "approved_by": "automation",
+    "approval_note": "Synthetic validation-only input. Never import as a production character."
+  },
+  "source": {
+    "model": "model/pipeline_validation_fixture.fbx",
+    "model_format": "fbx",
+    "model_type": "static",
+    "textures_directory": "textures",
+    "animations_directory": "animations",
+    "textures": [],
+    "animations": []
+  },
+  "presentation": {
+    "role": "player_unit",
+    "scale": 1.0,
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "offset": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "facing_axis": "positive_x"
+  },
+  "import": {
+    "import_materials": false,
+    "import_textures": false,
+    "import_animations": false,
+    "create_physics_asset": false,
+    "generate_collision": true,
+    "skeleton_policy": "none",
+    "normal_policy": "compute_normals"
+  },
+  "previews": {},
+  "tags": [
+    "automation",
+    "synthetic"
+  ],
+  "notes": "Validation-only fixture; the model file is never submitted to an Unreal import factory."
+}

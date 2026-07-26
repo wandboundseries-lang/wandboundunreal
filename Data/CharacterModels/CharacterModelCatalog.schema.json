@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wandbound.local/schemas/character-model-catalog-v1.json",
+  "title": "Wandbound Character Model Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "characters"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/character"
+      }
+    }
+  },
+  "$defs": {
+    "character": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "character_id",
+        "display_name",
+        "card_definition_id",
+        "approved_for_import",
+        "approval_status",
+        "manifest_path",
+        "model_type",
+        "source_model_path",
+        "source_model_hash",
+        "source_inventory_hash",
+        "source_format",
+        "destination_root",
+        "primary_mesh_package",
+        "skeleton_package",
+        "physics_package",
+        "destination_packages",
+        "texture_packages",
+        "animation_packages",
+        "material_packages",
+        "transform",
+        "preview_paths",
+        "import_status",
+        "reimport_status",
+        "validation_status",
+        "cook_status",
+        "presentation_status",
+        "lfs_status",
+        "last_receipt_path",
+        "last_report_path"
+      ],
+      "properties": {
+        "character_id": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "card_definition_id": {
+          "type": "string"
+        },
+        "approved_for_import": {
+          "type": "boolean"
+        },
+        "approval_status": {
+          "type": "string"
+        },
+        "manifest_path": {
+          "type": "string"
+        },
+        "model_type": {
+          "enum": [
+            "static",
+            "skeletal"
+          ]
+        },
+        "source_model_path": {
+          "type": "string"
+        },
+        "source_model_hash": {
+          "type": "string"
+        },
+        "source_inventory_hash": {
+          "type": "string"
+        },
+        "source_format": {
+          "enum": [
+            "fbx",
+            "glb",
+            "gltf"
+          ]
+        },
+        "destination_root": {
+          "type": "string"
+        },
+        "primary_mesh_package": {
+          "type": "string"
+        },
+        "skeleton_package": {
+          "type": "string"
+        },
+        "physics_package": {
+          "type": "string"
+        },
+        "destination_packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "texture_packages": {
+          "$ref": "#/$defs/packageMap"
+        },
+        "animation_packages": {
+          "$ref": "#/$defs/packageMap"
+        },
+        "material_packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scale",
+            "rotation",
+            "offset",
+            "facing_axis"
+          ],
+          "properties": {
+            "scale": {
+              "type": "number"
+            },
+            "rotation": {
+              "$ref": "#/$defs/vector3"
+            },
+            "offset": {
+              "$ref": "#/$defs/vector3"
+            },
+            "facing_axis": {
+              "type": "string"
+            }
+          }
+        },
+        "preview_paths": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "import_status": {
+          "type": "string"
+        },
+        "reimport_status": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        },
+        "cook_status": {
+          "type": "string"
+        },
+        "presentation_status": {
+          "type": "string"
+        },
+        "lfs_status": {
+          "type": "string"
+        },
+        "last_receipt_path": {
+          "type": "string"
+        },
+        "last_report_path": {
+          "type": "string"
+        }
+      }
+    },
+    "packageMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    }
+  }
+}
