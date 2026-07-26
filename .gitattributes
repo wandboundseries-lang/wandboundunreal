@@ -1,1 +1,2 @@
 Content/Wandbound/Maps/Wandbound_LocalPlay_Dev.umap filter=lfs diff=lfs merge=lfs -text
+Content/Wandbound/Presentation/DA_WandboundStarterPresentation.uasset filter=lfs diff=lfs merge=lfs -text

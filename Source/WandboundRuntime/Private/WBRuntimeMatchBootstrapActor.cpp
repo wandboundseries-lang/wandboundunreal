@@ -4,10 +4,13 @@
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "WBBoardViewActor.h"
 #include "WBRuntimeMatchHostComponent.h"
 #include "WBRuntimeMatchHUDWidget.h"
 #include "WBRuntimePlayerController.h"
+#include "WBRuntimePresentationAssetBinding.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWBRuntimeLocalPlay, Log, All);
 
@@ -18,6 +21,9 @@ AWBRuntimeMatchBootstrapActor::AWBRuntimeMatchBootstrapActor()
 	BoardActorClass = AWBBoardViewActor::StaticClass();
 	CameraActorClass = ACameraActor::StaticClass();
 	HUDWidgetClass = UWBRuntimeMatchHUDWidget::StaticClass();
+	DevelopmentPresentationAssetSet = TSoftObjectPtr<UWBRuntimePresentationAssetSet>(
+		FSoftObjectPath(
+			TEXT("/Game/Wandbound/Presentation/DA_WandboundStarterPresentation.DA_WandboundStarterPresentation")));
 }
 
 FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
@@ -43,11 +49,12 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 	if (!EnsureBoard()) return FailStartup(BoardActorClass == nullptr ? TEXT("board_actor_class_missing") : TEXT("board_spawn_failed"));
 	if (!EnsureCamera()) return FailStartup(CameraActorClass == nullptr ? TEXT("camera_actor_class_missing") : TEXT("camera_spawn_failed"));
 
+	ResolveDevelopmentPresentationAssetSet();
 	MatchHost->BoardActor = BoardActor;
 	MatchHost->ConfigurePresentationAssets(
-		PresentationAssetSet,
+		ResolvedPresentationAssetSet,
 		CameraActor,
-		bEnablePresentationAssetLoading);
+		IsPresentationAssetLoadingEnabledByPolicy());
 	const FWBRuntimeMatchCommandResult MatchResult = MatchHost->InitializeDevelopmentMatch(InitialViewerPlayerId, false);
 	if (!MatchResult.bOk) return FailStartup(MatchResult.Reason.IsEmpty() ? TEXT("development_match_initialization_failed") : MatchResult.Reason);
 	if (!EnsureHUD()) return FailStartup(HUDWidgetClass == nullptr ? TEXT("hud_widget_class_missing") : TEXT("hud_creation_failed"));
@@ -74,10 +81,11 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::RestartDevelopmentMatch
 	HUDWidget->UnbindFromMatchHost();
 	MatchHost->ClearSelection();
 	BoardActor->ClearBoardView();
+	ResolveDevelopmentPresentationAssetSet();
 	MatchHost->ConfigurePresentationAssets(
-		PresentationAssetSet,
+		ResolvedPresentationAssetSet,
 		CameraActor,
-		bEnablePresentationAssetLoading);
+		IsPresentationAssetLoadingEnabledByPolicy());
 	const FWBRuntimeMatchCommandResult MatchResult = MatchHost->InitializeDevelopmentMatch(InitialViewerPlayerId, false);
 	if (!MatchResult.bOk) return FailStartup(MatchResult.Reason);
 	if (!HUDWidget->BindToMatchHost(MatchHost)) return FailStartup(TEXT("hud_host_binding_failed"));
@@ -111,6 +119,7 @@ void AWBRuntimeMatchBootstrapActor::ShutdownLocalPlay()
 	CameraActor = nullptr;
 	RuntimeController = nullptr;
 	HUDWidget = nullptr;
+	ResolvedPresentationAssetSet = nullptr;
 	bOwnsBoardActor = false;
 	bOwnsCameraActor = false;
 	bOwnsHUDWidget = false;
@@ -134,6 +143,31 @@ UWBRuntimeMatchHUDWidget* AWBRuntimeMatchBootstrapActor::GetHUDWidget() const { 
 bool AWBRuntimeMatchBootstrapActor::OwnsBoardActor() const { return bOwnsBoardActor; }
 bool AWBRuntimeMatchBootstrapActor::OwnsCameraActor() const { return bOwnsCameraActor; }
 bool AWBRuntimeMatchBootstrapActor::OwnsHUDWidget() const { return bOwnsHUDWidget; }
+bool AWBRuntimeMatchBootstrapActor::IsPresentationAssetSetConfigured() const
+{
+	return PresentationAssetSet != nullptr
+		|| !DevelopmentPresentationAssetSet.IsNull();
+}
+
+bool AWBRuntimeMatchBootstrapActor::IsPresentationAssetLoadingEnabledByPolicy() const
+{
+	return bEnablePresentationAssetLoading
+		&& !FParse::Param(
+			FCommandLine::Get(),
+			TEXT("WandboundLocalPlaySmoke"));
+}
+
+bool AWBRuntimeMatchBootstrapActor::IsPresentationFallbackActive() const
+{
+	return ResolvedPresentationAssetSet == nullptr
+		|| !IsPresentationAssetLoadingEnabledByPolicy();
+}
+
+EWBRuntimePresentationAssetSetStatus
+AWBRuntimeMatchBootstrapActor::GetPresentationAssetSetStatus() const
+{
+	return PresentationAssetSetStatus;
+}
 
 FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::MakeResult(const bool bOk, const FString& Reason) const
 {
@@ -172,6 +206,7 @@ void AWBRuntimeMatchBootstrapActor::RollbackStartup()
 	CameraActor = nullptr;
 	RuntimeController = nullptr;
 	HUDWidget = nullptr;
+	ResolvedPresentationAssetSet = nullptr;
 	bOwnsBoardActor = false;
 	bOwnsCameraActor = false;
 	bOwnsHUDWidget = false;
@@ -242,4 +277,50 @@ void AWBRuntimeMatchBootstrapActor::ConfigureController()
 	HUDWidget->bAllowDevelopmentViewerSwitch = bEnableDevelopmentViewerSwitch;
 	RuntimeController->SetRuntimeReferences(MatchHost, BoardActor, HUDWidget);
 	RuntimeController->SetViewTarget(CameraActor);
+}
+
+void AWBRuntimeMatchBootstrapActor::ResolveDevelopmentPresentationAssetSet()
+{
+	ResolvedPresentationAssetSet = PresentationAssetSet;
+	if (ResolvedPresentationAssetSet != nullptr)
+	{
+		PresentationAssetSetStatus =
+			IsPresentationAssetLoadingEnabledByPolicy()
+				? EWBRuntimePresentationAssetSetStatus::Loaded
+				: EWBRuntimePresentationAssetSetStatus::LoadingDisabled;
+		return;
+	}
+	if (DevelopmentPresentationAssetSet.IsNull())
+	{
+		PresentationAssetSetStatus =
+			EWBRuntimePresentationAssetSetStatus::NotConfigured;
+		return;
+	}
+	if (!IsPresentationAssetLoadingEnabledByPolicy())
+	{
+		PresentationAssetSetStatus =
+			EWBRuntimePresentationAssetSetStatus::LoadingDisabled;
+		return;
+	}
+
+	ResolvedPresentationAssetSet =
+		DevelopmentPresentationAssetSet.LoadSynchronous();
+	PresentationAssetSetStatus =
+		ResolvedPresentationAssetSet != nullptr
+			? EWBRuntimePresentationAssetSetStatus::Loaded
+			: EWBRuntimePresentationAssetSetStatus::Missing;
+	if (ResolvedPresentationAssetSet != nullptr)
+	{
+		UE_LOG(
+			LogWBRuntimeLocalPlay,
+			Log,
+			TEXT("Wandbound presentation asset status: starter_asset_set_loaded"));
+	}
+	else
+	{
+		UE_LOG(
+			LogWBRuntimeLocalPlay,
+			Warning,
+			TEXT("Wandbound presentation asset status: starter_asset_set_missing"));
+	}
 }

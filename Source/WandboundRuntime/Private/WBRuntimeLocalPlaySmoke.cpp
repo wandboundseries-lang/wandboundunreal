@@ -92,6 +92,15 @@ FString UWBRuntimeLocalPlaySmokeCoordinator::SerializeResult(const FWBRuntimeLoc
 	Writer->WriteValue(TEXT("action_submitted"), Result.bActionSubmitted);
 	Writer->WriteValue(TEXT("end_turn_submitted"), Result.bEndTurnSubmitted);
 	Writer->WriteValue(TEXT("game_over"), Result.bGameOver);
+	Writer->WriteValue(
+		TEXT("presentation_asset_set_configured"),
+		Result.bPresentationAssetSetConfigured);
+	Writer->WriteValue(
+		TEXT("presentation_asset_loading_enabled"),
+		Result.bPresentationAssetLoadingEnabled);
+	Writer->WriteValue(
+		TEXT("presentation_fallback_active"),
+		Result.bPresentationFallbackActive);
 	Writer->WriteValue(TEXT("winner_player_id"), Result.WinnerPlayerId);
 	Writer->WriteValue(TEXT("process_exit_code"), Result.ProcessExitCode);
 	Writer->WriteObjectEnd();
@@ -257,5 +266,11 @@ void UWBRuntimeLocalPlaySmokeCoordinator::RefreshPublicResult(AWBRuntimeMatchBoo
 	LastResult.OwnHandCount = Host->GetCurrentHandCards().Num();
 	LastResult.LegalActionCount = Host->GetCurrentLegalActions().Num();
 	LastResult.bGameOver = Presentation.bGameOver;
+	LastResult.bPresentationAssetSetConfigured =
+		Bootstrap->IsPresentationAssetSetConfigured();
+	LastResult.bPresentationAssetLoadingEnabled =
+		Bootstrap->IsPresentationAssetLoadingEnabledByPolicy();
+	LastResult.bPresentationFallbackActive =
+		Bootstrap->IsPresentationFallbackActive();
 	LastResult.WinnerPlayerId = Presentation.WinnerPlayerId;
 }

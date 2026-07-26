@@ -21,6 +21,15 @@ enum class EWBRuntimeLocalPlayState : uint8
 	ShuttingDown
 };
 
+UENUM(BlueprintType)
+enum class EWBRuntimePresentationAssetSetStatus : uint8
+{
+	NotConfigured,
+	LoadingDisabled,
+	Loaded,
+	Missing
+};
+
 USTRUCT(BlueprintType)
 struct WANDBOUNDRUNTIME_API FWBRuntimeLocalPlayResult
 {
@@ -83,6 +92,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Presentation Assets")
 	TObjectPtr<UWBRuntimePresentationAssetSet> PresentationAssetSet;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Wandbound|Presentation Assets")
+	TSoftObjectPtr<UWBRuntimePresentationAssetSet> DevelopmentPresentationAssetSet;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wandbound|Presentation Assets")
 	bool bEnablePresentationAssetLoading = true;
 
@@ -128,6 +140,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Local Play")
 	bool OwnsHUDWidget() const;
 
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	bool IsPresentationAssetSetConfigured() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	bool IsPresentationAssetLoadingEnabledByPolicy() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	bool IsPresentationFallbackActive() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
+	EWBRuntimePresentationAssetSetStatus GetPresentationAssetSetStatus() const;
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -144,7 +168,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UWBRuntimeMatchHUDWidget> HUDWidget;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UWBRuntimePresentationAssetSet> ResolvedPresentationAssetSet;
+
 	EWBRuntimeLocalPlayState LocalPlayState = EWBRuntimeLocalPlayState::Uninitialized;
+	EWBRuntimePresentationAssetSetStatus PresentationAssetSetStatus =
+		EWBRuntimePresentationAssetSetStatus::NotConfigured;
 	FString StartupFailureReason;
 	bool bOwnsBoardActor = false;
 	bool bOwnsCameraActor = false;
@@ -157,4 +186,5 @@ private:
 	bool EnsureCamera();
 	bool EnsureHUD();
 	void ConfigureController();
+	void ResolveDevelopmentPresentationAssetSet();
 };

@@ -41,7 +41,7 @@ $uatArgs = @(
 	"-archivedirectory=$ArchiveDirectory",
 	"-stagingdirectory=$StagingDirectory",
 	"-map=/Game/Wandbound/Maps/Wandbound_LocalPlay_Dev",
-	"-AdditionalCookerOptions=-DisablePlugins=DatasmithFBXImporter,DatasmithContent",
+	"-AdditionalCookerOptions=-DisablePlugins=DatasmithFBXImporter,DatasmithContent -Package=/Game/Wandbound/Presentation/DA_WandboundStarterPresentation",
 	"-pak",
 	"-SkipCookingEditorContent",
 	"-unattended",

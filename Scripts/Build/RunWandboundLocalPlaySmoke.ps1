@@ -65,7 +65,7 @@ $resultFile = Get-ChildItem -LiteralPath $PackageDirectory -Recurse -File -Filte
 	Select-Object -First 1
 if ($null -eq $resultFile) { throw "Packaged smoke result.json was not produced. Process exit code: $processExitCode" }
 $result = Get-Content -LiteralPath $resultFile.FullName -Raw | ConvertFrom-Json
-foreach ($requiredField in @("success", "failure_reason", "map_name", "game_mode_class", "bootstrap_state", "match_generation", "presentation_revision", "tile_count", "visible_unit_count", "visible_hero_count", "concealed_marker_count", "own_hand_count", "legal_action_count", "action_submitted", "end_turn_submitted", "game_over", "winner_player_id", "process_exit_code")) {
+foreach ($requiredField in @("success", "failure_reason", "map_name", "game_mode_class", "bootstrap_state", "match_generation", "presentation_revision", "tile_count", "visible_unit_count", "visible_hero_count", "concealed_marker_count", "own_hand_count", "legal_action_count", "action_submitted", "end_turn_submitted", "game_over", "presentation_asset_set_configured", "presentation_asset_loading_enabled", "presentation_fallback_active", "winner_player_id", "process_exit_code")) {
 	if ($null -eq $result.PSObject.Properties[$requiredField]) { throw "Smoke result missing required field: $requiredField" }
 }
 if ($processExitCode -ne 0) { throw "Packaged process failed with exit code $processExitCode. Result reason: $($result.failure_reason)" }

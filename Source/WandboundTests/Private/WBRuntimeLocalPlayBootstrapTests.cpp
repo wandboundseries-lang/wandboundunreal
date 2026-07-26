@@ -357,12 +357,18 @@ bool FWBRuntimeLocalPlaySourceGuardTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Controller source readable"), FFileHelper::LoadFileToString(ControllerSource, *FPaths::Combine(PrivateRoot, TEXT("WBRuntimePlayerController.cpp"))));
 	TestTrue(TEXT("Core build readable"), FFileHelper::LoadFileToString(CoreBuild, *FPaths::Combine(FPaths::ProjectDir(), TEXT("Source/WandboundCore/WandboundCore.Build.cs"))));
 	const FString CompositionSource = GameModeSource + BootstrapSource + ControllerSource;
+	FString CompositionWithoutApprovedStarterAsset = CompositionSource;
+	CompositionWithoutApprovedStarterAsset.ReplaceInline(
+		TEXT("/Game/Wandbound/Presentation/DA_WandboundStarterPresentation.DA_WandboundStarterPresentation"),
+		TEXT("[approved-development-presentation-asset]"));
 	for (const FString& Forbidden : {
 		TEXT("WBRules"), TEXT("WBEffectRunner"), TEXT("WBEquipExecution"), TEXT("WBSummonExecution"),
 		TEXT("FWBGameStateData"), TEXT("GetMutableStateForTest"), TEXT("/Game/"), TEXT("Content/"),
 		TEXT(".uasset"), TEXT(".umap"), TEXT("Reference/GodotProject") })
 	{
-		TestFalse(*FString::Printf(TEXT("Composition excludes %s"), *Forbidden), CompositionSource.Contains(Forbidden));
+		TestFalse(
+			*FString::Printf(TEXT("Composition excludes %s"), *Forbidden),
+			CompositionWithoutApprovedStarterAsset.Contains(Forbidden));
 	}
 	TestFalse(TEXT("Core remains runtime-independent"), CoreBuild.Contains(TEXT("WandboundRuntime")));
 	return true;

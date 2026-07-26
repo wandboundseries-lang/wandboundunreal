@@ -61,6 +61,15 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeLocalPlaySmokeResult
 	bool bGameOver = false;
 
 	UPROPERTY(BlueprintReadOnly)
+	bool bPresentationAssetSetConfigured = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bPresentationAssetLoadingEnabled = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bPresentationFallbackActive = true;
+
+	UPROPERTY(BlueprintReadOnly)
 	int32 WinnerPlayerId = -1;
 
 	UPROPERTY(BlueprintReadOnly)

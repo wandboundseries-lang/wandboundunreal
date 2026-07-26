@@ -303,7 +303,7 @@ bool FWBDevelopmentSmokeResultSchemaTest::RunTest(const FString& Parameters)
 	Result.MapName = MapPackagePath;
 	Result.GameModeClass = TEXT("/Script/WandboundRuntime.WBRuntimeLocalPlayGameMode");
 	const FString Json = UWBRuntimeLocalPlaySmokeCoordinator::SerializeResult(Result);
-	for (const FString& Required : { TEXT("success"), TEXT("failure_reason"), TEXT("map_name"), TEXT("game_mode_class"), TEXT("bootstrap_state"), TEXT("match_generation"), TEXT("presentation_revision"), TEXT("tile_count"), TEXT("visible_unit_count"), TEXT("visible_hero_count"), TEXT("concealed_marker_count"), TEXT("own_hand_count"), TEXT("legal_action_count"), TEXT("action_submitted"), TEXT("end_turn_submitted"), TEXT("game_over"), TEXT("winner_player_id"), TEXT("process_exit_code") })
+	for (const FString& Required : { TEXT("success"), TEXT("failure_reason"), TEXT("map_name"), TEXT("game_mode_class"), TEXT("bootstrap_state"), TEXT("match_generation"), TEXT("presentation_revision"), TEXT("tile_count"), TEXT("visible_unit_count"), TEXT("visible_hero_count"), TEXT("concealed_marker_count"), TEXT("own_hand_count"), TEXT("legal_action_count"), TEXT("action_submitted"), TEXT("end_turn_submitted"), TEXT("game_over"), TEXT("presentation_asset_set_configured"), TEXT("presentation_asset_loading_enabled"), TEXT("presentation_fallback_active"), TEXT("winner_player_id"), TEXT("process_exit_code") })
 	{
 		TestTrue(*FString::Printf(TEXT("Schema contains %s"), *Required), Json.Contains(Required));
 	}
