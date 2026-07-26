@@ -1,0 +1,16 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "production_pipeline_equipment",
+  "bundle_kind": "test",
+  "batches": [
+    {
+      "batch_name": "equipment",
+      "bundles": [
+        {
+          "name": "wands",
+          "path": "bundles/wands.json"
+        }
+      ]
+    }
+  ]
+}

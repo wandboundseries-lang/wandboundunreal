@@ -915,7 +915,9 @@ FWBCharacterPipelineRunResult WBCharacterModelPipeline::Run(
 	const FString AbsoluteProjectRoot = FPaths::ConvertRelativePathToFull(ProjectRoot);
 	Result.Validation = LoadAndValidateManifest(
 		AbsoluteProjectRoot,
-		Options.ManifestRepositoryPath);
+		Options.ManifestRepositoryPath,
+		Options.CardDefinitionRepository,
+		Options.bRequireCardDefinition);
 	Result.Diagnostics.Append(Result.Validation.Diagnostics);
 	if (!Result.Validation.IsValid())
 	{

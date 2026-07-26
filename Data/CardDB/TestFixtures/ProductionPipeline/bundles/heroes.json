@@ -1,0 +1,76 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "production_pipeline_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic Heroes for production pipeline validation.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "fixture_hero_alpha",
+      "public_name": "Fixture Hero Alpha",
+      "kind": "hero",
+      "public_text": "A validation-only Hero.",
+      "public_category": "Hero",
+      "factions": [
+        "wandwright"
+      ],
+      "tags": [
+        "fixture"
+      ],
+      "source_manifest": "manifests/core.manifest.json",
+      "stats": {
+        "hp": 15,
+        "atk": 4,
+        "ar": 2,
+        "rl": 3
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 2
+      },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "fixture_hero_beta",
+      "public_name": "Fixture Hero Beta",
+      "kind": "hero",
+      "public_text": "A second validation-only Hero.",
+      "public_category": "Hero",
+      "factions": [
+        "black_meridian"
+      ],
+      "tags": [
+        "fixture"
+      ],
+      "source_manifest": "manifests/core.manifest.json",
+      "stats": {
+        "hp": 16,
+        "atk": 3,
+        "ar": 3,
+        "rl": 3
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 3
+      },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      }
+    }
+  ]
+}

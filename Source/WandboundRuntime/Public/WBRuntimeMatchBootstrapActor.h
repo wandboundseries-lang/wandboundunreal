@@ -10,6 +10,8 @@ class AWBRuntimePlayerController;
 class UWBRuntimeMatchHostComponent;
 class UWBRuntimeMatchHUDWidget;
 class UWBRuntimePresentationAssetSet;
+struct FWBProductionCardDatabase;
+struct FWBMatchInitializationRequest;
 
 UENUM(BlueprintType)
 enum class EWBRuntimeLocalPlayState : uint8
@@ -152,6 +154,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Wandbound|Presentation Assets")
 	EWBRuntimePresentationAssetSetStatus GetPresentationAssetSetStatus() const;
 
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Local Play")
+	bool IsUsingProductionData() const;
+
+	UFUNCTION(BlueprintPure, Category = "Wandbound|Local Play")
+	FString GetProductionBundleDigest() const;
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -178,6 +186,9 @@ private:
 	bool bOwnsBoardActor = false;
 	bool bOwnsCameraActor = false;
 	bool bOwnsHUDWidget = false;
+	bool bProductionDataMode = false;
+	TSharedPtr<const FWBProductionCardDatabase> ProductionCardDatabase;
+	TSharedPtr<FWBMatchInitializationRequest> ProductionInitializationRequest;
 
 	FWBRuntimeLocalPlayResult MakeResult(bool bOk, const FString& Reason) const;
 	FWBRuntimeLocalPlayResult FailStartup(const FString& Reason);

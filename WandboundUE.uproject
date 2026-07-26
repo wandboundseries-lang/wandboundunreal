@@ -15,6 +15,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "WandboundCardDB",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "WandboundRuntime",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

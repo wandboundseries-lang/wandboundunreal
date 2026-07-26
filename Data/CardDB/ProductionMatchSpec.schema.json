@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wandbound.production-match-spec.schema.1",
+  "title": "Wandbound Production Match Specification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "match_id",
+    "seed",
+    "first_player",
+    "initial_draw_count",
+    "definition_bundle_digest",
+    "players",
+    "markers"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "match_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{2,63}$"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "first_player": {
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "initial_draw_count": {
+      "const": 6
+    },
+    "definition_bundle_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "players": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "player_id",
+          "hero_definition_id",
+          "ordered_deck"
+        ],
+        "properties": {
+          "player_id": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "hero_definition_id": {
+            "type": "string"
+          },
+          "ordered_deck": {
+            "type": "array",
+            "minItems": 6,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "markers": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "player_id",
+          "type",
+          "tile",
+          "definition_id",
+          "placement_order"
+        ],
+        "properties": {
+          "player_id": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "type": {
+            "enum": [
+              "trap",
+              "npc"
+            ]
+          },
+          "tile": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "integer"
+              },
+              "y": {
+                "type": "integer"
+              }
+            }
+          },
+          "definition_id": {
+            "type": "string"
+          },
+          "placement_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          }
+        }
+      }
+    }
+  }
+}

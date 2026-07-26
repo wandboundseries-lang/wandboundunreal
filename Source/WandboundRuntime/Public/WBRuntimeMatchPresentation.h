@@ -48,6 +48,18 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeHandCardPresentation
 	FName CardType;
 
 	UPROPERTY(BlueprintReadOnly)
+	FString PublicCategory;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FString> PublicFactions;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FString> PublicTags;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PublicRulesText;
+
+	UPROPERTY(BlueprintReadOnly)
 	int32 HandIndex = INDEX_NONE;
 
 	UPROPERTY(BlueprintReadOnly)
@@ -153,6 +165,18 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeUnitPresentation
 	FString PublicDefinitionId;
 
 	UPROPERTY(BlueprintReadOnly)
+	FString DisplayName;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PublicCategory;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FString> PublicFactions;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FString> PublicTags;
+
+	UPROPERTY(BlueprintReadOnly)
 	TArray<FWBRuntimePublicStatusPresentation> Statuses;
 };
 
@@ -187,6 +211,9 @@ struct WANDBOUNDRUNTIME_API FWBRuntimeLegalActionPresentation
 
 	UPROPERTY(BlueprintReadOnly)
 	FString PublicLabel;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PublicTargetPrompt;
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 MatchGeneration = 0;

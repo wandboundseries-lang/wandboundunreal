@@ -6,6 +6,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "WBBoardViewActor.h"
+#include "WBProductionSummonEquipDataProvider.h"
 #include "WBRuntimePresentationAssetPlaybackComponent.h"
 #include "WBRuntimePresentationAssetRegistry.h"
 #include "WBRuntimePresentationSequenceComponent.h"
@@ -216,6 +217,7 @@ bool IsNPCTrace(const FWBTraceEvent& Event)
 	const FString Kind = Event.Kind.GetPlainNameString().ToLower();
 	return Kind.Contains(TEXT("npc"));
 }
+
 }
 
 UWBRuntimeMatchHostComponent::UWBRuntimeMatchHostComponent()
@@ -901,6 +903,23 @@ void UWBRuntimeMatchHostComponent::RebuildPresentationModels(const FString& Stat
 		Presentation.RLUsed = Unit.RLUsed;
 		Presentation.AttacksRemaining = Unit.AttacksLeft;
 		Presentation.PublicDefinitionId = Unit.CardId;
+		if (Coordinator.IsValid())
+		{
+			FWBProductionPublicDefinitionData Definition;
+			if (FWBProductionSummonEquipDataProvider()
+				.GetPublicDefinitionData(
+					Coordinator->GetRepository(),
+					Unit.CardId,
+					Definition))
+			{
+				Presentation.DisplayName = Definition.DisplayName;
+				Presentation.PublicCategory =
+					Definition.PublicCategory;
+				Presentation.PublicFactions =
+					Definition.PublicFactions;
+				Presentation.PublicTags = Definition.PublicTags;
+			}
+		}
 		for (const FWBPublicUnitStatusSummary& Status : Unit.Statuses)
 		{
 			FWBRuntimePublicStatusPresentation PublicStatus;
@@ -983,7 +1002,21 @@ void UWBRuntimeMatchHostComponent::RebuildPresentationModels(const FString& Stat
 			Presentation.TargetUnitId = Action.ActivationCommand.EffectRequest.Target.TargetUnitId;
 			if (!Action.ActivationCommand.Source.SourceEffectId.IsEmpty())
 			{
-				Presentation.PublicLabel = Action.ActivationCommand.Source.SourceEffectId;
+				if (Coordinator.IsValid())
+				{
+					FWBProductionPublicEffectData Effect;
+					if (FWBProductionSummonEquipDataProvider()
+						.GetPublicEffectData(
+						Coordinator->GetRepository(),
+						Action.ActivationCommand.Source.SourceCardId,
+						Action.ActivationCommand.Source.SourceEffectId,
+						Effect))
+					{
+						Presentation.PublicLabel = Effect.PublicLabel;
+						Presentation.PublicTargetPrompt =
+							Effect.PublicTargetPrompt;
+					}
+				}
 			}
 		}
 		else if (Action.Family == EWBMatchActionFamily::Discard) Presentation.SourceCardInstanceId = Action.DiscardCardInstanceId;
@@ -1019,6 +1052,27 @@ void UWBRuntimeMatchHostComponent::RebuildHandPresentations()
 		Presentation.DefinitionId = Card.CardId;
 		Presentation.DisplayName = Card.CardId;
 		Presentation.HandIndex = Index;
+		if (Coordinator.IsValid())
+		{
+			FWBProductionPublicDefinitionData Definition;
+			if (FWBProductionSummonEquipDataProvider()
+				.GetPublicDefinitionData(
+					Coordinator->GetRepository(),
+					Card.CardId,
+					Definition))
+			{
+				Presentation.DisplayName = Definition.DisplayName;
+				Presentation.CardType = Definition.CardType;
+				Presentation.PublicCategory =
+					Definition.PublicCategory;
+				Presentation.PublicFactions =
+					Definition.PublicFactions;
+				Presentation.PublicTags = Definition.PublicTags;
+				Presentation.PublicRulesText =
+					Definition.PublicRulesText;
+				Presentation.RR = Definition.RR;
+			}
+		}
 		Presentation.bSelectable = !CurrentPresentation.bGameOver
 			&& !IsPresentationSequenceActive()
 			&& SelectableCards.Contains(Card.InstanceId);
@@ -1031,15 +1085,17 @@ void UWBRuntimeMatchHostComponent::RebuildHandPresentations()
 				Presentation.AvailableActionFamilies.AddUnique(Action.Family);
 			}
 		}
-		if (Presentation.AvailableActionFamilies.Contains(EWBRuntimeMatchActionFamily::Summon))
+		if (Presentation.CardType.IsNone()
+			&& Presentation.AvailableActionFamilies.Contains(EWBRuntimeMatchActionFamily::Summon))
 		{
 			Presentation.CardType = FName(TEXT("Character"));
 		}
-		else if (Presentation.AvailableActionFamilies.Contains(EWBRuntimeMatchActionFamily::Equip))
+		else if (Presentation.CardType.IsNone()
+			&& Presentation.AvailableActionFamilies.Contains(EWBRuntimeMatchActionFamily::Equip))
 		{
 			Presentation.CardType = FName(TEXT("Wand"));
 		}
-		else
+		else if (Presentation.CardType.IsNone())
 		{
 			Presentation.CardType = FName(TEXT("Card"));
 		}

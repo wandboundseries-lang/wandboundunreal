@@ -11,6 +11,7 @@
 #include "WBRuntimeMatchHUDWidget.h"
 #include "WBRuntimePlayerController.h"
 #include "WBRuntimePresentationAssetBinding.h"
+#include "WBProductionRuntimeBootstrap.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWBRuntimeLocalPlay, Log, All);
 
@@ -38,8 +39,42 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 	{
 		return FailStartup(TEXT("local_player_controller_missing"));
 	}
-	if (!bInitializeDevelopmentMatch) return FailStartup(TEXT("development_match_initialization_disabled"));
 	if (MatchHost == nullptr) return FailStartup(TEXT("match_host_missing"));
+
+	const bool bRequestedProductionData =
+		FParse::Param(FCommandLine::Get(), TEXT("WandboundProductionData"));
+	if (!bRequestedProductionData && !bInitializeDevelopmentMatch)
+	{
+		return FailStartup(TEXT("development_match_initialization_disabled"));
+	}
+
+	TSharedPtr<const FWBProductionCardDatabase> PendingDatabase;
+	TSharedPtr<FWBMatchInitializationRequest> PendingInitializationRequest;
+	if (bRequestedProductionData)
+	{
+		FWBProductionRuntimeBootstrapRequest Request;
+		FParse::Value(
+			FCommandLine::Get(),
+			TEXT("WandboundCardBundle="),
+			Request.CardBundleManifestPath);
+		FParse::Value(
+			FCommandLine::Get(),
+			TEXT("WandboundMatchSpec="),
+			Request.MatchSpecificationPath);
+		Request.bAllowTestBundle = FParse::Param(
+			FCommandLine::Get(),
+			TEXT("WandboundAllowTestCardBundle"));
+		const FWBProductionRuntimeBootstrapResult BootstrapResult =
+			WBProductionRuntimeBootstrap::Build(Request);
+		if (!BootstrapResult.bOk)
+		{
+			return FailStartup(BootstrapResult.Reason);
+		}
+		PendingDatabase = BootstrapResult.Database;
+		PendingInitializationRequest =
+			MakeShared<FWBMatchInitializationRequest>(
+				BootstrapResult.InitializationRequest);
+	}
 
 	LocalPlayState = EWBRuntimeLocalPlayState::Starting;
 	StartupFailureReason.Reset();
@@ -55,7 +90,11 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 		ResolvedPresentationAssetSet,
 		CameraActor,
 		IsPresentationAssetLoadingEnabledByPolicy());
-	const FWBRuntimeMatchCommandResult MatchResult = MatchHost->InitializeDevelopmentMatch(InitialViewerPlayerId, false);
+	const FWBRuntimeMatchCommandResult MatchResult = bRequestedProductionData
+		? MatchHost->InitializeMatch(
+			*PendingInitializationRequest,
+			InitialViewerPlayerId)
+		: MatchHost->InitializeDevelopmentMatch(InitialViewerPlayerId, false);
 	if (!MatchResult.bOk) return FailStartup(MatchResult.Reason.IsEmpty() ? TEXT("development_match_initialization_failed") : MatchResult.Reason);
 	if (!EnsureHUD()) return FailStartup(HUDWidgetClass == nullptr ? TEXT("hud_widget_class_missing") : TEXT("hud_creation_failed"));
 	if (!HUDWidget->BindToMatchHost(MatchHost)) return FailStartup(TEXT("hud_host_binding_failed"));
@@ -66,8 +105,23 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 	if (BoardActor->GetTilePresentations().Num() != 81) return FailStartup(TEXT("board_presentation_incomplete"));
 
 	LocalPlayState = EWBRuntimeLocalPlayState::Ready;
+	bProductionDataMode = bRequestedProductionData;
+	ProductionCardDatabase = PendingDatabase;
+	ProductionInitializationRequest = PendingInitializationRequest;
 	RuntimeController->SetRuntimeInteractionEnabled(true);
-	return MakeResult(true, TEXT("local_play_ready"));
+	if (bProductionDataMode)
+	{
+		UE_LOG(
+			LogWBRuntimeLocalPlay,
+			Log,
+			TEXT("Wandbound production CardDB digest: %s"),
+			*ProductionCardDatabase->ContentDigest);
+	}
+	return MakeResult(
+		true,
+		bProductionDataMode
+			? TEXT("production_data_local_play_ready")
+			: TEXT("local_play_ready"));
 }
 
 FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::RestartDevelopmentMatch()
@@ -86,7 +140,20 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::RestartDevelopmentMatch
 		ResolvedPresentationAssetSet,
 		CameraActor,
 		IsPresentationAssetLoadingEnabledByPolicy());
-	const FWBRuntimeMatchCommandResult MatchResult = MatchHost->InitializeDevelopmentMatch(InitialViewerPlayerId, false);
+	const FWBRuntimeMatchCommandResult MatchResult =
+		bProductionDataMode
+			? ProductionInitializationRequest.IsValid()
+				? MatchHost->InitializeMatch(
+					*ProductionInitializationRequest,
+					InitialViewerPlayerId)
+				: FWBRuntimeMatchCommandResult()
+			: MatchHost->InitializeDevelopmentMatch(
+				InitialViewerPlayerId,
+				false);
+	if (bProductionDataMode && !ProductionInitializationRequest.IsValid())
+	{
+		return FailStartup(TEXT("production_snapshot_missing"));
+	}
 	if (!MatchResult.bOk) return FailStartup(MatchResult.Reason);
 	if (!HUDWidget->BindToMatchHost(MatchHost)) return FailStartup(TEXT("hud_host_binding_failed"));
 	ConfigureController();
@@ -94,7 +161,11 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::RestartDevelopmentMatch
 	if (!RefreshResult.bOk) return FailStartup(RefreshResult.Reason);
 	LocalPlayState = EWBRuntimeLocalPlayState::Ready;
 	RuntimeController->SetRuntimeInteractionEnabled(true);
-	return MakeResult(true, TEXT("development_match_restarted"));
+	return MakeResult(
+		true,
+		bProductionDataMode
+			? TEXT("production_match_restarted")
+			: TEXT("development_match_restarted"));
 }
 
 void AWBRuntimeMatchBootstrapActor::ShutdownLocalPlay()
@@ -120,6 +191,9 @@ void AWBRuntimeMatchBootstrapActor::ShutdownLocalPlay()
 	RuntimeController = nullptr;
 	HUDWidget = nullptr;
 	ResolvedPresentationAssetSet = nullptr;
+	ProductionCardDatabase.Reset();
+	ProductionInitializationRequest.Reset();
+	bProductionDataMode = false;
 	bOwnsBoardActor = false;
 	bOwnsCameraActor = false;
 	bOwnsHUDWidget = false;
@@ -169,6 +243,18 @@ AWBRuntimeMatchBootstrapActor::GetPresentationAssetSetStatus() const
 	return PresentationAssetSetStatus;
 }
 
+bool AWBRuntimeMatchBootstrapActor::IsUsingProductionData() const
+{
+	return bProductionDataMode;
+}
+
+FString AWBRuntimeMatchBootstrapActor::GetProductionBundleDigest() const
+{
+	return ProductionCardDatabase.IsValid()
+		? ProductionCardDatabase->ContentDigest
+		: FString();
+}
+
 FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::MakeResult(const bool bOk, const FString& Reason) const
 {
 	FWBRuntimeLocalPlayResult Result;
@@ -207,6 +293,9 @@ void AWBRuntimeMatchBootstrapActor::RollbackStartup()
 	RuntimeController = nullptr;
 	HUDWidget = nullptr;
 	ResolvedPresentationAssetSet = nullptr;
+	ProductionCardDatabase.Reset();
+	ProductionInitializationRequest.Reset();
+	bProductionDataMode = false;
 	bOwnsBoardActor = false;
 	bOwnsCameraActor = false;
 	bOwnsHUDWidget = false;

@@ -1,5 +1,6 @@
 #include "WBCharacterModelPipeline.h"
 
+#include "WBCardDefinitionRepository.h"
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -651,7 +652,9 @@ WBCharacterModelPipeline::ParseAndValidateManifestJson(
 	const FString& Json,
 	const FString& ManifestRepositoryPath,
 	const FString& ProjectRoot,
-	const bool bRequireFiles)
+	const bool bRequireFiles,
+	const FWBCardDefinitionRepository* CardDefinitionRepository,
+	const bool bRequireCardDefinition)
 {
 	FWBCharacterManifestValidationResult Result;
 	Result.Manifest.ManifestRepositoryPath = NormalizeRepositoryPath(ManifestRepositoryPath);
@@ -1457,7 +1460,8 @@ WBCharacterModelPipeline::ParseAndValidateManifestJson(
 		}
 	}
 
-	if (!Result.Manifest.CardDefinitionId.IsEmpty())
+	if (!Result.Manifest.CardDefinitionId.IsEmpty()
+		&& CardDefinitionRepository == nullptr)
 	{
 		AddDiagnostic(
 			Result.Diagnostics,
@@ -1468,6 +1472,39 @@ WBCharacterModelPipeline::ParseAndValidateManifestJson(
 			TEXT("card_definition_id"),
 			FString(),
 			TEXT("Validate the mapping again when a production CardDB bundle is available."));
+	}
+	else if (!Result.Manifest.CardDefinitionId.IsEmpty())
+	{
+		const FWBCardDefinitionRepositoryLookupResult Lookup =
+			WBCardDefinitionRepository::FindCardById(
+				*CardDefinitionRepository,
+				Result.Manifest.CardDefinitionId);
+		if (!Lookup.bFound)
+		{
+			AddDiagnostic(
+				Result.Diagnostics,
+				bRequireCardDefinition
+					? EWBCharacterDiagnosticSeverity::Error
+					: EWBCharacterDiagnosticSeverity::Warning,
+				TEXT("card_definition_not_found"),
+				TEXT("The character manifest public definition ID is not present in the selected CardDB snapshot."),
+				NormalizedManifest,
+				TEXT("card_definition_id"),
+				FString(),
+				TEXT("Choose an existing Character or Hero definition ID."));
+		}
+		else if (Lookup.Definition.Kind != EWBCardDefinitionKind::Character)
+		{
+			AddDiagnostic(
+				Result.Diagnostics,
+				EWBCharacterDiagnosticSeverity::Error,
+				TEXT("card_definition_kind_mismatch"),
+				TEXT("Character models may bind only to Character or Hero definitions."),
+				NormalizedManifest,
+				TEXT("card_definition_id"),
+				FString(),
+				TEXT("Use a Character or Hero definition ID."));
+		}
 	}
 	Result.Manifest.NormalizedJson = Json;
 
@@ -1486,7 +1523,9 @@ WBCharacterModelPipeline::ParseAndValidateManifestJson(
 FWBCharacterManifestValidationResult
 WBCharacterModelPipeline::LoadAndValidateManifest(
 	const FString& ProjectRoot,
-	const FString& ManifestRepositoryPath)
+	const FString& ManifestRepositoryPath,
+	const FWBCardDefinitionRepository* CardDefinitionRepository,
+	const bool bRequireCardDefinition)
 {
 	const FString NormalizedPath = NormalizeRepositoryPath(ManifestRepositoryPath);
 	const FString AbsolutePath = FPaths::ConvertRelativePathToFull(
@@ -1508,7 +1547,9 @@ WBCharacterModelPipeline::LoadAndValidateManifest(
 		Json,
 		NormalizedPath,
 		ProjectRoot,
-		true);
+		true,
+		CardDefinitionRepository,
+		bRequireCardDefinition);
 }
 
 FWBCharacterSourceInventory WBCharacterModelPipeline::BuildSourceInventory(

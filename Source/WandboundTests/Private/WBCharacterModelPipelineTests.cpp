@@ -6,6 +6,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "WBCharacterModelPipeline.h"
+#include "WBCardDefinitionRepository.h"
 
 namespace
 {
@@ -847,6 +848,116 @@ bool FWBCharacterDryRunTest::RunTest(const FString&)
 		TEXT("No generated Unreal character content"),
 		IFileManager::Get().DirectoryExists(
 			*FPaths::Combine(Root, TEXT("Content/Wandbound/Characters/synthetic_guardian"))));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBCharacterManifestCardDBMappingAcceptedTest,
+	"Wandbound.Editor.CharacterModelPipeline.CardDB.ValidCharacterMapping",
+	PipelineFlags)
+bool FWBCharacterManifestCardDBMappingAcceptedTest::RunTest(const FString&)
+{
+	FWBCardDefinition Character;
+	Character.CardId = TEXT("fixture_character");
+	Character.PublicName = TEXT("Fixture Character");
+	Character.Kind = EWBCardDefinitionKind::Character;
+	Character.CharacterStats.HP = 1;
+	FWBCardDefinitionRepository Repository;
+	TestTrue(
+		TEXT("Repository builds"),
+		WBCardDefinitionRepository::BuildRepositoryFromDefinitions(
+			TEXT("character_mapping"),
+			TEXT("test"),
+			{ Character },
+			Repository).bOk);
+	const FString Json = StaticManifest().Replace(
+		TEXT("CHAR_SYNTHETIC_GUARDIAN"),
+		TEXT("fixture_character"));
+	const FWBCharacterManifestValidationResult Result =
+		WBCharacterModelPipeline::ParseAndValidateManifestJson(
+			Json,
+			TEXT("SourceAssets/Characters/synthetic_guardian/character_manifest.json"),
+			FPaths::ProjectDir(),
+			false,
+			&Repository,
+			true);
+	TestTrue(TEXT("Character mapping is valid"), Result.IsValid());
+	TestFalse(
+		TEXT("Repository unavailable warning removed"),
+		HasCode(Result, TEXT("card_definition_repository_unavailable")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBCharacterManifestCardDBMissingMappingTest,
+	"Wandbound.Editor.CharacterModelPipeline.CardDB.MissingDefinition",
+	PipelineFlags)
+bool FWBCharacterManifestCardDBMissingMappingTest::RunTest(const FString&)
+{
+	FWBCardDefinitionRepository Repository;
+	Repository.RepositoryId = TEXT("empty_mapping");
+	Repository.SourceVersion = TEXT("test");
+	const FWBCharacterManifestValidationResult WarningResult =
+		WBCharacterModelPipeline::ParseAndValidateManifestJson(
+			StaticManifest(),
+			TEXT("SourceAssets/Characters/synthetic_guardian/character_manifest.json"),
+			FPaths::ProjectDir(),
+			false,
+			&Repository,
+			false);
+	TestTrue(TEXT("Optional mapping remains valid"), WarningResult.IsValid());
+	TestTrue(
+		TEXT("Missing mapping warning"),
+		HasCode(WarningResult, TEXT("card_definition_not_found")));
+
+	const FWBCharacterManifestValidationResult ErrorResult =
+		WBCharacterModelPipeline::ParseAndValidateManifestJson(
+			StaticManifest(),
+			TEXT("SourceAssets/Characters/synthetic_guardian/character_manifest.json"),
+			FPaths::ProjectDir(),
+			false,
+			&Repository,
+			true);
+	TestFalse(TEXT("Required mapping fails"), ErrorResult.IsValid());
+	TestTrue(
+		TEXT("Missing mapping diagnosed"),
+		HasCode(ErrorResult, TEXT("card_definition_not_found")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBCharacterManifestCardDBWrongTypeTest,
+	"Wandbound.Editor.CharacterModelPipeline.CardDB.WrongDefinitionType",
+	PipelineFlags)
+bool FWBCharacterManifestCardDBWrongTypeTest::RunTest(const FString&)
+{
+	FWBCardDefinition Wand;
+	Wand.CardId = TEXT("fixture_wand");
+	Wand.PublicName = TEXT("Fixture Wand");
+	Wand.Kind = EWBCardDefinitionKind::Wand;
+	FWBCardDefinitionRepository Repository;
+	TestTrue(
+		TEXT("Repository builds"),
+		WBCardDefinitionRepository::BuildRepositoryFromDefinitions(
+			TEXT("wand_mapping"),
+			TEXT("test"),
+			{ Wand },
+			Repository).bOk);
+	const FString Json = StaticManifest().Replace(
+		TEXT("CHAR_SYNTHETIC_GUARDIAN"),
+		TEXT("fixture_wand"));
+	const FWBCharacterManifestValidationResult Result =
+		WBCharacterModelPipeline::ParseAndValidateManifestJson(
+			Json,
+			TEXT("SourceAssets/Characters/synthetic_guardian/character_manifest.json"),
+			FPaths::ProjectDir(),
+			false,
+			&Repository,
+			true);
+	TestFalse(TEXT("Wand mapping fails"), Result.IsValid());
+	TestTrue(
+		TEXT("Wrong kind diagnosed"),
+		HasCode(Result, TEXT("card_definition_kind_mismatch")));
 	return true;
 }
 

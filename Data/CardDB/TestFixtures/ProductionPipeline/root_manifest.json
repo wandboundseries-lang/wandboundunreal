@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "production_pipeline_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "core",
+      "path": "manifests/core.manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic production-pipeline validation only."
+  }
+}

@@ -13,7 +13,8 @@ public class WandboundEditor : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
-			"Json"
+			"Json",
+			"WandboundCore"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

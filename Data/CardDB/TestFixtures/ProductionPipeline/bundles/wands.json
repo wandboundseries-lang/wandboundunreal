@@ -1,0 +1,65 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "production_pipeline_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic Wand and activation for production pipeline validation.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "fixture_ember_wand",
+      "public_name": "Fixture Ember Wand",
+      "kind": "wand",
+      "public_text": "Equip. Activate once per turn: Apply Burn.",
+      "public_category": "Wand",
+      "factions": [
+        "wandwright"
+      ],
+      "tags": [
+        "fixture",
+        "fire"
+      ],
+      "source_manifest": "manifests/equipment.manifest.json",
+      "stats": {
+        "rr": 1
+      },
+      "equip": {
+        "target_requirement": "owned_unit",
+        "resonance_requirement": 1
+      },
+      "activated_effects": [
+        {
+          "effect_id": "fixture_apply_burn",
+          "public_label": "Apply Burn",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "equipped",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "blocked_by_stunned": true,
+            "blocked_by_frozen": false,
+            "once_per_turn": true,
+            "once_per_turn_key": "fixture_ember_wand_burn",
+            "cost_gate": {
+              "required_rr": 1,
+              "cost_kind": "RR"
+            }
+          },
+          "payloads": [
+            {
+              "type": "status_effect",
+              "operation": "apply_status",
+              "status_id": "Burn",
+              "turns_remaining": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

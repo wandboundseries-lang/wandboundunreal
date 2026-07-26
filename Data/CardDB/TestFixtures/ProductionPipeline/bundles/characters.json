@@ -1,0 +1,70 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "production_pipeline_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic Characters for production pipeline validation.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "fixture_guard",
+      "public_name": "Fixture Guard",
+      "kind": "character",
+      "public_text": "A validation-only Character.",
+      "public_category": "Character",
+      "factions": [
+        "officer"
+      ],
+      "tags": [
+        "fixture",
+        "guard"
+      ],
+      "source_manifest": "manifests/core.manifest.json",
+      "stats": {
+        "hp": 10,
+        "atk": 2,
+        "ar": 1,
+        "rl": 2
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 1
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "fixture_student",
+      "public_name": "Fixture Student",
+      "kind": "character",
+      "public_text": "A second validation-only Character.",
+      "public_category": "Character",
+      "factions": [
+        "csn"
+      ],
+      "tags": [
+        "fixture",
+        "student"
+      ],
+      "source_manifest": "manifests/core.manifest.json",
+      "stats": {
+        "hp": 8,
+        "atk": 3,
+        "ar": 2,
+        "rl": 3
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 2
+      }
+    }
+  ]
+}

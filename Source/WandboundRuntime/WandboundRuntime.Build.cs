@@ -8,7 +8,7 @@ public class WandboundRuntime : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Niagara", "UMG", "Slate", "SlateCore", "WandboundCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Niagara", "UMG", "Slate", "SlateCore", "WandboundCore", "WandboundCardDB" });
 		PrivateDependencyModuleNames.Add("Json");
 	}
 }

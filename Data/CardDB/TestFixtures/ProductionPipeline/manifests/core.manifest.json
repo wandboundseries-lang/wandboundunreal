@@ -1,0 +1,30 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "production_pipeline_core",
+  "bundle_kind": "test",
+  "includes": [
+    {
+      "name": "equipment",
+      "path": "manifests/equipment.manifest.json"
+    }
+  ],
+  "batches": [
+    {
+      "batch_name": "units",
+      "bundles": [
+        {
+          "name": "heroes",
+          "path": "bundles/heroes.json"
+        },
+        {
+          "name": "characters",
+          "path": "bundles/characters.json"
+        },
+        {
+          "name": "markers",
+          "path": "bundles/markers.json"
+        }
+      ]
+    }
+  ]
+}

@@ -51,6 +51,10 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 {
 	FString CardId;
 	FString PublicName;
+	FString PublicCategory;
+	TArray<FString> PublicFactions;
+	TArray<FString> PublicTags;
+	FString PublicRulesText;
 	EWBCardDefinitionKind Kind = EWBCardDefinitionKind::Unknown;
 	FWBCardCharacterStatsDefinition CharacterStats;
 	FWBCardWandStatsDefinition WandStats;

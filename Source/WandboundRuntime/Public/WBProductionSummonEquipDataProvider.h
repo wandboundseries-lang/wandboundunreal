@@ -46,6 +46,24 @@ struct WANDBOUNDRUNTIME_API FWBProductionSummonEquipDecisionData
 	TArray<FWBProductionSummonEquipProviderDiagnostic> Diagnostics;
 };
 
+struct WANDBOUNDRUNTIME_API FWBProductionPublicDefinitionData
+{
+	FString DefinitionId;
+	FString DisplayName;
+	FName CardType;
+	FString PublicCategory;
+	TArray<FString> PublicFactions;
+	TArray<FString> PublicTags;
+	FString PublicRulesText;
+	int32 RR = 0;
+};
+
+struct WANDBOUNDRUNTIME_API FWBProductionPublicEffectData
+{
+	FString PublicLabel;
+	FString PublicTargetPrompt;
+};
+
 class WANDBOUNDRUNTIME_API FWBProductionSummonEquipDataProvider
 {
 public:
@@ -53,4 +71,15 @@ public:
 		const FWBGameStateData& State,
 		const FWBCardDefinitionRepository& Repository,
 		int32 ViewerPlayerId) const;
+
+	bool GetPublicDefinitionData(
+		const FWBCardDefinitionRepository& Repository,
+		const FString& DefinitionId,
+		FWBProductionPublicDefinitionData& OutData) const;
+
+	bool GetPublicEffectData(
+		const FWBCardDefinitionRepository& Repository,
+		const FString& DefinitionId,
+		const FString& EffectId,
+		FWBProductionPublicEffectData& OutData) const;
 };

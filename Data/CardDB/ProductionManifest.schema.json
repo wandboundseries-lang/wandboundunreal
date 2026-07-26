@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wandbound.production-carddb-manifest.schema.1",
+  "title": "Wandbound Production CardDB Manifest Suite",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/suite"
+    },
+    {
+      "$ref": "#/$defs/manifest"
+    }
+  ],
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "test_only": {
+          "type": "boolean"
+        }
+      }
+    },
+    "pathEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "path"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suite_schema_version",
+        "suite_id",
+        "bundle_kind",
+        "manifests"
+      ],
+      "properties": {
+        "suite_schema_version": {
+          "const": 1
+        },
+        "suite_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "bundle_kind": {
+          "enum": [
+            "production",
+            "test",
+            "development"
+          ]
+        },
+        "manifests": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/pathEntry"
+          }
+        },
+        "metadata": {
+          "$ref": "#/$defs/metadata"
+        }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_schema_version",
+        "manifest_id",
+        "bundle_kind",
+        "batches"
+      ],
+      "properties": {
+        "manifest_schema_version": {
+          "const": 1
+        },
+        "manifest_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "bundle_kind": {
+          "enum": [
+            "production",
+            "test",
+            "development"
+          ]
+        },
+        "includes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pathEntry"
+          }
+        },
+        "batches": {
+          "type": "array",
+          "minItems": 1
+        },
+        "metadata": {
+          "$ref": "#/$defs/metadata"
+        }
+      }
+    }
+  }
+}

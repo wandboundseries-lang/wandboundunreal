@@ -2,7 +2,7 @@
 
 #include "WBCardZoneObservation.h"
 #include "WBGameStateData.h"
-#include "WBResonanceLoad.h"
+#include "WBResonanceRecalculation.h"
 
 namespace
 {
@@ -149,6 +149,7 @@ void AppendSummonOptionForCharacter(
 void AppendEquipOptionForWand(
 	FWBProductionSummonEquipDecisionData& Data,
 	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	const FWBObservedCardRef& Card,
 	const FWBCardDefinition& Definition,
 	const int32 ViewerPlayerId)
@@ -174,8 +175,15 @@ void AppendEquipOptionForWand(
 			continue;
 		}
 
-		FWBResonanceLoadSummary LoadSummary;
-		if (WBResonanceLoad::CanPayRR(State, Unit->UnitId, RR, LoadSummary))
+		const FWBResonanceRecalculationResult RLResult =
+			WBResonanceRecalculation::CalculateUnit(State, Unit->UnitId, Repository);
+		if (!RLResult.bSucceeded)
+		{
+			AddDiagnostic(Data, TEXT("rl_recalculation_failed"), Card.CardId, Card.InstanceId, Unit->UnitId);
+			continue;
+		}
+
+		if (!RLResult.bIsOverflowing && RR <= RLResult.AvailableRL)
 		{
 			Option.EligibleUnitIds.Add(Unit->UnitId);
 		}
@@ -188,6 +196,31 @@ void AppendEquipOptionForWand(
 	}
 
 	Data.EquipOptions.Add(Option);
+}
+
+FName PublicCardTypeName(const EWBCardDefinitionKind Kind)
+{
+	switch (Kind)
+	{
+	case EWBCardDefinitionKind::Character: return FName(TEXT("Character"));
+	case EWBCardDefinitionKind::Wand: return FName(TEXT("Wand"));
+	case EWBCardDefinitionKind::Action: return FName(TEXT("Action"));
+	case EWBCardDefinitionKind::Trap: return FName(TEXT("Trap"));
+	case EWBCardDefinitionKind::NPC: return FName(TEXT("NPC"));
+	default: return FName(TEXT("Card"));
+	}
+}
+
+FString PublicTargetPrompt(
+	const EWBCardEffectTargetRequirement Requirement)
+{
+	switch (Requirement)
+	{
+	case EWBCardEffectTargetRequirement::Unit: return TEXT("Choose a unit");
+	case EWBCardEffectTargetRequirement::Tile: return TEXT("Choose a tile");
+	case EWBCardEffectTargetRequirement::WallEdge: return TEXT("Choose a wall");
+	default: return FString();
+	}
 }
 }
 
@@ -226,7 +259,7 @@ FWBProductionSummonEquipDecisionData FWBProductionSummonEquipDataProvider::Build
 			break;
 
 		case EWBCardDefinitionKind::Wand:
-			AppendEquipOptionForWand(Data, State, Card, Lookup.Definition, ViewerPlayerId);
+			AppendEquipOptionForWand(Data, State, Repository, Card, Lookup.Definition, ViewerPlayerId);
 			break;
 
 		default:
@@ -236,4 +269,56 @@ FWBProductionSummonEquipDecisionData FWBProductionSummonEquipDataProvider::Build
 	}
 
 	return Data;
+}
+
+bool FWBProductionSummonEquipDataProvider::GetPublicDefinitionData(
+	const FWBCardDefinitionRepository& Repository,
+	const FString& DefinitionId,
+	FWBProductionPublicDefinitionData& OutData) const
+{
+	OutData = FWBProductionPublicDefinitionData();
+	const FWBCardDefinitionRepositoryLookupResult Lookup =
+		WBCardDefinitionRepository::FindCardById(Repository, DefinitionId);
+	if (!Lookup.bFound)
+	{
+		return false;
+	}
+	OutData.DefinitionId = Lookup.Definition.CardId;
+	OutData.DisplayName = Lookup.Definition.PublicName;
+	OutData.CardType = PublicCardTypeName(Lookup.Definition.Kind);
+	OutData.PublicCategory = Lookup.Definition.PublicCategory;
+	OutData.PublicFactions = Lookup.Definition.PublicFactions;
+	OutData.PublicTags = Lookup.Definition.PublicTags;
+	OutData.PublicRulesText = Lookup.Definition.PublicRulesText;
+	OutData.RR = Lookup.Definition.WandStats.RR;
+	return true;
+}
+
+bool FWBProductionSummonEquipDataProvider::GetPublicEffectData(
+	const FWBCardDefinitionRepository& Repository,
+	const FString& DefinitionId,
+	const FString& EffectId,
+	FWBProductionPublicEffectData& OutData) const
+{
+	OutData = FWBProductionPublicEffectData();
+	const FWBCardDefinitionRepositoryLookupResult Lookup =
+		WBCardDefinitionRepository::FindCardById(Repository, DefinitionId);
+	if (!Lookup.bFound)
+	{
+		return false;
+	}
+	const FWBCardEffectDefinition* Effect =
+		Lookup.Definition.ActivatedEffects.FindByPredicate(
+			[&EffectId](const FWBCardEffectDefinition& Candidate)
+			{
+				return Candidate.EffectId == EffectId;
+			});
+	if (Effect == nullptr)
+	{
+		return false;
+	}
+	OutData.PublicLabel = Effect->PublicLabel;
+	OutData.PublicTargetPrompt =
+		PublicTargetPrompt(Effect->TargetRequirement);
+	return true;
 }

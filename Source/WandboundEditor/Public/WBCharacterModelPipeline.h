@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+struct FWBCardDefinitionRepository;
+
 enum class EWBCharacterDiagnosticSeverity : uint8
 {
 	Warning,
@@ -242,6 +244,8 @@ struct WANDBOUNDEDITOR_API FWBCharacterPipelineRunOptions
 	bool bValidateCook = false;
 	bool bWriteReports = true;
 	bool bUpdateCatalog = true;
+	const FWBCardDefinitionRepository* CardDefinitionRepository = nullptr;
+	bool bRequireCardDefinition = false;
 };
 
 struct WANDBOUNDEDITOR_API FWBCharacterPipelineRunResult
@@ -277,10 +281,14 @@ namespace WBCharacterModelPipeline
 		const FString& Json,
 		const FString& ManifestRepositoryPath,
 		const FString& ProjectRoot,
-		bool bRequireFiles);
+		bool bRequireFiles,
+		const FWBCardDefinitionRepository* CardDefinitionRepository = nullptr,
+		bool bRequireCardDefinition = false);
 	WANDBOUNDEDITOR_API FWBCharacterManifestValidationResult LoadAndValidateManifest(
 		const FString& ProjectRoot,
-		const FString& ManifestRepositoryPath);
+		const FString& ManifestRepositoryPath,
+		const FWBCardDefinitionRepository* CardDefinitionRepository = nullptr,
+		bool bRequireCardDefinition = false);
 	WANDBOUNDEDITOR_API FWBCharacterSourceInventory BuildSourceInventory(
 		const FString& ProjectRoot,
 		const FWBCharacterModelManifest& Manifest);
