@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "canonical_rules_version": "Wandbound_Rules_Bible_v2_1_FINAL",
+  "active_format_document_found": false,
+  "production_authorization": "blocked",
+  "rules": [
+    {
+      "rule": "hero_eligibility",
+      "value": "At least one non-Hybrid Character in the deck must be eligible to be chosen as Hero.",
+      "classification": "CanonicalExplicit",
+      "source": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt:299"
+    },
+    {
+      "rule": "hero_selection_and_placement",
+      "value": "Each player chooses a Hero from their deck; it is removed and spawned at that player's fixed Hero spawn tile.",
+      "classification": "CanonicalExplicit",
+      "source": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt:41-42,91"
+    },
+    {
+      "rule": "required_deck_size",
+      "value": null,
+      "classification": "Missing",
+      "source": "Rules Bible 23.3 delegates card-count restrictions to an active format document; no active format document was found."
+    },
+    {
+      "rule": "minimum_deck_size",
+      "value": null,
+      "classification": "Missing",
+      "source": "No canonical active format document was found."
+    },
+    {
+      "rule": "maximum_deck_size",
+      "value": null,
+      "classification": "Missing",
+      "source": "No canonical active format document was found."
+    },
+    {
+      "rule": "allowed_player_deck_card_types",
+      "value": null,
+      "classification": "Missing",
+      "source": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt:301"
+    },
+    {
+      "rule": "duplicate_limit",
+      "value": null,
+      "classification": "Missing",
+      "source": "Rules Bible 23.3 delegates format and card-count restrictions; no copy limit is stated."
+    },
+    {
+      "rule": "deck_ordering_or_shuffle_policy",
+      "value": null,
+      "classification": "Missing",
+      "source": "The canonical Rules Bible and Glossary contain no shuffle or ordered-deck rule."
+    },
+    {
+      "rule": "starting_hand_size",
+      "value": 6,
+      "classification": "CanonicalExplicit",
+      "source": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt:94"
+    },
+    {
+      "rule": "first_player_selection",
+      "value": "A coin flip or mode rule decides the first player.",
+      "classification": "CanonicalExplicit",
+      "source": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt:90,95"
+    },
+    {
+      "rule": "pinned_first_player_policy_for_this_production_match",
+      "value": null,
+      "classification": "Missing",
+      "source": "No canonical production mode or deterministic coin-flip policy was found."
+    },
+    {
+      "rule": "setup_markers",
+      "value": "Each player has exactly 2 Trap markers and 2 NPC markers.",
+      "classification": "CanonicalExplicit",
+      "source": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt:92,300"
+    },
+    {
+      "rule": "wands_in_player_decks",
+      "value": null,
+      "classification": "Missing",
+      "source": "Tutorial and AI decks contain Wands, but development use is not an active canonical format rule."
+    },
+    {
+      "rule": "npcs_in_player_decks",
+      "value": null,
+      "classification": "Missing",
+      "source": "NPCs are canonically neutral and part of setup kits, but no rule explicitly authorizes or prohibits them in player decks."
+    },
+    {
+      "rule": "traps_in_player_decks",
+      "value": null,
+      "classification": "Missing",
+      "source": "Traps are canonically setup markers, but no rule explicitly authorizes or prohibits Trap cards in player decks."
+    },
+    {
+      "rule": "identical_mirrored_decks",
+      "value": null,
+      "classification": "Missing",
+      "source": "No canonical rule addresses identical player decks."
+    },
+    {
+      "rule": "development_reduced_deck_is_production_legal",
+      "value": false,
+      "classification": "LegacyOnly",
+      "source": "Reference/GodotProject/godotcanon/scripts/ai/ai_env.gd:487-503 explicitly calls its reduced deck a headless test baseline."
+    },
+    {
+      "rule": "empty_deck_draw",
+      "value": "A draw from an empty deck fails unless a mode defines a replacement.",
+      "classification": "CanonicalExplicit",
+      "source": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt:292"
+    }
+  ],
+  "blocking_rules": [
+    "required_deck_size",
+    "allowed_player_deck_card_types",
+    "duplicate_limit",
+    "deck_ordering_or_shuffle_policy",
+    "pinned_first_player_policy_for_this_production_match",
+    "identical_mirrored_decks"
+  ],
+  "conclusion": "No production match specification may be created from the available canonical evidence."
+}

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "WBProductionStartupResult.h"
 #include "WBRuntimeMatchBootstrapActor.generated.h"
 
 class ACameraActor;
@@ -187,6 +188,8 @@ private:
 	bool bOwnsCameraActor = false;
 	bool bOwnsHUDWidget = false;
 	bool bProductionDataMode = false;
+	bool bProductionStartupAttemptActive = false;
+	FWBProductionStartupResult PendingProductionStartupResult;
 	TSharedPtr<const FWBProductionCardDatabase> ProductionCardDatabase;
 	TSharedPtr<FWBMatchInitializationRequest> ProductionInitializationRequest;
 

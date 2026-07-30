@@ -7,6 +7,13 @@
     "char_test_03"
   ],
   "missing_requirements": [
+    "canonical_active_format_document",
+    "canonical_deck_card_count",
+    "canonical_allowed_player_deck_card_types",
+    "canonical_duplicate_limit",
+    "canonical_deck_ordering_or_shuffle_policy",
+    "canonical_identical_deck_policy",
+    "canonical_first_player_policy",
     "canonical_supported_player_0_ordered_deck",
     "canonical_supported_player_1_ordered_deck"
   ],

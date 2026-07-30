@@ -13,9 +13,12 @@ range equal to AR. AR remains Attack Range.
 `test` token because tracked tutorial setup explicitly uses those definitions as
 Heroes. They are not synthetic Unreal test-fixture definitions.
 
-No `match_spec.json` is present. Canonical sources identify two Hero candidates,
-but every tracked deck containing them also requires definitions that remain
-unsupported. `match_status.json` records the resulting named fail-closed status.
+No `match_spec.json` is present. Canonical sources identify two tutorial Hero
+choices, but the Rules Bible delegates card-count and format restrictions to an
+active format document that is absent from the tracked reference. Deck size,
+allowed card types, copy limits, ordering, mirrored-deck legality, and the
+production first-player policy therefore cannot be inferred from tutorial or AI
+examples. `match_status.json` records the resulting named fail-closed status.
 
 The suite contains no models, asset package paths, hidden match state, Godot
 source data, test-only metadata, unsupported effect payloads, or fabricated deck

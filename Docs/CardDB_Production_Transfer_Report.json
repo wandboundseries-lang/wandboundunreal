@@ -4191,5 +4191,17 @@
       "char_test_01",
       "char_test_03"
     ]
+  },
+  "minimum_canonical_match_audit": {
+    "report": "Docs/CardDB_Minimum_Canonical_Match_Plan.json",
+    "can_build_canonical_match": false,
+    "transferred_this_pass": 0,
+    "resulting_definition_count": 10,
+    "behavior_supported_untransferred_definition_ids": [
+      "char_test_healer",
+      "trap_generic_01",
+      "wand_equip_mender_thread"
+    ],
+    "blocking_reason": "production_match_spec_blocked_by_canonical_deck_evidence"
   }
 }

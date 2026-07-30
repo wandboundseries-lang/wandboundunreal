@@ -69,11 +69,22 @@ The complete 26-entry eligibility record and exact reasons are in
 placement evidence. They remain Character definitions because Hero is a match
 role in the canonical rules.
 
-No `match_spec.json` was created. Every tracked tutorial or strong-preset deck
-containing those Hero candidates also contains unsupported definitions.
-`match_status.json` records
+No `match_spec.json` was created. Rules Bible 23.3 delegates format,
+faction, and card-count restrictions to an active format document, and no
+active canonical format document exists in the tracked reference. Tutorial and
+AI decks cannot supply production deck size, allowed types, copy limits,
+ordering, mirrored-deck legality, or first-player policy. `match_status.json`
+records
 `production_match_spec_blocked_by_canonical_deck_evidence`; no deck list was
 invented or reduced.
+
+The exhaustive minimum-match audit found three additional definitions whose
+behavior can map to existing production paths: `char_test_healer`,
+`wand_equip_mender_thread`, and `trap_generic_01`. They were not transferred
+because no canonically legal minimum deck can be computed, and adding unrelated
+definitions would not lift the startup block. The evidence and stable
+classification of all 244 definitions are recorded in
+`CardDB_Minimum_Canonical_Match_Plan.json`.
 
 ## Material Mismatches
 

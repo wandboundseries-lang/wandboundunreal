@@ -1,0 +1,168 @@
+#include "WBProductionStartupResult.h"
+
+#include "HAL/PlatformMisc.h"
+#include "Misc/CommandLine.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
+
+namespace
+{
+constexpr int32 ProductionStartedExitCode = 0;
+constexpr int32 ProductionBlockedExitCode = 12;
+constexpr int32 ProductionInvalidExitCode = 13;
+
+FString NormalizeResultCode(
+	const FWBProductionRuntimeBootstrapResult& Bootstrap)
+{
+	if (Bootstrap.bOk)
+	{
+		return FString();
+	}
+	if (Bootstrap.Reason.StartsWith(TEXT("production_match_spec_blocked_")))
+	{
+		return Bootstrap.Reason;
+	}
+	if (Bootstrap.Reason.Contains(TEXT("digest")))
+	{
+		return TEXT("production_digest_mismatch");
+	}
+	if (Bootstrap.Reason.Contains(TEXT("unsupported")))
+	{
+		return TEXT("production_match_spec_blocked_by_unsupported_definitions");
+	}
+	return TEXT("production_bundle_invalid");
+}
+}
+
+FString WBProductionStartupResult::GetDefaultResultPath()
+{
+	return FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SmokeTest/WandboundProductionStartupResult.json"));
+}
+
+FWBProductionStartupResult WBProductionStartupResult::FromBootstrap(
+	const FWBProductionRuntimeBootstrapRequest& Request,
+	const FWBProductionRuntimeBootstrapResult& Bootstrap)
+{
+	FWBProductionStartupResult Result;
+	Result.bBundleLoaded = Bootstrap.Database.IsValid();
+	Result.BundleDigest = Bootstrap.Database.IsValid()
+		? Bootstrap.Database->ContentDigest
+		: FString();
+	Result.bMatchSpecPresent = !Request.MatchSpecificationPath.IsEmpty();
+	Result.bBlocked =
+		Bootstrap.Reason.StartsWith(TEXT("production_match_spec_blocked_"));
+	Result.ResultCode = NormalizeResultCode(Bootstrap);
+	return Result;
+}
+
+FWBProductionStartupResult WBProductionStartupResult::Started(
+	const FString& BundleDigest,
+	const bool bMatchSpecPresent,
+	const int32 Generation,
+	const int32 Revision,
+	const bool bPlayableDecisionReached)
+{
+	FWBProductionStartupResult Result;
+	Result.bBundleLoaded = true;
+	Result.BundleDigest = BundleDigest;
+	Result.bMatchSpecPresent = bMatchSpecPresent;
+	Result.bMatchInitialized = true;
+	Result.bPlayableDecisionReached = bPlayableDecisionReached;
+	Result.ResultCode = TEXT("production_started");
+	Result.Generation = Generation;
+	Result.Revision = Revision;
+	return Result;
+}
+
+FString WBProductionStartupResult::Serialize(
+	const FWBProductionStartupResult& Result)
+{
+	FString Json;
+	const TSharedRef<TJsonWriter<>> Writer =
+		TJsonWriterFactory<>::Create(&Json);
+	Writer->WriteObjectStart();
+	Writer->WriteValue(TEXT("schema_version"), Result.SchemaVersion);
+	Writer->WriteValue(TEXT("startup_mode"), Result.StartupMode);
+	Writer->WriteValue(TEXT("bundle_loaded"), Result.bBundleLoaded);
+	Writer->WriteValue(TEXT("bundle_digest"), Result.BundleDigest);
+	Writer->WriteValue(
+		TEXT("match_spec_present"),
+		Result.bMatchSpecPresent);
+	Writer->WriteValue(
+		TEXT("match_initialized"),
+		Result.bMatchInitialized);
+	Writer->WriteValue(
+		TEXT("playable_decision_reached"),
+		Result.bPlayableDecisionReached);
+	Writer->WriteValue(TEXT("blocked"), Result.bBlocked);
+	Writer->WriteValue(TEXT("result_code"), Result.ResultCode);
+	Writer->WriteValue(TEXT("generation"), Result.Generation);
+	Writer->WriteValue(TEXT("revision"), Result.Revision);
+	Writer->WriteObjectEnd();
+	Writer->Close();
+	return Json;
+}
+
+bool WBProductionStartupResult::Write(
+	const FWBProductionStartupResult& Result,
+	const FString& ResultPath)
+{
+	const FString Path = ResultPath.IsEmpty()
+		? GetDefaultResultPath()
+		: ResultPath;
+	return IFileManager::Get().MakeDirectory(
+			*FPaths::GetPath(Path),
+			true)
+		&& FFileHelper::SaveStringToFile(
+			Serialize(Result),
+			*Path,
+			FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+}
+
+int32 WBProductionStartupResult::ExitCodeForResult(
+	const FWBProductionStartupResult& Result)
+{
+	if (Result.ResultCode == TEXT("production_started"))
+	{
+		return ProductionStartedExitCode;
+	}
+	return Result.bBlocked
+		? ProductionBlockedExitCode
+		: ProductionInvalidExitCode;
+}
+
+bool WBProductionStartupResult::IsStartupProbeRequested(
+	const TCHAR* CommandLine)
+{
+#if UE_BUILD_SHIPPING
+	return false;
+#else
+	return CommandLine != nullptr
+		&& FParse::Param(
+			CommandLine,
+			TEXT("WandboundProductionStartupProbe"));
+#endif
+}
+
+void WBProductionStartupResult::RequestProbeExit(
+	const FWBProductionStartupResult& Result)
+{
+	if (!IsStartupProbeRequested(FCommandLine::Get()))
+	{
+		return;
+	}
+	if (GLog != nullptr)
+	{
+		GLog->FlushThreadedLogs();
+		GLog->Flush();
+	}
+	FPlatformMisc::RequestExitWithStatus(
+		true,
+		ExitCodeForResult(Result),
+		TEXT("WandboundProductionStartupProbe"));
+}

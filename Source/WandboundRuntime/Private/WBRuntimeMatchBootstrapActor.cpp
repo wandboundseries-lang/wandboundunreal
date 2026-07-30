@@ -12,6 +12,7 @@
 #include "WBRuntimePlayerController.h"
 #include "WBRuntimePresentationAssetBinding.h"
 #include "WBProductionRuntimeBootstrap.h"
+#include "WBProductionStartupResult.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWBRuntimeLocalPlay, Log, All);
 
@@ -43,6 +44,7 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 
 	const bool bRequestedProductionData =
 		FParse::Param(FCommandLine::Get(), TEXT("WandboundProductionData"));
+	bProductionStartupAttemptActive = bRequestedProductionData;
 	if (!bRequestedProductionData && !bInitializeDevelopmentMatch)
 	{
 		return FailStartup(TEXT("development_match_initialization_disabled"));
@@ -66,6 +68,10 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			TEXT("WandboundAllowTestCardBundle"));
 		const FWBProductionRuntimeBootstrapResult BootstrapResult =
 			WBProductionRuntimeBootstrap::Build(Request);
+		PendingProductionStartupResult =
+			WBProductionStartupResult::FromBootstrap(
+				Request,
+				BootstrapResult);
 		if (!BootstrapResult.bOk)
 		{
 			return FailStartup(BootstrapResult.Reason);
@@ -111,11 +117,24 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 	RuntimeController->SetRuntimeInteractionEnabled(true);
 	if (bProductionDataMode)
 	{
+		const FWBRuntimeMatchPresentation Presentation =
+			MatchHost->GetCurrentPresentation();
+		PendingProductionStartupResult =
+			WBProductionStartupResult::Started(
+				ProductionCardDatabase->ContentDigest,
+				!ProductionInitializationRequest->Players.IsEmpty(),
+				Presentation.MatchGeneration,
+				Presentation.PresentationRevision,
+				!MatchHost->GetCurrentLegalActions().IsEmpty());
+		WBProductionStartupResult::Write(
+			PendingProductionStartupResult);
 		UE_LOG(
 			LogWBRuntimeLocalPlay,
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
+		WBProductionStartupResult::RequestProbeExit(
+			PendingProductionStartupResult);
 	}
 	return MakeResult(
 		true,
@@ -194,6 +213,8 @@ void AWBRuntimeMatchBootstrapActor::ShutdownLocalPlay()
 	ProductionCardDatabase.Reset();
 	ProductionInitializationRequest.Reset();
 	bProductionDataMode = false;
+	bProductionStartupAttemptActive = false;
+	PendingProductionStartupResult = FWBProductionStartupResult();
 	bOwnsBoardActor = false;
 	bOwnsCameraActor = false;
 	bOwnsHUDWidget = false;
@@ -268,6 +289,18 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::FailStartup(const FStri
 {
 	StartupFailureReason = Reason;
 	UE_LOG(LogWBRuntimeLocalPlay, Log, TEXT("Wandbound local-play startup failed: %s"), *Reason);
+	if (bProductionStartupAttemptActive)
+	{
+		if (PendingProductionStartupResult.ResultCode.IsEmpty())
+		{
+			PendingProductionStartupResult.ResultCode =
+				TEXT("production_bundle_invalid");
+		}
+		WBProductionStartupResult::Write(
+			PendingProductionStartupResult);
+		WBProductionStartupResult::RequestProbeExit(
+			PendingProductionStartupResult);
+	}
 	RollbackStartup();
 	LocalPlayState = EWBRuntimeLocalPlayState::Failed;
 	return MakeResult(false, Reason);
@@ -296,6 +329,7 @@ void AWBRuntimeMatchBootstrapActor::RollbackStartup()
 	ProductionCardDatabase.Reset();
 	ProductionInitializationRequest.Reset();
 	bProductionDataMode = false;
+	bProductionStartupAttemptActive = false;
 	bOwnsBoardActor = false;
 	bOwnsCameraActor = false;
 	bOwnsHUDWidget = false;

@@ -86,6 +86,23 @@ deck composed only of supported definitions. It therefore ships
 production bootstrap loads and validates the suite, then fails with
 `production_match_spec_blocked_by_canonical_deck_evidence`.
 
+Every explicit production startup writes a small public-safe result to:
+
+```text
+Saved/SmokeTest/WandboundProductionStartupResult.json
+```
+
+The result contains only bundle/match presence, initialization and playable
+decision flags, the public bundle digest, generation/revision counters, and a
+named result code. It contains no deck order, hand contents, concealed marker
+identity, or effect parameters.
+
+Development and Test builds may add
+`-WandboundProductionStartupProbe`. The process then exits with `0` for
+`production_started`, `12` for a named production block, or `13` for invalid
+production input after writing the result artifact. Shipping builds ignore the
+probe flag.
+
 ## Public Data
 
 Visible units expose definition ID, display name, public category, factions,

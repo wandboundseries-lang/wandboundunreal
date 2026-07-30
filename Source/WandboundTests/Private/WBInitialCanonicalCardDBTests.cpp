@@ -142,7 +142,7 @@ bool FWBInitialCanonicalSuiteLoadsTest::RunTest(const FString&)
 			Result.Snapshot->BundleLockPath,
 			FString(TEXT("bundle_lock.json")));
 		const FString ExpectedTransferReportDigest =
-			TEXT("22465caa6e6299fa564b6e6fee77092a5e2871f5e67423bb1e0f1aa293cce884");
+			TEXT("987012918cc2b3b14bef864b05982da32d04992d0cb2bb8c1d1ea2ec2baeba2f");
 		TestEqual(
 			TEXT("Locked transfer report digest"),
 			Result.Snapshot->LockedTransferReportDigest,
