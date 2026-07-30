@@ -1,0 +1,22 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "initial_canonical",
+  "bundle_kind": "production",
+  "manifests": [
+    {
+      "name": "canonical_definitions",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "bundle_lock": {
+    "path": "bundle_lock.json"
+  },
+  "match_status": {
+    "path": "match_status.json"
+  },
+  "metadata": {
+    "source": "Canonical Wandbound v2.1 rules and Godot CardDB",
+    "version": "initial_canonical_v1",
+    "notes": "First fail-closed canonical production definition suite."
+  }
+}

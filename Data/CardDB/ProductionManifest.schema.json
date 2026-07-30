@@ -81,8 +81,27 @@
             "$ref": "#/$defs/pathEntry"
           }
         },
+        "bundle_lock": {
+          "$ref": "#/$defs/controlFile"
+        },
+        "match_status": {
+          "$ref": "#/$defs/controlFile"
+        },
         "metadata": {
           "$ref": "#/$defs/metadata"
+        }
+      }
+    },
+    "controlFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },

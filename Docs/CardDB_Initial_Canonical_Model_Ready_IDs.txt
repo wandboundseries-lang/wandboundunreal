@@ -1,0 +1,16 @@
+# Initial Canonical Model-Ready Definition IDs
+
+# This list is data-only. It does not imply that any model assets have been
+# imported, generated, or assigned.
+
+char_new_1_6_18_3
+char_new_2_4_20_2
+char_new_3_4_16_2
+char_new_rl_duelist
+char_new_rl_monolith
+char_test_01
+char_test_02
+char_test_03
+
+# See Docs/CardDB_Initial_Canonical_Eligibility_Report.json for the source
+# provenance and transfer eligibility of each definition.

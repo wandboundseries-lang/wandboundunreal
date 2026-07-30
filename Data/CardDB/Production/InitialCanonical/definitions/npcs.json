@@ -1,0 +1,61 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "initial_canonical_v1",
+  "source_version": "godot_carddb_canonical_v2_1",
+  "bundle_kind": "production",
+  "metadata": {
+    "source": "Reference/GodotProject/godotcanon/scripts/data/CardDB/npcs.json",
+    "version": "initial_canonical_v1",
+    "notes": "Canonical NPCs compatible with the generic deterministic NPC runtime."
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "npc_generic_01",
+      "public_name": "Dungeon Crawler",
+      "kind": "npc",
+      "public_text": "NPC.",
+      "public_category": "NPC",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 10,
+        "atk": 2,
+        "ar": 1,
+        "rl": 0
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 1
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "npc_human_marksman",
+      "public_name": "Human Marksman",
+      "kind": "npc",
+      "public_text": "NPC",
+      "public_category": "NPC",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 10,
+        "atk": 1,
+        "ar": 3,
+        "rl": 2
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 3
+      }
+    }
+  ]
+}

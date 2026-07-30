@@ -89,6 +89,12 @@ struct WANDBOUNDCARDDB_API FWBProductionCardDatabase
 	FString ContentDigest;
 	TArray<FString> IncludedManifestPaths;
 	TArray<FString> IncludedBundlePaths;
+	FString BundleLockPath;
+	FString LockedTransferReportDigest;
+	FString MatchStatusPath;
+	FString MatchStatus;
+	FString MatchBlockedReason;
+	TArray<FString> HeroCandidateDefinitionIds;
 	TArray<FWBProductionCardRecord> Records;
 	FWBCardDefinitionRepository CoreRepository;
 

@@ -1,0 +1,205 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "initial_canonical_v1",
+  "source_version": "godot_carddb_canonical_v2_1",
+  "bundle_kind": "production",
+  "metadata": {
+    "source": "Reference/GodotProject/godotcanon/scripts/data/CardDB/characters.json",
+    "version": "initial_canonical_v1",
+    "notes": "Canonical Characters with no required card-specific behavior."
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "char_new_1_6_18_3",
+      "public_name": "New 1-6-18-3",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 18,
+        "atk": 1,
+        "ar": 3,
+        "rl": 6
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 3
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_new_2_4_20_2",
+      "public_name": "New 2-4-20-2",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 20,
+        "atk": 2,
+        "ar": 2,
+        "rl": 4
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 2
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_new_3_4_16_2",
+      "public_name": "New 3-4-16-2",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 16,
+        "atk": 3,
+        "ar": 2,
+        "rl": 4
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 2
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_new_rl_duelist",
+      "public_name": "Resonance Needle",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 10,
+        "atk": 1,
+        "ar": 1,
+        "rl": 8
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 1
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_new_rl_monolith",
+      "public_name": "Resonance Monolith",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 10,
+        "atk": 0,
+        "ar": 0,
+        "rl": 10
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 0
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_test_01",
+      "public_name": "Arclight Crusader",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 15,
+        "atk": 4,
+        "ar": 2,
+        "rl": 3
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 2
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_test_02",
+      "public_name": "Arena Brawler",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 18,
+        "atk": 5,
+        "ar": 1,
+        "rl": 2
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 1
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_test_03",
+      "public_name": "Black Meridian Cole",
+      "kind": "character",
+      "public_text": "",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {
+        "hp": 14,
+        "atk": 4,
+        "ar": 4,
+        "rl": 3
+      },
+      "movement": {
+        "pattern": "orthogonal_adjacent"
+      },
+      "attack": {
+        "pattern": "orthogonal_line",
+        "range": 4
+      }
+    }
+  ]
+}

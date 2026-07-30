@@ -1,6 +1,5 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-using System.IO;
 using UnrealBuildTool;
 
 public class WandboundCardDB : ModuleRules
@@ -14,21 +13,24 @@ public class WandboundCardDB : ModuleRules
 		PrivateDependencyModuleNames.Add("Json");
 		AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
-		string CardDBDataRoot = Path.GetFullPath(
-			Path.Combine(ModuleDirectory, "..", "..", "Data", "CardDB"));
-		if (Directory.Exists(CardDBDataRoot))
+		string[] RuntimeDataFiles =
 		{
-			foreach (string SourceFile in Directory.GetFiles(
-				CardDBDataRoot,
-				"*",
-				SearchOption.AllDirectories))
-			{
-				string RelativePath = SourceFile.Substring(CardDBDataRoot.Length + 1)
-					.Replace('\\', '/');
-				RuntimeDependencies.Add(
-					"$(ProjectDir)/Data/CardDB/" + RelativePath,
-					StagedFileType.NonUFS);
-			}
+			"ProductionCardDB.schema.json",
+			"ProductionManifest.schema.json",
+			"ProductionMatchSpec.schema.json",
+			"Production/InitialCanonical/root_manifest.json",
+			"Production/InitialCanonical/bundle_manifest.json",
+			"Production/InitialCanonical/definitions/characters.json",
+			"Production/InitialCanonical/definitions/npcs.json",
+			"Production/InitialCanonical/bundle_lock.json",
+			"Production/InitialCanonical/match_status.json",
+			"Production/InitialCanonical/README.md"
+		};
+		foreach (string RelativePath in RuntimeDataFiles)
+		{
+			RuntimeDependencies.Add(
+				"$(ProjectDir)/Data/CardDB/" + RelativePath,
+				StagedFileType.NonUFS);
 		}
 	}
 }

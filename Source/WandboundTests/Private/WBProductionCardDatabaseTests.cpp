@@ -1233,6 +1233,7 @@ bool FWBProductionCardDBTransferReportTest::RunTest(const FString&)
 			&& Definitions != nullptr
 			&& Definitions->Num() == 244);
 	FString PreviousId;
+	int32 TransferredCount = 0;
 	if (Definitions != nullptr)
 	{
 		for (const TSharedPtr<FJsonValue>& Value : *Definitions)
@@ -1241,16 +1242,33 @@ bool FWBProductionCardDBTransferReportTest::RunTest(const FString&)
 			const FString Id =
 				Definition->GetStringField(TEXT("definition_id"));
 			TestTrue(TEXT("Stable definition order"), PreviousId < Id);
-			TestFalse(
-				TEXT("No unsupported canonical definition is ready"),
-				Definition->GetStringField(TEXT("unreal_status"))
-					.StartsWith(TEXT("Transferred")));
+			const FString UnrealStatus =
+				Definition->GetStringField(TEXT("unreal_status"));
+			if (UnrealStatus == TEXT("Transferred"))
+			{
+				++TransferredCount;
+				TestEqual(
+					TEXT("Transferred definition is behavior-free eligible"),
+					Definition->GetStringField(TEXT("eligibility")),
+					FString(TEXT("EligibleBehaviorFree")));
+			}
+			else
+			{
+				TestTrue(
+					TEXT("Non-transferred canonical definition remains fail-closed"),
+					UnrealStatus == TEXT("Deferred")
+						|| UnrealStatus == TEXT("UnsupportedEffect"));
+			}
 			TestFalse(
 				TEXT("Source provenance retained"),
 				Definition->GetStringField(TEXT("source_manifest"))
 					.IsEmpty());
 			PreviousId = Id;
 		}
+		TestEqual(
+			TEXT("Initial canonical behavior-free transfer count"),
+			TransferredCount,
+			10);
 	}
 	return true;
 }

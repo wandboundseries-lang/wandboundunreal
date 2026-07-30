@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "root_manifest": "root_manifest.json",
+  "included_manifests": [
+    "bundle_manifest.json"
+  ],
+  "definition_ids": [
+    "char_new_1_6_18_3",
+    "char_new_2_4_20_2",
+    "char_new_3_4_16_2",
+    "char_new_rl_duelist",
+    "char_new_rl_monolith",
+    "char_test_01",
+    "char_test_02",
+    "char_test_03",
+    "npc_generic_01",
+    "npc_human_marksman"
+  ],
+  "definition_count": 10,
+  "semantic_digest": "b406557f2f190818fe3460621bbbdfaf84abe53623ff26aa934588aad68bedde",
+  "source_provenance": [
+    "Reference/GodotProject/godotcanon/Wandbound_Canonical_Glossary_v2_1_FINAL.txt",
+    "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt",
+    "Reference/GodotProject/godotcanon/scripts/data/CardDB/characters.json",
+    "Reference/GodotProject/godotcanon/scripts/data/CardDB/npcs.json"
+  ],
+  "transfer_report_digest": "22465caa6e6299fa564b6e6fee77092a5e2871f5e67423bb1e0f1aa293cce884"
+}

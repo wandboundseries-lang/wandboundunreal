@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "source_definition_count": 26,
+  "status_counts": {
+    "EligibleBehaviorFree": 10,
+    "EligibleSupportedPayloadOnly": 0,
+    "HeroAmbiguous": 0,
+    "TypeAmbiguous": 0,
+    "StatAmbiguous": 0,
+    "UnsupportedImplicitBehavior": 14,
+    "MissingReference": 0,
+    "SchemaConflict": 2,
+    "Deferred": 0
+  },
+  "canonical_terminology": {
+    "AR": "Attack Range",
+    "ATK": "Attack value",
+    "RL": "Resonance Limit",
+    "RR": "Resonance Requirement",
+    "armor_inferred_from_ar": false
+  },
+  "hero_candidates": [
+    {
+      "definition_id": "char_test_01",
+      "display_name": "Arclight Crusader",
+      "evidence": "Explicit Player 0 hero choice and tutorial hero placement.",
+      "source": "Reference/GodotProject/godotcanon/autoload/Game.gd:8777 and data/tutorials/tutorial_01_board_combat_basics.json",
+      "status": "CanonicallySupported"
+    },
+    {
+      "definition_id": "char_test_03",
+      "display_name": "Black Meridian Cole",
+      "evidence": "Explicit Player 1 hero choice and tutorial hero placement.",
+      "source": "Reference/GodotProject/godotcanon/autoload/Game.gd:8778 and data/tutorials/tutorial_01_board_combat_basics.json",
+      "status": "CanonicallySupported"
+    }
+  ],
+  "production_match": {
+    "status": "blocked",
+    "reason": "production_match_spec_blocked_by_canonical_deck_evidence",
+    "detail": "Tracked tutorial and strong-preset decks contain unsupported definitions; no canonical ordered deck can be reduced to the transferred subset without invention."
+  },
+  "candidates": [
+    {
+      "definition_id": "char_bm_anchor",
+      "display_name": "Black Meridian Anchor",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires an adjacent-entry Rooted trigger."
+    },
+    {
+      "definition_id": "char_csn_echo",
+      "display_name": "CSN Echo",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires CSN inheritance, reactive summoning, wand transfer, and RL transfer."
+    },
+    {
+      "definition_id": "char_csn_juno",
+      "display_name": "CSN Juno",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires CSN inheritance and once-per-turn destruction prevention."
+    },
+    {
+      "definition_id": "char_csn_rook",
+      "display_name": "CSN Rook",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires CSN inheritance and a destruction-triggered deck summon."
+    },
+    {
+      "definition_id": "char_csn_sable",
+      "display_name": "CSN Sable",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires CSN inheritance and destruction-triggered permanent stats."
+    },
+    {
+      "definition_id": "char_csn_sonia",
+      "display_name": "CSN Sonia",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires CSN inheritance and a destruction-triggered draw."
+    },
+    {
+      "definition_id": "char_new_1_6_18_3",
+      "display_name": "New 1-6-18-3",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 18, "atk": 1, "ar": 3, "rl": 6 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Explicit stats, empty rules text, and only canonical default movement and attack behavior.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_new_2_4_20_2",
+      "display_name": "New 2-4-20-2",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 20, "atk": 2, "ar": 2, "rl": 4 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Explicit stats, empty rules text, and only canonical default movement and attack behavior.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_new_3_4_16_2",
+      "display_name": "New 3-4-16-2",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 16, "atk": 3, "ar": 2, "rl": 4 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Explicit stats, empty rules text, and only canonical default movement and attack behavior.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_new_rl_duelist",
+      "display_name": "Resonance Needle",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 10, "atk": 1, "ar": 1, "rl": 8 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Explicit stats, empty rules text, and only canonical default movement and attack behavior.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_new_rl_monolith",
+      "display_name": "Resonance Monolith",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 10, "atk": 0, "ar": 0, "rl": 10 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Explicit zero ATK and zero Attack Range are preserved without inventing attack capability.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_test_01",
+      "display_name": "Arclight Crusader",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 15, "atk": 4, "ar": 2, "rl": 3 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Canonical CardDB and tutorial definition with explicit stats and no card-specific behavior.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_test_02",
+      "display_name": "Arena Brawler",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 18, "atk": 5, "ar": 1, "rl": 2 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Canonical CardDB definition with explicit stats and no card-specific behavior.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_test_03",
+      "display_name": "Black Meridian Cole",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "canonical_stats": { "hp": 14, "atk": 4, "ar": 4, "rl": 3 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Canonical CardDB and tutorial definition with explicit stats and no card-specific behavior.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "char_ww_auditor",
+      "display_name": "Wandwright's Auditor",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires an equip-triggered permanent enemy RL reduction."
+    },
+    {
+      "definition_id": "char_ww_calibrator",
+      "display_name": "Wandwright's Calibrator",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires an equip-triggered ATK increase."
+    },
+    {
+      "definition_id": "char_ww_salvager",
+      "display_name": "Wandwright's Salvager",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text replaces overflow destruction with equipment transfer."
+    },
+    {
+      "definition_id": "char_ww_warder",
+      "display_name": "Wandwright's Warder",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires an attacked trigger and temporary RL mutation."
+    },
+    {
+      "definition_id": "npc_duelist_human",
+      "display_name": "Duelist",
+      "card_type": "npc",
+      "source_manifest": "scripts/data/CardDB/npcs.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Canonical npc_target_priority_profile duelist is not represented by the production schema."
+    },
+    {
+      "definition_id": "npc_generic_01",
+      "display_name": "Dungeon Crawler",
+      "card_type": "npc",
+      "source_manifest": "scripts/data/CardDB/npcs.json",
+      "canonical_stats": { "hp": 10, "atk": 2, "ar": 1, "rl": 0 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Uses the already-supported generic deterministic NPC behavior with no custom profile.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "npc_human_marksman",
+      "display_name": "Human Marksman",
+      "card_type": "npc",
+      "source_manifest": "scripts/data/CardDB/npcs.json",
+      "canonical_stats": { "hp": 10, "atk": 1, "ar": 3, "rl": 2 },
+      "eligibility": "EligibleBehaviorFree",
+      "reason": "Uses the already-supported generic deterministic NPC behavior with no custom profile.",
+      "production_status": "Transferred"
+    },
+    {
+      "definition_id": "npc_raider",
+      "display_name": "Raider",
+      "card_type": "npc",
+      "source_manifest": "scripts/data/CardDB/npcs.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Canonical npc_target_priority_profile raider is not represented by the production schema."
+    },
+    {
+      "definition_id": "officer_new_bulwark",
+      "display_name": "Officer Bulwark",
+      "card_type": "character",
+      "source_manifest": "scripts/data/CardDB/characters.json",
+      "eligibility": "SchemaConflict",
+      "reason": "Canonical stats explicitly include Armor 3, but base unit Armor is not present in the production definition schema."
+    },
+    {
+      "definition_id": "trap_generic_01",
+      "display_name": "Spike Trap",
+      "card_type": "trap",
+      "source_manifest": "scripts/data/CardDB/traps.json",
+      "eligibility": "SchemaConflict",
+      "reason": "Canonical default_damage 2 cannot be preserved in the current production Trap definition schema."
+    },
+    {
+      "definition_id": "wand_equip_csn_oathchain",
+      "display_name": "CSN Oathchain",
+      "card_type": "wand_equip",
+      "source_manifest": "scripts/data/CardDB/wands_equip.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires replacement destruction and prevention behavior."
+    },
+    {
+      "definition_id": "wand_equip_enemy_deadweight",
+      "display_name": "Deadweight Sigil",
+      "card_type": "wand_equip",
+      "source_manifest": "scripts/data/CardDB/wands_equip.json",
+      "eligibility": "UnsupportedImplicitBehavior",
+      "reason": "Rules text requires enemy-unit equip targeting not supported by production equip execution."
+    }
+  ]
+}

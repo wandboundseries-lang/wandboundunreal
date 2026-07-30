@@ -2,26 +2,87 @@
 
 ## Scope
 
-This audit compares the runtime-loaded Godot CardDB source set under `Reference/GodotProject/godotcanon/scripts/data/CardDB` with the validated Unreal production CardDB snapshot format. Godot files were read only. No canonical Godot definition was copied into the synthetic Unreal fixture.
+This audit compares the read-only Godot CardDB source set under
+`Reference/GodotProject/godotcanon/scripts/data/CardDB` with the validated
+Unreal production CardDB snapshot format. The first eligible canonical subset is
+now normalized under `Data/CardDB/Production/InitialCanonical/`.
 
 ## Result
 
 | Classification | Count |
 |---|---:|
-| Deferred | 26 |
+| Transferred | 10 |
+| Deferred | 16 |
 | UnsupportedEffect | 218 |
 
 - Canonical definitions inspected: 244
-- Canonical definitions transferred: 0
-- Synthetic Unreal fixture definitions: 7
+- Canonical definitions transferred: 10
+- Initial canonical production definitions: 10
 - Unsupported effect/passive/directive types: 97
+- Production digest: `b406557f2f190818fe3460621bbbdfaf84abe53623ff26aa934588aad68bedde`
 
-No canonical definition is reported as production-ready. Definitions without unsupported behavior remain `Deferred` because they have not been normalized into an explicit production manifest.
+All transferred definitions preserve canonical identity, display name, stats,
+rules text, and provenance. Unsupported definitions remain unsupported or
+deferred; no behavior was removed to make a definition eligible.
+
+## Canonical Terminology
+
+- `AR` is Attack Range.
+- `ATK` is Attack value.
+- `RL` is Resonance Limit.
+- `RR` is Resonance Requirement.
+- No Armor value was inferred from `AR`.
+- No base unit Armor field was invented.
+
+## Transferred Definitions
+
+| Definition ID | Name | Type | Previous | Final |
+|---|---|---|---|---|
+| `char_new_1_6_18_3` | New 1-6-18-3 | Character | Deferred | Transferred |
+| `char_new_2_4_20_2` | New 2-4-20-2 | Character | Deferred | Transferred |
+| `char_new_3_4_16_2` | New 3-4-16-2 | Character | Deferred | Transferred |
+| `char_new_rl_duelist` | Resonance Needle | Character | Deferred | Transferred |
+| `char_new_rl_monolith` | Resonance Monolith | Character | Deferred | Transferred |
+| `char_test_01` | Arclight Crusader | Character | Deferred | Transferred |
+| `char_test_02` | Arena Brawler | Character | Deferred | Transferred |
+| `char_test_03` | Black Meridian Cole | Character | Deferred | Transferred |
+| `npc_generic_01` | Dungeon Crawler | NPC | Deferred | Transferred |
+| `npc_human_marksman` | Human Marksman | NPC | Deferred | Transferred |
+
+The legacy `char_test_*` IDs are canonical CardDB IDs used by tracked tutorials,
+not synthetic Unreal fixture IDs. They are preserved rather than renamed.
+
+## Remaining Deferred Candidates
+
+Fourteen definitions require unsupported implicit behavior: Black Meridian
+Anchor, five CSN Characters, four Wandwright Characters, two profiled NPCs, and
+two Wands. `officer_new_bulwark` and `trap_generic_01` remain deferred because
+their explicit Armor and trap-damage fields cannot be preserved by the current
+production definition schema.
+
+The complete 26-entry eligibility record and exact reasons are in
+`CardDB_Initial_Canonical_Eligibility_Report.json`.
+
+## Hero And Match Status
+
+`char_test_01` and `char_test_03` have explicit tracked hero-choice and tutorial
+placement evidence. They remain Character definitions because Hero is a match
+role in the canonical rules.
+
+No `match_spec.json` was created. Every tracked tutorial or strong-preset deck
+containing those Hero candidates also contains unsupported definitions.
+`match_status.json` records
+`production_match_spec_blocked_by_canonical_deck_evidence`; no deck list was
+invented or reduced.
 
 ## Material Mismatches
 
-- The canonical Unreal rules kernel treats `AR` as attack range. The task wording also described base Armor; this pass does not invent a conflicting base-Armor definition field.
-- Godot Characters and NPCs generally rely on implicit movement and attack patterns. Production Unreal requires explicit deterministic patterns.
+- Canonical default movement is normalized to `orthogonal_adjacent`, and
+  canonical default attack behavior is normalized to `orthogonal_line` with
+  range equal to AR, only for definitions with no card-specific override.
+- `char_new_rl_monolith` preserves explicit `ATK 0` and `AR 0`.
+- NPC target-priority profiles remain unsupported. Only NPCs using the existing
+  generic deterministic NPC behavior transferred.
 - Godot Quick and React effects require response-window timing, which is intentionally outside this pass.
 - Godot Wands use legacy effect structures without the explicit source, cost, usage, and target gates required by the production Unreal schema.
 - Hybrid sacrifice and Hero-replacement semantics are not represented by the current production schema.
@@ -130,4 +191,8 @@ The complete stable list is recorded in `CardDB_Production_Transfer_Report.json`
 
 ## Provenance
 
-The JSON companion contains one deterministically sorted entry per definition with ID, display name, canonical category, source path, Unreal classification, field mismatches, unsupported effect types, and corrective action. `effects_react.json` is used only as a parseable mirror; provenance points to the runtime-loaded `effects_react.gd` source.
+The JSON companion contains one deterministically sorted entry per definition
+with ID, display name, canonical category, source path, Unreal classification,
+field mapping, eligibility, unsupported effect types, and corrective action.
+`effects_react.json` is used only as a parseable mirror; provenance points to
+the runtime-loaded `effects_react.gd` source.

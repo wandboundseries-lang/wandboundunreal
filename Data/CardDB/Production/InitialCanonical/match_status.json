@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "blocked",
+  "reason": "production_match_spec_blocked_by_canonical_deck_evidence",
+  "hero_candidate_ids": [
+    "char_test_01",
+    "char_test_03"
+  ],
+  "missing_requirements": [
+    "canonical_supported_player_0_ordered_deck",
+    "canonical_supported_player_1_ordered_deck"
+  ],
+  "definition_bundle_digest": "b406557f2f190818fe3460621bbbdfaf84abe53623ff26aa934588aad68bedde"
+}

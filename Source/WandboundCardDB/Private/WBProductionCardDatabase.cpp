@@ -540,6 +540,8 @@ private:
 	TArray<FWBProductionCardRecord> ParsedRecords;
 	FString ExpectedCardDBVersion;
 	FString ExpectedSourceVersion;
+	FString BundleLockRelativePath;
+	FString MatchStatusRelativePath;
 
 	void AddDiagnostic(
 		const EWBProductionCardDBDiagnosticSeverity Severity,
@@ -646,6 +648,50 @@ private:
 			FieldPath);
 	}
 
+	bool ReadControlFilePath(
+		const TSharedPtr<FJsonObject>& Suite,
+		const FString& Field,
+		FString& OutPath)
+	{
+		if (!HasField(Suite, Field))
+		{
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Entry;
+		if (!TryReadObject(Suite, Field, Entry))
+		{
+			AddError(
+				TEXT("suite_control_file_malformed"),
+				RootManifestPath,
+				FString(),
+				TEXT("$.") + Field,
+				TEXT("Suite control-file entries must be objects."));
+			return false;
+		}
+		ValidateKnownFields(
+			Entry,
+			{ TEXT("path") },
+			RootManifestPath,
+			FString(),
+			TEXT("$.") + Field);
+
+		FString Path;
+		if (!TryReadString(Entry, TEXT("path"), Path)
+			|| !WBProductionCardDatabase::IsSafeRepositoryRelativePath(Path))
+		{
+			AddError(
+				TEXT("suite_control_file_path_invalid"),
+				RootManifestPath,
+				FString(),
+				TEXT("$.") + Field + TEXT(".path"),
+				TEXT("Suite control-file paths must remain inside the suite root."));
+			return false;
+		}
+		OutPath = NormalizeRelativePath(Path);
+		return true;
+	}
+
 	bool LoadJsonFile(
 		const FString& RelativePath,
 		FString& OutJson)
@@ -680,6 +726,8 @@ private:
 				TEXT("suite_id"),
 				TEXT("bundle_kind"),
 				TEXT("manifests"),
+				TEXT("bundle_lock"),
+				TEXT("match_status"),
 				TEXT("metadata")
 			},
 			RootManifestPath,
@@ -725,6 +773,14 @@ private:
 				TEXT("$.bundle_kind"),
 				TEXT("The suite must be classified as production, test, or development."));
 		}
+		ReadControlFilePath(
+			Suite,
+			TEXT("bundle_lock"),
+			BundleLockRelativePath);
+		ReadControlFilePath(
+			Suite,
+			TEXT("match_status"),
+			MatchStatusRelativePath);
 
 		const TArray<TSharedPtr<FJsonValue>>* Manifests = nullptr;
 		if (!TryReadArray(Suite, TEXT("manifests"), Manifests)
@@ -1580,7 +1636,7 @@ private:
 				&& Record.CoreDefinition.CharacterStats.HP <= 999
 				&& Record.CoreDefinition.CharacterStats.ATK >= 0
 				&& Record.CoreDefinition.CharacterStats.ATK <= 99
-				&& Record.CoreDefinition.CharacterStats.AR >= 1
+				&& Record.CoreDefinition.CharacterStats.AR >= 0
 				&& Record.CoreDefinition.CharacterStats.AR <= 99
 				&& Record.CoreDefinition.CharacterStats.RL >= 0
 				&& Record.CoreDefinition.CharacterStats.RL <= 99;
@@ -2580,11 +2636,249 @@ private:
 				TEXT("The immutable snapshot digest could not be calculated."));
 			return;
 		}
+		ValidateBundleLock();
+		ValidateMatchStatus();
+		if (HasErrors())
+		{
+			return;
+		}
 
 		Result.bOk = true;
 		Result.Reason = TEXT("success");
 		Result.Snapshot =
 			MakeShared<const FWBProductionCardDatabase>(MoveTemp(WorkingDatabase));
+	}
+
+	bool IsStrictlySortedUnique(const TArray<FString>& Values) const
+	{
+		for (int32 Index = 1; Index < Values.Num(); ++Index)
+		{
+			if (Values[Index - 1] >= Values[Index])
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool IsSHA256(const FString& Value) const
+	{
+		if (Value.Len() != 64)
+		{
+			return false;
+		}
+		for (const TCHAR Character : Value)
+		{
+			if (!FChar::IsDigit(Character)
+				&& !(Character >= TEXT('a') && Character <= TEXT('f')))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	void AddControlFileError(
+		const FString& Code,
+		const FString& RelativePath,
+		const FString& FieldPath,
+		const FString& Message)
+	{
+		AddError(
+			Code,
+			RelativePath,
+			FString(),
+			FieldPath,
+			Message);
+	}
+
+	void ValidateBundleLock()
+	{
+		if (BundleLockRelativePath.IsEmpty())
+		{
+			return;
+		}
+
+		FString Json;
+		TSharedPtr<FJsonObject> Lock;
+		if (!LoadJsonFile(BundleLockRelativePath, Json)
+			|| !ParseJsonObject(Json, Lock))
+		{
+			AddControlFileError(
+				TEXT("bundle_lock_invalid"),
+				BundleLockRelativePath,
+				TEXT("$"),
+				TEXT("The explicit production bundle lock could not be loaded."));
+			return;
+		}
+		ValidateKnownFields(
+			Lock,
+			{
+				TEXT("schema_version"),
+				TEXT("root_manifest"),
+				TEXT("included_manifests"),
+				TEXT("definition_ids"),
+				TEXT("definition_count"),
+				TEXT("semantic_digest"),
+				TEXT("source_provenance"),
+				TEXT("transfer_report_digest")
+			},
+			BundleLockRelativePath,
+			FString(),
+			TEXT("$"));
+
+		int32 SchemaVersion = 0;
+		int32 DefinitionCount = -1;
+		FString RootManifest;
+		FString SemanticDigest;
+		FString TransferReportDigest;
+		TArray<FString> IncludedManifests;
+		TArray<FString> DefinitionIds;
+		TArray<FString> SourceProvenance;
+		const bool bFieldsValid =
+			TryReadInteger(Lock, TEXT("schema_version"), SchemaVersion)
+			&& SchemaVersion == SupportedSchemaVersion
+			&& TryReadString(Lock, TEXT("root_manifest"), RootManifest)
+			&& ReadStringArray(
+				Lock,
+				TEXT("included_manifests"),
+				IncludedManifests)
+			&& ReadStringArray(Lock, TEXT("definition_ids"), DefinitionIds)
+			&& TryReadInteger(
+				Lock,
+				TEXT("definition_count"),
+				DefinitionCount)
+			&& TryReadString(
+				Lock,
+				TEXT("semantic_digest"),
+				SemanticDigest)
+			&& ReadStringArray(
+				Lock,
+				TEXT("source_provenance"),
+				SourceProvenance)
+			&& TryReadString(
+				Lock,
+				TEXT("transfer_report_digest"),
+				TransferReportDigest);
+		if (!bFieldsValid
+			|| RootManifest != FPaths::GetCleanFilename(RootManifestPath)
+			|| !IsStrictlySortedUnique(IncludedManifests)
+			|| IncludedManifests != WorkingDatabase.IncludedManifestPaths
+			|| !IsStrictlySortedUnique(DefinitionIds)
+			|| DefinitionIds != WorkingDatabase.GetDefinitionIds()
+			|| DefinitionCount != WorkingDatabase.Records.Num()
+			|| SemanticDigest != WorkingDatabase.ContentDigest
+			|| SourceProvenance.IsEmpty()
+			|| !IsStrictlySortedUnique(SourceProvenance)
+			|| !IsSHA256(TransferReportDigest))
+		{
+			AddControlFileError(
+				TEXT("bundle_lock_mismatch"),
+				BundleLockRelativePath,
+				TEXT("$"),
+				FString::Printf(
+					TEXT("The bundle lock does not match the immutable production snapshot (expected digest %s, actual digest %s)."),
+					*SemanticDigest,
+					*WorkingDatabase.ContentDigest));
+			return;
+		}
+
+		WorkingDatabase.BundleLockPath = BundleLockRelativePath;
+		WorkingDatabase.LockedTransferReportDigest = TransferReportDigest;
+	}
+
+	void ValidateMatchStatus()
+	{
+		if (MatchStatusRelativePath.IsEmpty())
+		{
+			return;
+		}
+
+		FString Json;
+		TSharedPtr<FJsonObject> Status;
+		if (!LoadJsonFile(MatchStatusRelativePath, Json)
+			|| !ParseJsonObject(Json, Status))
+		{
+			AddControlFileError(
+				TEXT("match_status_invalid"),
+				MatchStatusRelativePath,
+				TEXT("$"),
+				TEXT("The explicit production match status could not be loaded."));
+			return;
+		}
+		ValidateKnownFields(
+			Status,
+			{
+				TEXT("schema_version"),
+				TEXT("status"),
+				TEXT("reason"),
+				TEXT("hero_candidate_ids"),
+				TEXT("missing_requirements"),
+				TEXT("definition_bundle_digest")
+			},
+			MatchStatusRelativePath,
+			FString(),
+			TEXT("$"));
+
+		int32 SchemaVersion = 0;
+		FString StatusValue;
+		FString Reason;
+		FString DefinitionDigest;
+		TArray<FString> HeroCandidateIds;
+		TArray<FString> MissingRequirements;
+		const bool bFieldsValid =
+			TryReadInteger(Status, TEXT("schema_version"), SchemaVersion)
+			&& SchemaVersion == SupportedSchemaVersion
+			&& TryReadString(Status, TEXT("status"), StatusValue)
+			&& StatusValue == TEXT("blocked")
+			&& TryReadString(Status, TEXT("reason"), Reason)
+			&& WBProductionCardDatabase::IsSafeDefinitionId(Reason)
+			&& ReadStringArray(
+				Status,
+				TEXT("hero_candidate_ids"),
+				HeroCandidateIds)
+			&& ReadStringArray(
+				Status,
+				TEXT("missing_requirements"),
+				MissingRequirements)
+			&& TryReadString(
+				Status,
+				TEXT("definition_bundle_digest"),
+				DefinitionDigest);
+		if (!bFieldsValid
+			|| !IsStrictlySortedUnique(HeroCandidateIds)
+			|| MissingRequirements.IsEmpty()
+			|| DefinitionDigest != WorkingDatabase.ContentDigest)
+		{
+			AddControlFileError(
+				TEXT("match_status_mismatch"),
+				MatchStatusRelativePath,
+				TEXT("$"),
+				FString::Printf(
+					TEXT("The blocked match status does not match the production snapshot (expected digest %s, actual digest %s)."),
+					*DefinitionDigest,
+					*WorkingDatabase.ContentDigest));
+			return;
+		}
+		for (const FString& HeroCandidateId : HeroCandidateIds)
+		{
+			const FWBProductionCardRecord* Record =
+				WorkingDatabase.FindCharacter(HeroCandidateId);
+			if (Record == nullptr)
+			{
+				AddControlFileError(
+					TEXT("match_status_hero_invalid"),
+					MatchStatusRelativePath,
+					TEXT("$.hero_candidate_ids"),
+					TEXT("Every Hero candidate must be a transferred Character definition."));
+				return;
+			}
+		}
+
+		WorkingDatabase.MatchStatusPath = MatchStatusRelativePath;
+		WorkingDatabase.MatchStatus = StatusValue;
+		WorkingDatabase.MatchBlockedReason = Reason;
+		WorkingDatabase.HeroCandidateDefinitionIds = MoveTemp(HeroCandidateIds);
 	}
 
 	void SortDiagnostics()

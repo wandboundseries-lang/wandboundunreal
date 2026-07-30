@@ -1,0 +1,24 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "initial_canonical_definitions",
+  "bundle_kind": "production",
+  "batches": [
+    {
+      "batch_name": "canonical_supported_definitions",
+      "bundles": [
+        {
+          "name": "characters",
+          "path": "definitions/characters.json"
+        },
+        {
+          "name": "npcs",
+          "path": "definitions/npcs.json"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "source": "Reference/GodotProject/godotcanon/scripts/data/CardDB",
+    "version": "initial_canonical_v1"
+  }
+}
