@@ -1078,12 +1078,25 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 	Result.bOk = true;
 	AppendStartTurnStatusTickTrace(Result.TraceEvents, PlayerId, State.TurnNumber);
 
-	for (FWBUnitState& Unit : State.Units)
+	TArray<int32> OrderedUnitIds;
+	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (!Unit.IsUnitOnBoard())
+		if (Unit.IsUnitOnBoard())
+		{
+			OrderedUnitIds.Add(Unit.UnitId);
+		}
+	}
+	OrderedUnitIds.Sort();
+	for (const int32 UnitId : OrderedUnitIds)
+	{
+		FWBUnitState* UnitPtr =
+			State.GetMutableUnitById(UnitId);
+		if (UnitPtr == nullptr
+			|| !UnitPtr->IsUnitOnBoard())
 		{
 			continue;
 		}
+		FWBUnitState& Unit = *UnitPtr;
 
 		if (!Unit.HasStatus(PoisonStatusId) || Unit.HasStatus(FrozenStatusId))
 		{
@@ -1282,14 +1295,6 @@ FWBApplyActionResult WBEffectRunner::ApplyDeterministicTurnTransition(
 	}
 
 	const int32 NextPlayerId = WorkingState.CurrentPlayer;
-	FWBApplyActionResult StartStatusResult = ApplyStartOfTurnStatusTicks(WorkingState, NextPlayerId);
-	if (!StartStatusResult.bOk)
-	{
-		Result.bOk = false;
-		Result.Reason = StartStatusResult.Reason;
-		return Result;
-	}
-
 	FWBApplyActionResult ResourceSetupResult = ApplyTurnStartResourceSetup(
 		WorkingState,
 		NextPlayerId,
@@ -1298,6 +1303,14 @@ FWBApplyActionResult WBEffectRunner::ApplyDeterministicTurnTransition(
 	{
 		Result.bOk = false;
 		Result.Reason = ResourceSetupResult.Reason;
+		return Result;
+	}
+
+	FWBApplyActionResult StartStatusResult = ApplyStartOfTurnStatusTicks(WorkingState, NextPlayerId);
+	if (!StartStatusResult.bOk)
+	{
+		Result.bOk = false;
+		Result.Reason = StartStatusResult.Reason;
 		return Result;
 	}
 
@@ -1311,10 +1324,123 @@ FWBApplyActionResult WBEffectRunner::ApplyDeterministicTurnTransition(
 		NextPlayerExplicitMPRoll));
 	Result.TraceEvents.Append(EndStatusResult.TraceEvents);
 	Result.TraceEvents.Append(EndTurnResult.TraceEvents);
-	Result.TraceEvents.Append(StartStatusResult.TraceEvents);
 	Result.TraceEvents.Append(ResourceSetupResult.TraceEvents);
+	Result.TraceEvents.Append(StartStatusResult.TraceEvents);
 
 	State = WorkingState;
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyTurnStartMPRoll(
+	FWBGameStateData& State,
+	const int32 PlayerId,
+	const int32 ExplicitMPRoll)
+{
+	FWBApplyActionResult Result;
+	FString Reason;
+	if (!WBRules::CanApplyTurnStartResourceSetup(
+		State,
+		PlayerId,
+		ExplicitMPRoll,
+		Reason)
+		|| !State.ApplyTurnStartMPRollForPlayer(
+			PlayerId,
+			ExplicitMPRoll,
+			Reason))
+	{
+		Result.Reason = Reason;
+		return Result;
+	}
+
+	const FWBPlayerStateData* Player =
+		State.GetPlayerById(PlayerId);
+	if (Player == nullptr)
+	{
+		Result.Reason = TEXT("missing_player_state");
+		return Result;
+	}
+
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("turn_start_mp_rolled"));
+	Event.PlayerId = PlayerId;
+	Event.TurnNumber = State.TurnNumber;
+	Event.MPRoll = ExplicitMPRoll;
+	Event.RemainingMP = Player->RemainingMP;
+	Event.MatchPhase = FName(TEXT("turn_start"));
+	Event.bOk = true;
+	Result.bOk = true;
+	Result.TraceEvents.Add(Event);
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyTurnStartResourceReset(
+	FWBGameStateData& State,
+	const int32 PlayerId)
+{
+	FWBApplyActionResult Result;
+	if (State.bGameOver)
+	{
+		Result.Reason = TEXT("game_over");
+		return Result;
+	}
+	if (!FWBGameStateData::IsValidPlayerId(PlayerId))
+	{
+		Result.Reason = TEXT("bad_player");
+		return Result;
+	}
+	if (PlayerId != State.CurrentPlayer)
+	{
+		Result.Reason = TEXT("not_active_player");
+		return Result;
+	}
+
+	int32 ResetUnitCount = 0;
+	for (const FWBUnitState& Unit : State.Units)
+	{
+		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard())
+		{
+			++ResetUnitCount;
+		}
+	}
+
+	FString Reason;
+	if (!State.ResetTurnStartResourcesForPlayer(
+		PlayerId,
+		Reason))
+	{
+		Result.Reason = Reason;
+		return Result;
+	}
+	const FWBPlayerStateData* Player =
+		State.GetPlayerById(PlayerId);
+	if (Player == nullptr)
+	{
+		Result.Reason = TEXT("missing_player_state");
+		return Result;
+	}
+
+	FWBTraceEvent Attacks;
+	Attacks.Kind =
+		FName(TEXT("turn_start_attacks_reset"));
+	Attacks.PlayerId = PlayerId;
+	Attacks.TurnNumber = State.TurnNumber;
+	Attacks.CardCount = ResetUnitCount;
+	Attacks.MatchPhase = FName(TEXT("turn_start"));
+	Attacks.bOk = true;
+	Result.TraceEvents.Add(Attacks);
+
+	FWBTraceEvent Walls;
+	Walls.Kind =
+		FName(TEXT("turn_start_wall_restored"));
+	Walls.PlayerId = PlayerId;
+	Walls.TurnNumber = State.TurnNumber;
+	Walls.WallsLeft = Player->WallsLeft;
+	Walls.WallRemovalsLeft =
+		Player->WallRemovalsLeft;
+	Walls.MatchPhase = FName(TEXT("turn_start"));
+	Walls.bOk = true;
+	Result.TraceEvents.Add(Walls);
+	Result.bOk = true;
 	return Result;
 }
 

@@ -7088,3 +7088,31 @@ notRun=0
 - Diagnostic messages, full source JSON, public labels, public text, payload bodies, and hidden referenced values remain omitted.
 - No `Source/WandboundCore`, `Source/WandboundRuntime`, `Reference/GodotProject`, `.uasset`, or `.umap` files were changed.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
+
+---
+
+# Deterministic Turn-Start Sequence
+
+Date: 2026-07-30
+
+- Baseline: `b3536b0`, 1,724 Wandbound tests.
+- Editor build: succeeded, 12.79 seconds.
+- Game build: succeeded, 211.20 seconds.
+- Focused turn-start tests: 54 succeeded, 0 failed.
+- Migrated affected groups: 599 succeeded, 0 failed.
+- Full Wandbound automation: 1,778 succeeded, 0 failed, 0 not run.
+- Focused replay verification: 2 succeeded, 0 failed.
+- Fresh BuildCookRun: succeeded, 194.04 seconds.
+- Package:
+  `Saved/PackagedBuilds/DeterministicTurnStart_20260730_221320`.
+- Packaged development smoke: passed, exit 0.
+- Packaged production startup: `production_started`, exit 0, Player 1 active,
+  Turn 1 complete, draw skipped, MP/reset/status/effect milestones true, and a
+  playable decision reached.
+- Repeated production startup JSON: byte-identical, SHA-256
+  `cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004`.
+- `git diff --check`: passed; line-ending notices only.
+- Exact final errors: none.
+
+Full evidence:
+`Docs/Deterministic_Turn_Start_Implementation_Report.md`.

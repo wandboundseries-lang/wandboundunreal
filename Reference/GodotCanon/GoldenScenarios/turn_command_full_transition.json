@@ -159,6 +159,15 @@
         "turn_number": 4
       },
       {
+        "kind": "turn_start_resource_setup",
+        "player_id": 1,
+        "turn_number": 4,
+        "mp_roll": 4,
+        "remaining_mp": 4,
+        "walls_left": 1,
+        "wall_removals_left": 0
+      },
+      {
         "kind": "start_turn_status_ticks",
         "player_id": 1,
         "turn_number": 4
@@ -174,15 +183,6 @@
         "new_max_hp": 4,
         "previous_status_turns": 2,
         "new_status_turns": 1
-      },
-      {
-        "kind": "turn_start_resource_setup",
-        "player_id": 1,
-        "turn_number": 4,
-        "mp_roll": 4,
-        "remaining_mp": 4,
-        "walls_left": 1,
-        "wall_removals_left": 0
       }
     ]
   }

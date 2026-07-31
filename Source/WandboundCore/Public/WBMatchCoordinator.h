@@ -12,6 +12,7 @@
 #include "WBPublicTurnSummary.h"
 #include "WBReplayTrace.h"
 #include "WBSummonExecution.h"
+#include "WBTurnStartSequence.h"
 
 enum class EWBMatchLoopPhase : uint8
 {
@@ -31,7 +32,8 @@ enum class EWBMatchActionFamily : uint8
 	Summon,
 	Equip,
 	Activation,
-	Discard
+	Discard,
+	TurnStartTrigger
 };
 
 struct WANDBOUNDCORE_API FWBMatchPlayerSetup
@@ -111,6 +113,8 @@ public:
 	bool WasHeroSpawnBatchCommitted() const;
 	bool WereHeroSetupTriggersResolved() const;
 	bool WereOpeningHandsDrawn() const;
+	bool WasTurnStartCompleted() const;
+	const FWBTurnStartSequenceState& GetTurnStartSequenceState() const;
 	const FWBGameStateData& GetState() const;
 	const FWBCardDefinitionRepository& GetRepository() const;
 	const TArray<FWBTraceEvent>& GetTraceLog() const;
@@ -119,7 +123,8 @@ public:
 private:
 	FWBMatchLegalActionGenerationResult EnumerateLegalActionsForState(
 		const FWBGameStateData& InState,
-		EWBMatchLoopPhase InPhase) const;
+		EWBMatchLoopPhase InPhase,
+		const FWBTurnStartSequenceState* InTurnStartSequence = nullptr) const;
 
 	bool ApplyAutomaticResolution(
 		FWBGameStateData& WorkingState,
@@ -130,6 +135,7 @@ private:
 		FWBGameStateData& WorkingState,
 		uint32& WorkingRandomState,
 		EWBMatchLoopPhase& WorkingPhase,
+		FWBTurnStartSequenceState& WorkingTurnStartSequence,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 
@@ -146,4 +152,5 @@ private:
 	bool bHeroSpawnBatchCommitted = false;
 	bool bHeroSetupTriggersResolved = false;
 	bool bOpeningHandsDrawn = false;
+	FWBTurnStartSequenceState TurnStartSequence;
 };

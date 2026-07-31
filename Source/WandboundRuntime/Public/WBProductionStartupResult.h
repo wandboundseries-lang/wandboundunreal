@@ -20,10 +20,18 @@ struct WANDBOUNDRUNTIME_API FWBProductionStartupResult
 	bool bHeroSpawnBatchCommitted = false;
 	bool bHeroSetupTriggersResolved = false;
 	bool bOpeningHandsDrawn = false;
+	bool bTurnStartCompleted = false;
+	bool bTurnStartDrawSkipped = false;
+	bool bTurnStartMPGenerated = false;
+	bool bTurnStartResourcesReset = false;
+	bool bTurnStartStatusesResolved = false;
+	bool bTurnStartEffectsResolved = false;
 	bool bPlayableDecisionReached = false;
 	bool bBlocked = false;
 	FString ResultCode;
 	int32 FirstPlayer = -1;
+	int32 ActivePlayer = -1;
+	int32 TurnNumber = -1;
 	int32 Generation = 0;
 	int32 Revision = 0;
 };

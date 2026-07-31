@@ -85,6 +85,20 @@ WBProductionStartupResult::StartedFromBootstrap(
 		Coordinator.WereHeroSetupTriggersResolved();
 	Result.bOpeningHandsDrawn =
 		Coordinator.WereOpeningHandsDrawn();
+	const FWBTurnStartSequenceState& TurnStart =
+		Coordinator.GetTurnStartSequenceState();
+	Result.bTurnStartCompleted =
+		Coordinator.WasTurnStartCompleted();
+	Result.bTurnStartDrawSkipped =
+		TurnStart.bDrawSkipped;
+	Result.bTurnStartMPGenerated =
+		TurnStart.bMPGenerated;
+	Result.bTurnStartResourcesReset =
+		TurnStart.bResourcesReset;
+	Result.bTurnStartStatusesResolved =
+		TurnStart.bStatusesResolved;
+	Result.bTurnStartEffectsResolved =
+		TurnStart.bEffectsResolved;
 	Result.bPlayableDecisionReached =
 		bPlayableDecisionReached;
 	Result.bBlocked = false;
@@ -93,9 +107,18 @@ WBProductionStartupResult::StartedFromBootstrap(
 		&& Result.bHeroSpawnBatchCommitted
 		&& Result.bHeroSetupTriggersResolved
 		&& Result.bOpeningHandsDrawn
+		&& Result.bTurnStartCompleted
+		&& Result.bTurnStartMPGenerated
+		&& Result.bTurnStartResourcesReset
+		&& Result.bTurnStartStatusesResolved
+		&& Result.bTurnStartEffectsResolved
 			? FString(TEXT("production_started"))
 			: FString(TEXT("production_bundle_invalid"));
 	Result.FirstPlayer = Coordinator.GetFirstPlayerId();
+	Result.ActivePlayer =
+		Coordinator.GetState().CurrentPlayer;
+	Result.TurnNumber =
+		Coordinator.GetState().TurnNumber;
 	Result.Generation = Generation;
 	Result.Revision = Revision;
 	return Result;
@@ -113,6 +136,11 @@ FWBProductionStartupResult WBProductionStartupResult::Started(
 	Result.BundleDigest = BundleDigest;
 	Result.bMatchSpecPresent = bMatchSpecPresent;
 	Result.bMatchInitialized = true;
+	Result.bTurnStartCompleted = true;
+	Result.bTurnStartMPGenerated = true;
+	Result.bTurnStartResourcesReset = true;
+	Result.bTurnStartStatusesResolved = true;
+	Result.bTurnStartEffectsResolved = true;
 	Result.bPlayableDecisionReached = bPlayableDecisionReached;
 	Result.ResultCode = TEXT("production_started");
 	Result.Generation = Generation;
@@ -159,11 +187,35 @@ FString WBProductionStartupResult::Serialize(
 		TEXT("opening_hands_drawn"),
 		Result.bOpeningHandsDrawn);
 	Writer->WriteValue(
+		TEXT("turn_start_completed"),
+		Result.bTurnStartCompleted);
+	Writer->WriteValue(
+		TEXT("turn_start_draw_skipped"),
+		Result.bTurnStartDrawSkipped);
+	Writer->WriteValue(
+		TEXT("turn_start_mp_generated"),
+		Result.bTurnStartMPGenerated);
+	Writer->WriteValue(
+		TEXT("turn_start_resources_reset"),
+		Result.bTurnStartResourcesReset);
+	Writer->WriteValue(
+		TEXT("turn_start_statuses_resolved"),
+		Result.bTurnStartStatusesResolved);
+	Writer->WriteValue(
+		TEXT("turn_start_effects_resolved"),
+		Result.bTurnStartEffectsResolved);
+	Writer->WriteValue(
 		TEXT("playable_decision_reached"),
 		Result.bPlayableDecisionReached);
 	Writer->WriteValue(TEXT("blocked"), Result.bBlocked);
 	Writer->WriteValue(TEXT("result_code"), Result.ResultCode);
 	Writer->WriteValue(TEXT("first_player"), Result.FirstPlayer);
+	Writer->WriteValue(
+		TEXT("active_player"),
+		Result.ActivePlayer);
+	Writer->WriteValue(
+		TEXT("turn_number"),
+		Result.TurnNumber);
 	Writer->WriteValue(TEXT("generation"), Result.Generation);
 	Writer->WriteValue(TEXT("revision"), Result.Revision);
 	Writer->WriteObjectEnd();

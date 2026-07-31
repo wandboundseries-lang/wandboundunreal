@@ -54,6 +54,24 @@ struct WANDBOUNDCORE_API FWBCardEffectDefinition
 	FWBCardActivationSourceGateDefinition SourceGate;
 };
 
+enum class EWBTurnStartTriggerScope : uint8
+{
+	AtStartOfYourTurn,
+	AtStartOfEachTurn
+};
+
+struct WANDBOUNDCORE_API FWBTurnStartTriggerDefinition
+{
+	FString TriggerId;
+	EWBTurnStartTriggerScope Scope =
+		EWBTurnStartTriggerScope::AtStartOfYourTurn;
+	EWBCardEffectTargetRequirement TargetRequirement =
+		EWBCardEffectTargetRequirement::None;
+	TArray<FWBGenericEffectPayload> Payloads;
+	int32 DrawCount = 0;
+	bool bMandatory = true;
+};
+
 struct WANDBOUNDCORE_API FWBCardCharacterStatsDefinition
 {
 	int32 HP = 0;
@@ -81,4 +99,5 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	int32 TrapDamage = 0;
 	TArray<FWBCardEffectDefinition> ActivatedEffects;
 	TArray<FWBSetupSummonTriggerDefinition> SetupSummonTriggers;
+	TArray<FWBTurnStartTriggerDefinition> TurnStartTriggers;
 };

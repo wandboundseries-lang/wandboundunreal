@@ -111,9 +111,9 @@
       "end_turn_status_ticks",
       "status_tick:Burn",
       "end_turn",
+      "turn_start_resource_setup",
       "start_turn_status_ticks",
-      "status_tick:Poison",
-      "turn_start_resource_setup"
+      "status_tick:Poison"
     ]
   }
 }

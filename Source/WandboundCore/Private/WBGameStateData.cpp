@@ -352,6 +352,23 @@ bool FWBGameStateData::ApplyTurnStartResourceSetupForPlayer(
 	const int32 ExplicitMPRoll,
 	FString& OutReason)
 {
+	if (!ApplyTurnStartMPRollForPlayer(
+		PlayerId,
+		ExplicitMPRoll,
+		OutReason))
+	{
+		return false;
+	}
+	return ResetTurnStartResourcesForPlayer(
+		PlayerId,
+		OutReason);
+}
+
+bool FWBGameStateData::ApplyTurnStartMPRollForPlayer(
+	const int32 PlayerId,
+	const int32 ExplicitMPRoll,
+	FString& OutReason)
+{
 	if (!IsValidPlayerId(PlayerId))
 	{
 		OutReason = TEXT("bad_player");

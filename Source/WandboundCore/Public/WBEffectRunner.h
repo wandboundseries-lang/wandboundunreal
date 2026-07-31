@@ -24,6 +24,8 @@ public:
 	static FWBApplyActionResult ApplyStartOfTurnStatusTicks(FWBGameStateData& State, int32 PlayerId);
 	static FWBApplyActionResult ApplyEndOfTurnStatusTicks(FWBGameStateData& State, int32 PlayerId);
 	static FWBApplyActionResult ApplyDeterministicTurnTransition(FWBGameStateData& State, int32 EndingPlayerId, int32 NextPlayerExplicitMPRoll);
+	static FWBApplyActionResult ApplyTurnStartMPRoll(FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll);
+	static FWBApplyActionResult ApplyTurnStartResourceReset(FWBGameStateData& State, int32 PlayerId);
 	static FWBApplyActionResult ApplyTurnStartResourceSetup(FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll);
 	static FWBApplyActionResult ApplyArmorEffect(FWBGameStateData& State, const FWBArmorEffectRequest& Request);
 	static FWBApplyActionResult ApplyStatusEffect(FWBGameStateData& State, const FWBStatusEffectRequest& Request);

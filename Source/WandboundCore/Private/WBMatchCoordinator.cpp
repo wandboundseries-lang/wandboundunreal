@@ -531,40 +531,40 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 	WorkingState.bSuppressManualReactsDuringInitialHeroSetup = false;
 	WorkingState.bInitialSetupInProgress = false;
 
-	const FWBApplyActionResult StartStatusResult =
-		WBEffectRunner::ApplyStartOfTurnStatusTicks(WorkingState, SelectedFirstPlayer);
-	if (!StartStatusResult.bOk)
-	{
-		return MakeOperationFailure(StartStatusResult.Reason);
-	}
-	WorkingTraceEvents.Append(StartStatusResult.TraceEvents);
-
-	FWBTraceEvent DrawSkipped = MakeMatchTrace(
-		FName(TEXT("turn_start_draw_skipped")),
-		SelectedFirstPlayer,
-		1,
-		PhaseToName(EWBMatchLoopPhase::TurnStart));
-	WorkingTraceEvents.Add(DrawSkipped);
-
 	const int32 OpeningMPRoll = RollD6(WorkingRandomState);
-	const FWBApplyActionResult ResourceResult =
-		WBEffectRunner::ApplyTurnStartResourceSetup(WorkingState, SelectedFirstPlayer, OpeningMPRoll);
-	if (!ResourceResult.bOk)
+	FWBTurnStartSequenceState WorkingTurnStartSequence;
+	const FWBTurnStartSequenceResult TurnStartResult =
+		WBTurnStartSequence::Begin(
+			WorkingState,
+			Request.Repository,
+			SelectedFirstPlayer,
+			OpeningMPRoll,
+			WorkingTurnStartSequence);
+	if (!TurnStartResult.bOk)
 	{
-		return MakeOperationFailure(ResourceResult.Reason);
+		return MakeOperationFailure(TurnStartResult.Reason);
 	}
-	WorkingTraceEvents.Append(ResourceResult.TraceEvents);
-	WorkingTraceEvents.Add(MakeMatchTrace(
-		FName(TEXT("turn_started")),
-		SelectedFirstPlayer,
-		1,
-		PhaseToName(EWBMatchLoopPhase::Action)));
+	WorkingTraceEvents.Append(TurnStartResult.TraceEvents);
+	const EWBMatchLoopPhase InitialMatchPhase =
+		TurnStartResult.bTerminal
+			? EWBMatchLoopPhase::GameOver
+			: (TurnStartResult.bCompleted
+				? EWBMatchLoopPhase::Action
+				: EWBMatchLoopPhase::TurnStart);
+	if (TurnStartResult.bCompleted)
+	{
+		WorkingTraceEvents.Add(MakeMatchTrace(
+			FName(TEXT("turn_started")),
+			SelectedFirstPlayer,
+			1,
+			PhaseToName(EWBMatchLoopPhase::Action)));
+	}
 
 	WBMatchCoordinator Candidate;
 	Candidate.bInitialized = true;
 	Candidate.FirstPlayerId = SelectedFirstPlayer;
 	Candidate.RandomState = WorkingRandomState;
-	Candidate.MatchPhase = EWBMatchLoopPhase::Action;
+	Candidate.MatchPhase = InitialMatchPhase;
 	Candidate.State = WorkingState;
 	Candidate.Repository = Request.Repository;
 	Candidate.TraceLog = WorkingTraceEvents;
@@ -573,6 +573,8 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 	Candidate.bHeroSetupTriggersResolved =
 		HeroSetupResult.bTriggersResolved;
 	Candidate.bOpeningHandsDrawn = true;
+	Candidate.TurnStartSequence =
+		MoveTemp(WorkingTurnStartSequence);
 
 	const FWBMatchLegalActionGenerationResult LegalResult = Candidate.EnumerateLegalActions();
 	if (!LegalResult.bOk)
@@ -595,12 +597,16 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActions() 
 	{
 		return MakeGenerationFailure(TEXT("match_not_initialized"));
 	}
-	return EnumerateLegalActionsForState(State, MatchPhase);
+	return EnumerateLegalActionsForState(
+		State,
+		MatchPhase,
+		&TurnStartSequence);
 }
 
 FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsForState(
 	const FWBGameStateData& InState,
-	const EWBMatchLoopPhase InPhase) const
+	const EWBMatchLoopPhase InPhase,
+	const FWBTurnStartSequenceState* InTurnStartSequence) const
 {
 	FWBMatchLegalActionGenerationResult Result;
 	if (InState.bGameOver || InPhase == EWBMatchLoopPhase::GameOver)
@@ -609,7 +615,39 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 		return Result;
 	}
 
-	if (InPhase != EWBMatchLoopPhase::Action && InPhase != EWBMatchLoopPhase::Response)
+	if (InPhase == EWBMatchLoopPhase::TurnStart)
+	{
+		if (InTurnStartSequence == nullptr
+			|| InTurnStartSequence->bCompleted)
+		{
+			return MakeGenerationFailure(
+				TEXT("turn_start_sequence_not_complete"));
+		}
+		for (const FString& ActionId :
+			WBTurnStartSequence::
+				EnumerateLegalChoiceActionIds(
+					InState,
+					*InTurnStartSequence))
+		{
+			FWBMatchLegalAction Action;
+			Action.Family =
+				EWBMatchActionFamily::TurnStartTrigger;
+			Action.ActionId = ActionId;
+			Action.PlayerId =
+				InTurnStartSequence->ActivePlayerId;
+			Result.Actions.Add(MoveTemp(Action));
+		}
+		if (Result.Actions.IsEmpty())
+		{
+			return MakeGenerationFailure(
+				TEXT("turn_start_trigger_order_required"));
+		}
+		Result.bOk = true;
+		return Result;
+	}
+
+	if (InPhase != EWBMatchLoopPhase::Action
+		&& InPhase != EWBMatchLoopPhase::Response)
 	{
 		return MakeGenerationFailure(TEXT("match_not_accepting_actions"));
 	}
@@ -879,6 +917,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	FWBGameStateData WorkingState = State;
 	uint32 WorkingRandomState = RandomState;
 	EWBMatchLoopPhase WorkingPhase = MatchPhase;
+	FWBTurnStartSequenceState WorkingTurnStartSequence =
+		TurnStartSequence;
 	TArray<FWBTraceEvent> WorkingTraceEvents;
 	FWBTraceEvent Submitted = MakeMatchTrace(
 		FName(TEXT("action_submitted")),
@@ -898,8 +938,46 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			WorkingState,
 			WorkingRandomState,
 			WorkingPhase,
+			WorkingTurnStartSequence,
 			WorkingTraceEvents,
 			FailureReason);
+	}
+	else if (SelectedAction->Family
+		== EWBMatchActionFamily::TurnStartTrigger)
+	{
+		const FWBTurnStartSequenceResult TurnStartResult =
+			WBTurnStartSequence::SubmitChoice(
+				WorkingState,
+				Repository,
+				ActionId,
+				WorkingTurnStartSequence);
+		bActionApplied = TurnStartResult.bOk;
+		FailureReason = TurnStartResult.Reason;
+		WorkingTraceEvents.Append(
+			TurnStartResult.TraceEvents);
+		if (bActionApplied
+			&& TurnStartResult.bCompleted
+			&& !WorkingState.bGameOver)
+		{
+			bActionApplied = ApplyAutomaticResolution(
+				WorkingState,
+				WorkingTraceEvents,
+				FailureReason);
+			if (bActionApplied)
+			{
+				WorkingTraceEvents.Add(MakeMatchTrace(
+					FName(TEXT("turn_started")),
+					WorkingState.CurrentPlayer,
+					WorkingState.TurnNumber,
+					PhaseToName(
+						EWBMatchLoopPhase::Action)));
+			}
+		}
+		WorkingPhase = WorkingState.bGameOver
+			? EWBMatchLoopPhase::GameOver
+			: (TurnStartResult.bCompleted
+				? EWBMatchLoopPhase::Action
+				: EWBMatchLoopPhase::TurnStart);
 	}
 	else
 	{
@@ -1024,9 +1102,14 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			: FailureReason);
 	}
 
-	WorkingPhase = WorkingState.bGameOver
-		? EWBMatchLoopPhase::GameOver
-		: (WorkingState.IsResponsePhase() ? EWBMatchLoopPhase::Response : EWBMatchLoopPhase::Action);
+	if (WorkingPhase != EWBMatchLoopPhase::TurnStart)
+	{
+		WorkingPhase = WorkingState.bGameOver
+			? EWBMatchLoopPhase::GameOver
+			: (WorkingState.IsResponsePhase()
+				? EWBMatchLoopPhase::Response
+				: EWBMatchLoopPhase::Action);
+	}
 
 	FWBTraceEvent Resolved = MakeMatchTrace(
 		FName(TEXT("action_resolved")),
@@ -1037,7 +1120,10 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	WorkingTraceEvents.Add(Resolved);
 
 	const FWBMatchLegalActionGenerationResult NextLegalResult =
-		EnumerateLegalActionsForState(WorkingState, WorkingPhase);
+		EnumerateLegalActionsForState(
+			WorkingState,
+			WorkingPhase,
+			&WorkingTurnStartSequence);
 	if (!NextLegalResult.bOk)
 	{
 		return MakeOperationFailure(NextLegalResult.Reason);
@@ -1046,6 +1132,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	State = WorkingState;
 	RandomState = WorkingRandomState;
 	MatchPhase = WorkingPhase;
+	TurnStartSequence =
+		MoveTemp(WorkingTurnStartSequence);
 	TraceLog.Append(WorkingTraceEvents);
 
 	FWBMatchOperationResult Result;
@@ -1132,6 +1220,7 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 	FWBGameStateData& WorkingState,
 	uint32& WorkingRandomState,
 	EWBMatchLoopPhase& WorkingPhase,
+	FWBTurnStartSequenceState& WorkingTurnStartSequence,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
@@ -1215,87 +1304,54 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 
 	const int32 NextPlayerId = WorkingState.CurrentPlayer;
 	WorkingPhase = EWBMatchLoopPhase::TurnStart;
-	const FWBApplyActionResult StartStatusResult =
-		WBEffectRunner::ApplyStartOfTurnStatusTicks(WorkingState, NextPlayerId);
-	if (!StartStatusResult.bOk)
-	{
-		OutReason = StartStatusResult.Reason;
-		return false;
-	}
-	OutTraceEvents.Append(StartStatusResult.TraceEvents);
-	if (WorkingState.bGameOver)
-	{
-		WorkingPhase = EWBMatchLoopPhase::GameOver;
-		FWBTraceEvent GameOver = MakeMatchTrace(
-			FName(TEXT("game_over")),
-			NextPlayerId,
-			WorkingState.TurnNumber,
-			PhaseToName(WorkingPhase));
-		GameOver.WinningPlayerId = WorkingState.WinnerPlayerId;
-		OutTraceEvents.Add(GameOver);
-		OutTraceEvents.Add(MakeMatchTrace(
-			FName(TEXT("automatic_resolution")),
-			NextPlayerId,
-			WorkingState.TurnNumber,
-			PhaseToName(WorkingPhase)));
-		OutReason.Reset();
-		return true;
-	}
-
-	const FWBCardLifecycleResult DrawResult = WBCardLifecycle::ApplyTurnStartDraw(
-		WorkingState,
-		NextPlayerId,
-		WorkingState.TurnNumber,
-		FirstPlayerId);
-	if (!DrawResult.bOk)
-	{
-		OutReason = DrawResult.Reason;
-		return false;
-	}
-	FWBTraceEvent DrawTrace = MakeMatchTrace(
-		DrawResult.Code == EWBCardLifecycleResultCode::FirstPlayerFirstTurnDrawSkipped
-			? FName(TEXT("turn_start_draw_skipped"))
-			: FName(TEXT("turn_start_card_drawn")),
-		NextPlayerId,
-		WorkingState.TurnNumber,
-		PhaseToName(WorkingPhase));
-	DrawTrace.CardInstanceId = DrawResult.CardInstanceId;
-	DrawTrace.CardId = DrawResult.CardId;
-	DrawTrace.CardCount = DrawResult.Code == EWBCardLifecycleResultCode::FirstPlayerFirstTurnDrawSkipped ? 0 : 1;
-	OutTraceEvents.Add(DrawTrace);
-
 	const int32 MPRoll = RollD6(WorkingRandomState);
-	const FWBApplyActionResult ResourceResult =
-		WBEffectRunner::ApplyTurnStartResourceSetup(WorkingState, NextPlayerId, MPRoll);
-	if (!ResourceResult.bOk)
+	WorkingTurnStartSequence =
+		FWBTurnStartSequenceState();
+	const FWBTurnStartSequenceResult TurnStartResult =
+		WBTurnStartSequence::Begin(
+			WorkingState,
+			Repository,
+			NextPlayerId,
+			MPRoll,
+			WorkingTurnStartSequence);
+	if (!TurnStartResult.bOk)
 	{
-		OutReason = ResourceResult.Reason;
+		OutReason = TurnStartResult.Reason;
 		return false;
 	}
-	OutTraceEvents.Append(ResourceResult.TraceEvents);
+	OutTraceEvents.Append(TurnStartResult.TraceEvents);
 
 	FWBTraceEvent Advanced = MakeMatchTrace(
 		FName(TEXT("player_advanced")),
 		NextPlayerId,
 		WorkingState.TurnNumber,
-		PhaseToName(EWBMatchLoopPhase::Action));
+		PhaseToName(TurnStartResult.bCompleted
+			? EWBMatchLoopPhase::Action
+			: EWBMatchLoopPhase::TurnStart));
 	Advanced.FromPlayer = EndingPlayerId;
 	Advanced.ToPlayer = NextPlayerId;
 	OutTraceEvents.Add(Advanced);
-	OutTraceEvents.Add(MakeMatchTrace(
-		FName(TEXT("turn_started")),
-		NextPlayerId,
-		WorkingState.TurnNumber,
-		PhaseToName(EWBMatchLoopPhase::Action)));
-
-	if (!ApplyAutomaticResolution(WorkingState, OutTraceEvents, OutReason))
+	if (TurnStartResult.bCompleted)
 	{
-		return false;
+		OutTraceEvents.Add(MakeMatchTrace(
+			FName(TEXT("turn_started")),
+			NextPlayerId,
+			WorkingState.TurnNumber,
+			PhaseToName(EWBMatchLoopPhase::Action)));
+		if (!ApplyAutomaticResolution(
+			WorkingState,
+			OutTraceEvents,
+			OutReason))
+		{
+			return false;
+		}
 	}
 
 	WorkingPhase = WorkingState.bGameOver
 		? EWBMatchLoopPhase::GameOver
-		: EWBMatchLoopPhase::Action;
+		: (TurnStartResult.bCompleted
+			? EWBMatchLoopPhase::Action
+			: EWBMatchLoopPhase::TurnStart);
 	OutReason.Reset();
 	return true;
 }
@@ -1357,6 +1413,17 @@ bool WBMatchCoordinator::WereHeroSetupTriggersResolved() const
 bool WBMatchCoordinator::WereOpeningHandsDrawn() const
 {
 	return bOpeningHandsDrawn;
+}
+
+bool WBMatchCoordinator::WasTurnStartCompleted() const
+{
+	return TurnStartSequence.bCompleted;
+}
+
+const FWBTurnStartSequenceState&
+WBMatchCoordinator::GetTurnStartSequenceState() const
+{
+	return TurnStartSequence;
 }
 
 const FWBGameStateData& WBMatchCoordinator::GetState() const

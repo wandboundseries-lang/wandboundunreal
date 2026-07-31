@@ -153,6 +153,8 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	bool IsResponsePhase() const;
 	void AdvanceTurnBasic();
 	bool ResetActionResourcesForPlayer(int32 PlayerId, FString& OutReason);
+	bool ApplyTurnStartMPRollForPlayer(int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);
+	bool ResetTurnStartResourcesForPlayer(int32 PlayerId, FString& OutReason);
 	bool ApplyTurnStartResourceSetupForPlayer(int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);
 	bool HasActivationUsageKeyThisTurn(int32 PlayerId, const FString& Key) const;
 	void MarkActivationUsageKeyForTest(int32 PlayerId, const FString& Key);

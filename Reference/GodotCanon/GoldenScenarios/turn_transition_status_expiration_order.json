@@ -6,7 +6,7 @@
     "autoload/Game.gd:start_turn_impl",
     "scripts/sim/game_state.gd:_process_statuses_for_timing"
   ],
-  "intent": "End-turn expirations occur before end_turn, start-turn Poison expiration occurs before resource setup.",
+  "intent": "End-turn expirations occur before end_turn, then resource setup precedes start-turn Poison expiration.",
   "initial_state": {
     "current_player": 0,
     "priority_player": 0,
@@ -180,6 +180,9 @@
         "kind": "end_turn"
       },
       {
+        "kind": "turn_start_resource_setup"
+      },
+      {
         "kind": "start_turn_status_ticks"
       },
       {
@@ -192,9 +195,6 @@
         "status_id": "Poison",
         "target_unit_id": 4,
         "expired_status": true
-      },
-      {
-        "kind": "turn_start_resource_setup"
       }
     ]
   }

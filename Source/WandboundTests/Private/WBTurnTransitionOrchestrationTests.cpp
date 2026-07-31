@@ -581,9 +581,9 @@ bool FWBDeterministicTurnTransitionValidSequenceTest::RunTest(const FString& Par
 		TestEqual(TEXT("Trace 1 end status"), Result.TraceEvents[1].Kind, FName(TEXT("end_turn_status_ticks")));
 		TestEqual(TEXT("Trace 2 burn"), Result.TraceEvents[2].StatusId, FName(TEXT("Burn")));
 		TestEqual(TEXT("Trace 3 end turn"), Result.TraceEvents[3].Kind, FName(TEXT("end_turn")));
-		TestEqual(TEXT("Trace 4 start status"), Result.TraceEvents[4].Kind, FName(TEXT("start_turn_status_ticks")));
-		TestEqual(TEXT("Trace 5 poison"), Result.TraceEvents[5].StatusId, FName(TEXT("Poison")));
-		TestEqual(TEXT("Trace 6 resources"), Result.TraceEvents[6].Kind, FName(TEXT("turn_start_resource_setup")));
+		TestEqual(TEXT("Trace 4 resources"), Result.TraceEvents[4].Kind, FName(TEXT("turn_start_resource_setup")));
+		TestEqual(TEXT("Trace 5 start status"), Result.TraceEvents[5].Kind, FName(TEXT("start_turn_status_ticks")));
+		TestEqual(TEXT("Trace 6 poison"), Result.TraceEvents[6].StatusId, FName(TEXT("Poison")));
 	}
 
 	return true;
@@ -611,7 +611,7 @@ bool FWBDeterministicTurnTransitionBurnThenPoisonOrderTest::RunTest(const FStrin
 	const int32 ResourceIndex = FindTraceKindIndex(Result.TraceEvents, FName(TEXT("turn_start_resource_setup")));
 	TestTrue(TEXT("Burn trace precedes end turn"), BurnIndex != INDEX_NONE && EndTurnIndex != INDEX_NONE && BurnIndex < EndTurnIndex);
 	TestTrue(TEXT("Poison trace follows end turn"), PoisonIndex != INDEX_NONE && EndTurnIndex != INDEX_NONE && EndTurnIndex < PoisonIndex);
-	TestTrue(TEXT("Resources happen after poison"), ResourceIndex != INDEX_NONE && PoisonIndex != INDEX_NONE && PoisonIndex < ResourceIndex);
+	TestTrue(TEXT("Resources happen before poison"), ResourceIndex != INDEX_NONE && PoisonIndex != INDEX_NONE && ResourceIndex < PoisonIndex);
 	return true;
 }
 
@@ -647,7 +647,7 @@ bool FWBDeterministicTurnTransitionExpirationOrderTest::RunTest(const FString& P
 	const int32 PoisonExpiredIndex = FindTraceStatusIndex(Result.TraceEvents, FName(TEXT("status_expired")), FName(TEXT("Poison")), 4);
 	const int32 ResourceIndex = FindTraceKindIndex(Result.TraceEvents, FName(TEXT("turn_start_resource_setup")));
 	TestTrue(TEXT("End-turn expirations precede end turn"), BurnExpiredIndex < EndTurnIndex && RootedExpiredIndex < EndTurnIndex && StunnedExpiredIndex < EndTurnIndex);
-	TestTrue(TEXT("Poison expiration precedes resource setup"), EndTurnIndex < PoisonExpiredIndex && PoisonExpiredIndex < ResourceIndex);
+	TestTrue(TEXT("Resource setup precedes Poison expiration"), EndTurnIndex < ResourceIndex && ResourceIndex < PoisonExpiredIndex);
 	return true;
 }
 

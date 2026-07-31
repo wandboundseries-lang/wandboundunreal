@@ -616,9 +616,9 @@ bool FWBTurnCommandFullTransitionTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Trace 1 end status"), Result.TraceEvents[1].Kind, FName(TEXT("end_turn_status_ticks")));
 		TestEqual(TEXT("Trace 2 Burn"), Result.TraceEvents[2].StatusId, FName(TEXT("Burn")));
 		TestEqual(TEXT("Trace 3 end turn"), Result.TraceEvents[3].Kind, FName(TEXT("end_turn")));
-		TestEqual(TEXT("Trace 4 start status"), Result.TraceEvents[4].Kind, FName(TEXT("start_turn_status_ticks")));
-		TestEqual(TEXT("Trace 5 Poison"), Result.TraceEvents[5].StatusId, FName(TEXT("Poison")));
-		TestEqual(TEXT("Trace 6 resources"), Result.TraceEvents[6].Kind, FName(TEXT("turn_start_resource_setup")));
+		TestEqual(TEXT("Trace 4 resources"), Result.TraceEvents[4].Kind, FName(TEXT("turn_start_resource_setup")));
+		TestEqual(TEXT("Trace 5 start status"), Result.TraceEvents[5].Kind, FName(TEXT("start_turn_status_ticks")));
+		TestEqual(TEXT("Trace 6 Poison"), Result.TraceEvents[6].StatusId, FName(TEXT("Poison")));
 	}
 
 	return true;

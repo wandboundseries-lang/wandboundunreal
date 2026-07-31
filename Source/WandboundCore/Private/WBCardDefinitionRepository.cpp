@@ -93,6 +93,23 @@ bool HasDuplicateEffectIds(const FWBCardDefinition& Definition)
 	return false;
 }
 
+bool HasDuplicateTurnStartTriggerIds(
+	const FWBCardDefinition& Definition)
+{
+	TSet<FString> SeenTriggerIds;
+	for (const FWBTurnStartTriggerDefinition& Trigger :
+		Definition.TurnStartTriggers)
+	{
+		if (!Trigger.TriggerId.IsEmpty()
+			&& SeenTriggerIds.Contains(Trigger.TriggerId))
+		{
+			return true;
+		}
+		SeenTriggerIds.Add(Trigger.TriggerId);
+	}
+	return false;
+}
+
 bool HasValidKindMetadata(const FWBCardDefinition& Definition, FString& OutReason)
 {
 	switch (Definition.Kind)
@@ -190,6 +207,46 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 		if (HasDuplicateEffectIds(Definition))
 		{
 			return MakeValidationFailure(Repository, TEXT("duplicate_effect_id"));
+		}
+
+		for (const FWBTurnStartTriggerDefinition& Trigger :
+			Definition.TurnStartTriggers)
+		{
+			if (Trigger.TriggerId.IsEmpty())
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("turn_start_trigger_id_missing"));
+			}
+			if (!IsSupportedTargetRequirement(
+				Trigger.TargetRequirement))
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("unsupported_target_requirement"));
+			}
+			if (Trigger.DrawCount < 0
+				|| (Trigger.DrawCount == 0
+					&& Trigger.Payloads.IsEmpty()))
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("turn_start_trigger_effect_missing"));
+			}
+			if (!Trigger.Payloads.IsEmpty()
+				&& Trigger.TargetRequirement
+					!= EWBCardEffectTargetRequirement::Unit)
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("turn_start_trigger_target_required"));
+			}
+		}
+		if (HasDuplicateTurnStartTriggerIds(Definition))
+		{
+			return MakeValidationFailure(
+				Repository,
+				TEXT("duplicate_turn_start_trigger_id"));
 		}
 	}
 
