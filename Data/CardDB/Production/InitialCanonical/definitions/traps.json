@@ -1,0 +1,28 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "initial_canonical_v1",
+  "source_version": "godot_carddb_canonical_v2_1",
+  "bundle_kind": "production",
+  "metadata": {
+    "source": "Reference/GodotProject/godotcanon/scripts/data/CardDB/traps.json",
+    "version": "initial_canonical_v1",
+    "notes": "Canonical Spike Trap with complete generic production Trap behavior."
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "trap_generic_01",
+      "public_name": "Spike Trap",
+      "kind": "trap",
+      "public_text": "TRAP",
+      "public_category": "Trap",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "trap": {
+        "damage": 2
+      }
+    }
+  ]
+}

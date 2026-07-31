@@ -6,6 +6,7 @@
 #include "WBCardDefinitionRepository.h"
 #include "WBCardZoneObservation.h"
 #include "WBEquipExecution.h"
+#include "WBInitialHeroSetup.h"
 #include "WBMarkerResolution.h"
 #include "WBPublicBoardSummary.h"
 #include "WBPublicTurnSummary.h"
@@ -38,6 +39,7 @@ struct WANDBOUNDCORE_API FWBMatchPlayerSetup
 	int32 PlayerId = -1;
 	FString HeroInstanceId;
 	FString HeroCardId;
+	FWBTile HeroSpawnTile = FWBTile(-1, -1);
 	TArray<FWBCardInstanceRef> OrderedDeck;
 };
 
@@ -45,9 +47,13 @@ struct WANDBOUNDCORE_API FWBMatchInitializationRequest
 {
 	int32 Seed = 1;
 	int32 FirstPlayerId = INDEX_NONE;
+	int32 ExpectedFirstPlayerId = INDEX_NONE;
+	bool bDeriveFirstPlayerFromSeed = false;
+	bool bShuffleDecksAtMatchStart = false;
 	FWBCardDefinitionRepository Repository;
 	TArray<FWBMatchPlayerSetup> Players;
 	TArray<FWBSetupMarkerPlacement> MarkerPlacements;
+	TMap<int32, TArray<FString>> SetupTriggerOrderChoices;
 };
 
 struct WANDBOUNDCORE_API FWBMatchLegalAction
@@ -102,6 +108,9 @@ public:
 	EWBMatchLoopPhase GetMatchPhase() const;
 	FName GetMatchPhaseName() const;
 	int32 GetFirstPlayerId() const;
+	bool WasHeroSpawnBatchCommitted() const;
+	bool WereHeroSetupTriggersResolved() const;
+	bool WereOpeningHandsDrawn() const;
 	const FWBGameStateData& GetState() const;
 	const FWBCardDefinitionRepository& GetRepository() const;
 	const TArray<FWBTraceEvent>& GetTraceLog() const;
@@ -134,4 +143,7 @@ private:
 	FWBGameStateData State;
 	FWBCardDefinitionRepository Repository;
 	TArray<FWBTraceEvent> TraceLog;
+	bool bHeroSpawnBatchCommitted = false;
+	bool bHeroSetupTriggersResolved = false;
+	bool bOpeningHandsDrawn = false;
 };

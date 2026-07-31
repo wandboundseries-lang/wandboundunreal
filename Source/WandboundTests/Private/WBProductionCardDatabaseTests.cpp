@@ -897,6 +897,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FWBProductionCardDBPlayableDecisionTest::RunTest(const FString&)
 {
 	const FWBProductionCardDatabaseLoadResult Database = LoadProductionFixture();
+	if (!TestTrue(
+		TEXT("Production fixture loads"),
+		Database.bOk && Database.Snapshot.IsValid()))
+	{
+		return false;
+	}
 	const FWBProductionMatchSpecificationLoadResult Spec =
 		WBProductionMatchSpecification::ParseAndBuildRequestForTest(
 			ValidMatchSpecJson(*Database.Snapshot),

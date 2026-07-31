@@ -119,13 +119,28 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 	{
 		const FWBRuntimeMatchPresentation Presentation =
 			MatchHost->GetCurrentPresentation();
+		const WBMatchCoordinator* Coordinator =
+			MatchHost->GetCoordinatorForInspection();
+		if (Coordinator == nullptr)
+		{
+			return FailStartup(TEXT("match_coordinator_missing"));
+		}
+		const FWBMatchLegalActionGenerationResult PlayableDecision =
+			Coordinator->EnumerateLegalActions();
+		if (!PlayableDecision.bOk)
+		{
+			return FailStartup(
+				PlayableDecision.Reason.IsEmpty()
+					? TEXT("playable_decision_generation_failed")
+					: PlayableDecision.Reason);
+		}
 		PendingProductionStartupResult =
-			WBProductionStartupResult::Started(
-				ProductionCardDatabase->ContentDigest,
-				!ProductionInitializationRequest->Players.IsEmpty(),
+			WBProductionStartupResult::StartedFromBootstrap(
+				PendingProductionStartupResult,
+				*Coordinator,
 				Presentation.MatchGeneration,
 				Presentation.PresentationRevision,
-				!MatchHost->GetCurrentLegalActions().IsEmpty());
+				!PlayableDecision.Actions.IsEmpty());
 		WBProductionStartupResult::Write(
 			PendingProductionStartupResult);
 		UE_LOG(

@@ -85,6 +85,7 @@ FWBCardDefinition MakeMatchTrapDefinition()
 	Definition.CardId = TEXT("basic_trap");
 	Definition.PublicName = TEXT("Basic Trap");
 	Definition.Kind = EWBCardDefinitionKind::Trap;
+	Definition.TrapDamage = 2;
 	return Definition;
 }
 
@@ -518,23 +519,23 @@ bool FWBMatchCoordinatorFirstTurnRestrictionsTest::RunTest(const FString& Parame
 	FWBUnitState* Hero0 = State.GetMutableUnitById(FirstPlayerId);
 	FWBUnitState* Hero1 = State.GetMutableUnitById(SecondPlayerId);
 	Hero0->X = 4;
-	Hero0->Y = 4;
+	Hero0->Y = 5;
 	Hero0->MPRemaining = 2;
 	Hero0->AttacksLeft = 1;
 	Hero1->X = 5;
-	Hero1->Y = 4;
+	Hero1->Y = 5;
 	State.GetMutablePlayerById(FirstPlayerId)->RemainingMP = 2;
 
 	const FWBMatchLegalActionGenerationResult TurnOne = Coordinator.EnumerateLegalActions();
 	TestTrue(TEXT("Turn-one generation succeeds"), TurnOne.bOk);
 	TestNull(TEXT("Attack is blocked on first-player turn one"), FindCoreAction(TurnOne, EWBActionType::Attack));
-	TestNull(TEXT("Opposing-half move is blocked"), FindMoveTo(TurnOne, FWBTile(4, 3)));
-	TestNotNull(TEXT("Own-half move remains legal"), FindMoveTo(TurnOne, FWBTile(4, 5)));
+	TestNull(TEXT("Neutral-boundary move is blocked"), FindMoveTo(TurnOne, FWBTile(4, 4)));
+	TestNotNull(TEXT("Own-half move remains legal"), FindMoveTo(TurnOne, FWBTile(4, 6)));
 
 	State.TurnNumber = 2;
 	const FWBMatchLegalActionGenerationResult LaterTurn = Coordinator.EnumerateLegalActions();
 	TestNotNull(TEXT("Attack restriction expires"), FindCoreAction(LaterTurn, EWBActionType::Attack));
-	TestNotNull(TEXT("Half-board restriction expires"), FindMoveTo(LaterTurn, FWBTile(4, 3)));
+	TestNotNull(TEXT("Region-boundary restriction expires"), FindMoveTo(LaterTurn, FWBTile(4, 4)));
 	return true;
 }
 

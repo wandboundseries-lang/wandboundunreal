@@ -1,6 +1,7 @@
 #include "WBProductionRuntimeBootstrap.h"
 
 #include "WBProductionMatchSpecification.h"
+#include "Misc/Paths.h"
 
 FWBProductionRuntimeBootstrapResult WBProductionRuntimeBootstrap::Build(
 	const FWBProductionRuntimeBootstrapRequest& Request)
@@ -44,10 +45,54 @@ FWBProductionRuntimeBootstrapResult WBProductionRuntimeBootstrap::Build(
 		return Result;
 	}
 
-	const FWBProductionMatchSpecificationLoadResult MatchResult =
-		WBProductionMatchSpecification::LoadAndBuildRequest(
-			Request.MatchSpecificationPath,
-			*DatabaseResult.Snapshot);
+	FWBProductionMatchSpecificationLoadResult MatchResult;
+	if (DatabaseResult.Snapshot->MatchStatus == TEXT("ready"))
+	{
+		const FString SuiteRoot = FPaths::GetPath(
+			WBProductionCardDatabase::ResolveInputPath(
+				Request.CardBundleManifestPath));
+		const FString ActiveFormatPath =
+			Request.ActiveFormatPath.IsEmpty()
+				? FPaths::Combine(
+					SuiteRoot,
+					TEXT("active_format_v1.json"))
+				: Request.ActiveFormatPath;
+		const FString AddendumPath =
+			Request.GameStartAddendumPath.IsEmpty()
+				? FPaths::Combine(
+					SuiteRoot,
+					TEXT("game_start_addendum_v1.json"))
+				: Request.GameStartAddendumPath;
+		const FWBActiveFormatLoadResult FormatResult =
+			WBActiveFormat::Load(ActiveFormatPath);
+		if (!FormatResult.bOk)
+		{
+			Result.Reason = FormatResult.Reason;
+			return Result;
+		}
+		const FWBGameStartAddendumLoadResult AddendumResult =
+			WBGameStartAddendum::Load(AddendumPath);
+		if (!AddendumResult.bOk)
+		{
+			Result.Reason = AddendumResult.Reason;
+			return Result;
+		}
+		Result.ActiveFormat = FormatResult.Format;
+		Result.GameStartAddendum = AddendumResult.Addendum;
+		MatchResult =
+			WBProductionMatchSpecification::LoadAndBuildRequestV2(
+				Request.MatchSpecificationPath,
+				*DatabaseResult.Snapshot,
+				Result.ActiveFormat,
+				Result.GameStartAddendum);
+	}
+	else
+	{
+		MatchResult =
+			WBProductionMatchSpecification::LoadAndBuildRequest(
+				Request.MatchSpecificationPath,
+				*DatabaseResult.Snapshot);
+	}
 	Result.Diagnostics.Append(MatchResult.Diagnostics);
 	if (!MatchResult.bOk)
 	{

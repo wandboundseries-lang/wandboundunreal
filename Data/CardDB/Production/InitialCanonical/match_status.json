@@ -1,21 +1,11 @@
 {
   "schema_version": 1,
-  "status": "blocked",
-  "reason": "production_match_spec_blocked_by_canonical_deck_evidence",
+  "status": "ready",
+  "reason": "production_match_spec_available",
   "hero_candidate_ids": [
     "char_test_01",
     "char_test_03"
   ],
-  "missing_requirements": [
-    "canonical_active_format_document",
-    "canonical_deck_card_count",
-    "canonical_allowed_player_deck_card_types",
-    "canonical_duplicate_limit",
-    "canonical_deck_ordering_or_shuffle_policy",
-    "canonical_identical_deck_policy",
-    "canonical_first_player_policy",
-    "canonical_supported_player_0_ordered_deck",
-    "canonical_supported_player_1_ordered_deck"
-  ],
-  "definition_bundle_digest": "b406557f2f190818fe3460621bbbdfaf84abe53623ff26aa934588aad68bedde"
+  "missing_requirements": [],
+  "definition_bundle_digest": "87d2644aeb479e84a3e96967fd57901ac52aa7e283fd5cfee142d35e8659f00c"
 }

@@ -140,6 +140,20 @@
         "hero": {
           "type": "object"
         },
+        "trap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "damage"
+          ],
+          "properties": {
+            "damage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 99
+            }
+          }
+        },
         "equip": {
           "type": "object"
         },

@@ -6403,6 +6403,31 @@ notRun=0
 - Source guards confirm the validator does not call effect execution, normal legal action generation, activation candidate generation, or activation legal action generation paths.
 - No production CardDB importer, production loader, production zones, runtime provider generation, UI, response windows, Blueprints, `.uasset`, or `.umap` work was added.
 
+## Active Format v1 And Game-Start Final Validation
+
+Date: 2026-07-30
+
+- Editor build: succeeded.
+- Game build: succeeded.
+- Focused Active Format: 11 succeeded.
+- Focused production match: 10 succeeded.
+- Focused Turn 1 rules: 34 succeeded.
+- Focused authority guards: 7 succeeded.
+- Full Wandbound automation: 1,724 succeeded, 0 warnings, 0 failed, 0 not run.
+- Definitive BuildCookRun:
+  `Saved/PackagedBuilds/ActiveFormatGameStartFinal_20260730_0252`;
+  succeeded in 154.59 seconds.
+- Packaged development smoke: exit 0.
+- Packaged production startup: exit 0, `production_started`, Player 1 first,
+  all setup milestones true, playable decision reached.
+- Repeated packaged startup output: byte-identical, SHA-256
+  `36f3f471568bdb642888f6083aa356e52ab147cb4f9a66ec9ef4b641ed384420`.
+- `git diff --check`: no whitespace errors; line-ending notices only.
+- Exact final errors: none.
+
+Full evidence is in
+`Docs/Active_Format_Game_Start_Implementation_Report.md`.
+
 # Extended Test-Only CardDB Schema Fixture Validation Pass
 
 ## Build

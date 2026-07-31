@@ -1,5 +1,7 @@
 #include "WBRules.h"
 
+#include "WBTurnOneRestrictions.h"
+
 #include "WBCardActivationCommand.h"
 #include "WBCardActivationCostPayment.h"
 #include "WBEffectRequest.h"
@@ -345,6 +347,17 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 		return FWBMoveQueryResult::Deny(TEXT("blocked_by_wall"));
 	}
 
+	FWBRelocationStep Relocation;
+	Relocation.UnitId = Unit->UnitId;
+	Relocation.FromTile = Action.FromTile;
+	Relocation.ToTile = Action.ToTile;
+	const FWBTurnOneRestrictionQuery RelocationQuery =
+		WBTurnOneRestrictions::QueryRelocation(State, { Relocation });
+	if (!RelocationQuery.bOk)
+	{
+		return FWBMoveQueryResult::Deny(*RelocationQuery.Reason);
+	}
+
 	const int32 MovementPoints = bNPCAuthority ? AvailableMP : Player->RemainingMP;
 	if (MovementPoints <= 0)
 	{
@@ -435,6 +448,19 @@ FWBActionQueryResult CanDeclareAttackWithAuthority(
 	else if (Attacker->OwnerId != Action.PlayerId)
 	{
 		return FWBActionQueryResult::Deny(TEXT("wrong_player"));
+	}
+
+	if (!bNPCAuthority)
+	{
+		const FWBTurnOneRestrictionQuery TurnOneQuery =
+			WBTurnOneRestrictions::QueryAttackTarget(
+				State,
+				Action.PlayerId,
+				Defender->OwnerId);
+		if (!TurnOneQuery.bOk)
+		{
+			return FWBActionQueryResult::Deny(*TurnOneQuery.Reason);
+		}
 	}
 
 	if (!bNPCAuthority && Defender->OwnerId == Attacker->OwnerId)

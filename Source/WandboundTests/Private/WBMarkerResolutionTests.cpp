@@ -16,6 +16,7 @@ FWBCardDefinition MakeTrapDefinition()
 	Definition.CardId = TEXT("basic_trap");
 	Definition.PublicName = TEXT("Basic Trap");
 	Definition.Kind = EWBCardDefinitionKind::Trap;
+	Definition.TrapDamage = 2;
 	return Definition;
 }
 
@@ -241,7 +242,10 @@ bool FWBMarkerSetupValidationAtomicTest::RunTest(const FString& Parameters)
 
 	TArray<FWBSetupMarkerPlacement> HeroOverlap = MakePlacements();
 	HeroOverlap[0].Tile = FWBTile(4, 8);
-	ExpectFailure(TEXT("Hero overlap"), HeroOverlap, TEXT("marker_setup_tile_occupied"));
+	ExpectFailure(
+		TEXT("Hero overlap"),
+		HeroOverlap,
+		TEXT("setup_marker_on_reserved_hero_spawn_tile"));
 
 	TArray<FWBSetupMarkerPlacement> Distribution = MakePlacements();
 	Distribution[2].Type = EWBMarkerType::Trap;

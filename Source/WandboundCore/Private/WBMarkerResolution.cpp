@@ -10,7 +10,6 @@ namespace
 constexpr int32 CanonicalMarkerCount = 8;
 constexpr int32 MarkersPerPlayer = 4;
 constexpr int32 MarkersPerTypePerPlayer = 2;
-constexpr int32 TrapDamageAmount = 2;
 
 FWBMarkerResolutionResult MakeMarkerFailure(const FString& Reason)
 {
@@ -321,7 +320,11 @@ FWBMarkerResolutionResult WBMarkerResolution::ApplyCanonicalSetup(
 		{
 			return MakeMarkerFailure(TEXT("marker_outside_player_half"));
 		}
-		if (IsHeroSpawnTile(Placement.Tile) || State.IsTileOccupied(Placement.Tile))
+		if (IsHeroSpawnTile(Placement.Tile))
+		{
+			return MakeMarkerFailure(TEXT("setup_marker_on_reserved_hero_spawn_tile"));
+		}
+		if (State.IsTileOccupied(Placement.Tile))
 		{
 			return MakeMarkerFailure(TEXT("marker_setup_tile_occupied"));
 		}
@@ -454,6 +457,18 @@ FWBMarkerResolutionResult WBMarkerResolution::ResolveMarkerAtUnitTile(
 	int32 PendingSpawnId = -1;
 	if (Marker.Type == EWBMarkerType::Trap)
 	{
+		const FWBCardDefinitionRepositoryLookupResult TrapLookup =
+			WBCardDefinitionRepository::FindCardById(
+				Repository,
+				Marker.InternalMarkerCardId);
+		if (!TrapLookup.bFound
+			|| TrapLookup.Definition.Kind != EWBCardDefinitionKind::Trap
+			|| TrapLookup.Definition.TrapDamage <= 0)
+		{
+			return MakeMarkerFailure(TEXT("trap_behavior_unsupported"));
+		}
+		const int32 TrapDamageAmount =
+			TrapLookup.Definition.TrapDamage;
 		FWBDamageRequest DamageRequest;
 		DamageRequest.DamageKind = EWBDamageKind::Effect;
 		DamageRequest.SourcePlayerId = Marker.OwnerPlayerId;

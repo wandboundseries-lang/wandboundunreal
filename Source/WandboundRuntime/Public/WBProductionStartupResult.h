@@ -9,11 +9,21 @@ struct WANDBOUNDRUNTIME_API FWBProductionStartupResult
 	FString StartupMode = TEXT("production");
 	bool bBundleLoaded = false;
 	FString BundleDigest;
+	FString FormatId;
+	int32 FormatVersion = 0;
+	FString FormatDigest;
+	FString GameStartAddendumId;
+	int32 GameStartAddendumVersion = 0;
+	FString GameStartAddendumDigest;
 	bool bMatchSpecPresent = false;
 	bool bMatchInitialized = false;
+	bool bHeroSpawnBatchCommitted = false;
+	bool bHeroSetupTriggersResolved = false;
+	bool bOpeningHandsDrawn = false;
 	bool bPlayableDecisionReached = false;
 	bool bBlocked = false;
 	FString ResultCode;
+	int32 FirstPlayer = -1;
 	int32 Generation = 0;
 	int32 Revision = 0;
 };
@@ -33,6 +43,13 @@ public:
 		const int32 Generation,
 		const int32 Revision,
 		const bool bPlayableDecisionReached);
+
+	static FWBProductionStartupResult StartedFromBootstrap(
+		const FWBProductionStartupResult& BootstrapResult,
+		const WBMatchCoordinator& Coordinator,
+		int32 Generation,
+		int32 Revision,
+		bool bPlayableDecisionReached);
 
 	static FString Serialize(const FWBProductionStartupResult& Result);
 

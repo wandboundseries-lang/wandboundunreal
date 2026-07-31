@@ -25,6 +25,26 @@ enum class EWBCardEffectTargetRequirement : uint8
 	WallEdge
 };
 
+enum class EWBSetupSummonTriggerScope : uint8
+{
+	OwnWhenSummoned,
+	CharacterSummoned,
+	UnitSummoned,
+	YouSummonUnit,
+	OpponentSummonsUnit,
+	FactionSummoned
+};
+
+struct WANDBOUNDCORE_API FWBSetupSummonTriggerDefinition
+{
+	FString TriggerId;
+	EWBSetupSummonTriggerScope Scope =
+		EWBSetupSummonTriggerScope::OwnWhenSummoned;
+	FString FactionId;
+	int32 DrawCount = 0;
+	bool bMandatory = true;
+};
+
 struct WANDBOUNDCORE_API FWBCardEffectDefinition
 {
 	FString EffectId;
@@ -58,5 +78,7 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	EWBCardDefinitionKind Kind = EWBCardDefinitionKind::Unknown;
 	FWBCardCharacterStatsDefinition CharacterStats;
 	FWBCardWandStatsDefinition WandStats;
+	int32 TrapDamage = 0;
 	TArray<FWBCardEffectDefinition> ActivatedEffects;
+	TArray<FWBSetupSummonTriggerDefinition> SetupSummonTriggers;
 };

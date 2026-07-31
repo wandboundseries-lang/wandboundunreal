@@ -13,6 +13,10 @@
         {
           "name": "npcs",
           "path": "definitions/npcs.json"
+        },
+        {
+          "name": "traps",
+          "path": "definitions/traps.json"
         }
       ]
     }

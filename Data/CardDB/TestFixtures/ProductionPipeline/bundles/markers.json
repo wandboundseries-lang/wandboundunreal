@@ -20,7 +20,10 @@
         "fixture"
       ],
       "source_manifest": "manifests/core.manifest.json",
-      "stats": {}
+      "stats": {},
+      "trap": {
+        "damage": 2
+      }
     },
     {
       "schema_version": 1,

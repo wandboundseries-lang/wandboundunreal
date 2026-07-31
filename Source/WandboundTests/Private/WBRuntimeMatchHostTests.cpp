@@ -43,6 +43,8 @@ FWBCardDefinition MakeSimpleDefinition(const FString& CardId, const EWBCardDefin
 	Definition.CardId = CardId;
 	Definition.PublicName = CardId;
 	Definition.Kind = Kind;
+	Definition.TrapDamage =
+		Kind == EWBCardDefinitionKind::Trap ? 2 : 0;
 	return Definition;
 }
 

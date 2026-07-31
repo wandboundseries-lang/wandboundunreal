@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wandbound.game-start-addendum.schema.1",
+  "title": "Wandbound Game Start and Turn One Addendum v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "addendum_id",
+    "addendum_version",
+    "authority",
+    "approval_date",
+    "addendum_digest",
+    "supersedes_rules",
+    "setup_sequence",
+    "hero_spawn",
+    "trigger_order",
+    "reaction_policy",
+    "opening_hand_timing",
+    "reserved_tiles",
+    "turn_one",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "addendum_id": { "const": "game_start_turn_one_v1" },
+    "addendum_version": { "const": 1 },
+    "authority": { "const": "product_owner_approved" },
+    "approval_date": { "const": "2026-07-30" },
+    "addendum_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "supersedes_rules": {
+      "const": [
+        "rules_bible_v2.sequential_hero_deployment",
+        "rules_bible_v2_1.first_player_turn_one_blanket_attack_prohibition"
+      ]
+    },
+    "setup_sequence": {
+      "const": [
+        "format_validation",
+        "first_player_selection",
+        "marker_placement",
+        "hero_atomic_spawn",
+        "hero_trigger_collection",
+        "first_player_hero_trigger_resolution",
+        "second_player_hero_trigger_resolution",
+        "opening_hand_draw",
+        "first_turn_ready"
+      ]
+    },
+    "hero_spawn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "atomic",
+        "placement_counts_as_summon",
+        "collect_triggers_after_batch_commit"
+      ],
+      "properties": {
+        "atomic": { "const": true },
+        "placement_counts_as_summon": { "const": true },
+        "collect_triggers_after_batch_commit": { "const": true }
+      }
+    },
+    "trigger_order": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "first_player_batch_first",
+        "player_selected_within_batch",
+        "stable_replay_decision_ids"
+      ],
+      "properties": {
+        "first_player_batch_first": { "const": true },
+        "player_selected_within_batch": { "const": true },
+        "stable_replay_decision_ids": { "const": true }
+      }
+    },
+    "reaction_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manual_reacts_allowed",
+        "priority_passing_allowed",
+        "required_choices_continue"
+      ],
+      "properties": {
+        "manual_reacts_allowed": { "const": false },
+        "priority_passing_allowed": { "const": false },
+        "required_choices_continue": { "const": true }
+      }
+    },
+    "opening_hand_timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "setup_effect_draws_before_standard_draw",
+        "standard_draw_count",
+        "setup_trigger_draw_reason",
+        "opening_hand_draw_reason"
+      ],
+      "properties": {
+        "setup_effect_draws_before_standard_draw": { "const": true },
+        "standard_draw_count": { "const": 6 },
+        "setup_trigger_draw_reason": { "const": "setup_trigger_draw" },
+        "opening_hand_draw_reason": { "const": "opening_hand_draw" }
+      }
+    },
+    "reserved_tiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hero_spawn_tiles_reserved"],
+      "properties": {
+        "hero_spawn_tiles_reserved": { "const": true }
+      }
+    },
+    "turn_one": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "board_size",
+        "neutral_row",
+        "first_player_only",
+        "neutral_row_summons_allowed",
+        "opponent_half_summons_allowed",
+        "protected_boundary_crossing_allowed",
+        "all_relocation_operations_covered",
+        "neutral_npc_attacks_allowed",
+        "opponent_controlled_attacks_allowed"
+      ],
+      "properties": {
+        "board_size": { "const": 9 },
+        "neutral_row": { "const": 4 },
+        "first_player_only": { "const": true },
+        "neutral_row_summons_allowed": { "const": true },
+        "opponent_half_summons_allowed": { "const": false },
+        "protected_boundary_crossing_allowed": { "const": false },
+        "all_relocation_operations_covered": { "const": true },
+        "neutral_npc_attacks_allowed": { "const": true },
+        "opponent_controlled_attacks_allowed": { "const": false }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

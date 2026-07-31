@@ -119,8 +119,11 @@ struct WANDBOUNDCORE_API FWBGameStateData
 {
 	int32 CurrentPlayer = 0;
 	int32 PriorityPlayer = 0;
+	int32 FirstPlayerId = INDEX_NONE;
 	int32 TurnNumber = 1;
 	EWBGamePhase Phase = EWBGamePhase::NormalTurn;
+	bool bInitialSetupInProgress = false;
+	bool bSuppressManualReactsDuringInitialHeroSetup = false;
 	bool bGameOver = false;
 	int32 WinnerPlayerId = -1;
 	TArray<FWBUnitState> Units;

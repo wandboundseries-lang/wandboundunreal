@@ -14,15 +14,17 @@
     "char_test_02",
     "char_test_03",
     "npc_generic_01",
-    "npc_human_marksman"
+    "npc_human_marksman",
+    "trap_generic_01"
   ],
-  "definition_count": 10,
-  "semantic_digest": "b406557f2f190818fe3460621bbbdfaf84abe53623ff26aa934588aad68bedde",
+  "definition_count": 11,
+  "semantic_digest": "87d2644aeb479e84a3e96967fd57901ac52aa7e283fd5cfee142d35e8659f00c",
   "source_provenance": [
     "Reference/GodotProject/godotcanon/Wandbound_Canonical_Glossary_v2_1_FINAL.txt",
     "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt",
     "Reference/GodotProject/godotcanon/scripts/data/CardDB/characters.json",
-    "Reference/GodotProject/godotcanon/scripts/data/CardDB/npcs.json"
+    "Reference/GodotProject/godotcanon/scripts/data/CardDB/npcs.json",
+    "Reference/GodotProject/godotcanon/scripts/data/CardDB/traps.json"
   ],
   "transfer_report_digest": "987012918cc2b3b14bef864b05982da32d04992d0cb2bb8c1d1ea2ec2baeba2f"
 }

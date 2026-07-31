@@ -457,7 +457,7 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 	{
 		const FWBCardDefinition& Definition = Record.CoreDefinition;
 		Source += FString::Printf(
-			TEXT("id=%s|type=%s|name=%s|category=%s|rules=%s|hp=%d|atk=%d|ar=%d|rl=%d|rr=%d|move=%s|attack=%s:%d|equip=%s:%d|hero=%d:%s"),
+			TEXT("id=%s|type=%s|name=%s|category=%s|rules=%s|hp=%d|atk=%d|ar=%d|rl=%d|rr=%d|trap_damage=%d|move=%s|attack=%s:%d|equip=%s:%d|hero=%d:%s"),
 			*Definition.CardId,
 			*WBProductionCardDatabase::CardTypeToString(Record.Type),
 			*Definition.PublicName,
@@ -468,6 +468,7 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 			Definition.CharacterStats.AR,
 			Definition.CharacterStats.RL,
 			Definition.WandStats.RR,
+			Definition.TrapDamage,
 			*Record.Movement.Pattern,
 			*Record.Attack.Pattern,
 			Record.Attack.Range,
@@ -1405,6 +1406,7 @@ private:
 				TEXT("movement"),
 				TEXT("attack"),
 				TEXT("hero"),
+				TEXT("trap"),
 				TEXT("equip"),
 				TEXT("activated_effects")
 			},
@@ -1583,6 +1585,7 @@ private:
 		ParseStats(Card, CardPath, Record);
 		ParseMovementAndAttack(Card, CardPath, Record);
 		ParseHero(Card, CardPath, Record);
+		ParseTrap(Card, CardPath, Record);
 		ParseEquip(Card, CardPath, Record);
 		ParseEffects(Card, CardPath, Record);
 
@@ -1872,6 +1875,58 @@ private:
 				Record.CoreDefinition.CardId,
 				CardPath + TEXT(".equip"),
 				TEXT("Equip data must target an owned unit and match the Wand RR."));
+		}
+	}
+
+	void ParseTrap(
+		const TSharedPtr<FJsonObject>& Card,
+		const FString& CardPath,
+		FWBProductionCardRecord& Record)
+	{
+		if (Record.Type != EWBProductionCardType::Trap)
+		{
+			if (HasField(Card, TEXT("trap")))
+			{
+				AddError(
+					TEXT("contradictory_trap_data"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					CardPath + TEXT(".trap"),
+					TEXT("Only Trap definitions may declare Trap behavior."));
+			}
+			return;
+		}
+
+		TSharedPtr<FJsonObject> Trap;
+		if (!TryReadObject(Card, TEXT("trap"), Trap))
+		{
+			AddError(
+				TEXT("trap_behavior_missing"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				CardPath + TEXT(".trap"),
+				TEXT("Production Traps require explicit supported behavior."));
+			return;
+		}
+		ValidateKnownFields(
+			Trap,
+			{ TEXT("damage") },
+			Record.SourceManifestPath,
+			Record.CoreDefinition.CardId,
+			CardPath + TEXT(".trap"));
+		if (!TryReadInteger(
+			Trap,
+			TEXT("damage"),
+			Record.CoreDefinition.TrapDamage)
+			|| Record.CoreDefinition.TrapDamage <= 0
+			|| Record.CoreDefinition.TrapDamage > 99)
+		{
+			AddError(
+				TEXT("trap_behavior_unsupported"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				CardPath + TEXT(".trap.damage"),
+				TEXT("Trap damage must be a supported positive integer."));
 		}
 	}
 
@@ -2830,7 +2885,8 @@ private:
 			TryReadInteger(Status, TEXT("schema_version"), SchemaVersion)
 			&& SchemaVersion == SupportedSchemaVersion
 			&& TryReadString(Status, TEXT("status"), StatusValue)
-			&& StatusValue == TEXT("blocked")
+			&& (StatusValue == TEXT("blocked")
+				|| StatusValue == TEXT("ready"))
 			&& TryReadString(Status, TEXT("reason"), Reason)
 			&& WBProductionCardDatabase::IsSafeDefinitionId(Reason)
 			&& ReadStringArray(
@@ -2847,7 +2903,10 @@ private:
 				DefinitionDigest);
 		if (!bFieldsValid
 			|| !IsStrictlySortedUnique(HeroCandidateIds)
-			|| MissingRequirements.IsEmpty()
+			|| (StatusValue == TEXT("blocked")
+				&& MissingRequirements.IsEmpty())
+			|| (StatusValue == TEXT("ready")
+				&& !MissingRequirements.IsEmpty())
 			|| DefinitionDigest != WorkingDatabase.ContentDigest)
 		{
 			AddControlFileError(
@@ -2877,7 +2936,8 @@ private:
 
 		WorkingDatabase.MatchStatusPath = MatchStatusRelativePath;
 		WorkingDatabase.MatchStatus = StatusValue;
-		WorkingDatabase.MatchBlockedReason = Reason;
+		WorkingDatabase.MatchBlockedReason =
+			StatusValue == TEXT("blocked") ? Reason : FString();
 		WorkingDatabase.HeroCandidateDefinitionIds = MoveTemp(HeroCandidateIds);
 	}
 
@@ -3210,6 +3270,14 @@ bool WBProductionCardDatabase::SnapshotToCanonicalJson(
 		Card->SetNumberField(TEXT("ar"), Definition.CharacterStats.AR);
 		Card->SetNumberField(TEXT("rl"), Definition.CharacterStats.RL);
 		Card->SetNumberField(TEXT("rr"), Definition.WandStats.RR);
+		if (Record.Type == EWBProductionCardType::Trap)
+		{
+			TSharedRef<FJsonObject> Trap = MakeShared<FJsonObject>();
+			Trap->SetNumberField(
+				TEXT("damage"),
+				Definition.TrapDamage);
+			Card->SetObjectField(TEXT("trap"), Trap);
+		}
 		Card->SetStringField(TEXT("movement_pattern"), Record.Movement.Pattern);
 		Card->SetStringField(TEXT("attack_pattern"), Record.Attack.Pattern);
 		Card->SetNumberField(TEXT("attack_range"), Record.Attack.Range);

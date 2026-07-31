@@ -5,6 +5,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "WBCardZoneState.h"
+#include "WBTurnOneRestrictions.h"
 
 namespace
 {
@@ -236,6 +237,19 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 	if (State.IsTileOccupied(Request.TargetTile))
 	{
 		return MakeResult(EWBSummonExecutionResultCode::TargetTileOccupied, Request);
+	}
+
+	const FWBTurnOneRestrictionQuery TurnOneQuery =
+		WBTurnOneRestrictions::QuerySummonPlacement(
+			State,
+			Request.PlayerId,
+			Request.TargetTile);
+	if (!TurnOneQuery.bOk)
+	{
+		return MakeResult(
+			EWBSummonExecutionResultCode::TargetTileNotAllowed,
+			Request,
+			TurnOneQuery.Reason);
 	}
 
 	const int32 NewUnitId = AllocateNextUnitId(State);

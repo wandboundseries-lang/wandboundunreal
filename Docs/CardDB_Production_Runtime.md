@@ -80,11 +80,11 @@ initializing the existing match host. Failure produces a named reason and no
 partial match. A successful actor restart reuses its validated immutable
 snapshot and initialization request.
 
-The first canonical suite has two evidenced Hero candidates but no tracked legal
-deck composed only of supported definitions. It therefore ships
-`match_status.json` instead of a fabricated match specification. Explicit
-production bootstrap loads and validates the suite, then fails with
-`production_match_spec_blocked_by_canonical_deck_evidence`.
+The initial canonical suite now ships the product-owner-approved Active Format
+v1, game-start addendum v1, and production match specification v2. Explicit
+production bootstrap validates all three documents, their semantic digests,
+both launch decks, both Setup Kits, and the production definition bundle before
+initializing the match.
 
 Every explicit production startup writes a small public-safe result to:
 
@@ -92,10 +92,10 @@ Every explicit production startup writes a small public-safe result to:
 Saved/SmokeTest/WandboundProductionStartupResult.json
 ```
 
-The result contains only bundle/match presence, initialization and playable
-decision flags, the public bundle digest, generation/revision counters, and a
-named result code. It contains no deck order, hand contents, concealed marker
-identity, or effect parameters.
+The result contains only bundle/format/addendum identity and digest fields,
+setup milestone flags, first player, initialization/playable-decision flags,
+generation/revision counters, and a named result code. It contains no deck
+order, hand contents, concealed marker identity, or effect parameters.
 
 Development and Test builds may add
 `-WandboundProductionStartupProbe`. The process then exits with `0` for

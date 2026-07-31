@@ -167,12 +167,18 @@ bool FWBMinimumCanonicalAuditDeckEvidenceTest::RunTest(const FString&)
 		TEXT("No required deck IDs invented"),
 		Solver->GetArrayField(TEXT("required_definition_ids")).Num(),
 		0);
-	TestFalse(
-		TEXT("Production match spec remains absent"),
+	TestTrue(
+		TEXT("Later approved format now supplies production match spec"),
 		IFileManager::Get().FileExists(
 			*FPaths::Combine(
 				FPaths::ProjectDir(),
 				TEXT("Data/CardDB/Production/InitialCanonical/match_spec.json"))));
+	TestTrue(
+		TEXT("Later approved Active Format is registered"),
+		IFileManager::Get().FileExists(
+			*FPaths::Combine(
+				FPaths::ProjectDir(),
+				TEXT("Data/CardDB/Production/InitialCanonical/active_format_v1.json"))));
 	return true;
 }
 
@@ -190,28 +196,12 @@ bool FWBMinimumCanonicalAuditStatusTest::RunTest(const FString&)
 		return false;
 	}
 	TestEqual(
-		TEXT("Named deck evidence block retained"),
+		TEXT("Approved format makes production match available"),
 		Status->GetStringField(TEXT("reason")),
-		FString(
-			TEXT("production_match_spec_blocked_by_canonical_deck_evidence")));
+		FString(TEXT("production_match_spec_available")));
 	const TArray<TSharedPtr<FJsonValue>>& Missing =
 		Status->GetArrayField(TEXT("missing_requirements"));
-	TestTrue(
-		TEXT("Active format requirement explicit"),
-		Missing.ContainsByPredicate(
-			[](const TSharedPtr<FJsonValue>& Value)
-			{
-				return Value->AsString()
-					== TEXT("canonical_active_format_document");
-			}));
-	TestTrue(
-		TEXT("Deck card count requirement explicit"),
-		Missing.ContainsByPredicate(
-			[](const TSharedPtr<FJsonValue>& Value)
-			{
-				return Value->AsString()
-					== TEXT("canonical_deck_card_count");
-			}));
+	TestEqual(TEXT("No production requirements missing"), Missing.Num(), 0);
 	return true;
 }
 
@@ -342,10 +332,20 @@ bool FWBMinimumCanonicalAuditAuthorityTest::RunTest(const FString&)
 	{
 		TestFalse(*Forbidden, StartupResult.Contains(Forbidden));
 	}
-	TestFalse(
-		TEXT("No match spec staged while blocked"),
+	TestTrue(
+		TEXT("Approved production match spec is staged"),
 		BuildRules.Contains(
 			TEXT("Production/InitialCanonical/match_spec.json")));
+	TestTrue(
+		TEXT("Approved Active Format is staged"),
+		BuildRules.Contains(TEXT("ActiveFormat.schema.json"))
+			&& BuildRules.Contains(
+				TEXT("Production/InitialCanonical/active_format_v1.json")));
+	TestTrue(
+		TEXT("Approved game-start addendum is staged"),
+		BuildRules.Contains(TEXT("GameStartAddendum.schema.json"))
+			&& BuildRules.Contains(
+				TEXT("Production/InitialCanonical/game_start_addendum_v1.json")));
 	return true;
 }
 

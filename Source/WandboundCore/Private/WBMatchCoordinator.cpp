@@ -15,7 +15,6 @@
 namespace
 {
 constexpr int32 OpeningHandSize = 6;
-constexpr int32 BoardMidRow = 4;
 
 FWBMatchOperationResult MakeOperationFailure(const FString& Reason)
 {
@@ -54,25 +53,29 @@ bool ZoneEntryLess(const FWBZoneCardEntry& A, const FWBZoneCardEntry& B)
 	return A.Card.CardId < B.Card.CardId;
 }
 
+uint32 NextMatchRandom(uint32& InOutRandomState)
+{
+	InOutRandomState =
+		InOutRandomState * 1664525u + 1013904223u;
+	return InOutRandomState;
+}
+
+void ShuffleDeckDeterministically(
+	TArray<FWBCardInstanceRef>& Cards,
+	uint32& InOutRandomState)
+{
+	for (int32 Index = Cards.Num() - 1; Index > 0; --Index)
+	{
+		const int32 SwapIndex = static_cast<int32>(
+			NextMatchRandom(InOutRandomState)
+			% static_cast<uint32>(Index + 1));
+		Cards.Swap(Index, SwapIndex);
+	}
+}
+
 FWBTile HeroSpawnForPlayer(const int32 PlayerId)
 {
 	return PlayerId == 0 ? FWBTile(4, 8) : FWBTile(4, 0);
-}
-
-bool IsFirstPlayerFirstTurn(const FWBGameStateData& State, const int32 FirstPlayerId)
-{
-	return State.TurnNumber == 1 && State.CurrentPlayer == FirstPlayerId;
-}
-
-bool EntersOpponentHalfOnFirstTurn(const FWBAction& Action, const int32 FirstPlayerId)
-{
-	if (Action.Type != EWBActionType::Move)
-	{
-		return false;
-	}
-
-	return (FirstPlayerId == 0 && Action.ToTile.Y < BoardMidRow)
-		|| (FirstPlayerId == 1 && Action.ToTile.Y > BoardMidRow);
 }
 
 FWBTraceEvent MakeMatchTrace(
@@ -325,19 +328,32 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 		WorkingRandomState = 0x6d2b79f5u;
 	}
 
-	const int32 SelectedFirstPlayer = Request.FirstPlayerId == INDEX_NONE
-		? static_cast<int32>((static_cast<uint32>(RollD6(WorkingRandomState)) - 1u) % 2u)
-		: Request.FirstPlayerId;
+	int32 SelectedFirstPlayer = Request.FirstPlayerId;
+	if (Request.bDeriveFirstPlayerFromSeed
+		|| SelectedFirstPlayer == INDEX_NONE)
+	{
+		SelectedFirstPlayer = static_cast<int32>(
+			NextMatchRandom(WorkingRandomState) % 2u);
+	}
 	if (!FWBGameStateData::IsValidPlayerId(SelectedFirstPlayer))
 	{
 		return MakeOperationFailure(TEXT("invalid_first_player"));
+	}
+	if (Request.bDeriveFirstPlayerFromSeed
+		&& Request.ExpectedFirstPlayerId != INDEX_NONE
+		&& Request.ExpectedFirstPlayerId != SelectedFirstPlayer)
+	{
+		return MakeOperationFailure(TEXT("expected_first_player_mismatch"));
 	}
 
 	FWBGameStateData WorkingState;
 	WorkingState.CurrentPlayer = SelectedFirstPlayer;
 	WorkingState.PriorityPlayer = SelectedFirstPlayer;
+	WorkingState.FirstPlayerId = SelectedFirstPlayer;
 	WorkingState.TurnNumber = 1;
 	WorkingState.Phase = EWBGamePhase::NormalTurn;
+	WorkingState.bInitialSetupInProgress = true;
+	WorkingState.bSuppressManualReactsDuringInitialHeroSetup = true;
 	WorkingState.bGameOver = false;
 	WorkingState.WinnerPlayerId = -1;
 
@@ -358,6 +374,7 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 		PhaseToName(EWBMatchLoopPhase::Setup));
 	WorkingTraceEvents.Add(FirstPlayerSelected);
 
+	TArray<FWBInitialHeroPlacement> HeroPlacements;
 	for (const FWBMatchPlayerSetup& Setup : PlayerSetups)
 	{
 		if (Setup.HeroInstanceId.IsEmpty() || Setup.HeroCardId.IsEmpty())
@@ -410,77 +427,54 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 
 		FWBPlayerStateData Player;
 		Player.PlayerId = Setup.PlayerId;
-		Player.HeroUnitId = Setup.PlayerId;
+		Player.HeroUnitId = -1;
 		WorkingState.Players.Add(Player);
+
+		TArray<FWBCardInstanceRef> RemainingDeck;
+		for (int32 Index = 0; Index < Setup.OrderedDeck.Num(); ++Index)
+		{
+			if (Index != HeroDeckIndex)
+			{
+				RemainingDeck.Add(Setup.OrderedDeck[Index]);
+			}
+		}
+		if (Request.bShuffleDecksAtMatchStart)
+		{
+			ShuffleDeckDeterministically(
+				RemainingDeck,
+				WorkingRandomState);
+		}
 
 		FWBPlayerCardZoneState PlayerZones;
 		PlayerZones.PlayerId = Setup.PlayerId;
-		int32 DeckIndex = 0;
-		for (int32 Index = 0; Index < Setup.OrderedDeck.Num(); ++Index)
+		for (int32 Index = 0; Index < RemainingDeck.Num(); ++Index)
 		{
-			if (Index == HeroDeckIndex)
-			{
-				continue;
-			}
-
 			FWBZoneCardEntry Entry;
-			Entry.Card = Setup.OrderedDeck[Index];
+			Entry.Card = RemainingDeck[Index];
 			Entry.Card.OwnerPlayerId = Setup.PlayerId;
 			Entry.Zone = EWBCardZone::Deck;
-			Entry.ZoneIndex = DeckIndex++;
+			Entry.ZoneIndex = Index;
 			PlayerZones.Deck.Add(Entry);
 		}
 		WorkingState.CardZoneState.PlayerZones.Add(PlayerZones);
 
-		const FWBTile SpawnTile = HeroSpawnForPlayer(Setup.PlayerId);
-		FWBUnitState Hero;
-		Hero.UnitId = Setup.PlayerId;
-		Hero.OwnerId = Setup.PlayerId;
-		Hero.CardId = Setup.HeroCardId;
-		Hero.X = SpawnTile.X;
-		Hero.Y = SpawnTile.Y;
-		Hero.HP = HeroLookup.Definition.CharacterStats.HP;
-		Hero.MaxHP = Hero.HP;
-		Hero.ATK = HeroLookup.Definition.CharacterStats.ATK;
-		Hero.AR = HeroLookup.Definition.CharacterStats.AR;
-		Hero.SetCanonicalRL(
-			HeroLookup.Definition.CharacterStats.RL,
-			HeroLookup.Definition.CharacterStats.RL,
-			0);
-		Hero.MaxAttacksPerTurn = 1;
-		WorkingState.Units.Add(Hero);
-
-		FWBTraceEvent HeroSpawned = MakeMatchTrace(
-			FName(TEXT("hero_spawned")),
-			Setup.PlayerId,
-			1,
-			PhaseToName(EWBMatchLoopPhase::Setup));
-		HeroSpawned.SourceUnitId = Hero.UnitId;
-		HeroSpawned.CardInstanceId = Setup.HeroInstanceId;
-		HeroSpawned.CardId = Setup.HeroCardId;
-		HeroSpawned.ToTile = SpawnTile;
-		HeroSpawned.bHeroUnit = true;
-		WorkingTraceEvents.Add(HeroSpawned);
+		FWBInitialHeroPlacement Placement;
+		Placement.PlayerId = Setup.PlayerId;
+		Placement.HeroInstanceId = Setup.HeroInstanceId;
+		Placement.HeroCardId = Setup.HeroCardId;
+		Placement.SpawnTile = WBRules::IsTileInBounds(
+			Setup.HeroSpawnTile)
+			? Setup.HeroSpawnTile
+			: HeroSpawnForPlayer(Setup.PlayerId);
+		if (Placement.SpawnTile
+			!= HeroSpawnForPlayer(Setup.PlayerId))
+		{
+			return MakeOperationFailure(TEXT("hero_spawn_tile_invalid"));
+		}
+		HeroPlacements.Add(MoveTemp(Placement));
 	}
 
 	WBCardZoneState::SortOrderedZonesDeterministically(WorkingState.CardZoneState);
-	for (const FWBMatchPlayerSetup& Setup : PlayerSetups)
-	{
-		const FWBCardLifecycleResult DrawResult =
-			WBCardLifecycle::ApplySetupDraw(WorkingState, Setup.PlayerId, OpeningHandSize);
-		if (!DrawResult.bOk)
-		{
-			return MakeOperationFailure(DrawResult.Reason);
-		}
-
-		FWBTraceEvent OpeningDrawn = MakeMatchTrace(
-			FName(TEXT("opening_cards_drawn")),
-			Setup.PlayerId,
-			1,
-			PhaseToName(EWBMatchLoopPhase::Setup));
-		OpeningDrawn.CardCount = OpeningHandSize;
-		WorkingTraceEvents.Add(OpeningDrawn);
-	}
 
 	const FWBMarkerResolutionResult MarkerSetupResult =
 		WBMarkerResolution::ApplyCanonicalSetup(
@@ -492,6 +486,50 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 		return MakeOperationFailure(MarkerSetupResult.Reason);
 	}
 	WorkingTraceEvents.Append(MarkerSetupResult.TraceEvents);
+
+	FWBInitialHeroSetupRequest HeroSetupRequest;
+	HeroSetupRequest.FirstPlayerId = SelectedFirstPlayer;
+	HeroSetupRequest.Placements = MoveTemp(HeroPlacements);
+	HeroSetupRequest.TriggerOrderChoices =
+		Request.SetupTriggerOrderChoices;
+	const FWBInitialHeroSetupResult HeroSetupResult =
+		WBInitialHeroSetup::Apply(
+			WorkingState,
+			Request.Repository,
+			HeroSetupRequest);
+	if (!HeroSetupResult.bOk)
+	{
+		return MakeOperationFailure(HeroSetupResult.Reason);
+	}
+	WorkingTraceEvents.Append(HeroSetupResult.TraceEvents);
+
+	const int32 OpeningDrawPlayers[] = {
+		SelectedFirstPlayer,
+		1 - SelectedFirstPlayer
+	};
+	for (const int32 PlayerId : OpeningDrawPlayers)
+	{
+		const FWBCardLifecycleResult DrawResult =
+			WBCardLifecycle::ApplySetupDraw(
+				WorkingState,
+				PlayerId,
+				OpeningHandSize);
+		if (!DrawResult.bOk)
+		{
+			return MakeOperationFailure(DrawResult.Reason);
+		}
+
+		FWBTraceEvent OpeningDrawn = MakeMatchTrace(
+			FName(TEXT("opening_hand_draw")),
+			PlayerId,
+			1,
+			PhaseToName(EWBMatchLoopPhase::Setup));
+		OpeningDrawn.CardCount = OpeningHandSize;
+		WorkingTraceEvents.Add(OpeningDrawn);
+	}
+
+	WorkingState.bSuppressManualReactsDuringInitialHeroSetup = false;
+	WorkingState.bInitialSetupInProgress = false;
 
 	const FWBApplyActionResult StartStatusResult =
 		WBEffectRunner::ApplyStartOfTurnStatusTicks(WorkingState, SelectedFirstPlayer);
@@ -530,6 +568,11 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 	Candidate.State = WorkingState;
 	Candidate.Repository = Request.Repository;
 	Candidate.TraceLog = WorkingTraceEvents;
+	Candidate.bHeroSpawnBatchCommitted =
+		HeroSetupResult.bSpawnBatchCommitted;
+	Candidate.bHeroSetupTriggersResolved =
+		HeroSetupResult.bTriggersResolved;
+	Candidate.bOpeningHandsDrawn = true;
 
 	const FWBMatchLegalActionGenerationResult LegalResult = Candidate.EnumerateLegalActions();
 	if (!LegalResult.bOk)
@@ -575,13 +618,6 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 	TArray<FWBAction> EndTurnActions;
 	for (const FWBAction& CoreAction : WBRules::GenerateLegalActionsForPlayer(InState, PlayerId))
 	{
-		if (IsFirstPlayerFirstTurn(InState, FirstPlayerId)
-			&& (CoreAction.Type == EWBActionType::Attack
-				|| EntersOpponentHalfOnFirstTurn(CoreAction, FirstPlayerId)))
-		{
-			continue;
-		}
-
 		FWBMatchLegalAction MatchAction;
 		MatchAction.Family = EWBMatchActionFamily::CoreAction;
 		MatchAction.ActionId = WBActionCodec::MakeActionId(CoreAction);
@@ -1306,6 +1342,21 @@ FName WBMatchCoordinator::GetMatchPhaseName() const
 int32 WBMatchCoordinator::GetFirstPlayerId() const
 {
 	return FirstPlayerId;
+}
+
+bool WBMatchCoordinator::WasHeroSpawnBatchCommitted() const
+{
+	return bHeroSpawnBatchCommitted;
+}
+
+bool WBMatchCoordinator::WereHeroSetupTriggersResolved() const
+{
+	return bHeroSetupTriggersResolved;
+}
+
+bool WBMatchCoordinator::WereOpeningHandsDrawn() const
+{
+	return bOpeningHandsDrawn;
 }
 
 const FWBGameStateData& WBMatchCoordinator::GetState() const

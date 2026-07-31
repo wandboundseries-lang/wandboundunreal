@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "format_id": "active_format_v1",
+  "format_version": 1,
+  "authority": "product_owner_approved",
+  "approval_date": "2026-07-30",
+  "format_digest": "258c5925ae1af7a20663c96d225f21de97b339a523c4b968cc8c6d3a024529af",
+  "source_provenance": [
+    "Docs/Wandbound_Active_Format_v1.md"
+  ],
+  "main_deck": {
+    "minimum_size": 1,
+    "maximum_size": 30,
+    "unique_definition_ids": true,
+    "requires_non_hybrid_character": true,
+    "legal_categories": [
+      "character",
+      "wand",
+      "action"
+    ],
+    "excluded_categories": [
+      "trap",
+      "npc"
+    ]
+  },
+  "setup_kit": {
+    "trap_count": 2,
+    "npc_count": 2,
+    "definition_ids_may_repeat": true
+  },
+  "opening": {
+    "hand_count": 6,
+    "mirrored_decks_allowed": true
+  },
+  "randomization": {
+    "seeded_shuffle": true,
+    "seeded_first_player_coin_flip": true,
+    "first_player_policy": "seeded_coin_flip"
+  },
+  "turn_one": {
+    "first_player_only": true,
+    "neutral_row_summons_allowed": true,
+    "opponent_half_summons_allowed": false,
+    "protected_region_boundary_crossing_allowed": false,
+    "neutral_npc_attacks_allowed": true,
+    "opponent_controlled_attacks_allowed": false
+  },
+  "game_start_addendum": {
+    "id": "game_start_turn_one_v1",
+    "version": 1
+  }
+}

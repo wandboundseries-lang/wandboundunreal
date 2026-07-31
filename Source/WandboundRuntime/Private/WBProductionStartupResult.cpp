@@ -53,10 +53,51 @@ FWBProductionStartupResult WBProductionStartupResult::FromBootstrap(
 	Result.BundleDigest = Bootstrap.Database.IsValid()
 		? Bootstrap.Database->ContentDigest
 		: FString();
+	Result.FormatId = Bootstrap.ActiveFormat.FormatId;
+	Result.FormatVersion = Bootstrap.ActiveFormat.FormatVersion;
+	Result.FormatDigest = Bootstrap.ActiveFormat.Digest;
+	Result.GameStartAddendumId =
+		Bootstrap.GameStartAddendum.AddendumId;
+	Result.GameStartAddendumVersion =
+		Bootstrap.GameStartAddendum.AddendumVersion;
+	Result.GameStartAddendumDigest =
+		Bootstrap.GameStartAddendum.Digest;
 	Result.bMatchSpecPresent = !Request.MatchSpecificationPath.IsEmpty();
 	Result.bBlocked =
 		Bootstrap.Reason.StartsWith(TEXT("production_match_spec_blocked_"));
 	Result.ResultCode = NormalizeResultCode(Bootstrap);
+	return Result;
+}
+
+FWBProductionStartupResult
+WBProductionStartupResult::StartedFromBootstrap(
+	const FWBProductionStartupResult& BootstrapResult,
+	const WBMatchCoordinator& Coordinator,
+	const int32 Generation,
+	const int32 Revision,
+	const bool bPlayableDecisionReached)
+{
+	FWBProductionStartupResult Result = BootstrapResult;
+	Result.bMatchInitialized = Coordinator.IsInitialized();
+	Result.bHeroSpawnBatchCommitted =
+		Coordinator.WasHeroSpawnBatchCommitted();
+	Result.bHeroSetupTriggersResolved =
+		Coordinator.WereHeroSetupTriggersResolved();
+	Result.bOpeningHandsDrawn =
+		Coordinator.WereOpeningHandsDrawn();
+	Result.bPlayableDecisionReached =
+		bPlayableDecisionReached;
+	Result.bBlocked = false;
+	Result.ResultCode = bPlayableDecisionReached
+		&& Result.bMatchInitialized
+		&& Result.bHeroSpawnBatchCommitted
+		&& Result.bHeroSetupTriggersResolved
+		&& Result.bOpeningHandsDrawn
+			? FString(TEXT("production_started"))
+			: FString(TEXT("production_bundle_invalid"));
+	Result.FirstPlayer = Coordinator.GetFirstPlayerId();
+	Result.Generation = Generation;
+	Result.Revision = Revision;
 	return Result;
 }
 
@@ -90,6 +131,18 @@ FString WBProductionStartupResult::Serialize(
 	Writer->WriteValue(TEXT("startup_mode"), Result.StartupMode);
 	Writer->WriteValue(TEXT("bundle_loaded"), Result.bBundleLoaded);
 	Writer->WriteValue(TEXT("bundle_digest"), Result.BundleDigest);
+	Writer->WriteValue(TEXT("format_id"), Result.FormatId);
+	Writer->WriteValue(TEXT("format_version"), Result.FormatVersion);
+	Writer->WriteValue(TEXT("format_digest"), Result.FormatDigest);
+	Writer->WriteValue(
+		TEXT("game_start_addendum_id"),
+		Result.GameStartAddendumId);
+	Writer->WriteValue(
+		TEXT("game_start_addendum_version"),
+		Result.GameStartAddendumVersion);
+	Writer->WriteValue(
+		TEXT("game_start_addendum_digest"),
+		Result.GameStartAddendumDigest);
 	Writer->WriteValue(
 		TEXT("match_spec_present"),
 		Result.bMatchSpecPresent);
@@ -97,10 +150,20 @@ FString WBProductionStartupResult::Serialize(
 		TEXT("match_initialized"),
 		Result.bMatchInitialized);
 	Writer->WriteValue(
+		TEXT("hero_spawn_batch_committed"),
+		Result.bHeroSpawnBatchCommitted);
+	Writer->WriteValue(
+		TEXT("hero_setup_triggers_resolved"),
+		Result.bHeroSetupTriggersResolved);
+	Writer->WriteValue(
+		TEXT("opening_hands_drawn"),
+		Result.bOpeningHandsDrawn);
+	Writer->WriteValue(
 		TEXT("playable_decision_reached"),
 		Result.bPlayableDecisionReached);
 	Writer->WriteValue(TEXT("blocked"), Result.bBlocked);
 	Writer->WriteValue(TEXT("result_code"), Result.ResultCode);
+	Writer->WriteValue(TEXT("first_player"), Result.FirstPlayer);
 	Writer->WriteValue(TEXT("generation"), Result.Generation);
 	Writer->WriteValue(TEXT("revision"), Result.Revision);
 	Writer->WriteObjectEnd();

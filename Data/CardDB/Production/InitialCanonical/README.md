@@ -13,12 +13,12 @@ range equal to AR. AR remains Attack Range.
 `test` token because tracked tutorial setup explicitly uses those definitions as
 Heroes. They are not synthetic Unreal test-fixture definitions.
 
-No `match_spec.json` is present. Canonical sources identify two tutorial Hero
-choices, but the Rules Bible delegates card-count and format restrictions to an
-active format document that is absent from the tracked reference. Deck size,
-allowed card types, copy limits, ordering, mirrored-deck legality, and the
-production first-player policy therefore cannot be inferred from tutorial or AI
-examples. `match_status.json` records the resulting named fail-closed status.
+The product-owner-approved Active Format v1 and game-start addendum now supply
+the format and setup authority delegated by the Rules Bible. The suite includes
+their digest-pinned runtime data, `trap_generic_01`, and the first valid
+`match_spec.json`. The match uses two seven-Character decks, repeated supported
+Trap slots in each Setup Kit, both supported NPCs, deterministic marker
+placements, seeded shuffle, and a seed-derived first player.
 
 The suite contains no models, asset package paths, hidden match state, Godot
 source data, test-only metadata, unsupported effect payloads, or fabricated deck

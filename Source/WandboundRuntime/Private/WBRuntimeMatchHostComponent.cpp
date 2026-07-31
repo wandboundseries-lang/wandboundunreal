@@ -97,6 +97,7 @@ FWBMatchInitializationRequest BuildDeterministicDevelopmentSetup(const bool bFra
 	Trap.CardId = TEXT("basic_trap");
 	Trap.PublicName = TEXT("Basic Trap");
 	Trap.Kind = EWBCardDefinitionKind::Trap;
+	Trap.TrapDamage = 2;
 	FWBCardDefinition HeroAlpha = MakeDevelopmentCharacter(TEXT("hero_alpha"));
 	for (const TPair<FString, FString>& EffectIdentity : {
 		TPair<FString, FString>(TEXT("arc_bolt"), TEXT("Arc Bolt")),

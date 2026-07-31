@@ -17,6 +17,8 @@ FWBCardDefinition MakeDefinition(const FString& CardId, const EWBCardDefinitionK
 	Definition.CharacterStats.ATK = 2;
 	Definition.CharacterStats.AR = 1;
 	Definition.CharacterStats.RL = 0;
+	Definition.TrapDamage =
+		Kind == EWBCardDefinitionKind::Trap ? 2 : 0;
 	return Definition;
 }
 

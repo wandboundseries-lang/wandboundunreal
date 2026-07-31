@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "addendum_id": "game_start_turn_one_v1",
+  "addendum_version": 1,
+  "authority": "product_owner_approved",
+  "approval_date": "2026-07-30",
+  "addendum_digest": "bdcd0d2fc19e853f874fc80eb58cb7967062faa3b8fe91f6c85a3289972d1e67",
+  "supersedes_rules": [
+    "rules_bible_v2.sequential_hero_deployment",
+    "rules_bible_v2_1.first_player_turn_one_blanket_attack_prohibition"
+  ],
+  "setup_sequence": [
+    "format_validation",
+    "first_player_selection",
+    "marker_placement",
+    "hero_atomic_spawn",
+    "hero_trigger_collection",
+    "first_player_hero_trigger_resolution",
+    "second_player_hero_trigger_resolution",
+    "opening_hand_draw",
+    "first_turn_ready"
+  ],
+  "hero_spawn": {
+    "atomic": true,
+    "placement_counts_as_summon": true,
+    "collect_triggers_after_batch_commit": true
+  },
+  "trigger_order": {
+    "first_player_batch_first": true,
+    "player_selected_within_batch": true,
+    "stable_replay_decision_ids": true
+  },
+  "reaction_policy": {
+    "manual_reacts_allowed": false,
+    "priority_passing_allowed": false,
+    "required_choices_continue": true
+  },
+  "opening_hand_timing": {
+    "setup_effect_draws_before_standard_draw": true,
+    "standard_draw_count": 6,
+    "setup_trigger_draw_reason": "setup_trigger_draw",
+    "opening_hand_draw_reason": "opening_hand_draw"
+  },
+  "reserved_tiles": {
+    "hero_spawn_tiles_reserved": true
+  },
+  "turn_one": {
+    "board_size": 9,
+    "neutral_row": 4,
+    "first_player_only": true,
+    "neutral_row_summons_allowed": true,
+    "opponent_half_summons_allowed": false,
+    "protected_boundary_crossing_allowed": false,
+    "all_relocation_operations_covered": true,
+    "neutral_npc_attacks_allowed": true,
+    "opponent_controlled_attacks_allowed": false
+  },
+  "provenance": [
+    "Docs/Wandbound_Game_Start_and_Turn_One_Addendum_v1.md",
+    "product_owner_approval_2026-07-30"
+  ]
+}

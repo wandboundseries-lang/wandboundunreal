@@ -128,7 +128,7 @@ bool FWBInitialCanonicalSuiteLoadsTest::RunTest(const FString&)
 	TestTrue(TEXT("Immutable snapshot exists"), Result.Snapshot.IsValid());
 	if (Result.Snapshot.IsValid())
 	{
-		TestEqual(TEXT("Definition count"), Result.Snapshot->Records.Num(), 10);
+		TestEqual(TEXT("Definition count"), Result.Snapshot->Records.Num(), 11);
 		TestEqual(
 			TEXT("Production classification"),
 			Result.Snapshot->BundleKind,
@@ -136,7 +136,7 @@ bool FWBInitialCanonicalSuiteLoadsTest::RunTest(const FString&)
 		TestEqual(
 			TEXT("Pinned digest"),
 			Result.Snapshot->ContentDigest,
-			FString(TEXT("b406557f2f190818fe3460621bbbdfaf84abe53623ff26aa934588aad68bedde")));
+			FString(TEXT("87d2644aeb479e84a3e96967fd57901ac52aa7e283fd5cfee142d35e8659f00c")));
 		TestEqual(
 			TEXT("Lock path"),
 			Result.Snapshot->BundleLockPath,
@@ -280,7 +280,6 @@ bool FWBInitialCanonicalUnsupportedAbsentTest::RunTest(const FString&)
 		FString(TEXT("npc_raider")),
 		FString(TEXT("npc_duelist_human")),
 		FString(TEXT("officer_new_bulwark")),
-		FString(TEXT("trap_generic_01")),
 		FString(TEXT("wand_equip_csn_oathchain")),
 		FString(TEXT("wand_equip_enemy_deadweight")),
 		FString(TEXT("fixture_guard")),
@@ -331,8 +330,8 @@ bool FWBInitialCanonicalLockTamperTest::RunTest(const FString&)
 	FString Lock = ReadProjectText(
 		TEXT("Data/CardDB/Production/InitialCanonical/bundle_lock.json"));
 	Lock.ReplaceInline(
-		TEXT("\"definition_count\": 10"),
-		TEXT("\"definition_count\": 9"));
+		TEXT("\"definition_count\": 11"),
+		TEXT("\"definition_count\": 10"));
 	TestTrue(TEXT("Tampered lock written"), FFileHelper::SaveStringToFile(Lock, *LockPath));
 	const FWBProductionCardDatabaseLoadResult Result =
 		WBProductionCardDatabase::LoadManifestSuite(
@@ -361,9 +360,9 @@ bool FWBInitialCanonicalBlockedMatchTest::RunTest(const FString&)
 		WBProductionRuntimeBootstrap::Build(Request);
 	TestFalse(TEXT("No fabricated match starts"), Result.bOk);
 	TestEqual(
-		TEXT("Named canonical deck blocker"),
+		TEXT("Explicit match spec remains required"),
 		Result.Reason,
-		FString(TEXT("production_match_spec_blocked_by_canonical_deck_evidence")));
+		FString(TEXT("production_match_spec_missing")));
 	TestTrue(TEXT("Production snapshot loaded first"), Result.Database.IsValid());
 	TestFalse(TEXT("No test-bundle opt-in required"), Request.bAllowTestBundle);
 	if (Result.Database.IsValid())
@@ -387,7 +386,11 @@ bool FWBInitialCanonicalPackagingTest::RunTest(const FString&)
 		ReadProjectText(TEXT("Source/WandboundCardDB/WandboundCardDB.Build.cs"));
 	TestTrue(TEXT("Production root staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/root_manifest.json")));
 	TestTrue(TEXT("Bundle lock staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/bundle_lock.json")));
-	TestTrue(TEXT("Blocked status staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/match_status.json")));
+	TestTrue(TEXT("Match status staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/match_status.json")));
+	TestTrue(TEXT("Active Format staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/active_format_v1.json")));
+	TestTrue(TEXT("Game-start addendum staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/game_start_addendum_v1.json")));
+	TestTrue(TEXT("Match spec staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/match_spec.json")));
+	TestTrue(TEXT("Trap definitions staged"), BuildRules.Contains(TEXT("Production/InitialCanonical/definitions/traps.json")));
 	TestFalse(TEXT("No wildcard enumeration"), BuildRules.Contains(TEXT("SearchOption.AllDirectories")));
 	TestFalse(TEXT("Test fixture not staged"), BuildRules.Contains(TEXT("TestFixtures/ProductionPipeline")));
 	TestFalse(TEXT("Godot source not staged"), BuildRules.Contains(TEXT("Reference/GodotProject")));

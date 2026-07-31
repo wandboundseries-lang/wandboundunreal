@@ -1,0 +1,156 @@
+{
+  "schema_version": 2,
+  "match_id": "initial_canonical_match",
+  "seed": 424242,
+  "expected_first_player": 1,
+  "opening_hand_count": 6,
+  "definition_bundle_digest": "87d2644aeb479e84a3e96967fd57901ac52aa7e283fd5cfee142d35e8659f00c",
+  "active_format": {
+    "id": "active_format_v1",
+    "version": 1,
+    "digest": "258c5925ae1af7a20663c96d225f21de97b339a523c4b968cc8c6d3a024529af"
+  },
+  "game_start_addendum": {
+    "id": "game_start_turn_one_v1",
+    "version": 1,
+    "digest": "bdcd0d2fc19e853f874fc80eb58cb7967062faa3b8fe91f6c85a3289972d1e67"
+  },
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "char_test_01",
+      "hero_spawn": {
+        "x": 4,
+        "y": 8
+      },
+      "ordered_main_deck": [
+        "char_test_01",
+        "char_new_1_6_18_3",
+        "char_new_2_4_20_2",
+        "char_new_3_4_16_2",
+        "char_new_rl_duelist",
+        "char_new_rl_monolith",
+        "char_test_02"
+      ],
+      "setup_kit": {
+        "traps": [
+          "trap_generic_01",
+          "trap_generic_01"
+        ],
+        "npcs": [
+          "npc_generic_01",
+          "npc_human_marksman"
+        ]
+      }
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "char_test_03",
+      "hero_spawn": {
+        "x": 4,
+        "y": 0
+      },
+      "ordered_main_deck": [
+        "char_test_03",
+        "char_new_1_6_18_3",
+        "char_new_2_4_20_2",
+        "char_new_3_4_16_2",
+        "char_new_rl_duelist",
+        "char_new_rl_monolith",
+        "char_test_02"
+      ],
+      "setup_kit": {
+        "traps": [
+          "trap_generic_01",
+          "trap_generic_01"
+        ],
+        "npcs": [
+          "npc_generic_01",
+          "npc_human_marksman"
+        ]
+      }
+    }
+  ],
+  "markers": [
+    {
+      "player_id": 1,
+      "type": "trap",
+      "tile": {
+        "x": 0,
+        "y": 0
+      },
+      "definition_id": "trap_generic_01",
+      "placement_order": 0
+    },
+    {
+      "player_id": 1,
+      "type": "trap",
+      "tile": {
+        "x": 1,
+        "y": 0
+      },
+      "definition_id": "trap_generic_01",
+      "placement_order": 1
+    },
+    {
+      "player_id": 1,
+      "type": "npc",
+      "tile": {
+        "x": 2,
+        "y": 0
+      },
+      "definition_id": "npc_generic_01",
+      "placement_order": 2
+    },
+    {
+      "player_id": 1,
+      "type": "npc",
+      "tile": {
+        "x": 3,
+        "y": 0
+      },
+      "definition_id": "npc_human_marksman",
+      "placement_order": 3
+    },
+    {
+      "player_id": 0,
+      "type": "trap",
+      "tile": {
+        "x": 0,
+        "y": 8
+      },
+      "definition_id": "trap_generic_01",
+      "placement_order": 4
+    },
+    {
+      "player_id": 0,
+      "type": "trap",
+      "tile": {
+        "x": 1,
+        "y": 8
+      },
+      "definition_id": "trap_generic_01",
+      "placement_order": 5
+    },
+    {
+      "player_id": 0,
+      "type": "npc",
+      "tile": {
+        "x": 2,
+        "y": 8
+      },
+      "definition_id": "npc_generic_01",
+      "placement_order": 6
+    },
+    {
+      "player_id": 0,
+      "type": "npc",
+      "tile": {
+        "x": 3,
+        "y": 8
+      },
+      "definition_id": "npc_human_marksman",
+      "placement_order": 7
+    }
+  ]
+}
