@@ -2,6 +2,7 @@
 
 #include "WBAction.h"
 #include "WBEffectRunner.h"
+#include "WBMatchCoordinator.h"
 #include "WBRules.h"
 
 namespace
@@ -67,7 +68,7 @@ FWBApplyActionResult WBTurnController::ApplyTurnCommand(FWBGameStateData& State,
 	case EWBTurnCommandMode::BasicEndTurn:
 		return WBEffectRunner::ApplyEndTurn(State, MakeEndTurnAction(Command.ActingPlayerId));
 	case EWBTurnCommandMode::DeterministicFullTransition:
-		return WBEffectRunner::ApplyDeterministicTurnTransition(
+		return WBMatchCoordinator::ApplyLegacyCompatibilityTurnTransition(
 			State,
 			Command.ActingPlayerId,
 			Command.NextPlayerExplicitMPRoll);

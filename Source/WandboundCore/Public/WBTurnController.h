@@ -7,6 +7,7 @@
 enum class EWBTurnCommandMode : uint8
 {
 	BasicEndTurn,
+	// Compatibility only. Production full transitions use WBMatchCoordinator.
 	DeterministicFullTransition
 };
 
@@ -17,6 +18,7 @@ struct WANDBOUNDCORE_API FWBTurnCommand
 	int32 NextPlayerExplicitMPRoll = 0;
 };
 
+// Legacy raw-state command bridge retained for fixture compatibility.
 class WANDBOUNDCORE_API WBTurnController
 {
 public:

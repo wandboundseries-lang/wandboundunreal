@@ -1,6 +1,7 @@
 #include "WBRuntimeTurnResolutionAdapter.h"
 
 #include "WBActionCodec.h"
+#include "WBMatchCoordinator.h"
 #include "WBSelectedActionExecutor.h"
 
 namespace
@@ -23,6 +24,17 @@ int32 GetNextPlayerIdForTwoPlayerBaseline(const int32 PlayerId)
 {
 	return PlayerId == 0 ? 1 : 0;
 }
+
+void ApplyCoordinatorStatus(
+	const FWBMatchOperationResult& Operation,
+	FWBRuntimeSelectedActionResult& Envelope)
+{
+	Envelope.bTransitionCompleted = Operation.bCompleted;
+	Envelope.bPendingDecision = Operation.bPendingDecision;
+	Envelope.PendingPlayerId = Operation.PendingPlayerId;
+	Envelope.ActivePlayerId = Operation.ActivePlayerId;
+	Envelope.TurnNumber = Operation.TurnNumber;
+}
 }
 
 FWBApplyActionResult WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelectedAction(
@@ -41,6 +53,28 @@ FWBRuntimeSelectedActionResult WBRuntimeTurnResolutionAdapter::ApplyRuntimeSelec
 	FWBRuntimeSelectedActionResult Envelope;
 	Envelope.SelectedActionType = FName(*WBActionCodec::GetActionKind(SelectedAction.Type));
 	Envelope.SelectedActionId = WBActionCodec::MakeActionId(SelectedAction);
+
+	if (Context.MatchCoordinator != nullptr)
+	{
+		const FWBMatchOperationResult Operation =
+			Context.MatchCoordinator->SubmitActionId(
+				SelectedAction.PlayerId,
+				Envelope.SelectedActionId);
+		Envelope.ApplyResult.bOk = Operation.bOk;
+		Envelope.ApplyResult.Reason = Operation.Reason;
+		Envelope.ApplyResult.TraceEvents = Operation.TraceEvents;
+		Envelope.bCoordinatorOwnedTransition =
+			SelectedAction.Type == EWBActionType::EndTurn;
+		ApplyCoordinatorStatus(Operation, Envelope);
+		if (Operation.bOk)
+		{
+			State = Context.MatchCoordinator->GetState();
+		}
+		BuildFinalPublicSummaries(
+			Context.MatchCoordinator->GetState(),
+			Envelope);
+		return Envelope;
+	}
 
 	if (SelectedAction.Type != EWBActionType::EndTurn)
 	{

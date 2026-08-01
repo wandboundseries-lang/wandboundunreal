@@ -6407,8 +6407,8 @@ notRun=0
 
 Date: 2026-07-30
 
-- Editor build: succeeded.
-- Game build: succeeded.
+- Editor build: succeeded in 17.55 seconds on the final source.
+- Game build: succeeded in 108.98 seconds on the final source.
 - Focused Active Format: 11 succeeded.
 - Focused production match: 10 succeeded.
 - Focused Turn 1 rules: 34 succeeded.
@@ -7116,3 +7116,31 @@ Date: 2026-07-30
 
 Full evidence:
 `Docs/Deterministic_Turn_Start_Implementation_Report.md`.
+## Turn-Transition Authority Migration - 2026-07-30
+
+- Baseline: `f87005f Add deterministic turn-start sequence`.
+- Editor build: succeeded.
+- Game build: succeeded.
+- Focused turn-authority automation: 38 succeeded, 0 failed.
+- Affected turn/replay/runtime/production/action/NPC/turn-start groups:
+  660 succeeded, 0 failed.
+- Full Wandbound automation: 1,816 succeeded, 0 failed, 0 warnings.
+- Fresh BuildCookRun: succeeded in 166.12 seconds.
+- Package: `Saved/PackagedBuilds/TurnAuthorityFinal_20260801_1055`.
+- Packaged development smoke: passed, exit 0, generation 1, revision 4,
+  selected action and EndTurn both submitted.
+- Coordinator pause/resume and deterministic replay: passed in focused
+  automation.
+- Production bundle digest remained
+  `87d2644aeb479e84a3e96967fd57901ac52aa7e283fd5cfee142d35e8659f00c`.
+- Match-spec SHA-256 remained
+  `5fd3ba8d78af9681e3acdc4c4b58e7c2934aacbcfed83cd3504a8a37e23b03da`.
+- `git diff --check`: passed; line-ending notices only.
+- Packaged production startup: passed twice, exit 0, `production_started`,
+  Player 1 active, Turn 1, turn start complete, playable decision reached.
+- Repeated packaged startup JSON: byte-identical, SHA-256
+  `cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004`.
+- Exact final errors: none.
+
+Full evidence:
+`Docs/Turn_Transition_Authority_Migration_Report.md`.

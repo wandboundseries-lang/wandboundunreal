@@ -23,6 +23,8 @@ public:
 	static FWBApplyActionResult ApplyPassResponse(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyStartOfTurnStatusTicks(FWBGameStateData& State, int32 PlayerId);
 	static FWBApplyActionResult ApplyEndOfTurnStatusTicks(FWBGameStateData& State, int32 PlayerId);
+	// Compatibility only. Production full turn transitions are owned by
+	// WBMatchCoordinator::SubmitActionId.
 	static FWBApplyActionResult ApplyDeterministicTurnTransition(FWBGameStateData& State, int32 EndingPlayerId, int32 NextPlayerExplicitMPRoll);
 	static FWBApplyActionResult ApplyTurnStartMPRoll(FWBGameStateData& State, int32 PlayerId, int32 ExplicitMPRoll);
 	static FWBApplyActionResult ApplyTurnStartResourceReset(FWBGameStateData& State, int32 PlayerId);

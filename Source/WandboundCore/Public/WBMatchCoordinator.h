@@ -84,6 +84,14 @@ struct WANDBOUNDCORE_API FWBMatchOperationResult
 	FString SubmittedActionId;
 	TArray<FWBTraceEvent> TraceEvents;
 	TArray<FWBMatchLegalAction> NextLegalActions;
+	bool bCompleted = false;
+	bool bTerminal = false;
+	bool bPendingDecision = false;
+	int32 PendingPlayerId = -1;
+	int32 ActivePlayerId = -1;
+	int32 TurnNumber = 0;
+	int32 TraceBeginIndex = 0;
+	int32 TraceEndIndex = 0;
 	bool bGameOver = false;
 	int32 WinnerPlayerId = -1;
 };
@@ -114,11 +122,21 @@ public:
 	bool WereHeroSetupTriggersResolved() const;
 	bool WereOpeningHandsDrawn() const;
 	bool WasTurnStartCompleted() const;
+	bool IsTurnTransitionInProgress() const;
+	bool HasPendingTurnStartDecision() const;
+	int32 GetPendingTurnStartDecisionPlayerId() const;
 	const FWBTurnStartSequenceState& GetTurnStartSequenceState() const;
 	const FWBGameStateData& GetState() const;
 	const FWBCardDefinitionRepository& GetRepository() const;
 	const TArray<FWBTraceEvent>& GetTraceLog() const;
 	FWBGameStateData& GetMutableStateForTest();
+
+	// Compatibility-only bridge for old fixtures and callers that still own raw
+	// state. Production turn transitions must use SubmitActionId.
+	static FWBApplyActionResult ApplyLegacyCompatibilityTurnTransition(
+		FWBGameStateData& InOutState,
+		int32 EndingPlayerId,
+		int32 NextPlayerExplicitMPRoll);
 
 private:
 	FWBMatchLegalActionGenerationResult EnumerateLegalActionsForState(

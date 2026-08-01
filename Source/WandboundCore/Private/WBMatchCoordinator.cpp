@@ -93,6 +93,26 @@ FWBTraceEvent MakeMatchTrace(
 	return Event;
 }
 
+FWBTraceEvent MakeLegacyTurnTransitionTrace(
+	const int32 EndingPlayerId,
+	const int32 NextPlayerId,
+	const int32 TurnNumberBefore,
+	const int32 TurnNumberAfter,
+	const int32 NextPlayerExplicitMPRoll)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("turn_transition"));
+	Event.PlayerId = EndingPlayerId;
+	Event.FromPlayer = EndingPlayerId;
+	Event.ToPlayer = NextPlayerId;
+	Event.NextPlayerId = NextPlayerId;
+	Event.TurnNumberBefore = TurnNumberBefore;
+	Event.TurnNumberAfter = TurnNumberAfter;
+	Event.MPRoll = NextPlayerExplicitMPRoll;
+	Event.bOk = true;
+	return Event;
+}
+
 void AppendFixtureZoneEntry(
 	FWBCardActivationFixtureZoneContext& Context,
 	const FString& CardId,
@@ -588,6 +608,19 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 	Result.bOk = true;
 	Result.TraceEvents = WorkingTraceEvents;
 	Result.NextLegalActions = LegalResult.Actions;
+	Result.bPendingDecision =
+		MatchPhase == EWBMatchLoopPhase::TurnStart
+		&& !TurnStartSequence.bCompleted;
+	Result.bCompleted = !Result.bPendingDecision;
+	Result.bTerminal = State.bGameOver;
+	Result.PendingPlayerId =
+		Result.bPendingDecision ? State.PriorityPlayer : -1;
+	Result.ActivePlayerId = State.CurrentPlayer;
+	Result.TurnNumber = State.TurnNumber;
+	Result.TraceBeginIndex = 0;
+	Result.TraceEndIndex = TraceLog.Num();
+	Result.bGameOver = State.bGameOver;
+	Result.WinnerPlayerId = State.WinnerPlayerId;
 	return Result;
 }
 
@@ -881,23 +914,48 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	{
 		return MakeOperationFailure(TEXT("match_not_initialized"));
 	}
+	const auto MakeCurrentFailure =
+		[this](const FString& Reason)
+		{
+			FWBMatchOperationResult Result =
+				MakeOperationFailure(Reason);
+			Result.bTerminal = State.bGameOver;
+			Result.bPendingDecision =
+				IsTurnTransitionInProgress();
+			Result.PendingPlayerId =
+				GetPendingTurnStartDecisionPlayerId();
+			Result.ActivePlayerId = State.CurrentPlayer;
+			Result.TurnNumber = State.TurnNumber;
+			Result.TraceBeginIndex = TraceLog.Num();
+			Result.TraceEndIndex = TraceLog.Num();
+			Result.bGameOver = State.bGameOver;
+			Result.WinnerPlayerId = State.WinnerPlayerId;
+			return Result;
+		};
 	if (State.bGameOver || MatchPhase == EWBMatchLoopPhase::GameOver)
 	{
-		return MakeOperationFailure(TEXT("game_over"));
+		return MakeCurrentFailure(TEXT("game_over"));
 	}
 	if (PlayerId != State.PriorityPlayer)
 	{
-		return MakeOperationFailure(TEXT("wrong_player"));
+		return MakeCurrentFailure(TEXT("wrong_player"));
 	}
 	if (ActionId.IsEmpty())
 	{
-		return MakeOperationFailure(TEXT("action_id_missing"));
+		return MakeCurrentFailure(TEXT("action_id_missing"));
+	}
+	if (MatchPhase == EWBMatchLoopPhase::TurnStart
+		&& !TurnStartSequence.bCompleted
+		&& ActionId.StartsWith(TEXT("end_turn:")))
+	{
+		return MakeCurrentFailure(
+			TEXT("turn_transition_pending_decision"));
 	}
 
 	const FWBMatchLegalActionGenerationResult LegalResult = EnumerateLegalActions();
 	if (!LegalResult.bOk)
 	{
-		return MakeOperationFailure(LegalResult.Reason);
+		return MakeCurrentFailure(LegalResult.Reason);
 	}
 
 	const FWBMatchLegalAction* SelectedAction = nullptr;
@@ -911,9 +969,10 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	}
 	if (SelectedAction == nullptr)
 	{
-		return MakeOperationFailure(TEXT("stale_or_illegal_action"));
+		return MakeCurrentFailure(TEXT("stale_or_illegal_action"));
 	}
 
+	const int32 TraceBeginIndex = TraceLog.Num();
 	FWBGameStateData WorkingState = State;
 	uint32 WorkingRandomState = RandomState;
 	EWBMatchLoopPhase WorkingPhase = MatchPhase;
@@ -1097,7 +1156,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 
 	if (!bActionApplied)
 	{
-		return MakeOperationFailure(FailureReason.IsEmpty()
+		return MakeCurrentFailure(FailureReason.IsEmpty()
 			? FString(TEXT("match_action_failed"))
 			: FailureReason);
 	}
@@ -1126,7 +1185,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			&WorkingTurnStartSequence);
 	if (!NextLegalResult.bOk)
 	{
-		return MakeOperationFailure(NextLegalResult.Reason);
+		return MakeCurrentFailure(NextLegalResult.Reason);
 	}
 
 	State = WorkingState;
@@ -1141,6 +1200,17 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	Result.SubmittedActionId = ActionId;
 	Result.TraceEvents = MoveTemp(WorkingTraceEvents);
 	Result.NextLegalActions = NextLegalResult.Actions;
+	Result.bPendingDecision =
+		MatchPhase == EWBMatchLoopPhase::TurnStart
+		&& !TurnStartSequence.bCompleted;
+	Result.bCompleted = !Result.bPendingDecision;
+	Result.bTerminal = State.bGameOver;
+	Result.PendingPlayerId =
+		Result.bPendingDecision ? State.PriorityPlayer : -1;
+	Result.ActivePlayerId = State.CurrentPlayer;
+	Result.TurnNumber = State.TurnNumber;
+	Result.TraceBeginIndex = TraceBeginIndex;
+	Result.TraceEndIndex = TraceLog.Num();
 	Result.bGameOver = State.bGameOver;
 	Result.WinnerPlayerId = State.WinnerPlayerId;
 	return Result;
@@ -1420,6 +1490,25 @@ bool WBMatchCoordinator::WasTurnStartCompleted() const
 	return TurnStartSequence.bCompleted;
 }
 
+bool WBMatchCoordinator::IsTurnTransitionInProgress() const
+{
+	return bInitialized
+		&& MatchPhase == EWBMatchLoopPhase::TurnStart
+		&& !TurnStartSequence.bCompleted;
+}
+
+bool WBMatchCoordinator::HasPendingTurnStartDecision() const
+{
+	return IsTurnTransitionInProgress();
+}
+
+int32 WBMatchCoordinator::GetPendingTurnStartDecisionPlayerId() const
+{
+	return HasPendingTurnStartDecision()
+		? State.PriorityPlayer
+		: -1;
+}
+
 const FWBTurnStartSequenceState&
 WBMatchCoordinator::GetTurnStartSequenceState() const
 {
@@ -1444,6 +1533,88 @@ const TArray<FWBTraceEvent>& WBMatchCoordinator::GetTraceLog() const
 FWBGameStateData& WBMatchCoordinator::GetMutableStateForTest()
 {
 	return State;
+}
+
+FWBApplyActionResult WBMatchCoordinator::ApplyLegacyCompatibilityTurnTransition(
+	FWBGameStateData& InOutState,
+	const int32 EndingPlayerId,
+	const int32 NextPlayerExplicitMPRoll)
+{
+	FWBApplyActionResult Result;
+
+	FString Reason;
+	if (!WBRules::CanApplyDeterministicTurnTransition(
+		InOutState,
+		EndingPlayerId,
+		NextPlayerExplicitMPRoll,
+		Reason))
+	{
+		Result.Reason = Reason;
+		return Result;
+	}
+
+	FWBGameStateData WorkingState = InOutState;
+	const int32 TurnNumberBefore = WorkingState.TurnNumber;
+
+	const FWBApplyActionResult EndStatusResult =
+		WBEffectRunner::ApplyEndOfTurnStatusTicks(
+			WorkingState,
+			EndingPlayerId);
+	if (!EndStatusResult.bOk)
+	{
+		Result.Reason = EndStatusResult.Reason;
+		return Result;
+	}
+
+	FWBAction EndTurnAction;
+	EndTurnAction.Type = EWBActionType::EndTurn;
+	EndTurnAction.PlayerId = EndingPlayerId;
+	const FWBApplyActionResult EndTurnResult =
+		WBEffectRunner::ApplyEndTurn(
+			WorkingState,
+			EndTurnAction);
+	if (!EndTurnResult.bOk)
+	{
+		Result.Reason = EndTurnResult.Reason;
+		return Result;
+	}
+
+	const int32 NextPlayerId = WorkingState.CurrentPlayer;
+	const FWBApplyActionResult ResourceSetupResult =
+		WBEffectRunner::ApplyTurnStartResourceSetup(
+			WorkingState,
+			NextPlayerId,
+			NextPlayerExplicitMPRoll);
+	if (!ResourceSetupResult.bOk)
+	{
+		Result.Reason = ResourceSetupResult.Reason;
+		return Result;
+	}
+
+	const FWBApplyActionResult StartStatusResult =
+		WBEffectRunner::ApplyStartOfTurnStatusTicks(
+			WorkingState,
+			NextPlayerId);
+	if (!StartStatusResult.bOk)
+	{
+		Result.Reason = StartStatusResult.Reason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	Result.TraceEvents.Add(MakeLegacyTurnTransitionTrace(
+		EndingPlayerId,
+		NextPlayerId,
+		TurnNumberBefore,
+		WorkingState.TurnNumber,
+		NextPlayerExplicitMPRoll));
+	Result.TraceEvents.Append(EndStatusResult.TraceEvents);
+	Result.TraceEvents.Append(EndTurnResult.TraceEvents);
+	Result.TraceEvents.Append(ResourceSetupResult.TraceEvents);
+	Result.TraceEvents.Append(StartStatusResult.TraceEvents);
+
+	InOutState = MoveTemp(WorkingState);
+	return Result;
 }
 
 int32 WBMatchCoordinator::RollD6(uint32& InOutRandomState)
