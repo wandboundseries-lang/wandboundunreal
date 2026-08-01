@@ -20,6 +20,11 @@ struct WANDBOUNDCORE_API FWBPublicTurnSummary
 	FName Phase;
 	bool bGameOver = false;
 	int32 WinnerPlayerId = -1;
+	// Terminal fields remain absent/default for nonterminal observations.
+	int32 LoserPlayerId = -1;
+	FName TerminalReason;
+	FName TerminalSource;
+	int32 TerminalTurn = -1;
 	TArray<FWBPublicPlayerTurnSummary> Players;
 };
 

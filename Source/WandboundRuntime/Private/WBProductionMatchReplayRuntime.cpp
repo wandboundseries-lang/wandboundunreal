@@ -160,6 +160,7 @@ bool FWBProductionMatchReplayRecorder::Begin(
 	const FWBProductionMatchReplayMetadata& Metadata,
 	const WBMatchCoordinator& Coordinator)
 {
+	bFinalized = false;
 	Archive = FWBProductionMatchReplayArchive();
 	Archive.Header.SchemaVersion =
 		WBProductionMatchReplay::SchemaVersion;
@@ -204,7 +205,7 @@ bool FWBProductionMatchReplayRecorder::Begin(
 void FWBProductionMatchReplayRecorder::CaptureCommittedActions(
 	const WBMatchCoordinator& Coordinator)
 {
-	if (!bAvailable)
+	if (!bAvailable || bFinalized)
 	{
 		return;
 	}
@@ -218,24 +219,45 @@ void FWBProductionMatchReplayRecorder::CaptureCommittedActions(
 			Committed[Index];
 		Archive.Records.Add(MoveTemp(Record));
 	}
-	RefreshFooter(Coordinator, Coordinator.GetState().bGameOver);
-	Persist();
+	const bool bTerminal = Coordinator.GetState().bGameOver;
+	RefreshFooter(Coordinator, bTerminal);
+	if (Persist() && bTerminal)
+	{
+		bFinalized = true;
+	}
 }
 
-void FWBProductionMatchReplayRecorder::MarkComplete(
+bool FWBProductionMatchReplayRecorder::MarkComplete(
 	const WBMatchCoordinator& Coordinator)
 {
 	if (!bAvailable)
 	{
-		return;
+		return false;
+	}
+	if (bFinalized)
+	{
+		return true;
 	}
 	CaptureCommittedActions(Coordinator);
 	if (!bAvailable)
 	{
-		return;
+		return false;
 	}
-	RefreshFooter(Coordinator, Coordinator.GetState().bGameOver);
-	Persist();
+	if (bFinalized)
+	{
+		return true;
+	}
+	if (!Coordinator.GetState().bGameOver)
+	{
+		return false;
+	}
+	RefreshFooter(Coordinator, true);
+	if (!Persist())
+	{
+		return false;
+	}
+	bFinalized = true;
+	return true;
 }
 
 bool FWBProductionMatchReplayRecorder::IsAvailable() const
@@ -272,7 +294,27 @@ void FWBProductionMatchReplayRecorder::RefreshFooter(
 		? Coordinator.GetState().WinnerPlayerId
 		: -1;
 	Archive.Footer.Loser = Archive.Footer.Winner >= 0
-		? 1 - Archive.Footer.Winner
+		? Coordinator.GetState().TerminalOutcome.LoserPlayerId
+		: -1;
+	Archive.Footer.TerminalReason = Archive.Footer.bTerminal
+		? WBTerminalOutcomeNames::ReasonToName(
+			Coordinator.GetState().TerminalOutcome.Reason)
+		: FName();
+	Archive.Footer.TerminalSource = Archive.Footer.bTerminal
+		? WBTerminalOutcomeNames::SourceToName(
+			Coordinator.GetState().TerminalOutcome.Source)
+		: FName();
+	Archive.Footer.TerminalTurn = Archive.Footer.bTerminal
+		? Coordinator.GetState().TerminalOutcome.TurnNumber
+		: -1;
+	Archive.Footer.TerminalGeneration = Archive.Footer.bTerminal
+		? Coordinator.GetCoordinatorGeneration()
+		: -1;
+	Archive.Footer.TerminalRevision = Archive.Footer.bTerminal
+		? Coordinator.GetState().TerminalOutcome.CoordinatorRevision
+		: -1;
+	Archive.Footer.TerminalTraceIndex = Archive.Footer.bTerminal
+		? Coordinator.GetState().TerminalOutcome.TraceIndex
 		: -1;
 	Archive.Footer.FinalGeneration =
 		Coordinator.GetCoordinatorGeneration();
@@ -514,6 +556,11 @@ FWBProductionMatchReplayRunResult FWBProductionMatchReplayRunner::Run(
 			Archive.Records[Index];
 		Result.FailureRecordIndex = Index;
 		Result.ExpectedActionId = Record.ChosenActionId;
+		if (Coordinator.GetState().bGameOver)
+		{
+			Result.FailureCode = TEXT("replay_post_terminal_record");
+			return Result;
+		}
 		if (Coordinator.GetCoordinatorGeneration()
 			!= Record.BeforeGeneration)
 		{
@@ -658,12 +705,121 @@ FWBProductionMatchReplayRunResult FWBProductionMatchReplayRunner::Run(
 			Result.ActualDigest = StateDigest;
 			return Result;
 		}
-		if (Submitted.bTerminal != Record.bTerminal)
+		if (Submitted.bTerminal && !Record.bTerminal)
 		{
-			Result.FailureCode = TEXT("replay_terminal_mismatch");
+			Result.FailureCode = TEXT("replay_terminal_unexpected");
 			return Result;
 		}
+		if (!Submitted.bTerminal && Record.bTerminal)
+		{
+			Result.FailureCode = TEXT("replay_terminal_expected");
+			return Result;
+		}
+		if (Record.bTerminal)
+		{
+			if (Submitted.WinnerPlayerId != Record.WinnerPlayer)
+			{
+				Result.FailureCode = TEXT("replay_winner_mismatch");
+				return Result;
+			}
+			if (Submitted.LoserPlayerId != Record.LoserPlayer)
+			{
+				Result.FailureCode = TEXT("replay_loser_mismatch");
+				return Result;
+			}
+			if (Submitted.TerminalReason != Record.TerminalReason)
+			{
+				Result.FailureCode = TEXT("replay_terminal_reason_mismatch");
+				return Result;
+			}
+			if (Submitted.TerminalSource != Record.TerminalSource)
+			{
+				Result.FailureCode = TEXT("replay_terminal_source_mismatch");
+				return Result;
+			}
+			if (Submitted.TerminalTurnNumber != Record.TerminalTurn)
+			{
+				Result.FailureCode = TEXT("replay_terminal_turn_mismatch");
+				return Result;
+			}
+			if (Submitted.TerminalRevision != Record.TerminalRevision
+				|| Submitted.TerminalTraceIndex != Record.TerminalTraceIndex)
+			{
+				Result.FailureCode = TEXT("replay_terminal_metadata_mismatch");
+				return Result;
+			}
+			if (Index + 1 != Archive.Records.Num())
+			{
+				Result.FailureCode = TEXT("replay_post_terminal_record");
+				return Result;
+			}
+		}
 		++Result.RecordsVerified;
+	}
+
+	if (Archive.Footer.bComplete && !Archive.Footer.bTerminal)
+	{
+		Result.FailureCode = TEXT("replay_footer_terminal_mismatch");
+		return Result;
+	}
+	if (Archive.Footer.bTerminal != Coordinator.GetState().bGameOver)
+	{
+		Result.FailureCode = Archive.Footer.bTerminal
+			? FString(TEXT("replay_terminal_expected"))
+			: FString(TEXT("replay_terminal_unexpected"));
+		return Result;
+	}
+	if (Archive.Footer.bComplete && !Coordinator.GetState().bGameOver)
+	{
+		Result.FailureCode = TEXT("replay_terminal_expected");
+		return Result;
+	}
+	if (Coordinator.GetState().bGameOver)
+	{
+		const FWBTerminalOutcome& Outcome = Coordinator.GetState().TerminalOutcome;
+		if (Archive.Footer.Winner != Outcome.WinnerPlayerId)
+		{
+			Result.FailureCode = TEXT("replay_winner_mismatch");
+			return Result;
+		}
+		if (Archive.Footer.Loser != Outcome.LoserPlayerId)
+		{
+			Result.FailureCode = TEXT("replay_loser_mismatch");
+			return Result;
+		}
+		if (Archive.Footer.TerminalReason
+			!= WBTerminalOutcomeNames::ReasonToName(Outcome.Reason))
+		{
+			Result.FailureCode = TEXT("replay_terminal_reason_mismatch");
+			return Result;
+		}
+		if (Archive.Footer.TerminalSource
+			!= WBTerminalOutcomeNames::SourceToName(Outcome.Source))
+		{
+			Result.FailureCode = TEXT("replay_terminal_source_mismatch");
+			return Result;
+		}
+		if (Archive.Footer.TerminalTurn != Outcome.TurnNumber)
+		{
+			Result.FailureCode = TEXT("replay_terminal_turn_mismatch");
+			return Result;
+		}
+		if (Archive.Footer.TerminalGeneration
+			!= Coordinator.GetCoordinatorGeneration()
+			|| Archive.Footer.TerminalRevision
+				!= Outcome.CoordinatorRevision
+			|| Archive.Footer.TerminalTraceIndex != Outcome.TraceIndex)
+		{
+			Result.FailureCode = TEXT("replay_terminal_metadata_mismatch");
+			return Result;
+		}
+		const FWBMatchLegalActionGenerationResult Legal =
+			Coordinator.EnumerateLegalActions();
+		if (!Legal.bOk || !Legal.Actions.IsEmpty())
+		{
+			Result.FailureCode = TEXT("replay_legal_actions_after_terminal");
+			return Result;
+		}
 	}
 
 	const bool bFooterMatches =
@@ -676,14 +832,8 @@ FWBProductionMatchReplayRunResult FWBProductionMatchReplayRunner::Run(
 		&& Archive.Footer.FinalTraceDigest
 			== Coordinator.GetCurrentTraceDigest()
 		&& Archive.Footer.bTerminal
-			== Coordinator.GetState().bGameOver
-		&& Archive.Footer.Winner
-			== (Coordinator.GetState().bGameOver
-				? Coordinator.GetState().WinnerPlayerId
-				: -1);
-	if (!bFooterMatches
-		|| (Archive.Footer.bComplete
-			&& !Archive.Footer.bTerminal))
+			== Coordinator.GetState().bGameOver;
+	if (!bFooterMatches)
 	{
 		Result.FailureCode = TEXT("replay_footer_mismatch");
 		return Result;
@@ -691,6 +841,14 @@ FWBProductionMatchReplayRunResult FWBProductionMatchReplayRunner::Run(
 	Result.bValid = true;
 	Result.bComplete = Archive.Footer.bComplete;
 	Result.bTerminal = Archive.Footer.bTerminal;
+	Result.WinnerPlayerId = Archive.Footer.Winner;
+	Result.LoserPlayerId = Archive.Footer.Loser;
+	Result.TerminalReason = Archive.Footer.TerminalReason;
+	Result.TerminalSource = Archive.Footer.TerminalSource;
+	Result.TerminalTurn = Archive.Footer.TerminalTurn;
+	Result.TerminalGeneration = Archive.Footer.TerminalGeneration;
+	Result.TerminalRevision = Archive.Footer.TerminalRevision;
+	Result.TerminalTraceIndex = Archive.Footer.TerminalTraceIndex;
 	Result.FailureRecordIndex = -1;
 	Result.FailureCode.Reset();
 	return Result;

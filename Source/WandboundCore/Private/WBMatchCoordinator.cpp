@@ -93,6 +93,85 @@ FWBTraceEvent MakeMatchTrace(
 	return Event;
 }
 
+EWBTerminalSource InferTerminalSource(
+	const FWBMatchLegalAction& Action,
+	const TArray<FWBTraceEvent>& Events)
+{
+	bool bHasNPCTrace = false;
+	for (const FWBTraceEvent& Event : Events)
+	{
+		if (Event.DamageCause == FName(TEXT("Trap")))
+		{
+			return EWBTerminalSource::Trap;
+		}
+		if (Event.DamageCause == FName(TEXT("Burn"))
+			|| Event.DamageCause == FName(TEXT("Poison")))
+		{
+			return EWBTerminalSource::Status;
+		}
+		bHasNPCTrace |= Event.Kind.ToString().StartsWith(TEXT("npc_"));
+	}
+	if (bHasNPCTrace)
+	{
+		return EWBTerminalSource::NPC;
+	}
+	if (Action.Family == EWBMatchActionFamily::Activation)
+	{
+		return EWBTerminalSource::Effect;
+	}
+	if (Action.Family == EWBMatchActionFamily::CoreAction
+		&& Action.CoreAction.Type == EWBActionType::Attack)
+	{
+		return EWBTerminalSource::Attack;
+	}
+	return EWBTerminalSource::Unknown;
+}
+
+void CommitTerminalOutcome(
+	FWBGameStateData& State,
+	const FWBMatchLegalAction& Action,
+	const int32 NextCoordinatorRevision,
+	const int32 TraceBaseIndex,
+	TArray<FWBTraceEvent>& Events)
+{
+	if (!State.bGameOver)
+	{
+		return;
+	}
+	FWBTerminalOutcome& Outcome = State.TerminalOutcome;
+	Outcome.bTerminal = true;
+	Outcome.WinnerPlayerId = State.WinnerPlayerId;
+	Outcome.LoserPlayerId = Outcome.LoserPlayerId >= 0
+		? Outcome.LoserPlayerId
+		: (State.WinnerPlayerId == 0 ? 1 : 0);
+	Outcome.Reason = EWBTerminalReason::HeroDefeatedWithoutReplacement;
+	Outcome.Source = InferTerminalSource(Action, Events);
+	Outcome.TurnNumber = State.TurnNumber;
+	Outcome.CoordinatorRevision = NextCoordinatorRevision;
+	Outcome.TraceIndex = TraceBaseIndex + Events.Num();
+
+	FWBTraceEvent Committed = MakeMatchTrace(
+		FName(TEXT("terminal_state_committed")),
+		Outcome.LoserPlayerId,
+		Outcome.TurnNumber,
+		FName(TEXT("game_over")));
+	Committed.WinningPlayerId = Outcome.WinnerPlayerId;
+	Committed.Reason = WBTerminalOutcomeNames::ReasonToName(Outcome.Reason).ToString();
+	Committed.DamageCause = WBTerminalOutcomeNames::SourceToName(Outcome.Source);
+	Committed.bHeroUnit = true;
+	Events.Add(Committed);
+
+	FWBTraceEvent GameOver = MakeMatchTrace(
+		FName(TEXT("game_over")),
+		Outcome.LoserPlayerId,
+		Outcome.TurnNumber,
+		FName(TEXT("game_over")));
+	GameOver.WinningPlayerId = Outcome.WinnerPlayerId;
+	GameOver.Reason = Committed.Reason;
+	GameOver.DamageCause = Committed.DamageCause;
+	Events.Add(GameOver);
+}
+
 FWBTraceEvent MakeLegacyTurnTransitionTrace(
 	const int32 EndingPlayerId,
 	const int32 NextPlayerId,
@@ -944,6 +1023,14 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			Result.TraceEndIndex = TraceLog.Num();
 			Result.bGameOver = State.bGameOver;
 			Result.WinnerPlayerId = State.WinnerPlayerId;
+			Result.LoserPlayerId = State.TerminalOutcome.LoserPlayerId;
+			Result.TerminalReason =
+				WBTerminalOutcomeNames::ReasonToName(State.TerminalOutcome.Reason);
+			Result.TerminalSource =
+				WBTerminalOutcomeNames::SourceToName(State.TerminalOutcome.Source);
+			Result.TerminalTurnNumber = State.TerminalOutcome.TurnNumber;
+			Result.TerminalRevision = State.TerminalOutcome.CoordinatorRevision;
+			Result.TerminalTraceIndex = State.TerminalOutcome.TraceIndex;
 			Result.CoordinatorGeneration = CoordinatorGeneration;
 			Result.CoordinatorRevision = CoordinatorRevision;
 			return Result;
@@ -1213,6 +1300,13 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			: FailureReason);
 	}
 
+	CommitTerminalOutcome(
+		WorkingState,
+		*SelectedAction,
+		CoordinatorRevision + 1,
+		TraceBeginIndex,
+		WorkingTraceEvents);
+
 	if (WorkingPhase != EWBMatchLoopPhase::TurnStart)
 	{
 		WorkingPhase = WorkingState.bGameOver
@@ -1271,6 +1365,16 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			? State.PriorityPlayer
 			: -1;
 	CommittedRecord.bTerminal = State.bGameOver;
+	CommittedRecord.WinnerPlayer = State.TerminalOutcome.WinnerPlayerId;
+	CommittedRecord.LoserPlayer = State.TerminalOutcome.LoserPlayerId;
+	CommittedRecord.TerminalReason =
+		WBTerminalOutcomeNames::ReasonToName(State.TerminalOutcome.Reason);
+	CommittedRecord.TerminalSource =
+		WBTerminalOutcomeNames::SourceToName(State.TerminalOutcome.Source);
+	CommittedRecord.TerminalTurn = State.TerminalOutcome.TurnNumber;
+	CommittedRecord.TerminalRevision =
+		State.TerminalOutcome.CoordinatorRevision;
+	CommittedRecord.TerminalTraceIndex = State.TerminalOutcome.TraceIndex;
 	CommittedRecord.TraceStart = TraceBeginIndex;
 	CommittedRecord.TraceEnd = TraceLog.Num();
 	CommittedRecord.TraceDigest =
@@ -1297,6 +1401,14 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	Result.TraceEndIndex = TraceLog.Num();
 	Result.bGameOver = State.bGameOver;
 	Result.WinnerPlayerId = State.WinnerPlayerId;
+	Result.LoserPlayerId = State.TerminalOutcome.LoserPlayerId;
+	Result.TerminalReason =
+		WBTerminalOutcomeNames::ReasonToName(State.TerminalOutcome.Reason);
+	Result.TerminalSource =
+		WBTerminalOutcomeNames::SourceToName(State.TerminalOutcome.Source);
+	Result.TerminalTurnNumber = State.TerminalOutcome.TurnNumber;
+	Result.TerminalRevision = State.TerminalOutcome.CoordinatorRevision;
+	Result.TerminalTraceIndex = State.TerminalOutcome.TraceIndex;
 	Result.CoordinatorGeneration = CoordinatorGeneration;
 	Result.CoordinatorRevision = CoordinatorRevision;
 	return Result;
@@ -1350,17 +1462,6 @@ bool WBMatchCoordinator::ApplyAutomaticResolution(
 		}
 	}
 
-	if (WorkingState.bGameOver)
-	{
-		FWBTraceEvent GameOver = MakeMatchTrace(
-			FName(TEXT("game_over")),
-			WorkingState.CurrentPlayer,
-			WorkingState.TurnNumber,
-			PhaseToName(EWBMatchLoopPhase::GameOver));
-		GameOver.WinningPlayerId = WorkingState.WinnerPlayerId;
-		OutTraceEvents.Add(GameOver);
-	}
-
 	OutTraceEvents.Add(MakeMatchTrace(
 		FName(TEXT("automatic_resolution")),
 		WorkingState.CurrentPlayer,
@@ -1393,13 +1494,6 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 	if (WorkingState.bGameOver)
 	{
 		WorkingPhase = EWBMatchLoopPhase::GameOver;
-		FWBTraceEvent GameOver = MakeMatchTrace(
-			FName(TEXT("game_over")),
-			EndingPlayerId,
-			WorkingState.TurnNumber,
-			PhaseToName(WorkingPhase));
-		GameOver.WinningPlayerId = WorkingState.WinnerPlayerId;
-		OutTraceEvents.Add(GameOver);
 		OutTraceEvents.Add(MakeMatchTrace(
 			FName(TEXT("automatic_resolution")),
 			EndingPlayerId,
@@ -1442,13 +1536,6 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 	if (WorkingState.bGameOver)
 	{
 		WorkingPhase = EWBMatchLoopPhase::GameOver;
-		FWBTraceEvent GameOver = MakeMatchTrace(
-			FName(TEXT("game_over")),
-			EndingPlayerId,
-			WorkingState.TurnNumber,
-			PhaseToName(WorkingPhase));
-		GameOver.WinningPlayerId = WorkingState.WinnerPlayerId;
-		OutTraceEvents.Add(GameOver);
 		OutTraceEvents.Add(MakeMatchTrace(
 			FName(TEXT("automatic_resolution")),
 			EndingPlayerId,

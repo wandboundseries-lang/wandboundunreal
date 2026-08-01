@@ -1,0 +1,62 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "terminal_replay_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic units for terminal replay smoke only.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "terminal_attacker_hero",
+      "public_name": "Terminal Attacker Hero",
+      "kind": "hero",
+      "public_text": "A replay-fixture Hero.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 3, "ar": 8, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "terminal_defender_hero",
+      "public_name": "Terminal Defender Hero",
+      "kind": "hero",
+      "public_text": "A low-HP replay-fixture Hero.",
+      "public_category": "Hero",
+      "factions": ["black_meridian"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 5, "atk": 1, "ar": 1, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "terminal_filler",
+      "public_name": "Terminal Filler",
+      "kind": "character",
+      "public_text": "A replay-fixture deck card.",
+      "public_category": "Character",
+      "factions": ["officer"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 1, "ar": 1, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 }
+    }
+  ]
+}

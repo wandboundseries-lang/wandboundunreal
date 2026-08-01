@@ -53,6 +53,14 @@
         "terminal": { "type": "boolean" },
         "winner": { "type": "integer" },
         "loser": { "type": "integer" },
+        "terminal_reason": { "const": "hero_defeated_without_replacement" },
+        "terminal_source": {
+          "enum": ["attack", "status", "trap", "npc", "effect", "unknown"]
+        },
+        "terminal_turn": { "type": "integer", "minimum": 1 },
+        "terminal_generation": { "type": "integer", "minimum": 1 },
+        "terminal_revision": { "type": "integer", "minimum": 1 },
+        "terminal_trace_index": { "type": "integer", "minimum": 0 },
         "final_generation": { "type": "integer", "minimum": 1 },
         "final_revision": { "type": "integer", "minimum": 1 },
         "record_count": { "type": "integer", "minimum": 0 },
@@ -60,7 +68,16 @@
         "final_trace_digest": { "$ref": "#/$defs/digest" },
         "final_record_hash": { "$ref": "#/$defs/digest" },
         "replay_digest": { "$ref": "#/$defs/digest" }
-      }
+      },
+      "allOf": [{
+        "if": { "properties": { "terminal": { "const": true } } },
+        "then": {
+          "required": [
+            "terminal_reason", "terminal_source", "terminal_turn",
+            "terminal_generation", "terminal_revision", "terminal_trace_index"
+          ]
+        }
+      }]
     }
   },
   "$defs": {
@@ -96,13 +113,31 @@
         "pending_decision": { "type": "boolean" },
         "pending_player": { "type": "integer" },
         "terminal": { "type": "boolean" },
+        "winner": { "type": "integer", "minimum": 0 },
+        "loser": { "type": "integer", "minimum": 0 },
+        "terminal_reason": { "const": "hero_defeated_without_replacement" },
+        "terminal_source": {
+          "enum": ["attack", "status", "trap", "npc", "effect", "unknown"]
+        },
+        "terminal_turn": { "type": "integer", "minimum": 1 },
+        "terminal_revision": { "type": "integer", "minimum": 1 },
+        "terminal_trace_index": { "type": "integer", "minimum": 0 },
         "trace_start": { "type": "integer", "minimum": 0 },
         "trace_end": { "type": "integer", "minimum": 0 },
         "trace_digest": { "$ref": "#/$defs/digest" },
         "after_state_digest": { "$ref": "#/$defs/digest" },
         "previous_record_hash": { "$ref": "#/$defs/digest" },
         "record_hash": { "$ref": "#/$defs/digest" }
-      }
+      },
+      "allOf": [{
+        "if": { "properties": { "terminal": { "const": true } } },
+        "then": {
+          "required": [
+            "winner", "loser", "terminal_reason", "terminal_source",
+            "terminal_turn", "terminal_revision", "terminal_trace_index"
+          ]
+        }
+      }]
     }
   }
 }

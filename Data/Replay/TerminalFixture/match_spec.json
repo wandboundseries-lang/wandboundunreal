@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "match_id": "terminal_replay_smoke_match",
+  "seed": 731902,
+  "first_player": 0,
+  "initial_draw_count": 6,
+  "definition_bundle_digest": "5cba7d72a3491289ecc4ed6c36305e53e58e00279f828e996063c232f732d6d3",
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "terminal_attacker_hero",
+      "ordered_deck": [
+        "terminal_filler", "terminal_filler", "terminal_filler",
+        "terminal_filler", "terminal_filler", "terminal_filler",
+        "terminal_filler", "terminal_filler", "terminal_filler",
+        "terminal_filler"
+      ]
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "terminal_defender_hero",
+      "ordered_deck": [
+        "terminal_filler", "terminal_filler", "terminal_filler",
+        "terminal_filler", "terminal_filler", "terminal_filler",
+        "terminal_filler", "terminal_filler", "terminal_filler",
+        "terminal_filler"
+      ]
+    }
+  ],
+  "markers": [
+    { "player_id": 0, "type": "trap", "tile": { "x": 0, "y": 8 }, "definition_id": "terminal_trap", "placement_order": 0 },
+    { "player_id": 0, "type": "trap", "tile": { "x": 1, "y": 8 }, "definition_id": "terminal_trap", "placement_order": 1 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 0, "y": 7 }, "definition_id": "terminal_npc", "placement_order": 2 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 1, "y": 7 }, "definition_id": "terminal_npc", "placement_order": 3 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 0, "y": 0 }, "definition_id": "terminal_trap", "placement_order": 4 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 1, "y": 0 }, "definition_id": "terminal_trap", "placement_order": 5 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 0, "y": 1 }, "definition_id": "terminal_npc", "placement_order": 6 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 1, "y": 1 }, "definition_id": "terminal_npc", "placement_order": 7 }
+  ]
+}

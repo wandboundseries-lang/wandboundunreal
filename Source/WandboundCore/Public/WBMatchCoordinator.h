@@ -96,6 +96,12 @@ struct WANDBOUNDCORE_API FWBMatchOperationResult
 	int32 TraceEndIndex = 0;
 	bool bGameOver = false;
 	int32 WinnerPlayerId = -1;
+	int32 LoserPlayerId = -1;
+	FName TerminalReason;
+	FName TerminalSource;
+	int32 TerminalTurnNumber = -1;
+	int32 TerminalRevision = -1;
+	int32 TerminalTraceIndex = -1;
 	int32 CoordinatorGeneration = 0;
 	int32 CoordinatorRevision = 0;
 };

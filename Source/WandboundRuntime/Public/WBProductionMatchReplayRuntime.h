@@ -41,7 +41,7 @@ public:
 		const FWBProductionMatchReplayMetadata& Metadata,
 		const WBMatchCoordinator& Coordinator);
 	void CaptureCommittedActions(const WBMatchCoordinator& Coordinator);
-	void MarkComplete(const WBMatchCoordinator& Coordinator);
+	bool MarkComplete(const WBMatchCoordinator& Coordinator);
 
 	bool IsAvailable() const;
 	const FWBProductionMatchReplayArchive& GetArchive() const;
@@ -54,6 +54,7 @@ private:
 	void Fail(const FString& FailureCode);
 
 	bool bAvailable = false;
+	bool bFinalized = false;
 	FString ArchivePath;
 	FWBProductionMatchReplayArchive Archive;
 	FWBProductionMatchReplayReceipt Receipt;
@@ -80,6 +81,14 @@ struct WANDBOUNDRUNTIME_API FWBProductionMatchReplayRunResult
 	FString ExpectedDigest;
 	FString ActualDigest;
 	bool bTerminal = false;
+	int32 WinnerPlayerId = -1;
+	int32 LoserPlayerId = -1;
+	FName TerminalReason;
+	FName TerminalSource;
+	int32 TerminalTurn = -1;
+	int32 TerminalGeneration = -1;
+	int32 TerminalRevision = -1;
+	int32 TerminalTraceIndex = -1;
 };
 
 class WANDBOUNDRUNTIME_API WBProductionMatchReplayRuntime

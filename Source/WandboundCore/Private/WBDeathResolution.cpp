@@ -367,6 +367,13 @@ FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(FWBGameStateD
 			const int32 WinningPlayerId = OpposingPlayerId(Unit->OwnerId);
 			WorkingState.bGameOver = true;
 			WorkingState.WinnerPlayerId = WinningPlayerId;
+			WorkingState.TerminalOutcome.bTerminal = true;
+			WorkingState.TerminalOutcome.WinnerPlayerId = WinningPlayerId;
+			WorkingState.TerminalOutcome.LoserPlayerId = Unit->OwnerId;
+			WorkingState.TerminalOutcome.Reason =
+				EWBTerminalReason::HeroDefeatedWithoutReplacement;
+			WorkingState.TerminalOutcome.Source = EWBTerminalSource::Unknown;
+			WorkingState.TerminalOutcome.TurnNumber = WorkingState.TurnNumber;
 			TraceEvents.Add(MakeHeroDefeatedTrace(*Unit, WinningPlayerId, ResolutionOrder));
 		}
 

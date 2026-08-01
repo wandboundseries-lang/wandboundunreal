@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "terminal_replay_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "terminal_replay",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic terminal replay smoke fixture only."
+  }
+}

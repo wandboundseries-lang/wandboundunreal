@@ -7167,3 +7167,26 @@ Full evidence:
 
 Full evidence:
 `Docs/Production_Match_Replay_Log_Report.md`.
+
+## Deterministic Terminal Match and Replay Completion - 2026-08-01
+
+- Baseline: `8a33440aec9a611b6ae3a80b8303570c9122960a`, 1,901 Wandbound tests.
+- Editor build: succeeded on final source; final incremental build 54.08 seconds.
+- Game build: succeeded; final incremental validation 47.76 seconds.
+- Focused terminal/replay automation: 55 cases included in the final full run.
+- Full Wandbound automation: 1,955 succeeded, 0 failed, 0 warnings, 0 not run.
+- Fresh BuildCookRun: succeeded in 88.86 seconds.
+- Package: `Saved/PackagedBuilds/TerminalReplayCompletionFinal_20260801`.
+- Packaged development, startup, partial replay, and terminal replay smokes: passed.
+- Repeated terminal archive: byte-identical, SHA-256 `4e30424a56b613cbbda225295a0775473ed661cda390f172b609e529450235cc`.
+- Repeated terminal receipt: byte-identical, SHA-256 `5bcce2e1e9361e8848e4757a634cf82acdee30d2463a01f6f9f0023157e1ca76`.
+- Winner 0, loser 1, reason `hero_defeated_without_replacement`, source `attack`, turn 5, generation 1, revision 8.
+- Fresh replay matched state, trace, final-record, and replay digests; post-terminal input was rejected without mutation.
+- Prior partial archive/receipt/protected digest and production startup SHA-256 remained unchanged.
+- Receipt remained exactly eight public-safe fields; privacy scan found 0 protected-data hits.
+- `WBActionCodec`, production bundle/spec, Godot, Meshy, maps, assets, config defaults, and unrelated dirty work were untouched by this pass.
+- `git diff --check`: passed; line-ending notices only.
+- Exact final errors: none.
+
+Full evidence:
+`Docs/Terminal_Match_Replay_Completion_Report.md`.

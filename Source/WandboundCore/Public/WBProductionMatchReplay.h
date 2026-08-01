@@ -22,6 +22,13 @@ struct WANDBOUNDCORE_API FWBMatchCommittedActionRecord
 	bool bPendingDecision = false;
 	int32 PendingPlayer = -1;
 	bool bTerminal = false;
+	int32 WinnerPlayer = -1;
+	int32 LoserPlayer = -1;
+	FName TerminalReason;
+	FName TerminalSource;
+	int32 TerminalTurn = -1;
+	int32 TerminalRevision = -1;
+	int32 TerminalTraceIndex = -1;
 	int32 TraceStart = 0;
 	int32 TraceEnd = 0;
 	FString TraceDigest;
@@ -60,6 +67,12 @@ struct WANDBOUNDCORE_API FWBProductionMatchReplayFooter
 	bool bTerminal = false;
 	int32 Winner = -1;
 	int32 Loser = -1;
+	FName TerminalReason;
+	FName TerminalSource;
+	int32 TerminalTurn = -1;
+	int32 TerminalGeneration = -1;
+	int32 TerminalRevision = -1;
+	int32 TerminalTraceIndex = -1;
 	int32 FinalGeneration = 0;
 	int32 FinalRevision = 0;
 	int32 RecordCount = 0;

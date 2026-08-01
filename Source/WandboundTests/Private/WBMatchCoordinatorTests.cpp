@@ -654,6 +654,9 @@ bool FWBMatchCoordinatorActivationDeathTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Activation succeeds"), Result.bOk);
 	TestTrue(TEXT("Match ends"), Result.bGameOver);
 	TestEqual(TEXT("Winner set"), Result.WinnerPlayerId, FirstPlayerId);
+	TestEqual(TEXT("Loser set"), Result.LoserPlayerId, SecondPlayerId);
+	TestEqual(TEXT("Effect terminal source"), Result.TerminalSource, FName(TEXT("effect")));
+	TestEqual(TEXT("Typed terminal reason"), Result.TerminalReason, FName(TEXT("hero_defeated_without_replacement")));
 	TestEqual(TEXT("Coordinator phase terminal"), Coordinator.GetMatchPhase(), EWBMatchLoopPhase::GameOver);
 	TestTrue(TEXT("Hero removed"), Coordinator.GetState().GetUnitById(SecondPlayerId)->bRemovedFromBoard);
 	TestTrue(TEXT("Equipment cleanup traced"), HasTraceKind(Result.TraceEvents, FName(TEXT("equipped_card_discarded_on_death"))));
@@ -822,6 +825,7 @@ bool FWBMatchCoordinatorBurnTerminalTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Terminal transition succeeds"), Result.bOk);
 	TestTrue(TEXT("Burn ends match"), Result.bGameOver);
 	TestEqual(TEXT("Opponent wins"), Result.WinnerPlayerId, SecondPlayerId);
+	TestEqual(TEXT("Status terminal source"), Result.TerminalSource, FName(TEXT("status")));
 	TestEqual(TEXT("Player does not advance"), Coordinator.GetState().CurrentPlayer, FirstPlayerId);
 	TestEqual(TEXT("Turn does not advance"), Coordinator.GetState().TurnNumber, 1);
 	TestFalse(TEXT("NPC phase skipped after game over"), HasTraceKind(Result.TraceEvents, FName(TEXT("npc_phase_started"))));
@@ -1014,6 +1018,7 @@ bool FWBMatchCoordinatorTrapHeroTerminalIntegrationTest::RunTest(const FString& 
 	TestTrue(TEXT("Terminal action resolves"), Result.bOk);
 	TestTrue(TEXT("Match ends"), Result.bGameOver);
 	TestEqual(TEXT("Opponent wins"), Result.WinnerPlayerId, SecondPlayerId);
+	TestEqual(TEXT("Trap terminal source"), Result.TerminalSource, FName(TEXT("trap")));
 	TestTrue(TEXT("Hero removed"), Coordinator.GetState().GetUnitById(FirstPlayerId)->bRemovedFromBoard);
 	TestTrue(TEXT("Marker game-over trace emitted"), HasTraceKind(Result.TraceEvents, FName(TEXT("marker_triggered_game_over"))));
 	TestTrue(TEXT("No legal actions after terminal marker"), Result.NextLegalActions.IsEmpty());
@@ -1111,6 +1116,7 @@ bool FWBMatchCoordinatorNPCHeroTerminalIntegrationTest::RunTest(const FString& P
 	TestTrue(*FString::Printf(TEXT("Terminal NPC phase commits (%s)"), *Result.Reason), Result.bOk);
 	TestTrue(TEXT("NPC attack ends match"), Result.bGameOver);
 	TestEqual(TEXT("Opponent wins"), Result.WinnerPlayerId, SecondPlayerId);
+	TestEqual(TEXT("NPC terminal source"), Result.TerminalSource, FName(TEXT("npc")));
 	TestTrue(TEXT("No next-turn legal actions"), Result.NextLegalActions.IsEmpty());
 	TestFalse(TEXT("No next-player draw"), HasTraceKind(Result.TraceEvents, FName(TEXT("turn_start_card_drawn"))));
 	TestFalse(TEXT("No player advance"), HasTraceKind(Result.TraceEvents, FName(TEXT("player_advanced"))));

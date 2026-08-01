@@ -24,6 +24,15 @@ FWBPublicTurnSummary WBPublicTurnSummary::Build(const FWBGameStateData& State)
 	Summary.Phase = MakePublicPhaseName(State.Phase);
 	Summary.bGameOver = State.bGameOver;
 	Summary.WinnerPlayerId = State.WinnerPlayerId;
+	if (State.bGameOver)
+	{
+		Summary.LoserPlayerId = State.TerminalOutcome.LoserPlayerId;
+		Summary.TerminalReason =
+			WBTerminalOutcomeNames::ReasonToName(State.TerminalOutcome.Reason);
+		Summary.TerminalSource =
+			WBTerminalOutcomeNames::SourceToName(State.TerminalOutcome.Source);
+		Summary.TerminalTurn = State.TerminalOutcome.TurnNumber;
+	}
 
 	Summary.Players.Reserve(State.Players.Num());
 	for (const FWBPlayerStateData& Player : State.Players)

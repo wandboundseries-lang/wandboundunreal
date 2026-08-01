@@ -38,6 +38,11 @@ void AppendName(FString& Out, const TCHAR* Key, const FName Value)
 	AppendString(Out, Key, Value.IsNone() ? FString() : Value.ToString());
 }
 
+FString CanonicalTerminalName(const FName Value)
+{
+	return Value.IsNone() ? FString() : Value.ToString().ToLower();
+}
+
 void AppendTile(FString& Out, const TCHAR* Key, const FWBTile& Tile)
 {
 	AppendInt(Out, *FString::Printf(TEXT("%s.x"), Key), Tile.X);
@@ -67,6 +72,18 @@ FString CanonicalGameState(const FWBGameStateData& State)
 	AppendBool(Out, TEXT("suppress_reacts"), State.bSuppressManualReactsDuringInitialHeroSetup);
 	AppendBool(Out, TEXT("game_over"), State.bGameOver);
 	AppendInt(Out, TEXT("winner"), State.WinnerPlayerId);
+	if (State.bGameOver)
+	{
+		AppendInt(Out, TEXT("terminal.winner"), State.TerminalOutcome.WinnerPlayerId);
+		AppendInt(Out, TEXT("terminal.loser"), State.TerminalOutcome.LoserPlayerId);
+		AppendString(Out, TEXT("terminal.reason"), CanonicalTerminalName(
+			WBTerminalOutcomeNames::ReasonToName(State.TerminalOutcome.Reason)));
+		AppendString(Out, TEXT("terminal.source"), CanonicalTerminalName(
+			WBTerminalOutcomeNames::SourceToName(State.TerminalOutcome.Source)));
+		AppendInt(Out, TEXT("terminal.turn"), State.TerminalOutcome.TurnNumber);
+		AppendInt(Out, TEXT("terminal.revision"), State.TerminalOutcome.CoordinatorRevision);
+		AppendInt(Out, TEXT("terminal.trace_index"), State.TerminalOutcome.TraceIndex);
+	}
 
 	TArray<FWBUnitState> Units = State.Units;
 	Units.Sort([](const FWBUnitState& A, const FWBUnitState& B)
@@ -319,6 +336,18 @@ FString CanonicalRecord(const FWBProductionMatchReplayActionRecord& Record)
 	AppendBool(Out, TEXT("pending_decision"), Record.bPendingDecision);
 	AppendInt(Out, TEXT("pending_player"), Record.PendingPlayer);
 	AppendBool(Out, TEXT("terminal"), Record.bTerminal);
+	if (Record.bTerminal)
+	{
+		AppendInt(Out, TEXT("winner"), Record.WinnerPlayer);
+		AppendInt(Out, TEXT("loser"), Record.LoserPlayer);
+		AppendString(Out, TEXT("terminal_reason"),
+			CanonicalTerminalName(Record.TerminalReason));
+		AppendString(Out, TEXT("terminal_source"),
+			CanonicalTerminalName(Record.TerminalSource));
+		AppendInt(Out, TEXT("terminal_turn"), Record.TerminalTurn);
+		AppendInt(Out, TEXT("terminal_revision"), Record.TerminalRevision);
+		AppendInt(Out, TEXT("terminal_trace_index"), Record.TerminalTraceIndex);
+	}
 	AppendInt(Out, TEXT("trace_start"), Record.TraceStart);
 	AppendInt(Out, TEXT("trace_end"), Record.TraceEnd);
 	AppendString(Out, TEXT("trace_digest"), Record.TraceDigest);
@@ -366,6 +395,18 @@ void WriteRecord(TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>& Writer, c
 	Writer.WriteValue(TEXT("pending_decision"), Record.bPendingDecision);
 	Writer.WriteValue(TEXT("pending_player"), Record.PendingPlayer);
 	Writer.WriteValue(TEXT("terminal"), Record.bTerminal);
+	if (Record.bTerminal)
+	{
+		Writer.WriteValue(TEXT("winner"), Record.WinnerPlayer);
+		Writer.WriteValue(TEXT("loser"), Record.LoserPlayer);
+		Writer.WriteValue(TEXT("terminal_reason"),
+			CanonicalTerminalName(Record.TerminalReason));
+		Writer.WriteValue(TEXT("terminal_source"),
+			CanonicalTerminalName(Record.TerminalSource));
+		Writer.WriteValue(TEXT("terminal_turn"), Record.TerminalTurn);
+		Writer.WriteValue(TEXT("terminal_revision"), Record.TerminalRevision);
+		Writer.WriteValue(TEXT("terminal_trace_index"), Record.TerminalTraceIndex);
+	}
 	Writer.WriteValue(TEXT("trace_start"), Record.TraceStart);
 	Writer.WriteValue(TEXT("trace_end"), Record.TraceEnd);
 	Writer.WriteValue(TEXT("trace_digest"), Record.TraceDigest);
@@ -382,6 +423,17 @@ void WriteFooter(TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>& Writer, c
 	Writer.WriteValue(TEXT("terminal"), Footer.bTerminal);
 	Writer.WriteValue(TEXT("winner"), Footer.Winner);
 	Writer.WriteValue(TEXT("loser"), Footer.Loser);
+	if (Footer.bTerminal)
+	{
+		Writer.WriteValue(TEXT("terminal_reason"),
+			CanonicalTerminalName(Footer.TerminalReason));
+		Writer.WriteValue(TEXT("terminal_source"),
+			CanonicalTerminalName(Footer.TerminalSource));
+		Writer.WriteValue(TEXT("terminal_turn"), Footer.TerminalTurn);
+		Writer.WriteValue(TEXT("terminal_generation"), Footer.TerminalGeneration);
+		Writer.WriteValue(TEXT("terminal_revision"), Footer.TerminalRevision);
+		Writer.WriteValue(TEXT("terminal_trace_index"), Footer.TerminalTraceIndex);
+	}
 	Writer.WriteValue(TEXT("final_generation"), Footer.FinalGeneration);
 	Writer.WriteValue(TEXT("final_revision"), Footer.FinalRevision);
 	Writer.WriteValue(TEXT("record_count"), Footer.RecordCount);
@@ -437,7 +489,7 @@ bool ParseHeader(const TSharedPtr<FJsonObject>& Object, FWBProductionMatchReplay
 
 bool ParseRecord(const TSharedPtr<FJsonObject>& Object, FWBProductionMatchReplayActionRecord& Record)
 {
-	return GetInt(Object, TEXT("record_index"), Record.RecordIndex)
+	const bool bBaseValid = GetInt(Object, TEXT("record_index"), Record.RecordIndex)
 		&& GetInt(Object, TEXT("acting_player"), Record.ActingPlayer)
 		&& GetString(Object, TEXT("action_family"), Record.ActionFamily)
 		&& GetString(Object, TEXT("chosen_action_id"), Record.ChosenActionId)
@@ -458,11 +510,26 @@ bool ParseRecord(const TSharedPtr<FJsonObject>& Object, FWBProductionMatchReplay
 		&& GetString(Object, TEXT("after_state_digest"), Record.AfterStateDigest)
 		&& GetString(Object, TEXT("previous_record_hash"), Record.PreviousRecordHash)
 		&& GetString(Object, TEXT("record_hash"), Record.RecordHash);
+	if (!bBaseValid || !Record.bTerminal)
+	{
+		return bBaseValid;
+	}
+	FString Reason;
+	FString Source;
+	return GetInt(Object, TEXT("winner"), Record.WinnerPlayer)
+		&& GetInt(Object, TEXT("loser"), Record.LoserPlayer)
+		&& GetString(Object, TEXT("terminal_reason"), Reason)
+		&& GetString(Object, TEXT("terminal_source"), Source)
+		&& GetInt(Object, TEXT("terminal_turn"), Record.TerminalTurn)
+		&& GetInt(Object, TEXT("terminal_revision"), Record.TerminalRevision)
+		&& GetInt(Object, TEXT("terminal_trace_index"), Record.TerminalTraceIndex)
+		&& (Record.TerminalReason = FName(*Reason), true)
+		&& (Record.TerminalSource = FName(*Source), true);
 }
 
 bool ParseFooter(const TSharedPtr<FJsonObject>& Object, FWBProductionMatchReplayFooter& Footer)
 {
-	return GetBool(Object, TEXT("complete"), Footer.bComplete)
+	const bool bBaseValid = GetBool(Object, TEXT("complete"), Footer.bComplete)
 		&& GetBool(Object, TEXT("terminal"), Footer.bTerminal)
 		&& GetInt(Object, TEXT("winner"), Footer.Winner)
 		&& GetInt(Object, TEXT("loser"), Footer.Loser)
@@ -473,6 +540,20 @@ bool ParseFooter(const TSharedPtr<FJsonObject>& Object, FWBProductionMatchReplay
 		&& GetString(Object, TEXT("final_trace_digest"), Footer.FinalTraceDigest)
 		&& GetString(Object, TEXT("final_record_hash"), Footer.FinalRecordHash)
 		&& GetString(Object, TEXT("replay_digest"), Footer.ReplayDigest);
+	if (!bBaseValid || !Footer.bTerminal)
+	{
+		return bBaseValid;
+	}
+	FString Reason;
+	FString Source;
+	return GetString(Object, TEXT("terminal_reason"), Reason)
+		&& GetString(Object, TEXT("terminal_source"), Source)
+		&& GetInt(Object, TEXT("terminal_turn"), Footer.TerminalTurn)
+		&& GetInt(Object, TEXT("terminal_generation"), Footer.TerminalGeneration)
+		&& GetInt(Object, TEXT("terminal_revision"), Footer.TerminalRevision)
+		&& GetInt(Object, TEXT("terminal_trace_index"), Footer.TerminalTraceIndex)
+		&& (Footer.TerminalReason = FName(*Reason), true)
+		&& (Footer.TerminalSource = FName(*Source), true);
 }
 }
 
@@ -607,6 +688,24 @@ FWBProductionMatchReplayValidationResult WBProductionMatchReplay::DeserializeAnd
 	const FString& Json)
 {
 	FWBProductionMatchReplayValidationResult Result;
+	int32 FooterFieldCount = 0;
+	int32 FooterSearchIndex = 0;
+	while ((FooterSearchIndex = Json.Find(
+		TEXT("\"footer\":"),
+		ESearchCase::CaseSensitive,
+		ESearchDir::FromStart,
+		FooterSearchIndex)) != INDEX_NONE)
+	{
+		++FooterFieldCount;
+		FooterSearchIndex += 9;
+	}
+	if (FooterFieldCount != 1)
+	{
+		Result.FailureCode = FooterFieldCount > 1
+			? FString(TEXT("replay_footer_duplicate"))
+			: FString(TEXT("replay_schema_invalid"));
+		return Result;
+	}
 	TSharedPtr<FJsonObject> Root;
 	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
 	if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBCardZoneState.h"
+#include "WBTerminalOutcome.h"
 #include "WBTypes.h"
 
 enum class EWBResonanceModifierTarget : uint8
@@ -126,6 +127,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	bool bSuppressManualReactsDuringInitialHeroSetup = false;
 	bool bGameOver = false;
 	int32 WinnerPlayerId = -1;
+	FWBTerminalOutcome TerminalOutcome;
 	TArray<FWBUnitState> Units;
 	TArray<FWBWallEdge> Walls;
 	FName DefaultTerrainId = FName(TEXT("Normal"));

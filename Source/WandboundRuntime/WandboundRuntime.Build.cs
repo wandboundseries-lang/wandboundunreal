@@ -16,5 +16,20 @@ public class WandboundRuntime : ModuleRules
 		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/Replay/production_replay_smoke_match_spec.json",
 			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/TerminalFixture/root_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/TerminalFixture/bundle_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/TerminalFixture/units.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/TerminalFixture/markers.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/TerminalFixture/match_spec.json",
+			StagedFileType.NonUFS);
 	}
 }

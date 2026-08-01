@@ -905,9 +905,10 @@ void UWBRuntimeMatchHostComponent::RebuildPresentationModels(const FString& Stat
 	CurrentPresentation.WinnerPlayerId = CurrentObservation.PublicTurn.WinnerPlayerId;
 	if (CurrentPresentation.bGameOver)
 	{
-		CurrentPresentation.DefeatedPlayerId = CurrentPresentation.WinnerPlayerId == 0 ? 1 : 0;
-		CurrentPresentation.TerminalReason = TEXT("hero_defeated");
-		CurrentPresentation.FinalTurnNumber = CurrentObservation.PublicTurn.TurnNumber;
+		CurrentPresentation.DefeatedPlayerId = CurrentObservation.PublicTurn.LoserPlayerId;
+		CurrentPresentation.TerminalReason =
+			CurrentObservation.PublicTurn.TerminalReason.ToString();
+		CurrentPresentation.FinalTurnNumber = CurrentObservation.PublicTurn.TerminalTurn;
 		CurrentPresentation.FinalPresentationRevision = PresentationRevision;
 	}
 	CurrentPresentation.MatchGeneration = MatchGeneration;

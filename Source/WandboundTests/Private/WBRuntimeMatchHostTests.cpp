@@ -386,7 +386,10 @@ bool FWBRuntimeMatchHostTransientWorldNPCTerminalTest::RunTest(const FString& Pa
 	TestTrue(TEXT("NPC damage enters terminal state"), Host->IsGameOver());
 	TestEqual(TEXT("Opponent wins"), Host->GetWinnerPlayerId(), 1);
 	TestEqual(TEXT("Defeated player exposed"), Host->GetCurrentPresentation().DefeatedPlayerId, 0);
-	TestEqual(TEXT("Terminal reason exposed"), Host->GetCurrentPresentation().TerminalReason, FString(TEXT("hero_defeated")));
+	TestEqual(
+		TEXT("Terminal reason exposed"),
+		Host->GetCurrentPresentation().TerminalReason,
+		FString(TEXT("hero_defeated_without_replacement")));
 	TestEqual(TEXT("Final revision captured"), Host->GetCurrentPresentation().FinalPresentationRevision, Host->GetCurrentPresentation().PresentationRevision);
 	TestEqual(TEXT("Normal legal actions cleared"), Host->GetCurrentLegalActions().Num(), 0);
 	TestEqual(TEXT("Defeated Hero presentation removed"), Host->GetCurrentUnits().FilterByPredicate([](const FWBRuntimeUnitPresentation& Unit)

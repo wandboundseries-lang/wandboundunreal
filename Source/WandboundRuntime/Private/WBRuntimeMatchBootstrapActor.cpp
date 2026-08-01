@@ -15,6 +15,7 @@
 #include "WBProductionRuntimeBootstrap.h"
 #include "WBProductionMatchReplayRuntime.h"
 #include "WBProductionMatchReplaySmoke.h"
+#include "WBProductionTerminalReplaySmoke.h"
 #include "WBProductionStartupResult.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWBRuntimeLocalPlay, Log, All);
@@ -166,7 +167,16 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionMatchReplaySmoke::IsRequested())
+		if (WBProductionTerminalReplaySmoke::IsRequested())
+		{
+			const FWBProductionTerminalReplaySmokeResult TerminalReplaySmoke =
+				WBProductionTerminalReplaySmoke::Run(PendingBootstrapRequest);
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				TerminalReplaySmoke.bOk ? 0 : 22,
+				TEXT("WandboundProductionTerminalReplaySmoke"));
+		}
+		else if (WBProductionMatchReplaySmoke::IsRequested())
 		{
 			const FWBProductionMatchReplaySmokeResult ReplaySmoke =
 				WBProductionMatchReplaySmoke::Run(

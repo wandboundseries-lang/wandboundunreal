@@ -521,12 +521,15 @@ bool RunNamedReplayTest(
 				Fixture.Bootstrap.InitializationRequest,
 				Viewer);
 		Test.TestTrue(TEXT("Runtime host starts"), Started.bOk);
+		const FWBMatchObservation& Observation =
+			Host->GetCurrentObservation();
 		const FWBMatchLegalAction* Action =
-			FindOrdinaryAction(Host->GetCurrentObservation().LegalActions);
+			FindOrdinaryAction(Observation.LegalActions);
 		Test.TestNotNull(TEXT("Runtime ordinary action exists"), Action);
 		if (!Started.bOk || Action == nullptr) return false;
+		const FString ActionId = Action->ActionId;
 		const FWBRuntimeMatchCommandResult Submitted =
-			Host->SubmitLegalActionById(Action->ActionId);
+			Host->SubmitLegalActionById(ActionId);
 		Test.TestTrue(TEXT("Runtime action succeeds"), Submitted.bOk);
 		Test.TestEqual(
 			TEXT("Recorder captured one action"),
