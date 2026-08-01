@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "WBMatchCoordinator.h"
+#include "WBProductionMatchReplayRuntime.h"
 #include "WBRuntimeMatchPresentation.h"
 #include "WBRuntimePresentationEvent.h"
 #include "WBRuntimeMatchHostComponent.generated.h"
@@ -208,9 +209,17 @@ public:
 	const FWBMatchObservation& GetCurrentObservation() const;
 	const FWBMatchOperationResult& GetLatestOperationResult() const;
 	const WBMatchCoordinator* GetCoordinatorForInspection() const;
+	void ConfigureProductionReplay(
+		const FWBProductionMatchReplayMetadata& Metadata);
+	void ClearProductionReplayConfiguration();
+	const FWBProductionMatchReplayReceipt& GetProductionReplayReceipt() const;
 
 private:
 	TUniquePtr<WBMatchCoordinator> Coordinator;
+	TUniquePtr<FWBProductionMatchReplayRecorder> ProductionReplayRecorder;
+	FWBProductionMatchReplayMetadata ProductionReplayMetadata;
+	FWBProductionMatchReplayReceipt ProductionReplayReceipt;
+	bool bProductionReplayConfigured = false;
 	FWBMatchInitializationRequest InitializationRequest;
 	FWBMatchObservation CurrentObservation;
 	FWBMatchOperationResult LatestOperationResult;

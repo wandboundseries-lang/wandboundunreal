@@ -4,6 +4,7 @@
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
+#include "HAL/PlatformMisc.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "WBBoardViewActor.h"
@@ -12,6 +13,8 @@
 #include "WBRuntimePlayerController.h"
 #include "WBRuntimePresentationAssetBinding.h"
 #include "WBProductionRuntimeBootstrap.h"
+#include "WBProductionMatchReplayRuntime.h"
+#include "WBProductionMatchReplaySmoke.h"
 #include "WBProductionStartupResult.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWBRuntimeLocalPlay, Log, All);
@@ -52,6 +55,8 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 
 	TSharedPtr<const FWBProductionCardDatabase> PendingDatabase;
 	TSharedPtr<FWBMatchInitializationRequest> PendingInitializationRequest;
+	FWBProductionMatchReplayMetadata PendingReplayMetadata;
+	FWBProductionRuntimeBootstrapRequest PendingBootstrapRequest;
 	if (bRequestedProductionData)
 	{
 		FWBProductionRuntimeBootstrapRequest Request;
@@ -66,6 +71,7 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 		Request.bAllowTestBundle = FParse::Param(
 			FCommandLine::Get(),
 			TEXT("WandboundAllowTestCardBundle"));
+		PendingBootstrapRequest = Request;
 		const FWBProductionRuntimeBootstrapResult BootstrapResult =
 			WBProductionRuntimeBootstrap::Build(Request);
 		PendingProductionStartupResult =
@@ -80,6 +86,9 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 		PendingInitializationRequest =
 			MakeShared<FWBMatchInitializationRequest>(
 				BootstrapResult.InitializationRequest);
+		PendingReplayMetadata =
+			WBProductionMatchReplayRuntime::BuildMetadata(
+				BootstrapResult);
 	}
 
 	LocalPlayState = EWBRuntimeLocalPlayState::Starting;
@@ -96,6 +105,15 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 		ResolvedPresentationAssetSet,
 		CameraActor,
 		IsPresentationAssetLoadingEnabledByPolicy());
+	if (bRequestedProductionData)
+	{
+		MatchHost->ConfigureProductionReplay(
+			PendingReplayMetadata);
+	}
+	else
+	{
+		MatchHost->ClearProductionReplayConfiguration();
+	}
 	const FWBRuntimeMatchCommandResult MatchResult = bRequestedProductionData
 		? MatchHost->InitializeMatch(
 			*PendingInitializationRequest,
@@ -148,8 +166,21 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		WBProductionStartupResult::RequestProbeExit(
-			PendingProductionStartupResult);
+		if (WBProductionMatchReplaySmoke::IsRequested())
+		{
+			const FWBProductionMatchReplaySmokeResult ReplaySmoke =
+				WBProductionMatchReplaySmoke::Run(
+					PendingBootstrapRequest);
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				ReplaySmoke.bOk ? 0 : 21,
+				TEXT("WandboundProductionReplaySmoke"));
+		}
+		else
+		{
+			WBProductionStartupResult::RequestProbeExit(
+				PendingProductionStartupResult);
+		}
 	}
 	return MakeResult(
 		true,
@@ -216,6 +247,7 @@ void AWBRuntimeMatchBootstrapActor::ShutdownLocalPlay()
 	if (MatchHost != nullptr)
 	{
 		MatchHost->ResetMatch();
+		MatchHost->ClearProductionReplayConfiguration();
 		MatchHost->BoardActor = nullptr;
 	}
 	if (BoardActor != nullptr && bOwnsBoardActor && IsValid(BoardActor)) BoardActor->Destroy();
@@ -332,6 +364,7 @@ void AWBRuntimeMatchBootstrapActor::RollbackStartup()
 	if (MatchHost != nullptr)
 	{
 		MatchHost->ResetMatch();
+		MatchHost->ClearProductionReplayConfiguration();
 		MatchHost->BoardActor = nullptr;
 	}
 	if (BoardActor != nullptr && bOwnsBoardActor && IsValid(BoardActor)) BoardActor->Destroy();

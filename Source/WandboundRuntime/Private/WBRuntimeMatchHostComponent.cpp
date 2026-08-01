@@ -258,6 +258,8 @@ void UWBRuntimeMatchHostComponent::ResetMatch()
 	PresentationFailureReason.Reset();
 	ClearSelectionInternal(false);
 	Coordinator.Reset();
+	ProductionReplayRecorder.Reset();
+	ProductionReplayReceipt = FWBProductionMatchReplayReceipt();
 	InitializationRequest = FWBMatchInitializationRequest();
 	CurrentObservation = FWBMatchObservation();
 	LatestOperationResult = FWBMatchOperationResult();
@@ -307,6 +309,22 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::InitializeMatch(
 		PresentationAssetRegistry->BeginMatchGeneration(MatchGeneration);
 	}
 	ClearSelectionInternal(false);
+	if (bProductionReplayConfigured)
+	{
+		ProductionReplayRecorder =
+			MakeUnique<FWBProductionMatchReplayRecorder>();
+		ProductionReplayRecorder->Begin(
+			ProductionReplayMetadata,
+			*Coordinator);
+		ProductionReplayReceipt =
+			ProductionReplayRecorder->GetReceipt();
+	}
+	else
+	{
+		ProductionReplayRecorder.Reset();
+		ProductionReplayReceipt =
+			FWBProductionMatchReplayReceipt();
+	}
 
 	FWBRuntimeMatchCommandResult RefreshResult = RefreshFromCoordinator(TEXT("match_initialized"));
 	if (!RefreshResult.bOk)
@@ -639,6 +657,13 @@ FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::SubmitLegalActionAtRe
 	{
 		return Reject(LatestOperationResult.Reason);
 	}
+	if (ProductionReplayRecorder.IsValid())
+	{
+		ProductionReplayRecorder->CaptureCommittedActions(
+			*Coordinator);
+		ProductionReplayReceipt =
+			ProductionReplayRecorder->GetReceipt();
+	}
 
 	const bool bHadNPCEvents = LatestOperationResult.TraceEvents.ContainsByPredicate(IsNPCTrace);
 	FWBRuntimePresentationTranslationResult Translation =
@@ -806,6 +831,27 @@ UWBRuntimeMatchHostComponent::GetPresentationAssetPlayback() const
 const FWBMatchObservation& UWBRuntimeMatchHostComponent::GetCurrentObservation() const { return CurrentObservation; }
 const FWBMatchOperationResult& UWBRuntimeMatchHostComponent::GetLatestOperationResult() const { return LatestOperationResult; }
 const WBMatchCoordinator* UWBRuntimeMatchHostComponent::GetCoordinatorForInspection() const { return Coordinator.Get(); }
+
+void UWBRuntimeMatchHostComponent::ConfigureProductionReplay(
+	const FWBProductionMatchReplayMetadata& Metadata)
+{
+	ProductionReplayMetadata = Metadata;
+	bProductionReplayConfigured = true;
+}
+
+void UWBRuntimeMatchHostComponent::ClearProductionReplayConfiguration()
+{
+	bProductionReplayConfigured = false;
+	ProductionReplayMetadata = FWBProductionMatchReplayMetadata();
+	ProductionReplayRecorder.Reset();
+	ProductionReplayReceipt = FWBProductionMatchReplayReceipt();
+}
+
+const FWBProductionMatchReplayReceipt&
+UWBRuntimeMatchHostComponent::GetProductionReplayReceipt() const
+{
+	return ProductionReplayReceipt;
+}
 
 FWBRuntimeMatchCommandResult UWBRuntimeMatchHostComponent::RefreshFromCoordinator(const FString& StatusMessage)
 {

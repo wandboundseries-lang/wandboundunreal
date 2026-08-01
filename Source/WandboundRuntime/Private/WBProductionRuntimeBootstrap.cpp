@@ -104,6 +104,7 @@ FWBProductionRuntimeBootstrapResult WBProductionRuntimeBootstrap::Build(
 
 	Result.bOk = true;
 	Result.Reason = TEXT("success");
+	Result.MatchSpecification = MatchResult.Specification;
 	Result.InitializationRequest = MatchResult.InitializationRequest;
 	return Result;
 }

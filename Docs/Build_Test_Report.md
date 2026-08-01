@@ -7144,3 +7144,26 @@ Full evidence:
 
 Full evidence:
 `Docs/Turn_Transition_Authority_Migration_Report.md`.
+
+## Production Match Replay Log - 2026-08-01
+
+- Baseline: `b0b6a6965103d1c0987af69d2addc7b695af5ab7`, 1,816 Wandbound tests.
+- Editor build: succeeded on final source in 57.2 seconds.
+- Game build: succeeded on final source in 64.1 seconds.
+- Focused replay automation: 85 succeeded, 0 failed, 0 warnings.
+- Requested affected areas in the final full run: 1,234 unique tests succeeded, 0 failed.
+- Full Wandbound automation: 1,901 succeeded, 0 failed, 0 warnings, 0 not run.
+- Fresh BuildCookRun: succeeded in 58.8 seconds.
+- Package: `Saved/PackagedBuilds/ProductionReplayReceiptFinal_20260801`.
+- Packaged development smoke: passed, exit 0, generation 1, revision 4.
+- Canonical production startup passed twice and remained byte-identical at SHA-256 `cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004`.
+- Packaged replay record/load/fresh-coordinator verification passed twice, exit 0.
+- Repeated private archive: byte-identical, SHA-256 `d30304a936fd3b5c2163209546b9063a64ed7a223a65b217092cb64ef6495463`.
+- Repeated public receipt: byte-identical, SHA-256 `881ffb586544d5ed78156635754b5eeddf555c7ef000c472f79ac607cc4d2dd9`.
+- Public receipt allowlist: exact, with zero protected-value leakage hits.
+- `WBActionCodec` source/header hashes unchanged from baseline.
+- `git diff --check`: passed; line-ending notices only.
+- Exact final errors: none.
+
+Full evidence:
+`Docs/Production_Match_Replay_Log_Report.md`.

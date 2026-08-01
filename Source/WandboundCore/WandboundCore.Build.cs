@@ -12,5 +12,6 @@ public class WandboundCore : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "Json" });
+		AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 	}
 }

@@ -11,6 +11,7 @@
 #include "WBPublicBoardSummary.h"
 #include "WBPublicTurnSummary.h"
 #include "WBReplayTrace.h"
+#include "WBProductionMatchReplay.h"
 #include "WBSummonExecution.h"
 #include "WBTurnStartSequence.h"
 
@@ -33,7 +34,8 @@ enum class EWBMatchActionFamily : uint8
 	Equip,
 	Activation,
 	Discard,
-	TurnStartTrigger
+	TurnStartTrigger,
+	Count
 };
 
 struct WANDBOUNDCORE_API FWBMatchPlayerSetup
@@ -94,6 +96,8 @@ struct WANDBOUNDCORE_API FWBMatchOperationResult
 	int32 TraceEndIndex = 0;
 	bool bGameOver = false;
 	int32 WinnerPlayerId = -1;
+	int32 CoordinatorGeneration = 0;
+	int32 CoordinatorRevision = 0;
 };
 
 struct WANDBOUNDCORE_API FWBMatchObservation
@@ -129,6 +133,16 @@ public:
 	const FWBGameStateData& GetState() const;
 	const FWBCardDefinitionRepository& GetRepository() const;
 	const TArray<FWBTraceEvent>& GetTraceLog() const;
+	int32 GetCoordinatorGeneration() const;
+	int32 GetCoordinatorRevision() const;
+	const FString& GetInitialStateDigest() const;
+	const FString& GetInitialTraceDigest() const;
+	FString GetCurrentStateDigest() const;
+	FString GetCurrentTraceDigest() const;
+	const TArray<FWBMatchCommittedActionRecord>& GetCommittedActionRecords() const;
+	static bool ClassifyReplayActionFamily(
+		const FWBMatchLegalAction& Action,
+		FString& OutFamily);
 	FWBGameStateData& GetMutableStateForTest();
 
 	// Compatibility-only bridge for old fixtures and callers that still own raw
@@ -171,4 +185,9 @@ private:
 	bool bHeroSetupTriggersResolved = false;
 	bool bOpeningHandsDrawn = false;
 	FWBTurnStartSequenceState TurnStartSequence;
+	int32 CoordinatorGeneration = 0;
+	int32 CoordinatorRevision = 0;
+	FString InitialStateDigest;
+	FString InitialTraceDigest;
+	TArray<FWBMatchCommittedActionRecord> CommittedActionRecords;
 };

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "WandboundProductionMatchReplay.schema.json",
+  "title": "WandboundProductionMatchReplay",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["header", "records", "footer"],
+  "properties": {
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "replay_format_id", "opaque_match_id",
+        "rules_compatibility_version", "production_bundle_digest",
+        "production_match_spec_digest", "active_format_digest",
+        "game_start_addendum_digest", "initial_match_seed",
+        "initial_coordinator_generation", "initial_coordinator_revision",
+        "initial_state_digest", "initial_trace_digest",
+        "previous_record_hash", "header_hash"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "replay_format_id": { "const": "WandboundProductionMatchReplay" },
+        "opaque_match_id": { "type": "string", "minLength": 1 },
+        "rules_compatibility_version": { "const": 1 },
+        "production_bundle_digest": { "$ref": "#/$defs/digest" },
+        "production_match_spec_digest": { "$ref": "#/$defs/digest" },
+        "active_format_digest": { "$ref": "#/$defs/digest" },
+        "game_start_addendum_digest": { "$ref": "#/$defs/digest" },
+        "initial_match_seed": { "type": "integer" },
+        "initial_coordinator_generation": { "type": "integer", "minimum": 1 },
+        "initial_coordinator_revision": { "type": "integer", "minimum": 1 },
+        "initial_state_digest": { "$ref": "#/$defs/digest" },
+        "initial_trace_digest": { "$ref": "#/$defs/digest" },
+        "previous_record_hash": { "$ref": "#/$defs/digest" },
+        "header_hash": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/record" }
+    },
+    "footer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "complete", "terminal", "winner", "loser", "final_generation",
+        "final_revision", "record_count", "final_state_digest",
+        "final_trace_digest", "final_record_hash", "replay_digest"
+      ],
+      "properties": {
+        "complete": { "type": "boolean" },
+        "terminal": { "type": "boolean" },
+        "winner": { "type": "integer" },
+        "loser": { "type": "integer" },
+        "final_generation": { "type": "integer", "minimum": 1 },
+        "final_revision": { "type": "integer", "minimum": 1 },
+        "record_count": { "type": "integer", "minimum": 0 },
+        "final_state_digest": { "$ref": "#/$defs/digest" },
+        "final_trace_digest": { "$ref": "#/$defs/digest" },
+        "final_record_hash": { "$ref": "#/$defs/digest" },
+        "replay_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_index", "acting_player", "action_family",
+        "chosen_action_id", "expected_decision_id", "before_generation",
+        "before_revision", "before_state_digest", "legal_action_set_digest",
+        "after_generation", "after_revision", "completed",
+        "pending_decision", "pending_player", "terminal", "trace_start",
+        "trace_end", "trace_digest", "after_state_digest",
+        "previous_record_hash", "record_hash"
+      ],
+      "properties": {
+        "record_index": { "type": "integer", "minimum": 0 },
+        "acting_player": { "type": "integer", "minimum": 0 },
+        "action_family": { "type": "string", "minLength": 1 },
+        "chosen_action_id": { "type": "string", "minLength": 1 },
+        "expected_decision_id": { "type": "string", "minLength": 1 },
+        "before_generation": { "type": "integer", "minimum": 1 },
+        "before_revision": { "type": "integer", "minimum": 1 },
+        "before_state_digest": { "$ref": "#/$defs/digest" },
+        "legal_action_set_digest": { "$ref": "#/$defs/digest" },
+        "after_generation": { "type": "integer", "minimum": 1 },
+        "after_revision": { "type": "integer", "minimum": 1 },
+        "completed": { "type": "boolean" },
+        "pending_decision": { "type": "boolean" },
+        "pending_player": { "type": "integer" },
+        "terminal": { "type": "boolean" },
+        "trace_start": { "type": "integer", "minimum": 0 },
+        "trace_end": { "type": "integer", "minimum": 0 },
+        "trace_digest": { "$ref": "#/$defs/digest" },
+        "after_state_digest": { "$ref": "#/$defs/digest" },
+        "previous_record_hash": { "$ref": "#/$defs/digest" },
+        "record_hash": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}

@@ -323,6 +323,7 @@ void AppendOverflowTraceEvents(
 
 FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitializationRequest& Request)
 {
+	const int32 NextCoordinatorGeneration = CoordinatorGeneration + 1;
 	const FWBCardDefinitionRepositoryValidationResult RepositoryValidation =
 		WBCardDefinitionRepository::ValidateRepository(Request.Repository);
 	if (!RepositoryValidation.bOk)
@@ -595,6 +596,17 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 	Candidate.bOpeningHandsDrawn = true;
 	Candidate.TurnStartSequence =
 		MoveTemp(WorkingTurnStartSequence);
+	Candidate.CoordinatorGeneration = NextCoordinatorGeneration;
+	Candidate.CoordinatorRevision = 1;
+	Candidate.InitialStateDigest =
+		WBProductionMatchReplay::BuildCoordinatorStateDigest(
+			Candidate.State,
+			static_cast<int32>(Candidate.MatchPhase),
+			Candidate.RandomState,
+			Candidate.TurnStartSequence);
+	Candidate.InitialTraceDigest =
+		WBProductionMatchReplay::BuildTraceDigest(
+			Candidate.TraceLog);
 
 	const FWBMatchLegalActionGenerationResult LegalResult = Candidate.EnumerateLegalActions();
 	if (!LegalResult.bOk)
@@ -621,6 +633,8 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 	Result.TraceEndIndex = TraceLog.Num();
 	Result.bGameOver = State.bGameOver;
 	Result.WinnerPlayerId = State.WinnerPlayerId;
+	Result.CoordinatorGeneration = CoordinatorGeneration;
+	Result.CoordinatorRevision = CoordinatorRevision;
 	return Result;
 }
 
@@ -930,6 +944,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			Result.TraceEndIndex = TraceLog.Num();
 			Result.bGameOver = State.bGameOver;
 			Result.WinnerPlayerId = State.WinnerPlayerId;
+			Result.CoordinatorGeneration = CoordinatorGeneration;
+			Result.CoordinatorRevision = CoordinatorRevision;
 			return Result;
 		};
 	if (State.bGameOver || MatchPhase == EWBMatchLoopPhase::GameOver)
@@ -971,6 +987,42 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	{
 		return MakeCurrentFailure(TEXT("stale_or_illegal_action"));
 	}
+
+	FString ReplayActionFamily;
+	if (!ClassifyReplayActionFamily(*SelectedAction, ReplayActionFamily))
+	{
+		return MakeCurrentFailure(
+			TEXT("unsupported_replay_action_family"));
+	}
+	TArray<FString> CanonicalLegalActions;
+	CanonicalLegalActions.Reserve(LegalResult.Actions.Num());
+	for (const FWBMatchLegalAction& LegalAction : LegalResult.Actions)
+	{
+		FString Family;
+		if (!ClassifyReplayActionFamily(LegalAction, Family))
+		{
+			return MakeCurrentFailure(
+				TEXT("unsupported_replay_action_family"));
+		}
+		CanonicalLegalActions.Add(FString::Printf(
+			TEXT("%s|p%d|%s"),
+			*Family,
+			LegalAction.PlayerId,
+			*LegalAction.ActionId));
+	}
+	const FString LegalActionSetDigest =
+		WBProductionMatchReplay::BuildLegalActionSetDigest(
+			CanonicalLegalActions);
+	const int32 BeforeGeneration = CoordinatorGeneration;
+	const int32 BeforeRevision = CoordinatorRevision;
+	const FString BeforeStateDigest = GetCurrentStateDigest();
+	const FString ExpectedDecisionId =
+		WBProductionMatchReplay::BuildDecisionId(
+			BeforeGeneration,
+			BeforeRevision,
+			PlayerId,
+			static_cast<int32>(MatchPhase),
+			LegalActionSetDigest);
 
 	const int32 TraceBeginIndex = TraceLog.Num();
 	FWBGameStateData WorkingState = State;
@@ -1194,6 +1246,38 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	TurnStartSequence =
 		MoveTemp(WorkingTurnStartSequence);
 	TraceLog.Append(WorkingTraceEvents);
+	++CoordinatorRevision;
+
+	FWBMatchCommittedActionRecord CommittedRecord;
+	CommittedRecord.RecordIndex =
+		CommittedActionRecords.Num();
+	CommittedRecord.ActingPlayer = PlayerId;
+	CommittedRecord.ActionFamily = ReplayActionFamily;
+	CommittedRecord.ChosenActionId = ActionId;
+	CommittedRecord.ExpectedDecisionId = ExpectedDecisionId;
+	CommittedRecord.BeforeGeneration = BeforeGeneration;
+	CommittedRecord.BeforeRevision = BeforeRevision;
+	CommittedRecord.BeforeStateDigest = BeforeStateDigest;
+	CommittedRecord.LegalActionSetDigest = LegalActionSetDigest;
+	CommittedRecord.AfterGeneration = CoordinatorGeneration;
+	CommittedRecord.AfterRevision = CoordinatorRevision;
+	CommittedRecord.bCompleted =
+		!(MatchPhase == EWBMatchLoopPhase::TurnStart
+			&& !TurnStartSequence.bCompleted);
+	CommittedRecord.bPendingDecision =
+		!CommittedRecord.bCompleted;
+	CommittedRecord.PendingPlayer =
+		CommittedRecord.bPendingDecision
+			? State.PriorityPlayer
+			: -1;
+	CommittedRecord.bTerminal = State.bGameOver;
+	CommittedRecord.TraceStart = TraceBeginIndex;
+	CommittedRecord.TraceEnd = TraceLog.Num();
+	CommittedRecord.TraceDigest =
+		WBProductionMatchReplay::BuildTraceDigest(
+			WorkingTraceEvents);
+	CommittedRecord.AfterStateDigest = GetCurrentStateDigest();
+	CommittedActionRecords.Add(MoveTemp(CommittedRecord));
 
 	FWBMatchOperationResult Result;
 	Result.bOk = true;
@@ -1213,6 +1297,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	Result.TraceEndIndex = TraceLog.Num();
 	Result.bGameOver = State.bGameOver;
 	Result.WinnerPlayerId = State.WinnerPlayerId;
+	Result.CoordinatorGeneration = CoordinatorGeneration;
+	Result.CoordinatorRevision = CoordinatorRevision;
 	return Result;
 }
 
@@ -1528,6 +1614,96 @@ const FWBCardDefinitionRepository& WBMatchCoordinator::GetRepository() const
 const TArray<FWBTraceEvent>& WBMatchCoordinator::GetTraceLog() const
 {
 	return TraceLog;
+}
+
+int32 WBMatchCoordinator::GetCoordinatorGeneration() const
+{
+	return CoordinatorGeneration;
+}
+
+int32 WBMatchCoordinator::GetCoordinatorRevision() const
+{
+	return CoordinatorRevision;
+}
+
+const FString& WBMatchCoordinator::GetInitialStateDigest() const
+{
+	return InitialStateDigest;
+}
+
+const FString& WBMatchCoordinator::GetInitialTraceDigest() const
+{
+	return InitialTraceDigest;
+}
+
+FString WBMatchCoordinator::GetCurrentStateDigest() const
+{
+	return WBProductionMatchReplay::BuildCoordinatorStateDigest(
+		State,
+		static_cast<int32>(MatchPhase),
+		RandomState,
+		TurnStartSequence);
+}
+
+FString WBMatchCoordinator::GetCurrentTraceDigest() const
+{
+	return WBProductionMatchReplay::BuildTraceDigest(TraceLog);
+}
+
+const TArray<FWBMatchCommittedActionRecord>&
+WBMatchCoordinator::GetCommittedActionRecords() const
+{
+	return CommittedActionRecords;
+}
+
+bool WBMatchCoordinator::ClassifyReplayActionFamily(
+	const FWBMatchLegalAction& Action,
+	FString& OutFamily)
+{
+	OutFamily.Reset();
+	switch (Action.Family)
+	{
+	case EWBMatchActionFamily::CoreAction:
+		switch (Action.CoreAction.Type)
+		{
+		case EWBActionType::Move:
+			OutFamily = TEXT("move");
+			return true;
+		case EWBActionType::Attack:
+			OutFamily = TEXT("attack");
+			return true;
+		case EWBActionType::Pass:
+			OutFamily = TEXT("pass");
+			return true;
+		case EWBActionType::EndTurn:
+			OutFamily = TEXT("end_turn");
+			return true;
+		case EWBActionType::PassResponse:
+			OutFamily = TEXT("pass_react");
+			return true;
+		case EWBActionType::None:
+		default:
+			return false;
+		}
+	case EWBMatchActionFamily::Summon:
+		OutFamily = TEXT("summon");
+		return true;
+	case EWBMatchActionFamily::Equip:
+		OutFamily = TEXT("equip");
+		return true;
+	case EWBMatchActionFamily::Activation:
+		OutFamily = TEXT("activate");
+		return true;
+	case EWBMatchActionFamily::Discard:
+		OutFamily = TEXT("discard");
+		return true;
+	case EWBMatchActionFamily::TurnStartTrigger:
+		OutFamily = TEXT("turn_start_trigger_order");
+		return true;
+	case EWBMatchActionFamily::Count:
+	default:
+		return false;
+	}
 }
 
 FWBGameStateData& WBMatchCoordinator::GetMutableStateForTest()

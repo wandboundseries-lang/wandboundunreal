@@ -5,6 +5,7 @@
 #include "WBActiveFormat.h"
 #include "WBGameStartAddendum.h"
 #include "WBProductionCardDatabase.h"
+#include "WBProductionMatchSpecification.h"
 
 struct WANDBOUNDRUNTIME_API FWBProductionRuntimeBootstrapRequest
 {
@@ -22,6 +23,7 @@ struct WANDBOUNDRUNTIME_API FWBProductionRuntimeBootstrapResult
 	TSharedPtr<const FWBProductionCardDatabase> Database;
 	FWBActiveFormatV1 ActiveFormat;
 	FWBGameStartAddendumV1 GameStartAddendum;
+	FWBProductionMatchSpecification MatchSpecification;
 	FWBMatchInitializationRequest InitializationRequest;
 	TArray<FWBProductionCardDBDiagnostic> Diagnostics;
 };
