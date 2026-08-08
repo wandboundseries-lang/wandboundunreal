@@ -13,6 +13,7 @@ struct WANDBOUNDCORE_API FWBPublicUnitBoardSummary
 {
 	int32 UnitId = -1;
 	int32 OwnerId = -1;
+	bool bHeroUnit = false;
 	FString CardId;
 	int32 X = -1;
 	int32 Y = -1;

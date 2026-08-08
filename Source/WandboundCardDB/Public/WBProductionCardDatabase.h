@@ -23,6 +23,7 @@ enum class EWBProductionCardType : uint8
 	Unknown,
 	Character,
 	Hero,
+	Hybrid,
 	Wand,
 	Action,
 	Trap,

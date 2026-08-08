@@ -89,6 +89,13 @@ struct WANDBOUNDRUNTIME_API FWBProductionMatchReplayRunResult
 	int32 TerminalGeneration = -1;
 	int32 TerminalRevision = -1;
 	int32 TerminalTraceIndex = -1;
+	int32 FinalGeneration = -1;
+	int32 FinalRevision = -1;
+	FString FinalStateDigest;
+	FString FinalTraceDigest;
+	TArray<int32> FinalHeroUnitIds;
+	TArray<int32> FinalDiscardCounts;
+	int32 FinalEquippedCardCount = -1;
 };
 
 class WANDBOUNDRUNTIME_API WBProductionMatchReplayRuntime

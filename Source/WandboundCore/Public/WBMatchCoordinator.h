@@ -7,6 +7,7 @@
 #include "WBCardZoneObservation.h"
 #include "WBEquipExecution.h"
 #include "WBInitialHeroSetup.h"
+#include "WBHybridSummon.h"
 #include "WBMarkerResolution.h"
 #include "WBPublicBoardSummary.h"
 #include "WBPublicTurnSummary.h"
@@ -67,6 +68,8 @@ struct WANDBOUNDCORE_API FWBMatchLegalAction
 	int32 PlayerId = -1;
 	FWBAction CoreAction;
 	FWBSummonExecutionRequest SummonRequest;
+	bool bHybridHeroReplacement = false;
+	FWBHybridSummonPlan HybridSummonPlan;
 	FWBEquipExecutionRequest EquipRequest;
 	FWBCardActivationCommand ActivationCommand;
 	FString DiscardCardInstanceId;

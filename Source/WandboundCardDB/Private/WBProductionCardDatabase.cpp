@@ -178,6 +178,13 @@ FString NormalizeRelativePath(const FString& Path)
 	return Normalized;
 }
 
+FString CanonicalHybridToken(const FName Token)
+{
+	FString Canonical = Token.ToString();
+	Canonical.ToLowerInline();
+	return Canonical;
+}
+
 FString SHA256String(const FString& Value)
 {
 	const FTCHARToUTF8 Utf8(*Value);
@@ -283,6 +290,10 @@ EWBProductionCardType ParseCardType(const FString& Value)
 	{
 		return EWBProductionCardType::Hero;
 	}
+	if (Value == TEXT("hybrid"))
+	{
+		return EWBProductionCardType::Hybrid;
+	}
 	if (Value == TEXT("wand"))
 	{
 		return EWBProductionCardType::Wand;
@@ -309,6 +320,8 @@ EWBCardDefinitionKind CoreKindFor(const EWBProductionCardType Type)
 	case EWBProductionCardType::Character:
 	case EWBProductionCardType::Hero:
 		return EWBCardDefinitionKind::Character;
+	case EWBProductionCardType::Hybrid:
+		return EWBCardDefinitionKind::Hybrid;
 	case EWBProductionCardType::Wand:
 		return EWBCardDefinitionKind::Wand;
 	case EWBProductionCardType::Action:
@@ -483,6 +496,23 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 		for (const FString& Tag : Definition.PublicTags)
 		{
 			Source += TEXT("|tag=") + Tag;
+		}
+		if (Record.Type == EWBProductionCardType::Hybrid)
+		{
+			Source += FString::Printf(
+				TEXT("|hybrid=%d:%s:%d:%s:%s"),
+				Definition.HybridSummon.SacrificeCount,
+				*CanonicalHybridToken(
+					Definition.HybridSummon.SacrificeRequirement),
+				Definition.HybridSummon.WandPaymentCount,
+				*CanonicalHybridToken(
+					Definition.HybridSummon.HeroDestination),
+				*CanonicalHybridToken(
+					Definition.HybridSummon.NonHeroDestination));
+			for (const FName SourceName : Definition.HybridSummon.WandPaymentSources)
+			{
+				Source += TEXT(":") + CanonicalHybridToken(SourceName);
+			}
 		}
 		TArray<FWBCardEffectDefinition> Effects = Definition.ActivatedEffects;
 		Effects.Sort([](const FWBCardEffectDefinition& A, const FWBCardEffectDefinition& B)
@@ -1406,6 +1436,7 @@ private:
 				TEXT("movement"),
 				TEXT("attack"),
 				TEXT("hero"),
+				TEXT("hybrid_summon"),
 				TEXT("trap"),
 				TEXT("equip"),
 				TEXT("activated_effects")
@@ -1585,6 +1616,7 @@ private:
 		ParseStats(Card, CardPath, Record);
 		ParseMovementAndAttack(Card, CardPath, Record);
 		ParseHero(Card, CardPath, Record);
+		ParseHybrid(Card, CardPath, Record);
 		ParseTrap(Card, CardPath, Record);
 		ParseEquip(Card, CardPath, Record);
 		ParseEffects(Card, CardPath, Record);
@@ -1611,6 +1643,7 @@ private:
 
 		const bool bUnit = Record.Type == EWBProductionCardType::Character
 			|| Record.Type == EWBProductionCardType::Hero
+			|| Record.Type == EWBProductionCardType::Hybrid
 			|| Record.Type == EWBProductionCardType::NPC;
 		const bool bWand = Record.Type == EWBProductionCardType::Wand;
 		ValidateKnownFields(
@@ -1685,6 +1718,7 @@ private:
 	{
 		const bool bUnit = Record.Type == EWBProductionCardType::Character
 			|| Record.Type == EWBProductionCardType::Hero
+			|| Record.Type == EWBProductionCardType::Hybrid
 			|| Record.Type == EWBProductionCardType::NPC;
 		if (!bUnit)
 		{
@@ -1818,6 +1852,94 @@ private:
 		else
 		{
 			Record.bHeroRole = true;
+		}
+	}
+
+	void ParseHybrid(
+		const TSharedPtr<FJsonObject>& Card,
+		const FString& CardPath,
+		FWBProductionCardRecord& Record)
+	{
+		if (Record.Type != EWBProductionCardType::Hybrid)
+		{
+			if (HasField(Card, TEXT("hybrid_summon")))
+			{
+				AddError(
+					TEXT("hybrid_definition_invalid"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					CardPath + TEXT(".hybrid_summon"),
+					TEXT("Only Hybrid definitions may declare Hybrid summon rules."));
+			}
+			return;
+		}
+
+		TSharedPtr<FJsonObject> Hybrid;
+		if (!TryReadObject(Card, TEXT("hybrid_summon"), Hybrid))
+		{
+			AddError(
+				TEXT("hybrid_definition_invalid"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				CardPath + TEXT(".hybrid_summon"),
+				TEXT("Hybrid definitions require explicit sacrifice, payment, and destination rules."));
+			return;
+		}
+		ValidateKnownFields(
+			Hybrid,
+			{
+				TEXT("sacrifice_count"),
+				TEXT("sacrifice_requirement"),
+				TEXT("wand_payment_count"),
+				TEXT("wand_payment_sources"),
+				TEXT("hero_destination"),
+				TEXT("non_hero_destination")
+			},
+			Record.SourceManifestPath,
+			Record.CoreDefinition.CardId,
+			CardPath + TEXT(".hybrid_summon"));
+
+		FString SacrificeRequirement;
+		FString HeroDestination;
+		FString NonHeroDestination;
+		TArray<FString> PaymentSources;
+		FWBCardHybridSummonDefinition& Definition =
+			Record.CoreDefinition.HybridSummon;
+		const bool bValid =
+			TryReadInteger(Hybrid, TEXT("sacrifice_count"), Definition.SacrificeCount)
+			&& Definition.SacrificeCount == 1
+			&& TryReadString(Hybrid, TEXT("sacrifice_requirement"), SacrificeRequirement)
+			&& SacrificeRequirement == TEXT("controlled_character")
+			&& TryReadInteger(Hybrid, TEXT("wand_payment_count"), Definition.WandPaymentCount)
+			&& Definition.WandPaymentCount == 1
+			&& ReadStringArray(Hybrid, TEXT("wand_payment_sources"), PaymentSources)
+			&& PaymentSources.Num() == 2
+			&& PaymentSources.Contains(TEXT("hand"))
+			&& PaymentSources.Contains(TEXT("sacrificed_unit"))
+			&& TryReadString(Hybrid, TEXT("hero_destination"), HeroDestination)
+			&& HeroDestination == TEXT("sacrificed_hero_tile")
+			&& TryReadString(Hybrid, TEXT("non_hero_destination"), NonHeroDestination)
+			&& NonHeroDestination == TEXT("adjacent_to_hero");
+		Definition.SacrificeRequirement = FName(*SacrificeRequirement);
+		Definition.HeroDestination = FName(*HeroDestination);
+		Definition.NonHeroDestination = FName(*NonHeroDestination);
+		Definition.WandPaymentSources.Reset();
+		for (const FString& PaymentSource : PaymentSources)
+		{
+			Definition.WandPaymentSources.Add(FName(*PaymentSource));
+		}
+		Definition.WandPaymentSources.Sort([](const FName A, const FName B)
+		{
+			return CanonicalHybridToken(A) < CanonicalHybridToken(B);
+		});
+		if (!bValid)
+		{
+			AddError(
+				TEXT("hybrid_definition_invalid"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				CardPath + TEXT(".hybrid_summon"),
+				TEXT("The current Hybrid foundation supports the canonical one-Character, one-wand replacement contract only."));
 		}
 	}
 
@@ -2575,6 +2697,7 @@ private:
 	{
 		const bool bUnit = Record.Type == EWBProductionCardType::Character
 			|| Record.Type == EWBProductionCardType::Hero
+			|| Record.Type == EWBProductionCardType::Hybrid
 			|| Record.Type == EWBProductionCardType::NPC;
 		if (bUnit
 			&& Effect.SourceGate.RequiredZone
@@ -3146,6 +3269,8 @@ FString WBProductionCardDatabase::CardTypeToString(
 		return TEXT("Character");
 	case EWBProductionCardType::Hero:
 		return TEXT("Hero");
+	case EWBProductionCardType::Hybrid:
+		return TEXT("Hybrid");
 	case EWBProductionCardType::Wand:
 		return TEXT("Wand");
 	case EWBProductionCardType::Action:
@@ -3277,6 +3402,38 @@ bool WBProductionCardDatabase::SnapshotToCanonicalJson(
 				TEXT("damage"),
 				Definition.TrapDamage);
 			Card->SetObjectField(TEXT("trap"), Trap);
+		}
+		if (Record.Type == EWBProductionCardType::Hybrid)
+		{
+			TSharedRef<FJsonObject> Hybrid = MakeShared<FJsonObject>();
+			Hybrid->SetNumberField(
+				TEXT("sacrifice_count"),
+				Definition.HybridSummon.SacrificeCount);
+			Hybrid->SetStringField(
+				TEXT("sacrifice_requirement"),
+				CanonicalHybridToken(
+					Definition.HybridSummon.SacrificeRequirement));
+			Hybrid->SetNumberField(
+				TEXT("wand_payment_count"),
+				Definition.HybridSummon.WandPaymentCount);
+			TArray<FString> PaymentSources;
+			for (const FName Source : Definition.HybridSummon.WandPaymentSources)
+			{
+				PaymentSources.Add(CanonicalHybridToken(Source));
+			}
+			PaymentSources.Sort();
+			Hybrid->SetArrayField(
+				TEXT("wand_payment_sources"),
+				StringArrayToJson(PaymentSources));
+			Hybrid->SetStringField(
+				TEXT("hero_destination"),
+				CanonicalHybridToken(
+					Definition.HybridSummon.HeroDestination));
+			Hybrid->SetStringField(
+				TEXT("non_hero_destination"),
+				CanonicalHybridToken(
+					Definition.HybridSummon.NonHeroDestination));
+			Card->SetObjectField(TEXT("hybrid_summon"), Hybrid);
 		}
 		Card->SetStringField(TEXT("movement_pattern"), Record.Movement.Pattern);
 		Card->SetStringField(TEXT("attack_pattern"), Record.Attack.Pattern);

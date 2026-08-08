@@ -188,7 +188,9 @@ FWBRuntimePresentationTranslationResult WBRuntimeTracePresentationTranslator::Tr
 		{
 			AddEvent(Result.Events, Trace, TraceIndex, 0, EWBRuntimePresentationEventType::ArmorChanged);
 		}
-		else if (Kind == FName(TEXT("summon_unit")) || Kind == FName(TEXT("hero_spawned")))
+		else if (Kind == FName(TEXT("summon_unit"))
+			|| Kind == FName(TEXT("hero_spawned"))
+			|| Kind == FName(TEXT("hybrid_summoned")))
 		{
 			FWBRuntimePresentationEvent Event = MakeEvent(
 				Trace,
@@ -198,6 +200,21 @@ FWBRuntimePresentationTranslationResult WBRuntimeTracePresentationTranslator::Tr
 			Event.SequenceIndex = Result.Events.Num();
 			Event.PublicDefinitionId = Trace.CardId;
 			Result.Events.Add(MoveTemp(Event));
+		}
+		else if (Kind == FName(TEXT("unit_sacrificed")))
+		{
+			AddEvent(Result.Events, Trace, TraceIndex, 0,
+				EWBRuntimePresentationEventType::UnitSacrificed);
+		}
+		else if (Kind == FName(TEXT("wand_payment_committed")))
+		{
+			AddEvent(Result.Events, Trace, TraceIndex, 0,
+				EWBRuntimePresentationEventType::WandPaymentCommitted);
+		}
+		else if (Kind == FName(TEXT("hero_replacement_committed")))
+		{
+			AddEvent(Result.Events, Trace, TraceIndex, 0,
+				EWBRuntimePresentationEventType::HeroReplaced);
 		}
 		else if (Kind == FName(TEXT("equip_wand")))
 		{

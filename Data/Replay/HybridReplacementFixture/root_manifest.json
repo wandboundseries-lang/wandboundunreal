@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "hybrid_replacement_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "hybrid_replacement",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic atomic Hybrid Hero replacement fixture only."
+  }
+}

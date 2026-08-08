@@ -849,6 +849,22 @@ FWBProductionMatchReplayRunResult FWBProductionMatchReplayRunner::Run(
 	Result.TerminalGeneration = Archive.Footer.TerminalGeneration;
 	Result.TerminalRevision = Archive.Footer.TerminalRevision;
 	Result.TerminalTraceIndex = Archive.Footer.TerminalTraceIndex;
+	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
+	Result.FinalRevision = Coordinator.GetCoordinatorRevision();
+	Result.FinalStateDigest = Coordinator.GetCurrentStateDigest();
+	Result.FinalTraceDigest = Coordinator.GetCurrentTraceDigest();
+	for (const FWBPlayerStateData& Player : Coordinator.GetState().Players)
+	{
+		Result.FinalHeroUnitIds.Add(Player.HeroUnitId);
+		const auto* Zones = Coordinator.GetState().GetCardZoneState().PlayerZones.FindByPredicate(
+			[&Player](const auto& Candidate)
+			{
+				return Candidate.PlayerId == Player.PlayerId;
+			});
+		Result.FinalDiscardCounts.Add(Zones != nullptr ? Zones->Discard.Num() : -1);
+	}
+	Result.FinalEquippedCardCount =
+		Coordinator.GetState().GetCardZoneState().EquippedCards.Num();
 	Result.FailureRecordIndex = -1;
 	Result.FailureCode.Reset();
 	return Result;

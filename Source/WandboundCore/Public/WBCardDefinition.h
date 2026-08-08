@@ -8,6 +8,7 @@ enum class EWBCardDefinitionKind : uint8
 {
 	Unknown,
 	Character,
+	Hybrid,
 	Wand,
 	Action,
 	Terrain,
@@ -85,6 +86,16 @@ struct WANDBOUNDCORE_API FWBCardWandStatsDefinition
 	int32 RR = 0;
 };
 
+struct WANDBOUNDCORE_API FWBCardHybridSummonDefinition
+{
+	int32 SacrificeCount = 0;
+	FName SacrificeRequirement;
+	int32 WandPaymentCount = 0;
+	TArray<FName> WandPaymentSources;
+	FName HeroDestination;
+	FName NonHeroDestination;
+};
+
 struct WANDBOUNDCORE_API FWBCardDefinition
 {
 	FString CardId;
@@ -96,6 +107,7 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	EWBCardDefinitionKind Kind = EWBCardDefinitionKind::Unknown;
 	FWBCardCharacterStatsDefinition CharacterStats;
 	FWBCardWandStatsDefinition WandStats;
+	FWBCardHybridSummonDefinition HybridSummon;
 	int32 TrapDamage = 0;
 	TArray<FWBCardEffectDefinition> ActivatedEffects;
 	TArray<FWBSetupSummonTriggerDefinition> SetupSummonTriggers;

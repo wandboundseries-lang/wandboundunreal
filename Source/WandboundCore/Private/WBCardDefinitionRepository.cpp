@@ -115,6 +115,7 @@ bool HasValidKindMetadata(const FWBCardDefinition& Definition, FString& OutReaso
 	switch (Definition.Kind)
 	{
 	case EWBCardDefinitionKind::Character:
+	case EWBCardDefinitionKind::Hybrid:
 	case EWBCardDefinitionKind::NPC:
 		if (Definition.CharacterStats.HP <= 0)
 		{
@@ -126,6 +127,23 @@ bool HasValidKindMetadata(const FWBCardDefinition& Definition, FString& OutReaso
 			|| Definition.CharacterStats.RL < 0)
 		{
 			OutReason = TEXT("invalid_character_stats");
+			return false;
+		}
+		if (Definition.Kind == EWBCardDefinitionKind::Hybrid
+			&& (Definition.HybridSummon.SacrificeCount != 1
+				|| Definition.HybridSummon.SacrificeRequirement
+					!= FName(TEXT("controlled_character"))
+				|| Definition.HybridSummon.WandPaymentCount != 1
+				|| !Definition.HybridSummon.WandPaymentSources.Contains(
+					FName(TEXT("hand")))
+				|| !Definition.HybridSummon.WandPaymentSources.Contains(
+					FName(TEXT("sacrificed_unit")))
+				|| Definition.HybridSummon.HeroDestination
+					!= FName(TEXT("sacrificed_hero_tile"))
+				|| Definition.HybridSummon.NonHeroDestination
+					!= FName(TEXT("adjacent_to_hero"))))
+		{
+			OutReason = TEXT("invalid_hybrid_summon_definition");
 			return false;
 		}
 		return true;

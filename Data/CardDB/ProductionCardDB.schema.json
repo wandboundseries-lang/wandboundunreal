@@ -91,6 +91,7 @@
           "enum": [
             "character",
             "hero",
+            "hybrid",
             "wand",
             "action",
             "trap",
@@ -140,6 +141,32 @@
         "hero": {
           "type": "object"
         },
+        "hybrid_summon": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sacrifice_count",
+            "sacrifice_requirement",
+            "wand_payment_count",
+            "wand_payment_sources",
+            "hero_destination",
+            "non_hero_destination"
+          ],
+          "properties": {
+            "sacrifice_count": { "const": 1 },
+            "sacrifice_requirement": { "const": "controlled_character" },
+            "wand_payment_count": { "const": 1 },
+            "wand_payment_sources": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": { "enum": ["hand", "sacrificed_unit"] }
+            },
+            "hero_destination": { "const": "sacrificed_hero_tile" },
+            "non_hero_destination": { "const": "adjacent_to_hero" }
+          }
+        },
         "trap": {
           "type": "object",
           "additionalProperties": false,
@@ -160,7 +187,13 @@
         "activated_effects": {
           "type": "array"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "hybrid" } } },
+          "then": { "required": ["hybrid_summon"] }
+        }
+      ]
     }
   }
 }

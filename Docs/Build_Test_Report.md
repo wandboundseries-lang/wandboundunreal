@@ -7190,3 +7190,31 @@ Full evidence:
 
 Full evidence:
 `Docs/Terminal_Match_Replay_Completion_Report.md`.
+
+## Atomic Hybrid Hero Replacement (2026-08-01)
+
+- Baseline: `f5d487cdc36421ccde84fa146d2ba8e50150e88b`; 1,955 Wandbound tests.
+- Editor build: succeeded. Game build: succeeded.
+- Focused Hybrid/replay/authority automation: 79 succeeded, 0 failed.
+- Full automation: 2,034 succeeded, 0 failed, 0 not run.
+- Clean BuildCookRun: succeeded in 1,011.95 seconds.
+- Packaged startup ran twice with preserved SHA-256 `cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004`.
+- Partial replay archive/receipt remained `d30304a936fd3b5c2163209546b9063a64ed7a223a65b217092cb64ef6495463` / `881ffb586544d5ed78156635754b5eeddf555c7ef000c472f79ac607cc4d2dd9`.
+- Terminal replay archive/receipt remained `4e30424a56b613cbbda225295a0775473ed661cda390f172b609e529450235cc` / `5bcce2e1e9361e8848e4757a634cf82acdee30d2463a01f6f9f0023157e1ca76`.
+- In-editor Hybrid smoke and fresh replay succeeded; archive/receipt SHA-256 `a3a85aa6ae03ce3f57a5c5af40b172e4b938c582e9e1cc8ef58e47e39fe5e384` / `2c24946f17152ace66929e247d4bc435ebfddf6783c865d7bd87343aa174d85a`.
+- A package-only digest mismatch exposed display-case-sensitive Hybrid `FName` tokens. Canonical lowercase serialization at the CardDB digest/JSON boundary preserved the fixture digest across Editor and Game builds.
+- Final editor rebuild: succeeded in 36.53 seconds.
+- Final focused Hybrid/replay/authority automation: 79 succeeded, 0 failed, 0 not run.
+- Final full Wandbound automation: 2,034 succeeded, 0 failed, 0 not run.
+- Final BuildCookRun: succeeded in 192.52 seconds; packaging wrapper completed in 196 seconds.
+- Packaged Hybrid smoke passed twice with package-relative fixture paths and real exit code 0.
+- Fresh packaged replay verification passed twice, including replacement Hero ID and state/trace parity.
+- Repeated packaged Hybrid archive: byte-identical, SHA-256 `e1fa69301728e8129e69866ce0a91fbeaf77cc990d08f0a33133943bc629be20`.
+- Repeated packaged Hybrid receipt: byte-identical, SHA-256 `7cdba9356c9fbb6c796aaaedfbeef7fc884ec74522a4a20231d082961cc6f156`.
+- Repeated final state / trace digests: `9abce6721fb022c2769f8207b4dd07c79811a65bb8fc25f97962feb4e09f1897` / `fdc47bcbab4c83987b4c9749cf1e905074a90a6d6fd914f4606201b8c83b7703`.
+- Repeated replay digest: `9c73493e6931a627969a7472b49c858a623150de49da522ef963663f41e3f98e`.
+- Public receipt remained exactly eight fields; receipt/startup privacy scan found no protected path, action, card-instance, state-digest, or trace-digest values.
+- Packaged canonical startup probe passed and remained byte-identical at SHA-256 `cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004`.
+- The top-level launcher inserted a space before unquoted `.json` extensions; final validation used the packaged inner executable with its required `WandboundUE` bootstrap argument and package-relative `Data/...` paths.
+- `git diff --check`: no whitespace errors; LF-to-CRLF notices only.
+- Full details: `Docs/Atomic_Hybrid_Hero_Replacement_Report.md`.

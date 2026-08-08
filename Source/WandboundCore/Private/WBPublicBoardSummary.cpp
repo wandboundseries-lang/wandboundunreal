@@ -91,11 +91,15 @@ TArray<FWBPublicUnitStatusSummary> BuildPublicStatusSummaries(const FWBUnitState
 	return Statuses;
 }
 
-FWBPublicUnitBoardSummary BuildPublicUnitSummary(const FWBUnitState& Unit)
+FWBPublicUnitBoardSummary BuildPublicUnitSummary(
+	const FWBGameStateData& State,
+	const FWBUnitState& Unit)
 {
 	FWBPublicUnitBoardSummary Summary;
 	Summary.UnitId = Unit.UnitId;
 	Summary.OwnerId = Unit.OwnerId;
+	const FWBPlayerStateData* Owner = State.GetPlayerById(Unit.OwnerId);
+	Summary.bHeroUnit = Owner != nullptr && Owner->HeroUnitId == Unit.UnitId;
 	Summary.CardId = Unit.CardId;
 	Summary.X = Unit.X;
 	Summary.Y = Unit.Y;
@@ -279,7 +283,7 @@ FWBPublicBoardSummary WBPublicBoardSummary::Build(const FWBGameStateData& State)
 			continue;
 		}
 
-		Summary.Units.Add(BuildPublicUnitSummary(Unit));
+		Summary.Units.Add(BuildPublicUnitSummary(State, Unit));
 	}
 
 	Summary.Units.Sort([](const FWBPublicUnitBoardSummary& A, const FWBPublicUnitBoardSummary& B)

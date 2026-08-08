@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "f5d487cdc36421ccde84fa146d2ba8e50150e88b",
+  "scope": "atomic_hybrid_current_hero_replacement",
+  "production_hybrid_reachable_before": false,
+  "wb_action_codec_change_required": false,
+  "canonical": {
+    "category": "Hybrid",
+    "sacrifice_count": 1,
+    "sacrifice_requirement": "controlled_character",
+    "implemented_sacrifice": "current_hero_only",
+    "wand_payment_count": 1,
+    "wand_payment_sources": ["hand", "sacrificed_unit"],
+    "wand_payment_destination": "discard",
+    "hero_destination": "sacrificed_hero_tile",
+    "unit_cap": 4,
+    "unit_cap_evaluation": "after_sacrifice_plus_summon",
+    "sacrifice_is_defeat": false
+  },
+  "components": [
+    {"path":"Source/WandboundCore/Public/WBCardDefinition.h","symbol":"EWBCardDefinitionKind::Hybrid","class":"Legality","production_reachable":true,"required_change":"explicit Hybrid schema"},
+    {"path":"Source/WandboundCore/Public/WBHybridSummon.h","symbol":"FWBHybridSummonPlan","class":"TransactionPlanner","production_reachable":true,"required_change":"immutable complete preflight"},
+    {"path":"Source/WandboundCore/Private/WBHybridSummon.cpp","symbol":"ExecuteHeroReplacement","class":"MutationHelper","production_reachable":true,"required_change":"copy-then-commit atomic mutation"},
+    {"path":"Source/WandboundCore/Private/WBMatchCoordinator.cpp","symbol":"SubmitActionId","class":"CoordinatorAuthority","production_reachable":true,"required_change":"Summon-family dispatch and accepted-action replay"},
+    {"path":"Source/WandboundCore/Private/WBDeathResolution.cpp","symbol":"ApplyZeroHPDeathResolution","class":"DeathCleanup","production_reachable":true,"required_change":"none"},
+    {"path":"Source/WandboundRuntime/Private/WBProductionMatchReplayRuntime.cpp","symbol":"FWBProductionMatchReplayRunner::Run","class":"Replay","production_reachable":true,"required_change":"final Hero and zone-count verification output"},
+    {"path":"Source/WandboundCore/Private/WBPublicBoardSummary.cpp","symbol":"WBPublicBoardSummary::Build","class":"PublicObservation","production_reachable":true,"required_change":"derive public Hero classification from player Hero ID"},
+    {"path":"Data/Replay/HybridReplacementFixture","symbol":"hybrid_replacement_fixture","class":"FixtureOnly","production_reachable":false,"required_change":"dedicated test bundle and match spec"},
+    {"path":"Reference/GodotProject/scripts/sim/rules.gd","symbol":"Hybrid summon query/apply","class":"Legacy","production_reachable":false,"required_change":"read-only evidence only"}
+  ],
+  "unsupported": [
+    "non_hero_hybrid_placement",
+    "sacrifice_trigger_timing",
+    "card_specific_summon_trigger_timing",
+    "inheritance_semantics",
+    "simultaneous_dual_hero_resolution"
+  ]
+}

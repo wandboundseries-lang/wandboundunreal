@@ -7,6 +7,7 @@
 #include "WBCardZoneState.h"
 #include "WBDeathResolution.h"
 #include "WBEffectRunner.h"
+#include "WBHybridSummon.h"
 #include "WBMarkerResolution.h"
 #include "WBNPCPhaseResolution.h"
 #include "WBResonanceOverflow.h"
@@ -817,7 +818,31 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 				return MakeGenerationFailure(TEXT("card_definition_not_found"));
 			}
 
-			if (Lookup.Definition.Kind == EWBCardDefinitionKind::Character)
+			if (Lookup.Definition.Kind == EWBCardDefinitionKind::Hybrid)
+			{
+				const FWBHybridSummonPlanResult Plans =
+					WBHybridSummon::BuildHeroReplacementPlans(
+						InState,
+						Repository,
+						PlayerId,
+						Entry.Card.InstanceId,
+						CoordinatorGeneration,
+						CoordinatorRevision);
+				if (Plans.bOk)
+				{
+					for (const FWBHybridSummonPlan& Plan : Plans.Plans)
+					{
+						FWBMatchLegalAction Action;
+						Action.Family = EWBMatchActionFamily::Summon;
+						Action.PlayerId = PlayerId;
+						Action.bHybridHeroReplacement = true;
+						Action.HybridSummonPlan = Plan;
+						Action.ActionId = WBHybridSummon::BuildStableActionId(Plan);
+						Result.Actions.Add(MoveTemp(Action));
+					}
+				}
+			}
+			else if (Lookup.Definition.Kind == EWBCardDefinitionKind::Character)
 			{
 				const FWBPlayerStateData* Player = InState.GetPlayerById(PlayerId);
 				const FWBUnitState* Hero = Player != nullptr ? InState.GetUnitById(Player->HeroUnitId) : nullptr;
@@ -1213,21 +1238,40 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 		case EWBMatchActionFamily::Summon:
 		{
-			const FWBSummonExecutionResult ApplyResult =
-				WBSummonExecution::ExecuteCharacterSummonFromHand(
-					WorkingState,
-					Repository,
-					SelectedAction->SummonRequest);
-			bActionApplied = ApplyResult.bOk;
-			FailureReason = ApplyResult.Reason;
-			AppendSummonTraceEvents(ApplyResult, WorkingTraceEvents);
+			int32 CreatedUnitId = -1;
+			if (SelectedAction->bHybridHeroReplacement)
+			{
+				const FWBHybridSummonResult ApplyResult =
+					WBHybridSummon::ExecuteHeroReplacement(
+						WorkingState,
+						Repository,
+						SelectedAction->HybridSummonPlan,
+						CoordinatorGeneration,
+						CoordinatorRevision);
+				bActionApplied = ApplyResult.bOk;
+				FailureReason = ApplyResult.Reason;
+				WorkingTraceEvents.Append(ApplyResult.TraceEvents);
+				CreatedUnitId = ApplyResult.NewHeroUnitId;
+			}
+			else
+			{
+				const FWBSummonExecutionResult ApplyResult =
+					WBSummonExecution::ExecuteCharacterSummonFromHand(
+						WorkingState,
+						Repository,
+						SelectedAction->SummonRequest);
+				bActionApplied = ApplyResult.bOk;
+				FailureReason = ApplyResult.Reason;
+				AppendSummonTraceEvents(ApplyResult, WorkingTraceEvents);
+				CreatedUnitId = ApplyResult.CreatedUnitId;
+			}
 			if (bActionApplied)
 			{
 				const FWBMarkerResolutionResult MarkerResult =
 					WBMarkerResolution::ResolveMarkerAtUnitTile(
 						WorkingState,
 						Repository,
-						ApplyResult.CreatedUnitId);
+						CreatedUnitId);
 				bActionApplied = MarkerResult.bOk;
 				FailureReason = MarkerResult.Reason;
 				WorkingTraceEvents.Append(MarkerResult.TraceEvents);

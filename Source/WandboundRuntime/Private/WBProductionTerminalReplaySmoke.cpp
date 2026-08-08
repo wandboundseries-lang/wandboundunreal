@@ -18,7 +18,7 @@ const FWBMatchLegalAction* FindDiscard(
 	});
 }
 
-const FWBMatchLegalAction* FindEndTurn(
+const FWBMatchLegalAction* FindTerminalEndTurn(
 	const TArray<FWBMatchLegalAction>& Actions)
 {
 	return Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
@@ -107,7 +107,7 @@ bool EndCurrentTurn(
 	const FWBMatchLegalActionGenerationResult Legal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* EndTurn =
-		Legal.bOk ? FindEndTurn(Legal.Actions) : nullptr;
+		Legal.bOk ? FindTerminalEndTurn(Legal.Actions) : nullptr;
 	if (EndTurn == nullptr)
 	{
 		OutReason = Legal.Reason.IsEmpty()
