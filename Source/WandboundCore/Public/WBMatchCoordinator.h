@@ -68,6 +68,7 @@ struct WANDBOUNDCORE_API FWBMatchLegalAction
 	int32 PlayerId = -1;
 	FWBAction CoreAction;
 	FWBSummonExecutionRequest SummonRequest;
+	bool bHybridSummon = false;
 	bool bHybridHeroReplacement = false;
 	FWBHybridSummonPlan HybridSummonPlan;
 	FWBEquipExecutionRequest EquipRequest;

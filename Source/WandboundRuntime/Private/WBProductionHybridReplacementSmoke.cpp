@@ -34,7 +34,7 @@ const FWBMatchLegalAction* FindHybridReplacement(
 		{
 			return Action.Family == EWBMatchActionFamily::Summon
 				&& Action.bHybridHeroReplacement
-				&& Action.HybridSummonPlan.SacrificedHeroUnitId == HeroUnitId
+				&& Action.HybridSummonPlan.SacrificedUnitId == HeroUnitId
 				&& Action.HybridSummonPlan.WandPaymentSource
 					== EWBHybridWandPaymentSource::SacrificedUnit;
 		});

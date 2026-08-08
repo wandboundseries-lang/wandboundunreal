@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "match_id": "hybrid_non_hero_smoke_match",
+  "seed": 841907,
+  "first_player": 0,
+  "initial_draw_count": 6,
+  "definition_bundle_digest": "42f743203d5d07b674fcc68c603effb35700160d4443e765835f2662ed34c108",
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "hybrid_nonhero_hero_alpha",
+      "ordered_deck": [
+        "hybrid_nonhero_summon",
+        "hybrid_nonhero_wand",
+        "hybrid_nonhero_sacrifice_alpha",
+        "hybrid_nonhero_sacrifice_beta",
+        "hybrid_nonhero_wand",
+        "hybrid_nonhero_wand",
+        "hybrid_nonhero_filler",
+        "hybrid_nonhero_filler",
+        "hybrid_nonhero_filler",
+        "hybrid_nonhero_filler"
+      ]
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "hybrid_nonhero_hero_beta",
+      "ordered_deck": [
+        "hybrid_nonhero_filler", "hybrid_nonhero_filler",
+        "hybrid_nonhero_filler", "hybrid_nonhero_filler",
+        "hybrid_nonhero_filler", "hybrid_nonhero_filler",
+        "hybrid_nonhero_filler", "hybrid_nonhero_filler",
+        "hybrid_nonhero_filler", "hybrid_nonhero_filler"
+      ]
+    }
+  ],
+  "markers": [
+    { "player_id": 0, "type": "trap", "tile": { "x": 0, "y": 8 }, "definition_id": "hybrid_nonhero_trap", "placement_order": 0 },
+    { "player_id": 0, "type": "trap", "tile": { "x": 1, "y": 8 }, "definition_id": "hybrid_nonhero_trap", "placement_order": 1 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 0, "y": 7 }, "definition_id": "hybrid_nonhero_npc", "placement_order": 2 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 1, "y": 7 }, "definition_id": "hybrid_nonhero_npc", "placement_order": 3 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 0, "y": 0 }, "definition_id": "hybrid_nonhero_trap", "placement_order": 4 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 1, "y": 0 }, "definition_id": "hybrid_nonhero_trap", "placement_order": 5 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 0, "y": 1 }, "definition_id": "hybrid_nonhero_npc", "placement_order": 6 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 1, "y": 1 }, "definition_id": "hybrid_nonhero_npc", "placement_order": 7 }
+  ]
+}

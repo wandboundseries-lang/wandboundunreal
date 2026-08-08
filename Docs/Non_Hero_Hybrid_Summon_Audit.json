@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "58ed67adcfa3432e1b736674ba3f5dfd15f6cd01",
+  "scope": "non_hero_hybrid_summon_branch",
+  "initial_automation_count": 2034,
+  "staged_files": [],
+  "planned_dirty_overlap": false,
+  "canonical": {
+    "sacrifice_count": 1,
+    "sacrifice_requirement": "controlled_character",
+    "wand_payment_count": 1,
+    "wand_payment_sources": ["hand", "sacrificed_unit"],
+    "hero_destination": "sacrificed_hero_tile",
+    "non_hero_destination": "adjacent_to_hero",
+    "unit_cap": 4,
+    "unit_cap_evaluation": "active_minus_sacrifice_plus_summon",
+    "sacrifice_is_defeat": false
+  },
+  "compatibility": {
+    "action_family": "summon",
+    "stable_action_id_format": "hybrid_summon:p{player}:i{hybrid_instance}:s{sacrificed_unit}:w{source}:i{wand_instance}:x{x}:y{y}",
+    "replay_schema_change": false,
+    "public_receipt_field_count": 8,
+    "wb_action_codec_change": false,
+    "hero_fixture_change": false
+  },
+  "components": [
+    {
+      "path": "Source/WandboundCore/Public/WBHybridSummon.h",
+      "symbol": "FWBHybridSummonPlan",
+      "current_role": "immutable_complete_transaction_plan",
+      "hero_branch_behavior": "current_hero_sacrifice_and_replacement",
+      "non_hero_support_before": false,
+      "required_generalization": "generic_sacrificed_unit_and_unified_apis",
+      "authority_boundary": "core_planner",
+      "replay_impact": "none_external",
+      "privacy_impact": "internal_only",
+      "baseline_dirty": false,
+      "overlap": false
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBHybridSummon.cpp",
+      "symbol": "BuildSummonPlans_ExecuteSummon",
+      "current_role": "planner_and_atomic_mutation_helper",
+      "hero_branch_behavior": "hero_tile_hand_or_attached_wand_copy_then_commit",
+      "non_hero_support_before": false,
+      "required_generalization": "all_controlled_character_branches_adjacent_destinations_exact_payments",
+      "authority_boundary": "coordinator_called_core",
+      "replay_impact": "one_existing_summon_record",
+      "privacy_impact": "safe_payment_trace_only",
+      "baseline_dirty": false,
+      "overlap": false
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+      "symbol": "EnumerateLegalActionsForState_SubmitActionId",
+      "current_role": "sole_production_action_authority",
+      "hero_branch_behavior": "hero_only_hybrid_dispatch_plus_marker_resolution",
+      "non_hero_support_before": false,
+      "required_generalization": "unified_hybrid_dispatch",
+      "authority_boundary": "coordinator",
+      "replay_impact": "accepted_action_once",
+      "privacy_impact": "public_observation_only_outside_core",
+      "baseline_dirty": false,
+      "overlap": false
+    },
+    {
+      "path": "Data/Replay/HybridNonHeroFixture",
+      "symbol": "hybrid_non_hero_fixture",
+      "current_role": "missing",
+      "hero_branch_behavior": "not_applicable",
+      "non_hero_support_before": false,
+      "required_generalization": "isolated_packaged_fixture",
+      "authority_boundary": "fixture_only",
+      "replay_impact": "new_regression_baseline",
+      "privacy_impact": "production_public_boundaries",
+      "baseline_dirty": false,
+      "overlap": false
+    }
+  ],
+  "unsupported": [
+    "sacrifice_trigger_timing",
+    "card_specific_summon_trigger_timing",
+    "response_windows",
+    "state_inheritance",
+    "simultaneous_dual_hero_resolution"
+  ]
+}

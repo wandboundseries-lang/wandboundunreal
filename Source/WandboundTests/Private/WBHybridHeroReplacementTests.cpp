@@ -268,7 +268,7 @@ bool RunHybridCase(FAutomationTestBase& Test, const FString& CaseName)
 	if (CaseName.Contains(TEXT("InvalidSacrifice")))
 	{
 		FWBHybridSummonPlan Altered = S.Plan;
-		Altered.SacrificedHeroUnitId += 1000;
+		Altered.SacrificedUnitId += 1000;
 		return TestRejectedPlanAtomicity(Test, S, Altered, false);
 	}
 	if (CaseName.Contains(TEXT("InvalidDestination"))
@@ -292,7 +292,7 @@ bool RunHybridCase(FAutomationTestBase& Test, const FString& CaseName)
 	}
 	if (CaseName.Contains(TEXT("RequiresSacrifice")))
 	{
-		return Test.TestEqual(TEXT("Current Hero is sacrifice"), S.Plan.SacrificedHeroUnitId, S.OldHeroId)
+		return Test.TestEqual(TEXT("Current Hero is sacrifice"), S.Plan.SacrificedUnitId, S.OldHeroId)
 			&& Test.TestTrue(TEXT("Replacement flag set"), S.Plan.bBecomesReplacementHero);
 	}
 	if (CaseName.Contains(TEXT("RequiresWandPayment"))

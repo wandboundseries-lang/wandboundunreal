@@ -37,7 +37,7 @@ struct WANDBOUNDCORE_API FWBHybridSummonPlan
 	int32 ActingPlayerId = -1;
 	FString HybridCardInstanceId;
 	FString HybridDefinitionId;
-	int32 SacrificedHeroUnitId = -1;
+	int32 SacrificedUnitId = -1;
 	EWBHybridWandPaymentSource WandPaymentSource =
 		EWBHybridWandPaymentSource::None;
 	FString WandPaymentCardInstanceId;
@@ -64,6 +64,10 @@ struct WANDBOUNDCORE_API FWBHybridSummonResult
 		EWBHybridSummonResultCode::HybridReplacementNotSupported;
 	FString Reason;
 	FWBHybridSummonPlan Plan;
+	int32 SacrificedUnitId = -1;
+	int32 OriginalHeroUnitId = -1;
+	int32 NewHybridUnitId = -1;
+	// Compatibility aliases for the established Hero-replacement API.
 	int32 OldHeroUnitId = -1;
 	int32 NewHeroUnitId = -1;
 	TArray<FWBTraceEvent> TraceEvents;
@@ -72,11 +76,26 @@ struct WANDBOUNDCORE_API FWBHybridSummonResult
 class WANDBOUNDCORE_API WBHybridSummon
 {
 public:
+	static FWBHybridSummonPlanResult BuildSummonPlans(
+		const FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository,
+		int32 ActingPlayerId,
+		const FString& HybridCardInstanceId,
+		int32 CoordinatorGeneration,
+		int32 CoordinatorRevision);
+
 	static FWBHybridSummonPlanResult BuildHeroReplacementPlans(
 		const FWBGameStateData& State,
 		const FWBCardDefinitionRepository& Repository,
 		int32 ActingPlayerId,
 		const FString& HybridCardInstanceId,
+		int32 CoordinatorGeneration,
+		int32 CoordinatorRevision);
+
+	static FWBHybridSummonResult ExecuteSummon(
+		FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository,
+		const FWBHybridSummonPlan& Plan,
 		int32 CoordinatorGeneration,
 		int32 CoordinatorRevision);
 

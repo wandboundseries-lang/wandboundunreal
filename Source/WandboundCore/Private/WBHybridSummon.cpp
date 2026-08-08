@@ -100,7 +100,7 @@ bool PlansEqual(const FWBHybridSummonPlan& A, const FWBHybridSummonPlan& B)
 	return A.ActingPlayerId == B.ActingPlayerId
 		&& A.HybridCardInstanceId == B.HybridCardInstanceId
 		&& A.HybridDefinitionId == B.HybridDefinitionId
-		&& A.SacrificedHeroUnitId == B.SacrificedHeroUnitId
+		&& A.SacrificedUnitId == B.SacrificedUnitId
 		&& A.WandPaymentSource == B.WandPaymentSource
 		&& A.WandPaymentCardInstanceId == B.WandPaymentCardInstanceId
 		&& A.WandPaymentUnitId == B.WandPaymentUnitId
@@ -166,13 +166,13 @@ FWBTraceEvent MakeTrace(
 	Event.TargetUnitId = NewHeroUnitId;
 	Event.CardId = Plan.HybridDefinitionId;
 	Event.ToTile = Plan.DestinationTile;
-	Event.bHeroUnit = true;
+	Event.bHeroUnit = Plan.bBecomesReplacementHero;
 	Event.bOk = true;
 	return Event;
 }
 }
 
-FWBHybridSummonPlanResult WBHybridSummon::BuildHeroReplacementPlans(
+FWBHybridSummonPlanResult WBHybridSummon::BuildSummonPlans(
 	const FWBGameStateData& State,
 	const FWBCardDefinitionRepository& Repository,
 	const int32 ActingPlayerId,
@@ -227,14 +227,6 @@ FWBHybridSummonPlanResult WBHybridSummon::BuildHeroReplacementPlans(
 	{
 		return MakePlanFailure(EWBHybridSummonResultCode::HybridHeroSacrificeInvalid);
 	}
-	const FWBCardDefinitionRepositoryLookupResult HeroLookup =
-		WBCardDefinitionRepository::FindCardById(Repository, Hero->CardId);
-	if (!HeroLookup.bFound
-		|| HeroLookup.Definition.Kind != EWBCardDefinitionKind::Character)
-	{
-		return MakePlanFailure(EWBHybridSummonResultCode::HybridSacrificeInvalid);
-	}
-
 	const int32 CompletedUnitCount =
 		State.GetUnitsForPlayer(ActingPlayerId).Num() - 1 + 1;
 	if (CompletedUnitCount > MaxOwnedUnitsIncludingHero)
@@ -242,71 +234,133 @@ FWBHybridSummonPlanResult WBHybridSummon::BuildHeroReplacementPlans(
 		return MakePlanFailure(EWBHybridSummonResultCode::HybridUnitCapExceeded);
 	}
 
-	const FWBTile Destination(Hero->X, Hero->Y);
-	if (!WBRules::IsTileInBounds(Destination))
-	{
-		return MakePlanFailure(EWBHybridSummonResultCode::HybridDestinationInvalid);
-	}
-	const int32 Occupant = State.UnitIdAt(Destination);
-	if (Occupant != Hero->UnitId)
-	{
-		return MakePlanFailure(EWBHybridSummonResultCode::HybridDestinationOccupied);
-	}
-	const FWBTurnOneRestrictionQuery TurnOne =
-		WBTurnOneRestrictions::QuerySummonPlacement(
-			State, ActingPlayerId, Destination);
-	if (!TurnOne.bOk)
-	{
-		return MakePlanFailure(EWBHybridSummonResultCode::HybridDestinationInvalid);
-	}
-
 	TArray<FWBHybridSummonPlan> Plans;
 	TArray<FWBZoneCardEntry> Hand = PlayerZones->Hand;
 	Hand.Sort(PaymentEntryLess);
-	for (const FWBZoneCardEntry& Entry : Hand)
-	{
-		if (Entry.Card.InstanceId == HybridCardInstanceId
-			|| !IsWandDefinition(Repository, Entry.Card.CardId))
-		{
-			continue;
-		}
-		FWBHybridSummonPlan Plan;
-		Plan.ActingPlayerId = ActingPlayerId;
-		Plan.HybridCardInstanceId = HybridCardInstanceId;
-		Plan.HybridDefinitionId = HybridEntry->Card.CardId;
-		Plan.SacrificedHeroUnitId = Hero->UnitId;
-		Plan.WandPaymentSource = EWBHybridWandPaymentSource::Hand;
-		Plan.WandPaymentCardInstanceId = Entry.Card.InstanceId;
-		Plan.DestinationTile = Destination;
-		Plan.bBecomesReplacementHero = true;
-		Plan.BeforeGeneration = CoordinatorGeneration;
-		Plan.BeforeRevision = CoordinatorRevision;
-		Plans.Add(MoveTemp(Plan));
-	}
-
 	TArray<FWBEquippedCardEntry> Equipped = State.GetCardZoneState().EquippedCards;
 	Equipped.Sort(EquippedEntryLess);
-	for (const FWBEquippedCardEntry& Entry : Equipped)
+
+	TArray<const FWBUnitState*> SacrificeCandidates =
+		State.GetUnitsForPlayer(ActingPlayerId);
+	SacrificeCandidates.Sort([](const FWBUnitState& A, const FWBUnitState& B)
 	{
-		if (Entry.EquippedToUnitId != Hero->UnitId
-			|| Entry.Card.OwnerPlayerId != ActingPlayerId
-			|| !IsWandDefinition(Repository, Entry.Card.CardId))
+		return A.UnitId < B.UnitId;
+	});
+
+	bool bFoundCharacterSacrifice = false;
+	bool bFoundDestination = false;
+	for (const FWBUnitState* Sacrifice : SacrificeCandidates)
+	{
+		if (Sacrifice == nullptr || !Sacrifice->IsUnitOnBoard())
 		{
 			continue;
 		}
-		FWBHybridSummonPlan Plan;
-		Plan.ActingPlayerId = ActingPlayerId;
-		Plan.HybridCardInstanceId = HybridCardInstanceId;
-		Plan.HybridDefinitionId = HybridEntry->Card.CardId;
-		Plan.SacrificedHeroUnitId = Hero->UnitId;
-		Plan.WandPaymentSource = EWBHybridWandPaymentSource::SacrificedUnit;
-		Plan.WandPaymentCardInstanceId = Entry.Card.InstanceId;
-		Plan.WandPaymentUnitId = Hero->UnitId;
-		Plan.DestinationTile = Destination;
-		Plan.bBecomesReplacementHero = true;
-		Plan.BeforeGeneration = CoordinatorGeneration;
-		Plan.BeforeRevision = CoordinatorRevision;
-		Plans.Add(MoveTemp(Plan));
+		const FWBCardDefinitionRepositoryLookupResult SacrificeLookup =
+			WBCardDefinitionRepository::FindCardById(
+				Repository, Sacrifice->CardId);
+		if (!SacrificeLookup.bFound
+			|| SacrificeLookup.Definition.Kind
+				!= EWBCardDefinitionKind::Character)
+		{
+			continue;
+		}
+		bFoundCharacterSacrifice = true;
+
+		const bool bReplacesHero = Sacrifice->UnitId == Hero->UnitId;
+		TArray<FWBTile> Destinations;
+		if (bReplacesHero)
+		{
+			Destinations.Add(FWBTile(Sacrifice->X, Sacrifice->Y));
+		}
+		else
+		{
+			Destinations = {
+				FWBTile(Hero->X + 1, Hero->Y),
+				FWBTile(Hero->X - 1, Hero->Y),
+				FWBTile(Hero->X, Hero->Y + 1),
+				FWBTile(Hero->X, Hero->Y - 1)
+			};
+			Destinations.Sort([](const FWBTile& A, const FWBTile& B)
+			{
+				return A.Y != B.Y ? A.Y < B.Y : A.X < B.X;
+			});
+		}
+
+		for (const FWBTile& Destination : Destinations)
+		{
+			if (!WBRules::IsTileInBounds(Destination))
+			{
+				continue;
+			}
+			const int32 Occupant = State.UnitIdAt(Destination);
+			if (Occupant != -1 && Occupant != Sacrifice->UnitId)
+			{
+				continue;
+			}
+			const FWBTurnOneRestrictionQuery TurnOne =
+				WBTurnOneRestrictions::QuerySummonPlacement(
+					State, ActingPlayerId, Destination);
+			if (!TurnOne.bOk)
+			{
+				continue;
+			}
+			bFoundDestination = true;
+
+			for (const FWBZoneCardEntry& Entry : Hand)
+			{
+				if (Entry.Card.InstanceId == HybridCardInstanceId
+					|| Entry.Card.OwnerPlayerId != ActingPlayerId
+					|| !IsWandDefinition(Repository, Entry.Card.CardId))
+				{
+					continue;
+				}
+				FWBHybridSummonPlan Plan;
+				Plan.ActingPlayerId = ActingPlayerId;
+				Plan.HybridCardInstanceId = HybridCardInstanceId;
+				Plan.HybridDefinitionId = HybridEntry->Card.CardId;
+				Plan.SacrificedUnitId = Sacrifice->UnitId;
+				Plan.WandPaymentSource = EWBHybridWandPaymentSource::Hand;
+				Plan.WandPaymentCardInstanceId = Entry.Card.InstanceId;
+				Plan.DestinationTile = Destination;
+				Plan.bBecomesReplacementHero = bReplacesHero;
+				Plan.BeforeGeneration = CoordinatorGeneration;
+				Plan.BeforeRevision = CoordinatorRevision;
+				Plans.Add(MoveTemp(Plan));
+			}
+
+			for (const FWBEquippedCardEntry& Entry : Equipped)
+			{
+				if (Entry.EquippedToUnitId != Sacrifice->UnitId
+					|| Entry.Card.OwnerPlayerId != ActingPlayerId
+					|| !IsWandDefinition(Repository, Entry.Card.CardId))
+				{
+					continue;
+				}
+				FWBHybridSummonPlan Plan;
+				Plan.ActingPlayerId = ActingPlayerId;
+				Plan.HybridCardInstanceId = HybridCardInstanceId;
+				Plan.HybridDefinitionId = HybridEntry->Card.CardId;
+				Plan.SacrificedUnitId = Sacrifice->UnitId;
+				Plan.WandPaymentSource =
+					EWBHybridWandPaymentSource::SacrificedUnit;
+				Plan.WandPaymentCardInstanceId = Entry.Card.InstanceId;
+				Plan.WandPaymentUnitId = Sacrifice->UnitId;
+				Plan.DestinationTile = Destination;
+				Plan.bBecomesReplacementHero = bReplacesHero;
+				Plan.BeforeGeneration = CoordinatorGeneration;
+				Plan.BeforeRevision = CoordinatorRevision;
+				Plans.Add(MoveTemp(Plan));
+			}
+		}
+	}
+
+	if (!bFoundCharacterSacrifice)
+	{
+		return MakePlanFailure(EWBHybridSummonResultCode::HybridSacrificeRequired);
+	}
+	if (!bFoundDestination)
+	{
+		return MakePlanFailure(EWBHybridSummonResultCode::HybridDestinationInvalid);
 	}
 
 	if (Plans.IsEmpty())
@@ -315,6 +369,18 @@ FWBHybridSummonPlanResult WBHybridSummon::BuildHeroReplacementPlans(
 	}
 	Plans.Sort([](const FWBHybridSummonPlan& A, const FWBHybridSummonPlan& B)
 	{
+		if (A.SacrificedUnitId != B.SacrificedUnitId)
+		{
+			return A.SacrificedUnitId < B.SacrificedUnitId;
+		}
+		if (A.DestinationTile.Y != B.DestinationTile.Y)
+		{
+			return A.DestinationTile.Y < B.DestinationTile.Y;
+		}
+		if (A.DestinationTile.X != B.DestinationTile.X)
+		{
+			return A.DestinationTile.X < B.DestinationTile.X;
+		}
 		if (A.WandPaymentSource != B.WandPaymentSource)
 		{
 			return static_cast<uint8>(A.WandPaymentSource)
@@ -331,7 +397,39 @@ FWBHybridSummonPlanResult WBHybridSummon::BuildHeroReplacementPlans(
 	return Result;
 }
 
-FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
+FWBHybridSummonPlanResult WBHybridSummon::BuildHeroReplacementPlans(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const int32 ActingPlayerId,
+	const FString& HybridCardInstanceId,
+	const int32 CoordinatorGeneration,
+	const int32 CoordinatorRevision)
+{
+	FWBHybridSummonPlanResult Result = BuildSummonPlans(
+		State,
+		Repository,
+		ActingPlayerId,
+		HybridCardInstanceId,
+		CoordinatorGeneration,
+		CoordinatorRevision);
+	if (!Result.bOk)
+	{
+		return Result;
+	}
+	Result.Plans = Result.Plans.FilterByPredicate(
+		[](const FWBHybridSummonPlan& Plan)
+		{
+			return Plan.bBecomesReplacementHero;
+		});
+	if (Result.Plans.IsEmpty())
+	{
+		return MakePlanFailure(
+			EWBHybridSummonResultCode::HybridHeroSacrificeInvalid);
+	}
+	return Result;
+}
+
+FWBHybridSummonResult WBHybridSummon::ExecuteSummon(
 	FWBGameStateData& State,
 	const FWBCardDefinitionRepository& Repository,
 	const FWBHybridSummonPlan& Plan,
@@ -343,7 +441,7 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 	{
 		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridPlanStale, Plan);
 	}
-	const FWBHybridSummonPlanResult Preflight = BuildHeroReplacementPlans(
+	const FWBHybridSummonPlanResult Preflight = BuildSummonPlans(
 		State,
 		Repository,
 		Plan.ActingPlayerId,
@@ -408,7 +506,7 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 	TArray<FWBEquippedCardEntry> RemainingEquipment;
 	for (const FWBEquippedCardEntry& Entry : WorkingState.GetCardZoneState().EquippedCards)
 	{
-		if (Entry.EquippedToUnitId == Plan.SacrificedHeroUnitId)
+		if (Entry.EquippedToUnitId == Plan.SacrificedUnitId)
 		{
 			RemainingEquipment.Add(Entry);
 		}
@@ -433,17 +531,29 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridNotInHand, Plan);
 	}
 
-	FWBUnitState* OldHero = WorkingState.GetMutableUnitById(Plan.SacrificedHeroUnitId);
-	if (OldHero == nullptr || !OldHero->IsUnitOnBoard())
+	FWBPlayerStateData* Player = WorkingState.GetMutablePlayerById(
+		Plan.ActingPlayerId);
+	if (Player == nullptr)
 	{
-		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridHeroSacrificeInvalid, Plan);
+		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridWrongPlayer, Plan);
 	}
-	OldHero->ResonanceModifiers.Reset();
-	OldHero->SetCanonicalRL(OldHero->GetBaseRLForRules(), OldHero->GetBaseRLForRules(), 0);
-	OldHero->RemoveUnitFromBoard();
+	const int32 OriginalHeroUnitId = Player->HeroUnitId;
+	FWBUnitState* SacrificedUnit = WorkingState.GetMutableUnitById(
+		Plan.SacrificedUnitId);
+	if (SacrificedUnit == nullptr || !SacrificedUnit->IsUnitOnBoard())
+	{
+		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridSacrificeInvalid, Plan);
+	}
+	const FWBTile SacrificedFromTile(SacrificedUnit->X, SacrificedUnit->Y);
+	SacrificedUnit->ResonanceModifiers.Reset();
+	SacrificedUnit->SetCanonicalRL(
+		SacrificedUnit->GetBaseRLForRules(),
+		SacrificedUnit->GetBaseRLForRules(),
+		0);
+	SacrificedUnit->RemoveUnitFromBoard();
 	if (WorkingState.HasPendingAttack()
-		&& (WorkingState.PendingAttack.AttackerUnitId == Plan.SacrificedHeroUnitId
-			|| WorkingState.PendingAttack.DefenderUnitId == Plan.SacrificedHeroUnitId))
+		&& (WorkingState.PendingAttack.AttackerUnitId == Plan.SacrificedUnitId
+			|| WorkingState.PendingAttack.DefenderUnitId == Plan.SacrificedUnitId))
 	{
 		WorkingState.ClearPendingAttack();
 	}
@@ -453,30 +563,34 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 	{
 		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridUnitIdAllocationFailed, Plan);
 	}
-	FWBUnitState NewHero;
-	NewHero.UnitId = NewUnitId;
-	NewHero.OwnerId = Plan.ActingPlayerId;
-	NewHero.CardId = Plan.HybridDefinitionId;
-	NewHero.X = Plan.DestinationTile.X;
-	NewHero.Y = Plan.DestinationTile.Y;
-	NewHero.HP = HybridLookup.Definition.CharacterStats.HP;
-	NewHero.MaxHP = HybridLookup.Definition.CharacterStats.HP;
-	NewHero.ATK = HybridLookup.Definition.CharacterStats.ATK;
-	NewHero.AR = HybridLookup.Definition.CharacterStats.AR;
-	NewHero.SetCanonicalRL(
+	FWBUnitState NewHybrid;
+	NewHybrid.UnitId = NewUnitId;
+	NewHybrid.OwnerId = Plan.ActingPlayerId;
+	NewHybrid.CardId = Plan.HybridDefinitionId;
+	NewHybrid.X = Plan.DestinationTile.X;
+	NewHybrid.Y = Plan.DestinationTile.Y;
+	NewHybrid.HP = HybridLookup.Definition.CharacterStats.HP;
+	NewHybrid.MaxHP = HybridLookup.Definition.CharacterStats.HP;
+	NewHybrid.ATK = HybridLookup.Definition.CharacterStats.ATK;
+	NewHybrid.AR = HybridLookup.Definition.CharacterStats.AR;
+	NewHybrid.SetCanonicalRL(
 		HybridLookup.Definition.CharacterStats.RL,
 		HybridLookup.Definition.CharacterStats.RL,
 		0);
-	NewHero.AttacksLeft = 0;
-	NewHero.MaxAttacksPerTurn = 1;
-	NewHero.MPRemaining = 0;
-	WorkingState.Units.Add(NewHero);
-	FWBPlayerStateData* Player = WorkingState.GetMutablePlayerById(Plan.ActingPlayerId);
-	if (Player == nullptr)
+	NewHybrid.AttacksLeft = 0;
+	NewHybrid.MaxAttacksPerTurn = 1;
+	NewHybrid.MPRemaining = 0;
+	WorkingState.Units.Add(NewHybrid);
+	if (Plan.bBecomesReplacementHero)
 	{
-		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridWrongPlayer, Plan);
+		Player->HeroUnitId = NewUnitId;
 	}
-	Player->HeroUnitId = NewUnitId;
+	else if (Player->HeroUnitId != OriginalHeroUnitId
+		|| OriginalHeroUnitId == Plan.SacrificedUnitId)
+	{
+		return MakeExecutionFailure(
+			EWBHybridSummonResultCode::HybridHeroSacrificeInvalid, Plan);
+	}
 
 	FString ZoneReason;
 	if (!WBCardZoneState::ValidateZoneStateForTest(
@@ -488,21 +602,24 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 	TArray<FWBTraceEvent> Traces;
 	FWBTraceEvent Declared = MakeTrace(
 		FName(TEXT("hybrid_summon_declared")), Plan,
-		Plan.SacrificedHeroUnitId, NewUnitId);
+		Plan.SacrificedUnitId, NewUnitId);
 	Declared.CardInstanceId = Plan.HybridCardInstanceId;
 	Traces.Add(Declared);
 	FWBTraceEvent Sacrificed = MakeTrace(
 		FName(TEXT("unit_sacrificed")), Plan,
-		Plan.SacrificedHeroUnitId, -1);
-	Sacrificed.FromTile = Plan.DestinationTile;
+		Plan.SacrificedUnitId, -1);
+	Sacrificed.FromTile = SacrificedFromTile;
 	Sacrificed.DamageCause = FName(TEXT("hybrid_summon_cost"));
 	Traces.Add(Sacrificed);
-	Traces.Add(MakeTrace(
-		FName(TEXT("hero_sacrifice_committed")), Plan,
-		Plan.SacrificedHeroUnitId, -1));
+	if (Plan.bBecomesReplacementHero)
+	{
+		Traces.Add(MakeTrace(
+			FName(TEXT("hero_sacrifice_committed")), Plan,
+			Plan.SacrificedUnitId, -1));
+	}
 	FWBTraceEvent Paid = MakeTrace(
 		FName(TEXT("wand_payment_committed")), Plan,
-		Plan.SacrificedHeroUnitId, -1);
+		Plan.SacrificedUnitId, -1);
 	Paid.CardId.Reset();
 	Paid.CostAmount = 1;
 	Paid.CostKind = FName(TEXT("wand"));
@@ -514,7 +631,7 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 	{
 		FWBTraceEvent Cleanup = MakeTrace(
 			FName(TEXT("equipped_card_discarded_on_sacrifice")), Plan,
-			Plan.SacrificedHeroUnitId, -1);
+			Plan.SacrificedUnitId, -1);
 		Cleanup.CardId = Entry.Card.CardId;
 		Cleanup.CardInstanceId = Entry.Card.InstanceId;
 		Cleanup.SlotId = Entry.SlotId;
@@ -523,10 +640,13 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 	}
 	Traces.Add(MakeTrace(
 		FName(TEXT("hybrid_summoned")), Plan,
-		Plan.SacrificedHeroUnitId, NewUnitId));
-	Traces.Add(MakeTrace(
-		FName(TEXT("hero_replacement_committed")), Plan,
-		Plan.SacrificedHeroUnitId, NewUnitId));
+		Plan.SacrificedUnitId, NewUnitId));
+	if (Plan.bBecomesReplacementHero)
+	{
+		Traces.Add(MakeTrace(
+			FName(TEXT("hero_replacement_committed")), Plan,
+			Plan.SacrificedUnitId, NewUnitId));
+	}
 
 	State = MoveTemp(WorkingState);
 	FWBHybridSummonResult Result;
@@ -534,10 +654,35 @@ FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
 	Result.Code = EWBHybridSummonResultCode::Success;
 	Result.Reason = ResultCodeToString(Result.Code);
 	Result.Plan = Plan;
-	Result.OldHeroUnitId = Plan.SacrificedHeroUnitId;
-	Result.NewHeroUnitId = NewUnitId;
+	Result.SacrificedUnitId = Plan.SacrificedUnitId;
+	Result.OriginalHeroUnitId = OriginalHeroUnitId;
+	Result.NewHybridUnitId = NewUnitId;
+	Result.OldHeroUnitId = Plan.bBecomesReplacementHero
+		? Plan.SacrificedUnitId
+		: OriginalHeroUnitId;
+	Result.NewHeroUnitId = Player->HeroUnitId;
 	Result.TraceEvents = MoveTemp(Traces);
 	return Result;
+}
+
+FWBHybridSummonResult WBHybridSummon::ExecuteHeroReplacement(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBHybridSummonPlan& Plan,
+	const int32 CoordinatorGeneration,
+	const int32 CoordinatorRevision)
+{
+	if (!Plan.bBecomesReplacementHero)
+	{
+		return MakeExecutionFailure(
+			EWBHybridSummonResultCode::HybridHeroSacrificeInvalid, Plan);
+	}
+	return ExecuteSummon(
+		State,
+		Repository,
+		Plan,
+		CoordinatorGeneration,
+		CoordinatorRevision);
 }
 
 FString WBHybridSummon::BuildStableActionId(const FWBHybridSummonPlan& Plan)
@@ -549,7 +694,7 @@ FString WBHybridSummon::BuildStableActionId(const FWBHybridSummonPlan& Plan)
 		TEXT("hybrid_summon:p%d:i%s:s%d:w%s:i%s:x%d:y%d"),
 		Plan.ActingPlayerId,
 		*Plan.HybridCardInstanceId,
-		Plan.SacrificedHeroUnitId,
+		Plan.SacrificedUnitId,
 		Payment,
 		*Plan.WandPaymentCardInstanceId,
 		Plan.DestinationTile.X,

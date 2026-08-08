@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "hybrid_non_hero_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "hybrid_non_hero",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic non-Hero Hybrid summon fixture only."
+  }
+}

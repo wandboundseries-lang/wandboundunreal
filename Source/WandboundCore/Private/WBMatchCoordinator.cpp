@@ -821,7 +821,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 			if (Lookup.Definition.Kind == EWBCardDefinitionKind::Hybrid)
 			{
 				const FWBHybridSummonPlanResult Plans =
-					WBHybridSummon::BuildHeroReplacementPlans(
+					WBHybridSummon::BuildSummonPlans(
 						InState,
 						Repository,
 						PlayerId,
@@ -835,7 +835,9 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 						FWBMatchLegalAction Action;
 						Action.Family = EWBMatchActionFamily::Summon;
 						Action.PlayerId = PlayerId;
-						Action.bHybridHeroReplacement = true;
+						Action.bHybridSummon = true;
+						Action.bHybridHeroReplacement =
+							Plan.bBecomesReplacementHero;
 						Action.HybridSummonPlan = Plan;
 						Action.ActionId = WBHybridSummon::BuildStableActionId(Plan);
 						Result.Actions.Add(MoveTemp(Action));
@@ -1239,10 +1241,10 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		case EWBMatchActionFamily::Summon:
 		{
 			int32 CreatedUnitId = -1;
-			if (SelectedAction->bHybridHeroReplacement)
+			if (SelectedAction->bHybridSummon)
 			{
 				const FWBHybridSummonResult ApplyResult =
-					WBHybridSummon::ExecuteHeroReplacement(
+					WBHybridSummon::ExecuteSummon(
 						WorkingState,
 						Repository,
 						SelectedAction->HybridSummonPlan,
@@ -1251,7 +1253,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				bActionApplied = ApplyResult.bOk;
 				FailureReason = ApplyResult.Reason;
 				WorkingTraceEvents.Append(ApplyResult.TraceEvents);
-				CreatedUnitId = ApplyResult.NewHeroUnitId;
+				CreatedUnitId = ApplyResult.NewHybridUnitId;
 			}
 			else
 			{

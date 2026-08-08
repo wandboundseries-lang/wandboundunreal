@@ -13,6 +13,7 @@
 #include "WBRuntimePlayerController.h"
 #include "WBRuntimePresentationAssetBinding.h"
 #include "WBProductionRuntimeBootstrap.h"
+#include "WBProductionHybridNonHeroSmoke.h"
 #include "WBProductionHybridReplacementSmoke.h"
 #include "WBProductionMatchReplayRuntime.h"
 #include "WBProductionMatchReplaySmoke.h"
@@ -168,7 +169,16 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionHybridReplacementSmoke::IsRequested())
+		if (WBProductionHybridNonHeroSmoke::IsRequested())
+		{
+			const FWBProductionHybridNonHeroSmokeResult HybridSmoke =
+				WBProductionHybridNonHeroSmoke::Run(PendingBootstrapRequest);
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				HybridSmoke.bOk ? 0 : 24,
+				TEXT("WandboundProductionHybridNonHeroSmoke"));
+		}
+		else if (WBProductionHybridReplacementSmoke::IsRequested())
 		{
 			const FWBProductionHybridReplacementSmokeResult HybridSmoke =
 				WBProductionHybridReplacementSmoke::Run(PendingBootstrapRequest);

@@ -46,5 +46,20 @@ public class WandboundRuntime : ModuleRules
 		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/Replay/HybridReplacementFixture/match_spec.json",
 			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/HybridNonHeroFixture/root_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/HybridNonHeroFixture/bundle_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/HybridNonHeroFixture/units.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/HybridNonHeroFixture/markers.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/HybridNonHeroFixture/match_spec.json",
+			StagedFileType.NonUFS);
 	}
 }
