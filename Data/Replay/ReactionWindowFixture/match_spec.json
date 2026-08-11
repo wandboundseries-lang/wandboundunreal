@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "match_id": "reaction_window_smoke_match",
+  "seed": 841903,
+  "first_player": 0,
+  "initial_draw_count": 6,
+  "definition_bundle_digest": "e795f7b9c48b09f024f2cf10e7639cc7f8cc242a309d5c09ba4b988da54d7fb8",
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "hybrid_fixture_hero_alpha",
+      "ordered_deck": [
+        "hybrid_fixture_replacement",
+        "hybrid_fixture_wand",
+        "hybrid_fixture_filler",
+        "hybrid_fixture_filler",
+        "hybrid_fixture_filler",
+        "hybrid_fixture_filler",
+        "hybrid_fixture_filler",
+        "hybrid_fixture_filler",
+        "hybrid_fixture_filler",
+        "hybrid_fixture_filler"
+      ]
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "hybrid_fixture_hero_beta",
+      "ordered_deck": [
+        "hybrid_fixture_filler", "hybrid_fixture_filler",
+        "hybrid_fixture_filler", "hybrid_fixture_filler",
+        "hybrid_fixture_filler", "hybrid_fixture_filler",
+        "hybrid_fixture_filler", "hybrid_fixture_filler",
+        "hybrid_fixture_filler", "hybrid_fixture_filler"
+      ]
+    }
+  ],
+  "markers": [
+    { "player_id": 0, "type": "trap", "tile": { "x": 0, "y": 8 }, "definition_id": "hybrid_fixture_trap", "placement_order": 0 },
+    { "player_id": 0, "type": "trap", "tile": { "x": 1, "y": 8 }, "definition_id": "hybrid_fixture_trap", "placement_order": 1 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 0, "y": 7 }, "definition_id": "hybrid_fixture_npc", "placement_order": 2 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 1, "y": 7 }, "definition_id": "hybrid_fixture_npc", "placement_order": 3 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 0, "y": 0 }, "definition_id": "hybrid_fixture_trap", "placement_order": 4 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 1, "y": 0 }, "definition_id": "hybrid_fixture_trap", "placement_order": 5 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 0, "y": 1 }, "definition_id": "hybrid_fixture_npc", "placement_order": 6 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 1, "y": 1 }, "definition_id": "hybrid_fixture_npc", "placement_order": 7 }
+  ]
+}

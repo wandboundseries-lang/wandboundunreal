@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "reaction_window_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "reaction_window",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic production post-summon reaction-window fixture only."
+  }
+}

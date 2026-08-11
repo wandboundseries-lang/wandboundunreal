@@ -172,6 +172,41 @@ private:
 		FWBGameStateData& WorkingState,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
+	bool OpenReactionWindowIfApplicable(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		EWBReactionWindowKind Kind,
+		int32 OriginatingPlayerId,
+		const FString& SourceActionId,
+		int32 SourceUnitId,
+		int32 TargetUnitId,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool ApplyReactionPass(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		int32 PassingPlayerId,
+		bool bAutomatic,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool AdvanceReactionAfterReact(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		int32 ReactingPlayerId,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool ApplyForcedReactionPasses(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool HasLegalReactForPriority(
+		const FWBGameStateData& InState,
+		FString& OutReason) const;
+	static void CloseReactionWindow(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBTraceEvent>& OutTraceEvents);
 
 	bool ApplyTurnTransition(
 		FWBGameStateData& WorkingState,

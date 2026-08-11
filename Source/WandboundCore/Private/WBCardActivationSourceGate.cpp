@@ -155,10 +155,15 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 
 	if (Gate.Timing == EWBCardActivationTimingRequirement::ResponseWindow)
 	{
-		return MakeSourceGateFailure(TEXT("response_window_not_supported"));
+		if (!State.IsResponsePhase()
+			|| !State.HasOpenReactionWindow()
+			|| State.bSuppressManualReactsDuringInitialHeroSetup
+			|| State.PriorityPlayer != Context.PlayerId)
+		{
+			return MakeSourceGateFailure(TEXT("timing_not_response_priority"));
+		}
 	}
-
-	if (Gate.Timing == EWBCardActivationTimingRequirement::NormalTurnPriority
+	else if (Gate.Timing == EWBCardActivationTimingRequirement::NormalTurnPriority
 		&& (!State.IsNormalTurnPhase()
 			|| State.CurrentPlayer != Context.PlayerId
 			|| State.PriorityPlayer != Context.PlayerId))

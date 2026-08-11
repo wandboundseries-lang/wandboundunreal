@@ -208,6 +208,16 @@ bool FWBGameStateData::IsValidPlayerId(const int32 PlayerId)
 	return PlayerId == 0 || PlayerId == 1;
 }
 
+bool FWBReactionWindowState::IsOpen() const
+{
+	return Kind != EWBReactionWindowKind::None;
+}
+
+void FWBReactionWindowState::Reset()
+{
+	*this = FWBReactionWindowState();
+}
+
 int32 FWBGameStateData::TileToIndex(const FWBTile& Tile)
 {
 	constexpr int32 BoardWidth = 9;
@@ -311,6 +321,16 @@ bool FWBGameStateData::IsNormalTurnPhase() const
 bool FWBGameStateData::IsResponsePhase() const
 {
 	return Phase == EWBGamePhase::Response;
+}
+
+bool FWBGameStateData::HasOpenReactionWindow() const
+{
+	return ReactionWindow.IsOpen();
+}
+
+void FWBGameStateData::ClearReactionWindow()
+{
+	ReactionWindow.Reset();
 }
 
 void FWBGameStateData::AdvanceTurnBasic()

@@ -80,6 +80,8 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 RandomSeed = -1;
 	int32 CardCount = -1;
 	FName MatchPhase;
+	FName ReactionWindowKind;
+	int32 ReactionPassCount = -1;
 	bool bDeferredBoundary = false;
 	FWBTile FromTile;
 	FWBTile ToTile;

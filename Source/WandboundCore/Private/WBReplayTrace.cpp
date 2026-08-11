@@ -381,6 +381,16 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 		Object->SetStringField(TEXT("match_phase"), Event.MatchPhase.ToString());
 	}
 
+	if (!Event.ReactionWindowKind.IsNone())
+	{
+		Object->SetStringField(TEXT("reaction_window_kind"), Event.ReactionWindowKind.ToString());
+	}
+
+	if (Event.ReactionPassCount != -1)
+	{
+		Object->SetNumberField(TEXT("reaction_pass_count"), Event.ReactionPassCount);
+	}
+
 	if (Event.bDeferredBoundary)
 	{
 		Object->SetBoolField(TEXT("deferred_boundary"), Event.bDeferredBoundary);

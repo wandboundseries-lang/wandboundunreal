@@ -78,6 +78,29 @@ enum class EWBGamePhase : uint8
 	Response
 };
 
+enum class EWBReactionWindowKind : uint8
+{
+	None,
+	PreHit,
+	PostHit,
+	PostMove,
+	PostSummon,
+	PostEffect
+};
+
+struct WANDBOUNDCORE_API FWBReactionWindowState
+{
+	EWBReactionWindowKind Kind = EWBReactionWindowKind::None;
+	int32 OriginatingPlayerId = -1;
+	int32 ConsecutivePassCount = 0;
+	FString SourceActionId;
+	int32 SourceUnitId = -1;
+	int32 TargetUnitId = -1;
+
+	bool IsOpen() const;
+	void Reset();
+};
+
 struct WANDBOUNDCORE_API FWBPlayerStateData
 {
 	int32 PlayerId = -1;
@@ -133,6 +156,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	FName DefaultTerrainId = FName(TEXT("Normal"));
 	TMap<int32, FName> TerrainByTileIndex;
 	TArray<FWBPlayerStateData> Players;
+	FWBReactionWindowState ReactionWindow;
 	FWBPendingAttackState PendingAttack;
 	TArray<FWBPendingNPCSpawnState> PendingNPCSpawns;
 	TMap<int32, TSet<FString>> ActivationUsageKeysThisTurn;
@@ -153,6 +177,8 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	TArray<FWBUnitState*> GetMutableUnitsForPlayer(int32 PlayerId);
 	bool IsNormalTurnPhase() const;
 	bool IsResponsePhase() const;
+	bool HasOpenReactionWindow() const;
+	void ClearReactionWindow();
 	void AdvanceTurnBasic();
 	bool ResetActionResourcesForPlayer(int32 PlayerId, FString& OutReason);
 	bool ApplyTurnStartMPRollForPlayer(int32 PlayerId, int32 ExplicitMPRoll, FString& OutReason);

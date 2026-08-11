@@ -70,6 +70,15 @@ FString CanonicalGameState(const FWBGameStateData& State)
 	AppendInt(Out, TEXT("game_phase"), static_cast<int32>(State.Phase));
 	AppendBool(Out, TEXT("initial_setup"), State.bInitialSetupInProgress);
 	AppendBool(Out, TEXT("suppress_reacts"), State.bSuppressManualReactsDuringInitialHeroSetup);
+	if (State.HasOpenReactionWindow())
+	{
+		AppendInt(Out, TEXT("reaction.kind"), static_cast<int32>(State.ReactionWindow.Kind));
+		AppendInt(Out, TEXT("reaction.origin"), State.ReactionWindow.OriginatingPlayerId);
+		AppendInt(Out, TEXT("reaction.passes"), State.ReactionWindow.ConsecutivePassCount);
+		AppendString(Out, TEXT("reaction.action"), State.ReactionWindow.SourceActionId);
+		AppendInt(Out, TEXT("reaction.source_unit"), State.ReactionWindow.SourceUnitId);
+		AppendInt(Out, TEXT("reaction.target_unit"), State.ReactionWindow.TargetUnitId);
+	}
 	AppendBool(Out, TEXT("game_over"), State.bGameOver);
 	AppendInt(Out, TEXT("winner"), State.WinnerPlayerId);
 	if (State.bGameOver)

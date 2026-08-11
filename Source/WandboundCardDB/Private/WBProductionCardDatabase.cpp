@@ -2244,21 +2244,35 @@ private:
 		}
 
 		FString Timing;
-		if (!TryReadString(GateObject, TEXT("timing"), Timing)
-			|| Timing != TEXT("normal_turn_priority"))
+		if (!TryReadString(GateObject, TEXT("timing"), Timing))
 		{
 			AddError(
 				TEXT("unsupported_timing"),
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				EffectPath + TEXT(".source_gate.timing"),
-				TEXT("Response-window and non-priority timing are not production-ready."));
+				TEXT("Activation timing must be normal_turn_priority or response_window."));
 			Effect.SourceGate.Timing = EWBCardActivationTimingRequirement::Unknown;
 		}
-		else
+		else if (Timing == TEXT("normal_turn_priority"))
 		{
 			Effect.SourceGate.Timing =
 				EWBCardActivationTimingRequirement::NormalTurnPriority;
+		}
+		else if (Timing == TEXT("response_window"))
+		{
+			Effect.SourceGate.Timing =
+				EWBCardActivationTimingRequirement::ResponseWindow;
+		}
+		else
+		{
+			AddError(
+				TEXT("unsupported_timing"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				EffectPath + TEXT(".source_gate.timing"),
+				TEXT("Activation timing must be normal_turn_priority or response_window."));
+			Effect.SourceGate.Timing = EWBCardActivationTimingRequirement::Unknown;
 		}
 
 		bool BoolValue = false;

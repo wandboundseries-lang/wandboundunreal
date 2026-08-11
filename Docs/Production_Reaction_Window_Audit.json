@@ -1,0 +1,73 @@
+{
+  "baseline": {
+    "commit": "e1412b0f1e22a8b61fe11e78894dfa052c5746c7",
+    "origin_main_synchronized": true,
+    "initial_automation_count": 2122,
+    "replay_schema_version": 1,
+    "canonical_startup_hash": "cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004",
+    "regression_hashes": {
+      "partial": {
+        "archive": "d30304a936fd3b5c2163209546b9063a64ed7a223a65b217092cb64ef6495463",
+        "receipt": "881ffb586544d5ed78156635754b5eeddf555c7ef000c472f79ac607cc4d2dd9",
+        "replay": "391f0a6e836fc19439f110a5bd0a748367c00c826e73ad1d615fe53d9b492e7e"
+      },
+      "terminal": {
+        "archive": "4e30424a56b613cbbda225295a0775473ed661cda390f172b609e529450235cc",
+        "receipt": "5bcce2e1e9361e8848e4757a634cf82acdee30d2463a01f6f9f0023157e1ca76",
+        "replay": "95a9bd178298085120774097e8beea17a266b4ec6c048aa49dc9351f9c50dc6b"
+      },
+      "hybrid_hero": {
+        "archive": "e1fa69301728e8129e69866ce0a91fbeaf77cc990d08f0a33133943bc629be20",
+        "receipt": "7cdba9356c9fbb6c796aaaedfbeef7fc884ec74522a4a20231d082961cc6f156",
+        "replay": "9c73493e6931a627969a7472b49c858a623150de49da522ef963663f41e3f98e",
+        "state": "9abce6721fb022c2769f8207b4dd07c79811a65bb8fc25f97962feb4e09f1897",
+        "trace": "fdc47bcbab4c83987b4c9749cf1e905074a90a6d6fd914f4606201b8c83b7703"
+      },
+      "hybrid_non_hero": {
+        "archive": "f3b0cb64cb2bd45ae6816ddc871b0a08d89cac55272110a102e94fb666380c1d",
+        "receipt": "f3dab3075d43922bd1bcd59e377370f69bb848d5268a04d8bbfc4c5b9e1aa3f1",
+        "replay": "e84384339113dc407708b223ef29532eeee595e4da3b3434c6ba97159369bac4",
+        "state": "4c30735d3f70def1c8ca7c3c63787ac71f364399a1f32da7a74d2de0605803ba",
+        "trace": "c4c3e2fed801da6de224b9ab5b76563e2e1ea37127855d17a9f72eadefc846b3"
+      }
+    },
+    "action_codec": {
+      "header_sha256": "c0353d46d5fa0f288250ce272b290d518baffccd07d984f097c49d1fee9b7949",
+      "header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+      "source_sha256": "ec8a0b1cef1349fa96693ade3d09ec9bbb028f458ce6cf189777c31b5b4f8c99",
+      "source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+    }
+  },
+  "canonical_semantics": {
+    "window_kinds": ["pre_hit", "post_hit", "post_move", "post_summon", "post_effect"],
+    "post_summon_first_priority": "opponent_of_originating_player",
+    "post_move_first_priority": "opponent_of_originating_player",
+    "passes_to_close": 2,
+    "react_resets_pass_count": true,
+    "auto_pass_when_no_legal_react": true,
+    "marker_before_post_event_window": true,
+    "initial_hero_setup_manual_reacts_suppressed": true
+  },
+  "components": [
+    {"path":"Source/WandboundCore/Public/WBGameStateData.h","symbol":"FWBGameStateData","current_role":"rules state","production_reachable":true,"window_kind":"untyped response only","priority_behavior":"top-level priority player","pass_behavior":"none","legal_react_source":"none","state_owner":"game state owned by coordinator","replay_behavior":"state digest","privacy_behavior":"private state","baseline_dirty":false,"overlap":"none","required_change":"add typed reaction state"},
+    {"path":"Source/WandboundCore/Private/WBGameStateData.cpp","symbol":"FWBReactionWindowState helpers","current_role":"rules-state behavior","production_reachable":true,"window_kind":"none before this pass","priority_behavior":"none","pass_behavior":"none","legal_react_source":"none","state_owner":"game state owned by coordinator","replay_behavior":"private deterministic state","privacy_behavior":"private state","baseline_dirty":true,"overlap":"pre-existing RL and turn-start edits are separate from reaction helpers","required_change":"add typed open and reset helpers only"},
+    {"path":"Source/WandboundCore/Private/WBMatchCoordinator.cpp","symbol":"WBMatchCoordinator","current_role":"sole production action and transition authority","production_reachable":true,"window_kind":"response phase only","priority_behavior":"validates priority","pass_behavior":"delegates legacy one-pass close","legal_react_source":"existing activation generation","state_owner":"authoritative","replay_behavior":"accepted action records and traces","privacy_behavior":"viewer-scoped observations","baseline_dirty":false,"overlap":"none","required_change":"own lifecycle and supported checkpoints"},
+    {"path":"Source/WandboundCore/Public/WBAction.h","symbol":"EWBActionType and action families","current_role":"stable rules action model","production_reachable":true,"window_kind":"generic response","priority_behavior":"encoded player","pass_behavior":"PassResponse exists","legal_react_source":"activation family","state_owner":"none","replay_behavior":"stable action identity","privacy_behavior":"public IDs only","baseline_dirty":false,"overlap":"none","required_change":"none"},
+    {"path":"Source/WandboundCore/Public/WBActionCodec.h; Source/WandboundCore/Private/WBActionCodec.cpp","symbol":"WBActionCodec","current_role":"legacy core action ID and JSON codec","production_reachable":true,"window_kind":"generic response","priority_behavior":"existing codec behavior","pass_behavior":"existing PassResponse ID","legal_react_source":"existing activation IDs are not changed here","state_owner":"none","replay_behavior":"hash-guarded unchanged source","privacy_behavior":"no new fields","baseline_dirty":false,"overlap":"none","required_change":"none"},
+    {"path":"Source/WandboundCore/Public/WBReplayTrace.h; Source/WandboundCore/Private/WBReplayTrace.cpp","symbol":"FWBTraceEvent","current_role":"deterministic trace model","production_reachable":true,"window_kind":"no typed metadata before this pass","priority_behavior":"trace fields","pass_behavior":"trace fields","legal_react_source":"none","state_owner":"none","replay_behavior":"private trace digest","privacy_behavior":"not copied to public receipt","baseline_dirty":false,"overlap":"none","required_change":"add optional reaction kind and pass metadata"},
+    {"path":"Source/WandboundCore/Private/WBCardActivationSourceGate.cpp","symbol":"WBCardActivationSourceGate::Evaluate","current_role":"source and timing legality","production_reachable":true,"window_kind":"ResponseWindow currently unsupported","priority_behavior":"normal-turn only","pass_behavior":"none","legal_react_source":"explicit ResponseWindow timing","state_owner":"none","replay_behavior":"none","privacy_behavior":"candidate-internal","baseline_dirty":false,"overlap":"none","required_change":"permit typed response priority"},
+    {"path":"Source/WandboundCore/Private/WBSummonExecution.cpp","symbol":"ExecuteCharacterSummonFromHand","current_role":"normal summon mutation","production_reachable":true,"window_kind":"none","priority_behavior":"none","pass_behavior":"none","legal_react_source":"none","state_owner":"mutates working state","replay_behavior":"summon traces","privacy_behavior":"hand to public board","baseline_dirty":false,"overlap":"none","required_change":"coordinator checkpoint after marker resolution"},
+    {"path":"Source/WandboundCore/Private/WBHybridSummon.cpp","symbol":"WBHybridSummon::ExecuteSummon","current_role":"atomic Hybrid summon/replacement","production_reachable":true,"window_kind":"none","priority_behavior":"none","pass_behavior":"none","legal_react_source":"none","state_owner":"mutates working state","replay_behavior":"hybrid traces","privacy_behavior":"payment identity protected","baseline_dirty":false,"overlap":"none","required_change":"coordinator checkpoint after atomic result and marker resolution"},
+    {"path":"Source/WandboundCore/Private/WBEffectRunner.cpp","symbol":"ApplyPassResponse","current_role":"legacy raw-state compatibility","production_reachable":true,"window_kind":"generic response","priority_behavior":"returns to active player","pass_behavior":"one pass closes","legal_react_source":"none","state_owner":"raw state caller","replay_behavior":"pass_response trace","privacy_behavior":"public pass only","baseline_dirty":false,"overlap":"none","required_change":"preserve compatibility; coordinator owns production lifecycle"},
+    {"path":"Source/WandboundCore/Private/WBProductionMatchReplay.cpp","symbol":"CanonicalGameState","current_role":"deterministic state digest","production_reachable":true,"window_kind":"none","priority_behavior":"serialized","pass_behavior":"none","legal_react_source":"none","state_owner":"none","replay_behavior":"schema 1 hash chain","privacy_behavior":"digest not public receipt","baseline_dirty":false,"overlap":"none","required_change":"hash open typed reaction state"},
+    {"path":"Source/WandboundRuntime/Private/WBProductionMatchReplayRuntime.cpp","symbol":"FWBProductionMatchReplayRecorder and runner","current_role":"production record persistence and fresh replay","production_reachable":true,"window_kind":"coordinator-derived","priority_behavior":"replayed from accepted decisions and automatic traces","pass_behavior":"manual pass recorded; auto-pass remains trace-only","legal_react_source":"coordinator legal set","state_owner":"none","replay_behavior":"schema 1 archive and eight-field receipt","privacy_behavior":"private archive and public allowlisted receipt","baseline_dirty":false,"overlap":"none","required_change":"none; validate parity"},
+    {"path":"Source/WandboundCore/Private/WBPublicTurnSummary.cpp","symbol":"WBPublicTurnSummary::Build","current_role":"public turn observation","production_reachable":true,"window_kind":"response phase only","priority_behavior":"public priority player","pass_behavior":"none","legal_react_source":"viewer-authorized coordinator actions","state_owner":"none","replay_behavior":"none","privacy_behavior":"no hidden zones","baseline_dirty":false,"overlap":"none","required_change":"publish open window kind without private choices"},
+    {"path":"Reference/GodotProject/godotcanon/autoload/Game.gd","symbol":"open_response_window and response continuation","current_role":"read-only behavior reference","production_reachable":false,"window_kind":"all canonical kinds","priority_behavior":"opponent first for move/summon; target owner for attack","pass_behavior":"two consecutive; React resets; forced auto-pass","legal_react_source":"Godot CardDB rules","state_owner":"Godot only","replay_behavior":"reference events","privacy_behavior":"reference only","baseline_dirty":false,"overlap":"read-only","required_change":"none"}
+  ],
+  "supported_changes": ["typed_state", "post_summon", "post_move", "response_timed_activation", "two_pass_close", "react_resets_passes", "auto_pass", "terminal_clear", "replay_trace_and_digest", "public_observation"],
+  "blocked": [
+    {"behavior":"pre_hit_and_post_hit","reason":"production attack path has no suspended damage/counter continuation"},
+    {"behavior":"post_effect","reason":"Godot opens a pending-effect response before resolution while Unreal resolves immediately"},
+    {"behavior":"nested_reaction_stack","reason":"tracked Unreal architecture does not define canonical stack ordering or representation"}
+  ]
+}

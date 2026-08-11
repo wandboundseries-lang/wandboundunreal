@@ -1,0 +1,124 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "hybrid_replacement_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic units for a production post-summon reaction window.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "hybrid_fixture_hero_alpha",
+      "public_name": "Hybrid Fixture Hero Alpha",
+      "kind": "hero",
+      "public_text": "A replacement-fixture Hero.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 2, "ar": 2, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "hybrid_fixture_hero_beta",
+      "public_name": "Hybrid Fixture Hero Beta",
+      "kind": "hero",
+      "public_text": "An opposing replacement-fixture Hero.",
+      "public_category": "Hero",
+      "factions": ["black_meridian"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 2, "ar": 2, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      },
+      "activated_effects": [
+        {
+          "effect_id": "reaction_fixture_heal",
+          "public_label": "Respond",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "response_window",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "blocked_by_stunned": true,
+            "blocked_by_frozen": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "reaction_fixture_heal_once"
+          },
+          "payloads": [
+            {
+              "type": "heal_effect",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "hybrid_fixture_replacement",
+      "public_name": "Hybrid Fixture Replacement",
+      "kind": "hybrid",
+      "public_text": "Replace your Hero.",
+      "public_category": "Hybrid",
+      "factions": ["wandwright"],
+      "tags": ["fixture", "hybrid"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 16, "atk": 3, "ar": 2, "rl": 0 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "hybrid_summon": {
+        "sacrifice_count": 1,
+        "sacrifice_requirement": "controlled_character",
+        "wand_payment_count": 1,
+        "wand_payment_sources": ["hand", "sacrificed_unit"],
+        "hero_destination": "sacrificed_hero_tile",
+        "non_hero_destination": "adjacent_to_hero"
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "hybrid_fixture_wand",
+      "public_name": "Hybrid Fixture Wand",
+      "kind": "wand",
+      "public_text": "A replacement-fixture wand payment.",
+      "public_category": "Wand",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "rr": 1 },
+      "equip": {
+        "target_requirement": "owned_unit",
+        "resonance_requirement": 1
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "hybrid_fixture_filler",
+      "public_name": "Hybrid Fixture Filler",
+      "kind": "character",
+      "public_text": "A replacement-fixture deck card.",
+      "public_category": "Character",
+      "factions": ["officer"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 1, "ar": 1, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 }
+    }
+  ]
+}

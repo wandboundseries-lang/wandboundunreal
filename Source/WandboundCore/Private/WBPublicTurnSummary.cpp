@@ -22,6 +22,19 @@ FWBPublicTurnSummary WBPublicTurnSummary::Build(const FWBGameStateData& State)
 	Summary.PriorityPlayerId = State.PriorityPlayer;
 	Summary.TurnNumber = State.TurnNumber;
 	Summary.Phase = MakePublicPhaseName(State.Phase);
+	if (State.HasOpenReactionWindow())
+	{
+		switch (State.ReactionWindow.Kind)
+		{
+		case EWBReactionWindowKind::PreHit: Summary.ReactionWindowKind = FName(TEXT("pre_hit")); break;
+		case EWBReactionWindowKind::PostHit: Summary.ReactionWindowKind = FName(TEXT("post_hit")); break;
+		case EWBReactionWindowKind::PostMove: Summary.ReactionWindowKind = FName(TEXT("post_move")); break;
+		case EWBReactionWindowKind::PostSummon: Summary.ReactionWindowKind = FName(TEXT("post_summon")); break;
+		case EWBReactionWindowKind::PostEffect: Summary.ReactionWindowKind = FName(TEXT("post_effect")); break;
+		case EWBReactionWindowKind::None:
+		default: break;
+		}
+	}
 	Summary.bGameOver = State.bGameOver;
 	Summary.WinnerPlayerId = State.WinnerPlayerId;
 	if (State.bGameOver)

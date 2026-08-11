@@ -17,6 +17,8 @@ namespace
 {
 constexpr int32 OpeningHandSize = 6;
 
+FName ReactionWindowKindToName(EWBReactionWindowKind Kind);
+
 FWBMatchOperationResult MakeOperationFailure(const FString& Reason)
 {
 	FWBMatchOperationResult Result;
@@ -138,6 +140,20 @@ void CommitTerminalOutcome(
 	if (!State.bGameOver)
 	{
 		return;
+	}
+	if (State.HasOpenReactionWindow())
+	{
+		FWBTraceEvent Cleared = MakeMatchTrace(
+			FName(TEXT("reaction_window_cleared_terminal")),
+			State.ReactionWindow.OriginatingPlayerId,
+			State.TurnNumber,
+			FName(TEXT("game_over")));
+		Cleared.ReactionWindowKind = ReactionWindowKindToName(
+			State.ReactionWindow.Kind);
+		Cleared.SourceUnitId = State.ReactionWindow.SourceUnitId;
+		Cleared.TargetUnitId = State.ReactionWindow.TargetUnitId;
+		Events.Add(Cleared);
+		State.ClearReactionWindow();
 	}
 	FWBTerminalOutcome& Outcome = State.TerminalOutcome;
 	Outcome.bTerminal = true;
@@ -310,9 +326,20 @@ void AddActivationSource(
 	const FWBCardDefinition& Definition,
 	const int32 PlayerId,
 	const int32 SourceUnitId,
-	const EWBCardActivationSourceZone SourceZone)
+	const EWBCardActivationSourceZone SourceZone,
+	const bool bResponseOnly = false)
 {
-	if (Definition.ActivatedEffects.IsEmpty())
+	FWBCardDefinition EligibleDefinition = Definition;
+	if (bResponseOnly)
+	{
+		EligibleDefinition.ActivatedEffects.RemoveAll(
+			[](const FWBCardEffectDefinition& Effect)
+			{
+				return Effect.SourceGate.Timing
+					!= EWBCardActivationTimingRequirement::ResponseWindow;
+			});
+	}
+	if (EligibleDefinition.ActivatedEffects.IsEmpty())
 	{
 		return;
 	}
@@ -320,23 +347,142 @@ void AddActivationSource(
 	FWBCardActivationCandidateSource Source;
 	Source.PlayerId = PlayerId;
 	Source.SourceUnitId = SourceUnitId;
-	Source.CardDefinition = Definition;
+	Source.CardDefinition = EligibleDefinition;
 	Source.CandidateTargets = BuildActivationTargets(State);
-	for (const FWBCardEffectDefinition& Effect : Definition.ActivatedEffects)
+	for (const FWBCardEffectDefinition& Effect : EligibleDefinition.ActivatedEffects)
 	{
 		Source.EffectIdToSourceGateContext.Add(
 			Effect.EffectId,
 			BuildActivationGateContext(
 				State,
 				ZoneContext,
-				Definition,
+				EligibleDefinition,
 				PlayerId,
 				SourceUnitId,
 				SourceZone,
 				Effect));
 	}
-	Source.SourceGateContext = Source.EffectIdToSourceGateContext.FindRef(Definition.ActivatedEffects[0].EffectId);
+	Source.SourceGateContext = Source.EffectIdToSourceGateContext.FindRef(
+		EligibleDefinition.ActivatedEffects[0].EffectId);
 	Sources.Add(MoveTemp(Source));
+}
+
+FWBMatchLegalActionGenerationResult GetActivationActions(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const int32 PlayerId,
+	const bool bResponseOnly)
+{
+	FWBMatchLegalActionGenerationResult Result;
+	const FWBCardActivationFixtureZoneContext ZoneContext =
+		BuildActivationZoneContext(State);
+	TArray<FWBCardActivationCandidateSource> ActivationSources;
+	TArray<const FWBUnitState*> BoardUnits = State.GetUnitsForPlayer(PlayerId);
+	BoardUnits.Sort(UnitIdPointerLess);
+	for (const FWBUnitState* Unit : BoardUnits)
+	{
+		const FWBCardDefinitionRepositoryLookupResult Lookup =
+			WBCardDefinitionRepository::FindCardById(Repository, Unit->CardId);
+		if (Lookup.bFound)
+		{
+			AddActivationSource(
+				ActivationSources,
+				State,
+				ZoneContext,
+				Lookup.Definition,
+				PlayerId,
+				Unit->UnitId,
+				EWBCardActivationSourceZone::Board,
+				bResponseOnly);
+		}
+	}
+
+	TArray<FWBEquippedCardEntry> EquippedCards =
+		State.GetCardZoneState().EquippedCards;
+	EquippedCards.Sort(
+		[](const FWBEquippedCardEntry& A, const FWBEquippedCardEntry& B)
+		{
+			if (A.EquippedToUnitId != B.EquippedToUnitId)
+			{
+				return A.EquippedToUnitId < B.EquippedToUnitId;
+			}
+			if (A.EquipOrder != B.EquipOrder)
+			{
+				return A.EquipOrder < B.EquipOrder;
+			}
+			return A.Card.InstanceId < B.Card.InstanceId;
+		});
+	for (const FWBEquippedCardEntry& Entry : EquippedCards)
+	{
+		if (Entry.Card.OwnerPlayerId != PlayerId)
+		{
+			continue;
+		}
+		const FWBCardDefinitionRepositoryLookupResult Lookup =
+			WBCardDefinitionRepository::FindCardById(Repository, Entry.Card.CardId);
+		if (Lookup.bFound)
+		{
+			AddActivationSource(
+				ActivationSources,
+				State,
+				ZoneContext,
+				Lookup.Definition,
+				PlayerId,
+				Entry.EquippedToUnitId,
+				EWBCardActivationSourceZone::Equipped,
+				bResponseOnly);
+		}
+	}
+
+	const FWBCardActivationCandidateGenerationResult CandidateResult =
+		WBCardActivationCandidateGenerator::GenerateCandidates(
+			State,
+			ActivationSources);
+	if (!CandidateResult.bOk)
+	{
+		return MakeGenerationFailure(CandidateResult.Reason);
+	}
+	const FWBCardActivationLegalActionGenerationResult ActivationResult =
+		WBCardActivationLegalActionGenerator::GenerateFromCandidates(
+			CandidateResult.Candidates);
+	if (!ActivationResult.bOk)
+	{
+		return MakeGenerationFailure(ActivationResult.Reason);
+	}
+
+	TArray<FWBCardActivationLegalAction> ActivationActions =
+		ActivationResult.ActionSet.Actions;
+	ActivationActions.Sort(
+		[](const FWBCardActivationLegalAction& A,
+			const FWBCardActivationLegalAction& B)
+		{
+			return A.ActivationActionId < B.ActivationActionId;
+		});
+	for (const FWBCardActivationLegalAction& ActivationAction : ActivationActions)
+	{
+		FWBMatchLegalAction Action;
+		Action.Family = EWBMatchActionFamily::Activation;
+		Action.ActionId = ActivationAction.ActivationActionId;
+		Action.PlayerId = ActivationAction.PlayerId;
+		Action.ActivationCommand = ActivationAction.Command;
+		Result.Actions.Add(MoveTemp(Action));
+	}
+	Result.bOk = true;
+	return Result;
+}
+
+FName ReactionWindowKindToName(const EWBReactionWindowKind Kind)
+{
+	switch (Kind)
+	{
+	case EWBReactionWindowKind::PreHit: return FName(TEXT("pre_hit"));
+	case EWBReactionWindowKind::PostHit: return FName(TEXT("post_hit"));
+	case EWBReactionWindowKind::PostMove: return FName(TEXT("post_move"));
+	case EWBReactionWindowKind::PostSummon: return FName(TEXT("post_summon"));
+	case EWBReactionWindowKind::PostEffect: return FName(TEXT("post_effect"));
+	case EWBReactionWindowKind::None:
+	default: return NAME_None;
+	}
 }
 
 void AppendSummonTraceEvents(
@@ -701,8 +847,10 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 	Result.TraceEvents = WorkingTraceEvents;
 	Result.NextLegalActions = LegalResult.Actions;
 	Result.bPendingDecision =
-		MatchPhase == EWBMatchLoopPhase::TurnStart
-		&& !TurnStartSequence.bCompleted;
+		(MatchPhase == EWBMatchLoopPhase::TurnStart
+			&& !TurnStartSequence.bCompleted)
+		|| (MatchPhase == EWBMatchLoopPhase::Response
+			&& State.HasOpenReactionWindow());
 	Result.bCompleted = !Result.bPendingDecision;
 	Result.bTerminal = State.bGameOver;
 	Result.PendingPlayerId =
@@ -928,88 +1076,23 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 			Result.Actions.Add(DiscardAction);
 		}
 
-		const FWBCardActivationFixtureZoneContext ZoneContext = BuildActivationZoneContext(InState);
-		TArray<FWBCardActivationCandidateSource> ActivationSources;
-		TArray<const FWBUnitState*> BoardUnits = InState.GetUnitsForPlayer(PlayerId);
-		BoardUnits.Sort(UnitIdPointerLess);
-		for (const FWBUnitState* Unit : BoardUnits)
-		{
-			const FWBCardDefinitionRepositoryLookupResult Lookup =
-				WBCardDefinitionRepository::FindCardById(Repository, Unit->CardId);
-			if (Lookup.bFound)
-			{
-				AddActivationSource(
-					ActivationSources,
-					InState,
-					ZoneContext,
-					Lookup.Definition,
-					PlayerId,
-					Unit->UnitId,
-					EWBCardActivationSourceZone::Board);
-			}
-		}
-
-		TArray<FWBEquippedCardEntry> EquippedCards = InState.GetCardZoneState().EquippedCards;
-		EquippedCards.Sort([](const FWBEquippedCardEntry& A, const FWBEquippedCardEntry& B)
-		{
-			if (A.EquippedToUnitId != B.EquippedToUnitId)
-			{
-				return A.EquippedToUnitId < B.EquippedToUnitId;
-			}
-			if (A.EquipOrder != B.EquipOrder)
-			{
-				return A.EquipOrder < B.EquipOrder;
-			}
-			return A.Card.InstanceId < B.Card.InstanceId;
-		});
-		for (const FWBEquippedCardEntry& Entry : EquippedCards)
-		{
-			if (Entry.Card.OwnerPlayerId != PlayerId)
-			{
-				continue;
-			}
-			const FWBCardDefinitionRepositoryLookupResult Lookup =
-				WBCardDefinitionRepository::FindCardById(Repository, Entry.Card.CardId);
-			if (Lookup.bFound)
-			{
-				AddActivationSource(
-					ActivationSources,
-					InState,
-					ZoneContext,
-					Lookup.Definition,
-					PlayerId,
-					Entry.EquippedToUnitId,
-					EWBCardActivationSourceZone::Equipped);
-			}
-		}
-
-		const FWBCardActivationCandidateGenerationResult CandidateResult =
-			WBCardActivationCandidateGenerator::GenerateCandidates(InState, ActivationSources);
-		if (!CandidateResult.bOk)
-		{
-			return MakeGenerationFailure(CandidateResult.Reason);
-		}
-		const FWBCardActivationLegalActionGenerationResult ActivationResult =
-			WBCardActivationLegalActionGenerator::GenerateFromCandidates(CandidateResult.Candidates);
+		const FWBMatchLegalActionGenerationResult ActivationResult =
+			GetActivationActions(InState, Repository, PlayerId, false);
 		if (!ActivationResult.bOk)
 		{
-			return MakeGenerationFailure(ActivationResult.Reason);
+			return ActivationResult;
 		}
-
-		TArray<FWBCardActivationLegalAction> ActivationActions = ActivationResult.ActionSet.Actions;
-		ActivationActions.Sort([](const FWBCardActivationLegalAction& A, const FWBCardActivationLegalAction& B)
+		Result.Actions.Append(ActivationResult.Actions);
+	}
+	else
+	{
+		const FWBMatchLegalActionGenerationResult ActivationResult =
+			GetActivationActions(InState, Repository, PlayerId, true);
+		if (!ActivationResult.bOk)
 		{
-			return A.ActivationActionId < B.ActivationActionId;
-		});
-		for (const FWBCardActivationLegalAction& ActivationAction : ActivationActions)
-		{
-			FWBMatchLegalAction Action;
-			Action.Family = EWBMatchActionFamily::Activation;
-			Action.ActionId = ActivationAction.ActivationActionId;
-			Action.PlayerId = ActivationAction.PlayerId;
-			Action.ActivationCommand = ActivationAction.Command;
-			Result.Actions.Add(Action);
+			return ActivationResult;
 		}
+		Result.Actions.Append(ActivationResult.Actions);
 	}
 
 	for (const FWBAction& EndTurnAction : EndTurnActions)
@@ -1041,9 +1124,13 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				MakeOperationFailure(Reason);
 			Result.bTerminal = State.bGameOver;
 			Result.bPendingDecision =
-				IsTurnTransitionInProgress();
+				IsTurnTransitionInProgress()
+				|| (MatchPhase == EWBMatchLoopPhase::Response
+					&& State.HasOpenReactionWindow());
 			Result.PendingPlayerId =
-				GetPendingTurnStartDecisionPlayerId();
+				IsTurnTransitionInProgress()
+					? GetPendingTurnStartDecisionPlayerId()
+					: (Result.bPendingDecision ? State.PriorityPlayer : -1);
 			Result.ActivePlayerId = State.CurrentPlayer;
 			Result.TurnNumber = State.TurnNumber;
 			Result.TraceBeginIndex = TraceLog.Num();
@@ -1155,6 +1242,12 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 
 	FString FailureReason;
 	bool bActionApplied = false;
+	bool bWasReactionPass = false;
+	bool bWasReactionActivation = false;
+	EWBReactionWindowKind PendingReactionKind =
+		EWBReactionWindowKind::None;
+	int32 PendingReactionSourceUnitId = -1;
+	int32 PendingReactionTargetUnitId = -1;
 	if (SelectedAction->Family == EWBMatchActionFamily::CoreAction
 		&& SelectedAction->CoreAction.Type == EWBActionType::EndTurn)
 	{
@@ -1210,11 +1303,28 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		{
 		case EWBMatchActionFamily::CoreAction:
 		{
-			const FWBApplyActionResult ApplyResult =
-				WBEffectRunner::ApplyAction(WorkingState, SelectedAction->CoreAction);
-			bActionApplied = ApplyResult.bOk;
-			FailureReason = ApplyResult.Reason;
-			WorkingTraceEvents.Append(ApplyResult.TraceEvents);
+			if (SelectedAction->CoreAction.Type == EWBActionType::PassResponse
+				&& WorkingState.HasOpenReactionWindow())
+			{
+				bWasReactionPass = true;
+				bActionApplied = ApplyReactionPass(
+					WorkingState,
+					WorkingPhase,
+					PlayerId,
+					false,
+					WorkingTraceEvents,
+					FailureReason);
+			}
+			else
+			{
+				const FWBApplyActionResult ApplyResult =
+					WBEffectRunner::ApplyAction(
+						WorkingState,
+						SelectedAction->CoreAction);
+				bActionApplied = ApplyResult.bOk;
+				FailureReason = ApplyResult.Reason;
+				WorkingTraceEvents.Append(ApplyResult.TraceEvents);
+			}
 			if (bActionApplied && SelectedAction->CoreAction.Type == EWBActionType::Move)
 			{
 				const FWBMarkerResolutionResult MarkerResult =
@@ -1225,6 +1335,12 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				bActionApplied = MarkerResult.bOk;
 				FailureReason = MarkerResult.Reason;
 				WorkingTraceEvents.Append(MarkerResult.TraceEvents);
+				if (bActionApplied)
+				{
+					PendingReactionKind = EWBReactionWindowKind::PostMove;
+					PendingReactionSourceUnitId =
+						SelectedAction->CoreAction.SourceUnitId;
+				}
 			}
 			if (bActionApplied
 				&& SelectedAction->CoreAction.Type == EWBActionType::Attack
@@ -1277,6 +1393,17 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				bActionApplied = MarkerResult.bOk;
 				FailureReason = MarkerResult.Reason;
 				WorkingTraceEvents.Append(MarkerResult.TraceEvents);
+				if (bActionApplied)
+				{
+					PendingReactionKind =
+						EWBReactionWindowKind::PostSummon;
+					PendingReactionTargetUnitId = CreatedUnitId;
+					const FWBPlayerStateData* PlayerState =
+						WorkingState.GetPlayerById(PlayerId);
+					PendingReactionSourceUnitId = PlayerState != nullptr
+						? PlayerState->HeroUnitId
+						: -1;
+				}
 			}
 			break;
 		}
@@ -1294,6 +1421,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 		case EWBMatchActionFamily::Activation:
 		{
+			bWasReactionActivation =
+				WorkingState.HasOpenReactionWindow();
 			const FWBCardActivationCommandResult ApplyResult =
 				WBEffectRunner::ApplyCardActivationCommand(
 					WorkingState,
@@ -1336,6 +1465,41 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				WorkingState,
 				WorkingTraceEvents,
 				FailureReason);
+		}
+		if (bActionApplied && !WorkingState.bGameOver)
+		{
+			if (bWasReactionActivation)
+			{
+				bActionApplied = AdvanceReactionAfterReact(
+					WorkingState,
+					WorkingPhase,
+					PlayerId,
+					WorkingTraceEvents,
+					FailureReason);
+			}
+			else if (bWasReactionPass
+				&& WorkingState.HasOpenReactionWindow())
+			{
+				bActionApplied = ApplyForcedReactionPasses(
+					WorkingState,
+					WorkingPhase,
+					WorkingTraceEvents,
+					FailureReason);
+			}
+			else if (PendingReactionKind
+				!= EWBReactionWindowKind::None)
+			{
+				bActionApplied = OpenReactionWindowIfApplicable(
+					WorkingState,
+					WorkingPhase,
+					PendingReactionKind,
+					PlayerId,
+					ActionId,
+					PendingReactionSourceUnitId,
+					PendingReactionTargetUnitId,
+					WorkingTraceEvents,
+					FailureReason);
+			}
 		}
 	}
 
@@ -1402,8 +1566,10 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	CommittedRecord.AfterGeneration = CoordinatorGeneration;
 	CommittedRecord.AfterRevision = CoordinatorRevision;
 	CommittedRecord.bCompleted =
-		!(MatchPhase == EWBMatchLoopPhase::TurnStart
-			&& !TurnStartSequence.bCompleted);
+		!((MatchPhase == EWBMatchLoopPhase::TurnStart
+				&& !TurnStartSequence.bCompleted)
+			|| (MatchPhase == EWBMatchLoopPhase::Response
+				&& State.HasOpenReactionWindow()));
 	CommittedRecord.bPendingDecision =
 		!CommittedRecord.bCompleted;
 	CommittedRecord.PendingPlayer =
@@ -1435,8 +1601,10 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	Result.TraceEvents = MoveTemp(WorkingTraceEvents);
 	Result.NextLegalActions = NextLegalResult.Actions;
 	Result.bPendingDecision =
-		MatchPhase == EWBMatchLoopPhase::TurnStart
-		&& !TurnStartSequence.bCompleted;
+		(MatchPhase == EWBMatchLoopPhase::TurnStart
+			&& !TurnStartSequence.bCompleted)
+		|| (MatchPhase == EWBMatchLoopPhase::Response
+			&& State.HasOpenReactionWindow());
 	Result.bCompleted = !Result.bPendingDecision;
 	Result.bTerminal = State.bGameOver;
 	Result.PendingPlayerId =
@@ -1517,6 +1685,267 @@ bool WBMatchCoordinator::ApplyAutomaticResolution(
 			: EWBMatchLoopPhase::Action)));
 	OutReason.Reset();
 	return true;
+}
+
+bool WBMatchCoordinator::HasLegalReactForPriority(
+	const FWBGameStateData& InState,
+	FString& OutReason) const
+{
+	if (!InState.HasOpenReactionWindow()
+		|| !InState.IsResponsePhase()
+		|| !FWBGameStateData::IsValidPlayerId(InState.PriorityPlayer))
+	{
+		OutReason = TEXT("reaction_window_not_open");
+		return false;
+	}
+
+	const FWBMatchLegalActionGenerationResult Result =
+		GetActivationActions(
+			InState,
+			Repository,
+			InState.PriorityPlayer,
+			true);
+	if (!Result.bOk)
+	{
+		OutReason = Result.Reason;
+		return false;
+	}
+	OutReason.Reset();
+	return !Result.Actions.IsEmpty();
+}
+
+bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
+	FWBGameStateData& WorkingState,
+	EWBMatchLoopPhase& WorkingPhase,
+	const EWBReactionWindowKind Kind,
+	const int32 OriginatingPlayerId,
+	const FString& SourceActionId,
+	const int32 SourceUnitId,
+	const int32 TargetUnitId,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	if (Kind == EWBReactionWindowKind::None
+		|| WorkingState.bGameOver
+		|| WorkingState.bSuppressManualReactsDuringInitialHeroSetup)
+	{
+		OutReason.Reset();
+		return true;
+	}
+	if (!FWBGameStateData::IsValidPlayerId(OriginatingPlayerId))
+	{
+		OutReason = TEXT("reaction_originating_player_invalid");
+		return false;
+	}
+	if (WorkingState.HasOpenReactionWindow())
+	{
+		OutReason = TEXT("nested_reaction_window_not_supported");
+		return false;
+	}
+
+	FWBGameStateData ProbeState = WorkingState;
+	ProbeState.ReactionWindow.Kind = Kind;
+	ProbeState.ReactionWindow.OriginatingPlayerId = OriginatingPlayerId;
+	ProbeState.ReactionWindow.SourceActionId = SourceActionId;
+	ProbeState.ReactionWindow.SourceUnitId = SourceUnitId;
+	ProbeState.ReactionWindow.TargetUnitId = TargetUnitId;
+	ProbeState.Phase = EWBGamePhase::Response;
+	const int32 FirstPriorityPlayerId = 1 - OriginatingPlayerId;
+	ProbeState.PriorityPlayer = FirstPriorityPlayerId;
+
+	FString ProbeReason;
+	const bool bFirstPlayerHasReact =
+		HasLegalReactForPriority(ProbeState, ProbeReason);
+	if (!ProbeReason.IsEmpty())
+	{
+		OutReason = ProbeReason;
+		return false;
+	}
+	ProbeState.PriorityPlayer = OriginatingPlayerId;
+	const bool bOriginatingPlayerHasReact =
+		HasLegalReactForPriority(ProbeState, ProbeReason);
+	if (!ProbeReason.IsEmpty())
+	{
+		OutReason = ProbeReason;
+		return false;
+	}
+	if (!bFirstPlayerHasReact && !bOriginatingPlayerHasReact)
+	{
+		OutReason.Reset();
+		return true;
+	}
+
+	WorkingState.ReactionWindow = ProbeState.ReactionWindow;
+	WorkingState.PriorityPlayer = FirstPriorityPlayerId;
+	WorkingState.Phase = EWBGamePhase::Response;
+	WorkingPhase = EWBMatchLoopPhase::Response;
+	FWBTraceEvent Opened = MakeMatchTrace(
+		FName(TEXT("reaction_window_opened")),
+		OriginatingPlayerId,
+		WorkingState.TurnNumber,
+		PhaseToName(WorkingPhase));
+	Opened.ActionId = SourceActionId;
+	Opened.FromPlayer = OriginatingPlayerId;
+	Opened.ToPlayer = FirstPriorityPlayerId;
+	Opened.SourceUnitId = SourceUnitId;
+	Opened.TargetUnitId = TargetUnitId;
+	Opened.ReactionWindowKind = ReactionWindowKindToName(Kind);
+	Opened.ReactionPassCount = 0;
+	OutTraceEvents.Add(MoveTemp(Opened));
+	return ApplyForcedReactionPasses(
+		WorkingState,
+		WorkingPhase,
+		OutTraceEvents,
+		OutReason);
+}
+
+bool WBMatchCoordinator::ApplyReactionPass(
+	FWBGameStateData& WorkingState,
+	EWBMatchLoopPhase& WorkingPhase,
+	const int32 PassingPlayerId,
+	const bool bAutomatic,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	if (!WorkingState.HasOpenReactionWindow()
+		|| !WorkingState.IsResponsePhase()
+		|| WorkingPhase != EWBMatchLoopPhase::Response)
+	{
+		OutReason = TEXT("reaction_window_not_open");
+		return false;
+	}
+	if (PassingPlayerId != WorkingState.PriorityPlayer)
+	{
+		OutReason = TEXT("wrong_player");
+		return false;
+	}
+
+	const EWBReactionWindowKind Kind = WorkingState.ReactionWindow.Kind;
+	const int32 NextPlayerId = 1 - PassingPlayerId;
+	++WorkingState.ReactionWindow.ConsecutivePassCount;
+	FWBTraceEvent Passed = MakeMatchTrace(
+		bAutomatic
+			? FName(TEXT("reaction_auto_passed"))
+			: FName(TEXT("pass_response")),
+		PassingPlayerId,
+		WorkingState.TurnNumber,
+		PhaseToName(WorkingPhase));
+	Passed.FromPlayer = PassingPlayerId;
+	Passed.ToPlayer = NextPlayerId;
+	Passed.ReactionWindowKind = ReactionWindowKindToName(Kind);
+	Passed.ReactionPassCount =
+		WorkingState.ReactionWindow.ConsecutivePassCount;
+	OutTraceEvents.Add(MoveTemp(Passed));
+
+	if (WorkingState.ReactionWindow.ConsecutivePassCount >= 2)
+	{
+		CloseReactionWindow(WorkingState, WorkingPhase, OutTraceEvents);
+	}
+	else
+	{
+		WorkingState.PriorityPlayer = NextPlayerId;
+	}
+	OutReason.Reset();
+	return true;
+}
+
+bool WBMatchCoordinator::AdvanceReactionAfterReact(
+	FWBGameStateData& WorkingState,
+	EWBMatchLoopPhase& WorkingPhase,
+	const int32 ReactingPlayerId,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	if (!WorkingState.HasOpenReactionWindow()
+		|| WorkingPhase != EWBMatchLoopPhase::Response
+		|| WorkingState.PriorityPlayer != ReactingPlayerId)
+	{
+		OutReason = TEXT("reaction_window_not_open");
+		return false;
+	}
+
+	WorkingState.ReactionWindow.ConsecutivePassCount = 0;
+	WorkingState.PriorityPlayer = 1 - ReactingPlayerId;
+	FWBTraceEvent Resolved = MakeMatchTrace(
+		FName(TEXT("reaction_resolved")),
+		ReactingPlayerId,
+		WorkingState.TurnNumber,
+		PhaseToName(WorkingPhase));
+	Resolved.FromPlayer = ReactingPlayerId;
+	Resolved.ToPlayer = WorkingState.PriorityPlayer;
+	Resolved.ReactionWindowKind = ReactionWindowKindToName(
+		WorkingState.ReactionWindow.Kind);
+	Resolved.ReactionPassCount = 0;
+	OutTraceEvents.Add(MoveTemp(Resolved));
+	return ApplyForcedReactionPasses(
+		WorkingState,
+		WorkingPhase,
+		OutTraceEvents,
+		OutReason);
+}
+
+bool WBMatchCoordinator::ApplyForcedReactionPasses(
+	FWBGameStateData& WorkingState,
+	EWBMatchLoopPhase& WorkingPhase,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	int32 Guard = 0;
+	while (WorkingState.HasOpenReactionWindow())
+	{
+		if (++Guard > 2)
+		{
+			OutReason = TEXT("reaction_auto_pass_guard_exceeded");
+			return false;
+		}
+		FString LegalReason;
+		if (HasLegalReactForPriority(WorkingState, LegalReason))
+		{
+			OutReason.Reset();
+			return true;
+		}
+		if (!LegalReason.IsEmpty())
+		{
+			OutReason = LegalReason;
+			return false;
+		}
+		if (!ApplyReactionPass(
+			WorkingState,
+			WorkingPhase,
+			WorkingState.PriorityPlayer,
+			true,
+			OutTraceEvents,
+			OutReason))
+		{
+			return false;
+		}
+	}
+	OutReason.Reset();
+	return true;
+}
+
+void WBMatchCoordinator::CloseReactionWindow(
+	FWBGameStateData& WorkingState,
+	EWBMatchLoopPhase& WorkingPhase,
+	TArray<FWBTraceEvent>& OutTraceEvents)
+{
+	FWBTraceEvent Closed = MakeMatchTrace(
+		FName(TEXT("reaction_window_closed")),
+		WorkingState.ReactionWindow.OriginatingPlayerId,
+		WorkingState.TurnNumber,
+		PhaseToName(EWBMatchLoopPhase::Action));
+	Closed.ActionId = WorkingState.ReactionWindow.SourceActionId;
+	Closed.SourceUnitId = WorkingState.ReactionWindow.SourceUnitId;
+	Closed.TargetUnitId = WorkingState.ReactionWindow.TargetUnitId;
+	Closed.ReactionWindowKind = ReactionWindowKindToName(
+		WorkingState.ReactionWindow.Kind);
+	Closed.ReactionPassCount =
+		WorkingState.ReactionWindow.ConsecutivePassCount;
+	OutTraceEvents.Add(MoveTemp(Closed));
+	WorkingState.ClearReactionWindow();
+	WorkingState.PriorityPlayer = WorkingState.CurrentPlayer;
+	WorkingState.Phase = EWBGamePhase::NormalTurn;
+	WorkingPhase = EWBMatchLoopPhase::Action;
 }
 
 bool WBMatchCoordinator::ApplyTurnTransition(

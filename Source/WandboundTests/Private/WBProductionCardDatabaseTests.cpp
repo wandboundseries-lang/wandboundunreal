@@ -179,6 +179,44 @@ bool FWBProductionCardDBValidBundleTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBProductionCardDBResponseTimingTest,
+	"Wandbound.CardDB.Production.Schema.ResponseWindowTiming",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBProductionCardDBResponseTimingTest::RunTest(const FString&)
+{
+	const FString Sandbox = MakeSandbox(TEXT("response_window_timing"));
+	TestTrue(
+		TEXT("Fixture timing changed"),
+		ReplaceInSandboxFile(
+			Sandbox,
+			TEXT("bundles/wands.json"),
+			TEXT("\"timing\": \"normal_turn_priority\""),
+			TEXT("\"timing\": \"response_window\"")));
+	const FWBProductionCardDatabaseLoadResult Result = LoadSandbox(Sandbox);
+	TestTrue(TEXT("Response-window timing imports"), Result.bOk);
+	TestFalse(
+		TEXT("Response-window timing is not diagnosed as unsupported"),
+		HasDiagnostic(Result, TEXT("unsupported_timing")));
+	if (Result.Snapshot.IsValid())
+	{
+		const FWBProductionCardRecord* Wand =
+			Result.Snapshot->Records.FindByPredicate(
+				[](const FWBProductionCardRecord& Record)
+				{
+					return Record.CoreDefinition.CardId == TEXT("fixture_ember_wand");
+				});
+		TestNotNull(TEXT("Response definition remains present"), Wand);
+		TestTrue(
+			TEXT("Response timing maps to the typed source gate"),
+			Wand != nullptr
+			&& !Wand->CoreDefinition.ActivatedEffects.IsEmpty()
+			&& Wand->CoreDefinition.ActivatedEffects[0].SourceGate.Timing
+				== EWBCardActivationTimingRequirement::ResponseWindow);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FWBProductionCardDBUnknownFieldRejectedTest,
 	"Wandbound.CardDB.Production.Schema.UnknownFieldRejected",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

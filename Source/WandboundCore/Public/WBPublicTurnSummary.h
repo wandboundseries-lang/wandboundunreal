@@ -18,6 +18,7 @@ struct WANDBOUNDCORE_API FWBPublicTurnSummary
 	int32 PriorityPlayerId = -1;
 	int32 TurnNumber = 0;
 	FName Phase;
+	FName ReactionWindowKind;
 	bool bGameOver = false;
 	int32 WinnerPlayerId = -1;
 	// Terminal fields remain absent/default for nonterminal observations.

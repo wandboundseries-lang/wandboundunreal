@@ -394,8 +394,25 @@ bool FWBCardActivationSourceGateTimingCostAndOnceTest::RunTest(const FString& Pa
 	Context.PlayerId = 0;
 	Gate.Timing = EWBCardActivationTimingRequirement::ResponseWindow;
 	Result = WBCardActivationSourceGate::Evaluate(State, Gate, Context);
-	TestFalse(TEXT("Response window not supported"), Result.bOk);
-	TestEqual(TEXT("Response reason"), Result.Reason, FString(TEXT("response_window_not_supported")));
+	TestFalse(TEXT("Response timing requires an open typed window"), Result.bOk);
+	TestEqual(TEXT("Response reason"), Result.Reason, FString(TEXT("timing_not_response_priority")));
+	State.Phase = EWBGamePhase::Response;
+	State.PriorityPlayer = 0;
+	State.ReactionWindow.Kind = EWBReactionWindowKind::PostSummon;
+	State.ReactionWindow.OriginatingPlayerId = 1;
+	Result = WBCardActivationSourceGate::Evaluate(State, Gate, Context);
+	TestTrue(TEXT("Priority player passes during typed response window"), Result.bOk);
+	Context.PlayerId = 1;
+	Result = WBCardActivationSourceGate::Evaluate(State, Gate, Context);
+	TestFalse(TEXT("Non-priority player fails during response window"), Result.bOk);
+	TestEqual(TEXT("Response priority reason"), Result.Reason, FString(TEXT("timing_not_response_priority")));
+	Context.PlayerId = 0;
+	State.bSuppressManualReactsDuringInitialHeroSetup = true;
+	Result = WBCardActivationSourceGate::Evaluate(State, Gate, Context);
+	TestFalse(TEXT("Initial setup suppression blocks response timing"), Result.bOk);
+	State.bSuppressManualReactsDuringInitialHeroSetup = false;
+	State.ClearReactionWindow();
+	State.Phase = EWBGamePhase::NormalTurn;
 
 	Gate.Timing = EWBCardActivationTimingRequirement::Any;
 	Gate.bRequiresCostsSatisfiedExternally = true;
