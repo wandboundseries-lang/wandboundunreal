@@ -10,6 +10,8 @@ struct WANDBOUNDCORE_API FWBCardActivationCandidate
 
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
+	FString SourceCardInstanceId;
+	EWBCardZone SourceZone = EWBCardZone::Unknown;
 
 	FString SourceCardId;
 	FString SourceEffectId;
@@ -24,6 +26,8 @@ struct WANDBOUNDCORE_API FWBCardActivationCandidateSource
 {
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
+	FString SourceCardInstanceId;
+	EWBCardZone SourceZone = EWBCardZone::Unknown;
 
 	FWBCardDefinition CardDefinition;
 	TArray<FWBEffectTargetRef> CandidateTargets;

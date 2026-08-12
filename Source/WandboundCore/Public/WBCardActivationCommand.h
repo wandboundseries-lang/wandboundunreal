@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WBCardZoneState.h"
 #include "WBEffectRequest.h"
 #include "WBReplayTrace.h"
 
@@ -9,6 +10,8 @@ struct WANDBOUNDCORE_API FWBCardActivationSource
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
 	FString SourceCardId;
+	FString SourceCardInstanceId;
+	EWBCardZone SourceZone = EWBCardZone::Unknown;
 	FString SourceEffectId;
 };
 

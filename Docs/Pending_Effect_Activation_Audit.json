@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "commit": "4b87cfe09e60f65476076b2b2100b66284bee1a6",
+    "origin_main_synchronized": true,
+    "initial_automation_count": 2175,
+    "replay_schema_version": 1,
+    "action_codec_modified": false,
+    "staged_files": []
+  },
+  "canonical_semantics": {
+    "first_priority": "opponent_of_activating_player",
+    "react_resets_pass_count": true,
+    "priority_alternates": true,
+    "passes_to_close": 2,
+    "auto_pass_when_no_legal_react": true,
+    "nested_parent_context_restored": true
+  },
+  "components": [
+    {
+      "path": "Source/WandboundCore/Public/WBMatchCoordinator.h",
+      "symbol": "FWBPendingEffectActivationFrame",
+      "current_role": "typed immutable pending activation frame",
+      "production_reachable": true,
+      "state_owner": "WBMatchCoordinator",
+      "replay_behavior": "private state digest plus deterministic traces",
+      "privacy_behavior": "not included in public observation",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "added"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+      "symbol": "BeginPendingEffectActivation/ResolveTopPendingEffectActivation",
+      "current_role": "declare, nest, close, resolve, negate, and restore",
+      "production_reachable": true,
+      "window_kind": "post_effect",
+      "priority_behavior": "opponent first; alternate after React/pass",
+      "pass_behavior": "two consecutive passes; deterministic auto-pass",
+      "legal_react_source": "existing activation candidate and source-gate pipeline",
+      "state_owner": "WBMatchCoordinator",
+      "replay_behavior": "accepted actions plus automatic trace events",
+      "privacy_behavior": "legal actions only for priority viewer",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "extended"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBEffectRunner.cpp",
+      "symbol": "EWBGenericEffectOp::NegatePendingEffect",
+      "current_role": "validates and traces generic control payload transaction",
+      "production_reachable": true,
+      "state_owner": "EffectRunner for game state; coordinator for pending control state",
+      "replay_behavior": "pending_effect_negation_requested trace",
+      "privacy_behavior": "frame ID remains private trace/archive data",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "extended"
+    },
+    {
+      "path": "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+      "symbol": "negate_pending_effect parser and Hand source validation",
+      "current_role": "production data boundary",
+      "production_reachable": true,
+      "legal_react_source": "Hand/Board/Equipped source gates",
+      "state_owner": "none",
+      "replay_behavior": "none",
+      "privacy_behavior": "does not publish hidden zones",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "extended"
+    },
+    {
+      "path": "Reference/GodotProject/godotcanon/autoload/Game.gd",
+      "symbol": "pending_effect_activation/pending_nested_response_activation_stack",
+      "current_role": "read-only behavioral reference",
+      "production_reachable": false,
+      "state_owner": "Godot reference only",
+      "replay_behavior": "not used by Unreal",
+      "privacy_behavior": "not runtime-loaded",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "none"
+    }
+  ],
+  "godot_exact_id_branches_not_ported": [
+    "char_marrow_oddsman",
+    "char_marrow_claimshifter",
+    "wand_equip_ww_sealplate",
+    "effect_react_csn_crash_in",
+    "wand_react_sever_thread"
+  ],
+  "deferred": [
+    "suspended attack continuation",
+    "card-specific coin flips and copy effects",
+    "card-specific prevent semantics",
+    "optional hooks not expressible as ordinary activation definitions"
+  ]
+}

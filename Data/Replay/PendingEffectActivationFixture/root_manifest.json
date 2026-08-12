@@ -1,0 +1,11 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "pending_effect_activation_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    { "name": "pending_effect_activation", "path": "bundle_manifest.json" }
+  ],
+  "metadata": {
+    "notes": "Synthetic production A to B to C pending-effect activation fixture."
+  }
+}

@@ -390,6 +390,22 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetNumberField(TEXT("reaction_pass_count"), Event.ReactionPassCount);
 	}
+	if (!Event.PendingEffectFrameId.IsEmpty())
+	{
+		Object->SetStringField(TEXT("pending_effect_frame_id"), Event.PendingEffectFrameId);
+	}
+	if (!Event.ParentPendingEffectFrameId.IsEmpty())
+	{
+		Object->SetStringField(TEXT("parent_pending_effect_frame_id"), Event.ParentPendingEffectFrameId);
+	}
+	if (Event.PendingEffectStackDepth >= 0)
+	{
+		Object->SetNumberField(TEXT("pending_effect_stack_depth"), Event.PendingEffectStackDepth);
+	}
+	if (Event.bPendingEffectNegated)
+	{
+		Object->SetBoolField(TEXT("pending_effect_negated"), true);
+	}
 
 	if (Event.bDeferredBoundary)
 	{

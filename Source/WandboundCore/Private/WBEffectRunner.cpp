@@ -295,6 +295,20 @@ void AppendEffectRequestResolvedTrace(
 	TraceEvents.Add(Event);
 }
 
+void AppendPendingEffectNegationRequestedTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBEffectRequest& Request,
+	const FString& FrameId)
+{
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("pending_effect_negation_requested"));
+	Event.PlayerId = Request.Source.PlayerId;
+	Event.SourceUnitId = Request.Source.SourceUnitId;
+	Event.PendingEffectFrameId = FrameId;
+	Event.bOk = true;
+	TraceEvents.Add(MoveTemp(Event));
+}
+
 void AppendCardActivationResolvedTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const FWBCardActivationCommand& Command)
@@ -856,6 +870,15 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 			}
 
 			PayloadResult = ApplyHealEffect(WorkingState, HealRequest);
+			break;
+		}
+		case EWBGenericEffectOp::NegatePendingEffect:
+		{
+			PayloadResult.bOk = true;
+			AppendPendingEffectNegationRequestedTrace(
+				PayloadResult.TraceEvents,
+				Request,
+				Payload.PendingEffectFrameId);
 			break;
 		}
 		default:

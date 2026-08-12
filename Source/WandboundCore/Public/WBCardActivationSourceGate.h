@@ -48,6 +48,7 @@ struct WANDBOUNDCORE_API FWBCardActivationFixtureZoneEntry
 
 	// Fixture-only metadata for Equipped sources. This is not production zone state.
 	int32 EquippedToUnitId = -1;
+	FString CardInstanceId;
 };
 
 struct WANDBOUNDCORE_API FWBCardActivationFixtureZoneContext
@@ -83,6 +84,7 @@ struct WANDBOUNDCORE_API FWBCardActivationSourceGateContext
 	int32 SourceUnitId = -1;
 
 	FString SourceCardId;
+	FString SourceCardInstanceId;
 	EWBCardActivationSourceZone SourceZone = EWBCardActivationSourceZone::Fixture;
 	FWBCardActivationFixtureZoneContext FixtureZoneContext;
 	bool bCostsSatisfiedExternally = true;

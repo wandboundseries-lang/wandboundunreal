@@ -82,6 +82,10 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FName MatchPhase;
 	FName ReactionWindowKind;
 	int32 ReactionPassCount = -1;
+	FString PendingEffectFrameId;
+	FString ParentPendingEffectFrameId;
+	int32 PendingEffectStackDepth = -1;
+	bool bPendingEffectNegated = false;
 	bool bDeferredBoundary = false;
 	FWBTile FromTile;
 	FWBTile ToTile;

@@ -2162,14 +2162,15 @@ private:
 				EffectObject,
 				TEXT("target_requirement"),
 				TargetRequirement)
-				|| TargetRequirement != TEXT("unit"))
+				|| (TargetRequirement != TEXT("unit")
+					&& TargetRequirement != TEXT("none")))
 			{
 				AddError(
 					TEXT("invalid_target_requirement"),
 					Record.SourceManifestPath,
 					Record.CoreDefinition.CardId,
 					EffectPath + TEXT(".target_requirement"),
-					TEXT("The production activation path currently supports explicit unit targets only."));
+					TEXT("Production activations support explicit unit targets and control payloads with no public target."));
 			}
 			Effect.TargetRequirement = ParseTargetRequirement(TargetRequirement);
 
@@ -2233,14 +2234,15 @@ private:
 				? ParseSourceZone(Zone)
 				: EWBCardActivationSourceZone::Unknown;
 		if (Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Board
-			&& Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Equipped)
+			&& Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Equipped
+			&& Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Hand)
 		{
 			AddError(
 				TEXT("unsupported_source_zone"),
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				EffectPath + TEXT(".source_gate.required_zone"),
-				TEXT("Production match activation currently supports Board and Equipped sources."));
+				TEXT("Production match activation supports Board, Equipped, and Hand sources."));
 		}
 
 		FString Timing;
@@ -2277,14 +2279,16 @@ private:
 
 		bool BoolValue = false;
 		if (!TryReadBool(GateObject, TEXT("requires_source_unit"), BoolValue)
-			|| !BoolValue)
+			|| (Effect.SourceGate.RequiredZone == EWBCardActivationSourceZone::Hand
+				? BoolValue
+				: !BoolValue))
 		{
 			AddError(
 				TEXT("source_gate_malformed"),
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				EffectPath + TEXT(".source_gate.requires_source_unit"),
-				TEXT("Current production activations require a source unit."));
+				TEXT("Board and Equipped activations require a source unit; Hand activations must not."));
 		}
 		Effect.SourceGate.bRequiresSourceUnit = BoolValue;
 
@@ -2481,6 +2485,16 @@ private:
 			else if (Type == TEXT("armor_effect"))
 			{
 				ParseArmorPayload(PayloadObject, PayloadPath, Record, Payload);
+			}
+			else if (Type == TEXT("negate_pending_effect"))
+			{
+				ValidateKnownFields(
+					PayloadObject,
+					{ TEXT("type") },
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					PayloadPath);
+				Payload.Operation = EWBGenericEffectOp::NegatePendingEffect;
 			}
 			else
 			{
@@ -2735,14 +2749,35 @@ private:
 				EffectPath + TEXT(".source_gate.required_zone"),
 				TEXT("Wand activations must originate from Equipped."));
 		}
-		else if (Record.Type == EWBProductionCardType::Action)
+		else if (Record.Type == EWBProductionCardType::Action
+			&& Effect.SourceGate.RequiredZone
+				!= EWBCardActivationSourceZone::Hand)
 		{
 			AddError(
 				TEXT("effect_card_type_incompatible"),
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				EffectPath,
-				TEXT("Hand Action activation is not yet part of the production match coordinator."));
+				TEXT("Action activations must originate from Hand."));
+		}
+		if (Effect.TargetRequirement == EWBCardEffectTargetRequirement::None)
+		{
+			const bool bOnlyPendingNegation = !Effect.Payloads.IsEmpty()
+				&& !Effect.Payloads.ContainsByPredicate(
+					[](const FWBGenericEffectPayload& Payload)
+					{
+						return Payload.Operation
+							!= EWBGenericEffectOp::NegatePendingEffect;
+					});
+			if (!bOnlyPendingNegation)
+			{
+				AddError(
+					TEXT("invalid_target_requirement"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					EffectPath + TEXT(".target_requirement"),
+					TEXT("Only pending-effect negation may omit a public target."));
+			}
 		}
 	}
 

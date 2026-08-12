@@ -1,0 +1,22 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "WBProductionRuntimeBootstrap.h"
+
+struct WANDBOUNDRUNTIME_API FWBProductionPendingEffectSmokeResult
+{
+	bool bOk = false;
+	FString Reason;
+	int32 RecordsVerified = 0;
+	FString FinalStateDigest;
+	FString FinalTraceDigest;
+};
+
+class WANDBOUNDRUNTIME_API WBProductionPendingEffectSmoke
+{
+public:
+	static bool IsRequested(const TCHAR* CommandLine = nullptr);
+	static FString GetReceiptPath();
+	static FWBProductionPendingEffectSmokeResult Run(
+		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
+};

@@ -887,6 +887,15 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			}
 			break;
 		}
+		case EWBGenericEffectOp::NegatePendingEffect:
+		{
+			if (Payload.PendingEffectFrameId.IsEmpty())
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("pending_effect_frame_id_missing"));
+			}
+			break;
+		}
 		default:
 			return FWBActionQueryResult::Deny(TEXT("unknown_effect_payload_operation"));
 		}

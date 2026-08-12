@@ -73,6 +73,10 @@ FWBCardActivationSourceGateContext BuildGateContext(
 			? Source.SourceGateContext.SourceCardId
 			: Source.CardDefinition.CardId;
 	}
+	if (Context.SourceCardInstanceId.IsEmpty())
+	{
+		Context.SourceCardInstanceId = Source.SourceCardInstanceId;
+	}
 
 	if (Context.SourceZone == EWBCardActivationSourceZone::Fixture
 		&& Source.SourceGateContext.SourceZone != EWBCardActivationSourceZone::Fixture)
@@ -167,6 +171,8 @@ FWBCardActivationCandidate MakeCandidate(
 	FWBCardActivationCandidate Candidate;
 	Candidate.PlayerId = PlayerId;
 	Candidate.SourceUnitId = SourceUnitId;
+	Candidate.SourceCardInstanceId = Command.Source.SourceCardInstanceId;
+	Candidate.SourceZone = Command.Source.SourceZone;
 	Candidate.SourceCardId = CardDefinition.CardId;
 	Candidate.SourceEffectId = Effect.EffectId;
 	Candidate.PublicLabel = BuildPublicLabel(Effect);

@@ -121,7 +121,8 @@ public:
 		const FWBGameStateData& State,
 		int32 MatchPhase,
 		uint32 RandomState,
-		const FWBTurnStartSequenceState& TurnStartSequence);
+		const FWBTurnStartSequenceState& TurnStartSequence,
+		const FString& AdditionalCanonicalState = FString());
 	static FString BuildTraceDigest(const TArray<FWBTraceEvent>& Events);
 	static FString BuildLegalActionSetDigest(
 		const TArray<FString>& CanonicalActionEntries);

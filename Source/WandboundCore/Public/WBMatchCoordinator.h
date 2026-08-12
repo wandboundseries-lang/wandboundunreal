@@ -83,6 +83,21 @@ struct WANDBOUNDCORE_API FWBMatchLegalActionGenerationResult
 	TArray<FWBMatchLegalAction> Actions;
 };
 
+struct WANDBOUNDCORE_API FWBPendingEffectActivationFrame
+{
+	FString FrameId;
+	FString ParentFrameId;
+	FString ActivationActionId;
+	int32 ActivatingPlayerId = -1;
+	FWBCardActivationCommand Command;
+	FWBReactionWindowState ParentReactionWindow;
+	int32 ParentPriorityPlayerId = -1;
+	EWBGamePhase ParentGamePhase = EWBGamePhase::NormalTurn;
+	EWBMatchLoopPhase ParentMatchPhase = EWBMatchLoopPhase::Action;
+	bool bHasParentReaction = false;
+	bool bNegated = false;
+};
+
 struct WANDBOUNDCORE_API FWBMatchOperationResult
 {
 	bool bOk = false;
@@ -150,6 +165,7 @@ public:
 	FString GetCurrentStateDigest() const;
 	FString GetCurrentTraceDigest() const;
 	const TArray<FWBMatchCommittedActionRecord>& GetCommittedActionRecords() const;
+	const TArray<FWBPendingEffectActivationFrame>& GetPendingEffectActivationStack() const;
 	static bool ClassifyReplayActionFamily(
 		const FWBMatchLegalAction& Action,
 		FString& OutFamily);
@@ -166,7 +182,8 @@ private:
 	FWBMatchLegalActionGenerationResult EnumerateLegalActionsForState(
 		const FWBGameStateData& InState,
 		EWBMatchLoopPhase InPhase,
-		const FWBTurnStartSequenceState* InTurnStartSequence = nullptr) const;
+		const FWBTurnStartSequenceState* InTurnStartSequence = nullptr,
+		const TArray<FWBPendingEffectActivationFrame>* InPendingEffects = nullptr) const;
 
 	bool ApplyAutomaticResolution(
 		FWBGameStateData& WorkingState,
@@ -175,6 +192,7 @@ private:
 	bool OpenReactionWindowIfApplicable(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
 		EWBReactionWindowKind Kind,
 		int32 OriginatingPlayerId,
 		const FString& SourceActionId,
@@ -185,28 +203,48 @@ private:
 	bool ApplyReactionPass(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
 		int32 PassingPlayerId,
 		bool bAutomatic,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool BeginPendingEffectActivation(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		const FWBMatchLegalAction& Action,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		int32& WorkingNextPendingEffectSequence,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool ResolveTopPendingEffectActivation(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 	bool AdvanceReactionAfterReact(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
 		int32 ReactingPlayerId,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 	bool ApplyForcedReactionPasses(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 	bool HasLegalReactForPriority(
 		const FWBGameStateData& InState,
+		const TArray<FWBPendingEffectActivationFrame>& InPendingEffects,
 		FString& OutReason) const;
-	static void CloseReactionWindow(
+	bool CloseReactionWindow(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
-		TArray<FWBTraceEvent>& OutTraceEvents);
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
 
 	bool ApplyTurnTransition(
 		FWBGameStateData& WorkingState,
@@ -235,4 +273,6 @@ private:
 	FString InitialStateDigest;
 	FString InitialTraceDigest;
 	TArray<FWBMatchCommittedActionRecord> CommittedActionRecords;
+	TArray<FWBPendingEffectActivationFrame> PendingEffectActivations;
+	int32 NextPendingEffectSequence = 1;
 };

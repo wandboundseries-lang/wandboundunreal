@@ -242,6 +242,8 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::EvaluateFixtureZon
 	for (const FWBCardActivationFixtureZoneEntry& Entry : Context.FixtureZoneContext.Entries)
 	{
 		if (Entry.CardId == Context.SourceCardId
+			&& (Context.SourceCardInstanceId.IsEmpty()
+				|| Entry.CardInstanceId == Context.SourceCardInstanceId)
 			&& Entry.OwnerPlayerId == Context.PlayerId
 			&& Entry.Zone == Gate.RequiredZone)
 		{

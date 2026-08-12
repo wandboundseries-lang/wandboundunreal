@@ -17,7 +17,8 @@ bool IsKnownPayloadOperation(const EWBGenericEffectOp Operation)
 	return Operation == EWBGenericEffectOp::ArmorEffect
 		|| Operation == EWBGenericEffectOp::StatusEffect
 		|| Operation == EWBGenericEffectOp::DamageEffect
-		|| Operation == EWBGenericEffectOp::HealEffect;
+		|| Operation == EWBGenericEffectOp::HealEffect
+		|| Operation == EWBGenericEffectOp::NegatePendingEffect;
 }
 
 bool IsValidTileCoordinate(const FWBTile& Tile)
@@ -158,6 +159,23 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 	Result.Command.Source.PlayerId = Request.PlayerId;
 	Result.Command.Source.SourceUnitId = Request.SourceUnitId;
 	Result.Command.Source.SourceCardId = Request.CardDefinition.CardId;
+	Result.Command.Source.SourceCardInstanceId =
+		Request.SourceGateContext.SourceCardInstanceId;
+	switch (Request.SourceGateContext.SourceZone)
+	{
+	case EWBCardActivationSourceZone::Hand:
+		Result.Command.Source.SourceZone = EWBCardZone::Hand;
+		break;
+	case EWBCardActivationSourceZone::Board:
+		Result.Command.Source.SourceZone = EWBCardZone::Board;
+		break;
+	case EWBCardActivationSourceZone::Equipped:
+		Result.Command.Source.SourceZone = EWBCardZone::Equipped;
+		break;
+	default:
+		Result.Command.Source.SourceZone = EWBCardZone::Unknown;
+		break;
+	}
 	Result.Command.Source.SourceEffectId = MatchingEffect->EffectId;
 	Result.Command.EffectRequest.Source.PlayerId = Request.PlayerId;
 	Result.Command.EffectRequest.Source.SourceUnitId = Request.SourceUnitId;

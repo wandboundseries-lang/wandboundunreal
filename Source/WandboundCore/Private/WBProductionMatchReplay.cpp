@@ -592,7 +592,8 @@ FString WBProductionMatchReplay::BuildCoordinatorStateDigest(
 	const FWBGameStateData& State,
 	const int32 MatchPhase,
 	const uint32 RandomState,
-	const FWBTurnStartSequenceState& TurnStartSequence)
+	const FWBTurnStartSequenceState& TurnStartSequence,
+	const FString& AdditionalCanonicalState)
 {
 	FString Canonical = CanonicalGameState(State);
 	AppendInt(Canonical, TEXT("coordinator.phase"), MatchPhase);
@@ -617,6 +618,7 @@ FString WBProductionMatchReplay::BuildCoordinatorStateDigest(
 		AppendString(Canonical, TEXT("turn_start.trigger_card"), Trigger.SourceCardId);
 		AppendString(Canonical, TEXT("turn_start.definition_id"), Trigger.Definition.TriggerId);
 	}
+	Canonical += AdditionalCanonicalState;
 	return HashUtf8(Canonical);
 }
 

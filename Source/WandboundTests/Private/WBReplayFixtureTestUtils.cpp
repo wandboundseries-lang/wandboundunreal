@@ -3529,6 +3529,16 @@ bool ParseOptionalCardActivationFixtureZoneContextField(
 			return false;
 		}
 
+		if (!TryReadOptionalStringField(
+				EntryObject,
+				TEXT("card_instance_id"),
+				FString::Printf(TEXT("source_gate_context.fixture_zone_context.entries[%d].card_instance_id"), EntryIndex),
+				Entry.CardInstanceId,
+				OutReason))
+		{
+			return false;
+		}
+
 		Entry.Zone = ReadCardActivationSourceZoneOrDefault(EntryObject, TEXT("zone"), Entry.Zone);
 		if (Entry.Zone == EWBCardActivationSourceZone::Unknown)
 		{
