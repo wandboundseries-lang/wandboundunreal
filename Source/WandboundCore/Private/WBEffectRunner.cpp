@@ -517,12 +517,18 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State,
 
 	FWBPendingAttackState PendingAttack;
 	PendingAttack.bActive = true;
+	PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
 	PendingAttack.AttackerUnitId = Attacker->UnitId;
 	PendingAttack.DefenderUnitId = Defender->UnitId;
+	PendingAttack.OriginalAttackerUnitId = Attacker->UnitId;
+	PendingAttack.OriginalDefenderUnitId = Defender->UnitId;
 	PendingAttack.AttackingPlayerId = Action.PlayerId;
 	PendingAttack.AttackerTile = FWBTile(Attacker->X, Attacker->Y);
 	PendingAttack.DefenderTile = FWBTile(Defender->X, Defender->Y);
 	PendingAttack.DeclarationActionId = WBActionCodec::MakeActionId(Action);
+	PendingAttack.ContinuationId = FString::Printf(
+		TEXT("attack_continuation:%s"),
+		*PendingAttack.DeclarationActionId);
 	State.PendingAttack = PendingAttack;
 
 	Result.bOk = true;
@@ -564,8 +570,11 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(FWBGameStateData& Sta
 
 	FWBPendingAttackState PendingAttack;
 	PendingAttack.bActive = true;
+	PendingAttack.Stage = EWBAttackContinuationStage::Damage;
 	PendingAttack.AttackerUnitId = Attacker->UnitId;
 	PendingAttack.DefenderUnitId = Defender->UnitId;
+	PendingAttack.OriginalAttackerUnitId = Attacker->UnitId;
+	PendingAttack.OriginalDefenderUnitId = Defender->UnitId;
 	PendingAttack.AttackingPlayerId = -1;
 	PendingAttack.AttackerTile = FWBTile(Attacker->X, Attacker->Y);
 	PendingAttack.DefenderTile = FWBTile(Defender->X, Defender->Y);
@@ -573,6 +582,9 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(FWBGameStateData& Sta
 		TEXT("npc_attack:u%d:t%d"),
 		Attacker->UnitId,
 		Defender->UnitId);
+	PendingAttack.ContinuationId = FString::Printf(
+		TEXT("attack_continuation:%s"),
+		*PendingAttack.DeclarationActionId);
 	State.PendingAttack = PendingAttack;
 
 	Result.bOk = true;
@@ -580,7 +592,9 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(FWBGameStateData& Sta
 	return Result;
 }
 
-FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& State)
+FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
+	FWBGameStateData& State,
+	const bool bPreservePendingAttack)
 {
 	FWBApplyActionResult Result;
 
@@ -606,7 +620,16 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 	if (Defender->HasStatus(FrozenStatusId))
 	{
 		Defender->RemoveStatus(FrozenStatusId);
-		State.ClearPendingAttack();
+		if (bPreservePendingAttack)
+		{
+			State.PendingAttack.bDamageResolved = true;
+			State.PendingAttack.bFrozenBroken = true;
+			State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
+		}
+		else
+		{
+			State.ClearPendingAttack();
+		}
 
 		Result.bOk = true;
 		AppendStatusRemovedTrace(
@@ -673,7 +696,15 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(FWBGameStateData& 
 
 	const int32 DamageAmount = FMath::Max(DamageRequest.BaseDamage, 0);
 	const int32 NewHP = DamageResult.NewHP;
-	State.ClearPendingAttack();
+	if (bPreservePendingAttack)
+	{
+		State.PendingAttack.bDamageResolved = true;
+		State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
+	}
+	else
+	{
+		State.ClearPendingAttack();
+	}
 
 	Result.bOk = true;
 	AppendAttackDamageResolvedTrace(
@@ -879,6 +910,11 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 				PayloadResult.TraceEvents,
 				Request,
 				Payload.PendingEffectFrameId);
+			break;
+		}
+		case EWBGenericEffectOp::PreventPendingAttack:
+		{
+			PayloadResult.bOk = true;
 			break;
 		}
 		default:

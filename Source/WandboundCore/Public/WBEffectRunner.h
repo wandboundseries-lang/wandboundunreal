@@ -16,7 +16,7 @@ public:
 	static FWBApplyActionResult ApplyNPCMove(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyAttackDeclare(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyNPCAttackDeclare(FWBGameStateData& State, const FWBAction& Action);
-	static FWBApplyActionResult ApplyPendingAttackDamage(FWBGameStateData& State);
+	static FWBApplyActionResult ApplyPendingAttackDamage(FWBGameStateData& State, bool bPreservePendingAttack = false);
 	static FWBApplyActionResult ApplyZeroHPDeathRemoval(FWBGameStateData& State);
 	static FWBApplyActionResult ApplyEndTurn(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPass(FWBGameStateData& State, const FWBAction& Action);

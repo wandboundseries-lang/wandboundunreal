@@ -452,6 +452,8 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 				static_cast<int32>(Payload.ArmorEffect.Operation),
 				Payload.ArmorEffect.Amount);
 			break;
+		case EWBGenericEffectOp::PreventPendingAttack:
+			break;
 		default:
 			break;
 		}
@@ -2496,6 +2498,16 @@ private:
 					PayloadPath);
 				Payload.Operation = EWBGenericEffectOp::NegatePendingEffect;
 			}
+			else if (Type == TEXT("prevent_pending_attack"))
+			{
+				ValidateKnownFields(
+					PayloadObject,
+					{ TEXT("type") },
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					PayloadPath);
+				Payload.Operation = EWBGenericEffectOp::PreventPendingAttack;
+			}
 			else
 			{
 				AddError(
@@ -2762,21 +2774,23 @@ private:
 		}
 		if (Effect.TargetRequirement == EWBCardEffectTargetRequirement::None)
 		{
-			const bool bOnlyPendingNegation = !Effect.Payloads.IsEmpty()
+			const bool bOnlyPendingControl = !Effect.Payloads.IsEmpty()
 				&& !Effect.Payloads.ContainsByPredicate(
 					[](const FWBGenericEffectPayload& Payload)
 					{
 						return Payload.Operation
-							!= EWBGenericEffectOp::NegatePendingEffect;
+							!= EWBGenericEffectOp::NegatePendingEffect
+							&& Payload.Operation
+								!= EWBGenericEffectOp::PreventPendingAttack;
 					});
-			if (!bOnlyPendingNegation)
+			if (!bOnlyPendingControl)
 			{
 				AddError(
 					TEXT("invalid_target_requirement"),
 					Record.SourceManifestPath,
 					Record.CoreDefinition.CardId,
 					EffectPath + TEXT(".target_requirement"),
-					TEXT("Only pending-effect negation may omit a public target."));
+					TEXT("Only typed pending-effect or pending-attack control may omit a public target."));
 			}
 		}
 	}

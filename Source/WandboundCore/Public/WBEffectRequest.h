@@ -15,7 +15,8 @@ enum class EWBGenericEffectOp : uint8
 	StatusEffect,
 	DamageEffect,
 	HealEffect,
-	NegatePendingEffect
+	NegatePendingEffect,
+	PreventPendingAttack
 };
 
 struct WANDBOUNDCORE_API FWBEffectSourceRef
@@ -41,6 +42,7 @@ struct WANDBOUNDCORE_API FWBGenericEffectPayload
 	FWBDamageEffectRequest DamageEffect;
 	FWBHealEffectRequest HealEffect;
 	FString PendingEffectFrameId;
+	FString PendingAttackContinuationId;
 };
 
 struct WANDBOUNDCORE_API FWBEffectRequest

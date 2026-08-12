@@ -579,6 +579,53 @@ FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateDa
 	return FWBActionQueryResult::Ok();
 }
 
+FWBActionQueryResult WBRules::CanResolveCounterattack(const FWBGameStateData& State)
+{
+	if (State.bGameOver || !State.HasPendingAttack())
+	{
+		return FWBActionQueryResult::Deny(State.bGameOver
+			? TEXT("game_over")
+			: TEXT("missing_pending_attack"));
+	}
+	if (State.PendingAttack.bCounter)
+	{
+		return FWBActionQueryResult::Deny(TEXT("counter_cannot_chain"));
+	}
+
+	const FWBUnitState* OriginalAttacker =
+		State.GetUnitById(State.PendingAttack.AttackerUnitId);
+	const FWBUnitState* OriginalDefender =
+		State.GetUnitById(State.PendingAttack.DefenderUnitId);
+	if (OriginalAttacker == nullptr || OriginalDefender == nullptr
+		|| OriginalAttacker->bDefeated || OriginalDefender->bDefeated
+		|| !OriginalAttacker->IsUnitOnBoard()
+		|| !OriginalDefender->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("counter_unit_unavailable"));
+	}
+	if (HasAttackBlockingStatus(*OriginalDefender))
+	{
+		return FWBActionQueryResult::Deny(TEXT("counter_cannot_attack"));
+	}
+
+	const FWBTile From(OriginalDefender->X, OriginalDefender->Y);
+	const FWBTile To(OriginalAttacker->X, OriginalAttacker->Y);
+	if (!AreTilesOrthogonallyAligned(From, To))
+	{
+		return FWBActionQueryResult::Deny(TEXT("counter_not_in_line"));
+	}
+	if (OrthogonalDistance(From, To) > OriginalDefender->AR)
+	{
+		return FWBActionQueryResult::Deny(TEXT("counter_out_of_range"));
+	}
+	FString LOSReason;
+	if (!HasOrthogonalLineOfSight(State, From, To, LOSReason))
+	{
+		return FWBActionQueryResult::Deny(*LOSReason);
+	}
+	return FWBActionQueryResult::Ok();
+}
+
 bool WBRules::ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit)
 {
 	(void)State;
@@ -896,6 +943,19 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			}
 			break;
 		}
+		case EWBGenericEffectOp::PreventPendingAttack:
+			if (!State.HasPendingAttack()
+				|| State.PendingAttack.Stage != EWBAttackContinuationStage::PreHit)
+			{
+				return FWBActionQueryResult::Deny(TEXT("pending_attack_not_pre_hit"));
+			}
+			if (Payload.PendingAttackContinuationId.IsEmpty()
+				|| Payload.PendingAttackContinuationId
+					!= State.PendingAttack.ContinuationId)
+			{
+				return FWBActionQueryResult::Deny(TEXT("pending_attack_target_mismatch"));
+			}
+			break;
 		default:
 			return FWBActionQueryResult::Deny(TEXT("unknown_effect_payload_operation"));
 		}

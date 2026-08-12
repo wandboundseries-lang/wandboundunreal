@@ -91,5 +91,20 @@ public class WandboundRuntime : ModuleRules
 		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/Replay/PendingEffectActivationFixture/match_spec.json",
 			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SuspendedAttackFixture/root_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SuspendedAttackFixture/bundle_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SuspendedAttackFixture/units.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SuspendedAttackFixture/markers.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SuspendedAttackFixture/match_spec.json",
+			StagedFileType.NonUFS);
 	}
 }

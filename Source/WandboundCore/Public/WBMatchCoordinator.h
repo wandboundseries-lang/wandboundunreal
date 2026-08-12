@@ -245,6 +245,12 @@ private:
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
+	bool AdvanceAttackContinuation(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
 
 	bool ApplyTurnTransition(
 		FWBGameStateData& WorkingState,

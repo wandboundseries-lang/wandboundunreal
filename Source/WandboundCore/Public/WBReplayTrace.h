@@ -86,6 +86,10 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FString ParentPendingEffectFrameId;
 	int32 PendingEffectStackDepth = -1;
 	bool bPendingEffectNegated = false;
+	FString AttackContinuationId;
+	FName AttackContinuationStage;
+	bool bAttackPrevented = false;
+	bool bCounterAttack = false;
 	bool bDeferredBoundary = false;
 	FWBTile FromTile;
 	FWBTile ToTile;

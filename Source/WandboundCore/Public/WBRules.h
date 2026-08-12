@@ -45,6 +45,7 @@ public:
 	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanResolvePendingAttackDamage(const FWBGameStateData& State);
+	static FWBActionQueryResult CanResolveCounterattack(const FWBGameStateData& State);
 	static bool ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit);
 	static FWBActionQueryResult CanApplyZeroHPDeathRemoval(const FWBGameStateData& State);
 	static FWBActionQueryResult CanApplyCardActivationCommand(const FWBGameStateData& State, const FWBCardActivationCommand& Command);

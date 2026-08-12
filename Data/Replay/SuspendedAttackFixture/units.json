@@ -1,0 +1,120 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "suspended_attack_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Generic exact attack prevention and nested negation definitions.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "suspended_attack_hero_a",
+      "public_name": "Suspended Attack Hero A",
+      "kind": "hero",
+      "public_text": "Attacks and may negate a pending response.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 3, "ar": 8, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" },
+      "activated_effects": [
+        {
+          "effect_id": "suspended_attack_effect_b",
+          "public_label": "Negate B",
+          "target_requirement": "none",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "response_window",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "suspended_attack_b_once"
+          },
+          "payloads": [
+            { "type": "negate_pending_effect" }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "suspended_attack_hero_b",
+      "public_name": "Suspended Attack Hero B",
+      "kind": "hero",
+      "public_text": "May prevent the exact pending attack.",
+      "public_category": "Hero",
+      "factions": ["black_meridian"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 1, "ar": 0, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 0 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" },
+      "activated_effects": [
+        {
+          "effect_id": "suspended_attack_effect_a",
+          "public_label": "Prevent A",
+          "target_requirement": "none",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "response_window",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "suspended_attack_a_once"
+          },
+          "payloads": [
+            { "type": "prevent_pending_attack" }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "suspended_attack_effect_c_card",
+      "public_name": "Suspended Attack Negate C",
+      "kind": "action",
+      "public_text": "Negate the current pending effect.",
+      "public_category": "Action",
+      "factions": ["black_meridian"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "activated_effects": [
+        {
+          "effect_id": "suspended_attack_effect_c",
+          "public_label": "Negate C",
+          "target_requirement": "none",
+          "source_gate": {
+            "required_zone": "hand",
+            "timing": "response_window",
+            "requires_source_unit": false,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "suspended_attack_c_once"
+          },
+          "payloads": [
+            { "type": "negate_pending_effect" }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "suspended_attack_filler",
+      "public_name": "Suspended Attack Filler",
+      "kind": "action",
+      "public_text": "A fixture deck card.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {}
+    }
+  ]
+}

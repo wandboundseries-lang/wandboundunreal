@@ -208,6 +208,18 @@ FString CanonicalGameState(const FWBGameStateData& State)
 	AppendTile(Out, TEXT("attack.from"), State.PendingAttack.AttackerTile);
 	AppendTile(Out, TEXT("attack.to"), State.PendingAttack.DefenderTile);
 	AppendString(Out, TEXT("attack.action"), State.PendingAttack.DeclarationActionId);
+	if (State.PendingAttack.bActive)
+	{
+		AppendInt(Out, TEXT("attack.stage"), static_cast<int32>(State.PendingAttack.Stage));
+		AppendInt(Out, TEXT("attack.original_attacker"), State.PendingAttack.OriginalAttackerUnitId);
+		AppendInt(Out, TEXT("attack.original_defender"), State.PendingAttack.OriginalDefenderUnitId);
+		AppendString(Out, TEXT("attack.continuation"), State.PendingAttack.ContinuationId);
+		AppendBool(Out, TEXT("attack.prevented"), State.PendingAttack.bPrevented);
+		AppendBool(Out, TEXT("attack.damage_resolved"), State.PendingAttack.bDamageResolved);
+		AppendBool(Out, TEXT("attack.post_hit_completed"), State.PendingAttack.bPostHitCompleted);
+		AppendBool(Out, TEXT("attack.frozen_broken"), State.PendingAttack.bFrozenBroken);
+		AppendBool(Out, TEXT("attack.counter"), State.PendingAttack.bCounter);
+	}
 
 	TArray<FWBPendingNPCSpawnState> Spawns = State.PendingNPCSpawns;
 	Spawns.Sort([](const FWBPendingNPCSpawnState& A, const FWBPendingNPCSpawnState& B)

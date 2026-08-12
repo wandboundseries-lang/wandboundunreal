@@ -114,15 +114,34 @@ struct WANDBOUNDCORE_API FWBPlayerStateData
 	TArray<FString> Discard;
 };
 
+enum class EWBAttackContinuationStage : uint8
+{
+	None,
+	PreHit,
+	Damage,
+	PostHit,
+	Counter,
+	Complete
+};
+
 struct WANDBOUNDCORE_API FWBPendingAttackState
 {
 	bool bActive = false;
+	EWBAttackContinuationStage Stage = EWBAttackContinuationStage::None;
 	int32 AttackerUnitId = -1;
 	int32 DefenderUnitId = -1;
+	int32 OriginalAttackerUnitId = -1;
+	int32 OriginalDefenderUnitId = -1;
 	int32 AttackingPlayerId = -1;
 	FWBTile AttackerTile;
 	FWBTile DefenderTile;
 	FString DeclarationActionId;
+	FString ContinuationId;
+	bool bPrevented = false;
+	bool bDamageResolved = false;
+	bool bPostHitCompleted = false;
+	bool bFrozenBroken = false;
+	bool bCounter = false;
 };
 
 struct WANDBOUNDCORE_API FWBPendingNPCSpawnState

@@ -1,0 +1,11 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "suspended_attack_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    { "name": "suspended_attack", "path": "bundle_manifest.json" }
+  ],
+  "metadata": {
+    "notes": "Synthetic production suspended attack A to B to C prevention fixture."
+  }
+}

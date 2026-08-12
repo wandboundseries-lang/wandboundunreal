@@ -97,6 +97,10 @@ FString BuildPendingEffectCanonicalState(
 				Payload.HealEffect.SourcePlayerId,
 				Payload.HealEffect.Amount);
 			AppendString(TEXT("target_frame"), Payload.PendingEffectFrameId);
+			if (!Payload.PendingAttackContinuationId.IsEmpty())
+			{
+				AppendString(TEXT("target_attack"), Payload.PendingAttackContinuationId);
+			}
 			AppendString(TEXT("armor_reason"), Payload.ArmorEffect.SourceReason.ToString());
 			AppendString(TEXT("status_id"), Payload.StatusEffect.StatusId.ToString());
 			AppendString(TEXT("status_reason"), Payload.StatusEffect.SourceReason.ToString());
@@ -476,7 +480,8 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 	const FWBCardDefinitionRepository& Repository,
 	const int32 PlayerId,
 	const bool bResponseOnly,
-	const FString& PendingEffectFrameId = FString())
+	const FString& PendingEffectFrameId = FString(),
+	const FString& PendingAttackContinuationId = FString())
 {
 	FWBMatchLegalActionGenerationResult Result;
 	const FWBCardActivationFixtureZoneContext ZoneContext =
@@ -592,6 +597,21 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 		});
 	for (const FWBCardActivationLegalAction& ActivationAction : ActivationActions)
 	{
+		const bool bControlsPendingAttack =
+			ActivationAction.Command.EffectRequest.Payloads.ContainsByPredicate(
+				[](const FWBGenericEffectPayload& Payload)
+				{
+					return Payload.Operation
+						== EWBGenericEffectOp::PreventPendingAttack;
+				});
+		if (bControlsPendingAttack
+			&& (PendingAttackContinuationId.IsEmpty()
+				|| !State.HasPendingAttack()
+				|| State.PendingAttack.Stage
+					!= EWBAttackContinuationStage::PreHit))
+		{
+			continue;
+		}
 		FWBMatchLegalAction Action;
 		Action.Family = EWBMatchActionFamily::Activation;
 		Action.ActionId = ActivationAction.ActivationActionId;
@@ -604,6 +624,18 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				if (Payload.Operation == EWBGenericEffectOp::NegatePendingEffect)
 				{
 					Payload.PendingEffectFrameId = PendingEffectFrameId;
+				}
+			}
+		}
+		if (!PendingAttackContinuationId.IsEmpty())
+		{
+			for (FWBGenericEffectPayload& Payload :
+				Action.ActivationCommand.EffectRequest.Payloads)
+			{
+				if (Payload.Operation == EWBGenericEffectOp::PreventPendingAttack)
+				{
+					Payload.PendingAttackContinuationId =
+						PendingAttackContinuationId;
 				}
 			}
 		}
@@ -1032,6 +1064,9 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 	const FString PendingEffectFrameId = EffectivePendingEffects.IsEmpty()
 		? FString()
 		: EffectivePendingEffects.Last().FrameId;
+	const FString PendingAttackContinuationId = InState.HasPendingAttack()
+		? InState.PendingAttack.ContinuationId
+		: FString();
 	FWBMatchLegalActionGenerationResult Result;
 	if (InState.bGameOver || InPhase == EWBMatchLoopPhase::GameOver)
 	{
@@ -1227,7 +1262,8 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 
 		const FWBMatchLegalActionGenerationResult ActivationResult =
 			GetActivationActions(
-				InState, Repository, PlayerId, false, PendingEffectFrameId);
+				InState, Repository, PlayerId, false, PendingEffectFrameId,
+				PendingAttackContinuationId);
 		if (!ActivationResult.bOk)
 		{
 			return ActivationResult;
@@ -1238,7 +1274,8 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 	{
 		const FWBMatchLegalActionGenerationResult ActivationResult =
 			GetActivationActions(
-				InState, Repository, PlayerId, true, PendingEffectFrameId);
+				InState, Repository, PlayerId, true, PendingEffectFrameId,
+				PendingAttackContinuationId);
 		if (!ActivationResult.bOk)
 		{
 			return ActivationResult;
@@ -1496,15 +1533,29 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 						SelectedAction->CoreAction.SourceUnitId;
 				}
 			}
-			if (bActionApplied
+		if (bActionApplied
 				&& SelectedAction->CoreAction.Type == EWBActionType::Attack
 				&& WorkingState.HasPendingAttack())
 			{
-				const FWBApplyActionResult DamageResult =
-					WBEffectRunner::ApplyPendingAttackDamage(WorkingState);
-				bActionApplied = DamageResult.bOk;
-				FailureReason = DamageResult.Reason;
-				WorkingTraceEvents.Append(DamageResult.TraceEvents);
+				FWBTraceEvent Started = MakeMatchTrace(
+					FName(TEXT("attack_continuation_started")),
+					PlayerId,
+					WorkingState.TurnNumber,
+					PhaseToName(WorkingPhase));
+				Started.ActionId = ActionId;
+				Started.SourceUnitId =
+					WorkingState.PendingAttack.AttackerUnitId;
+				Started.TargetUnitId =
+					WorkingState.PendingAttack.DefenderUnitId;
+				Started.AttackContinuationId =
+					WorkingState.PendingAttack.ContinuationId;
+				Started.AttackContinuationStage = FName(TEXT("pre_hit"));
+				WorkingTraceEvents.Add(MoveTemp(Started));
+				PendingReactionKind = EWBReactionWindowKind::PreHit;
+				PendingReactionSourceUnitId =
+					WorkingState.PendingAttack.AttackerUnitId;
+				PendingReactionTargetUnitId =
+					WorkingState.PendingAttack.DefenderUnitId;
 			}
 			break;
 		}
@@ -1646,6 +1697,17 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 					PendingReactionTargetUnitId,
 					WorkingTraceEvents,
 					FailureReason);
+				if (bActionApplied
+					&& PendingReactionKind == EWBReactionWindowKind::PreHit
+					&& !WorkingState.HasOpenReactionWindow())
+				{
+					bActionApplied = AdvanceAttackContinuation(
+						WorkingState,
+						WorkingPhase,
+						WorkingPendingEffects,
+						WorkingTraceEvents,
+						FailureReason);
+				}
 			}
 		}
 	}
@@ -1858,7 +1920,10 @@ bool WBMatchCoordinator::HasLegalReactForPriority(
 			true,
 			InPendingEffects.IsEmpty()
 				? FString()
-				: InPendingEffects.Last().FrameId);
+				: InPendingEffects.Last().FrameId,
+			InState.HasPendingAttack()
+				? InState.PendingAttack.ContinuationId
+				: FString());
 	if (!Result.bOk)
 	{
 		OutReason = Result.Reason;
@@ -2271,6 +2336,41 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 				}
 			}
 		}
+
+		if (bResolutionSucceeded)
+		{
+			for (const FWBGenericEffectPayload& Payload :
+				Frame.Command.EffectRequest.Payloads)
+			{
+				if (Payload.Operation != EWBGenericEffectOp::PreventPendingAttack)
+				{
+					continue;
+				}
+				if (!WorkingState.HasPendingAttack()
+					|| Payload.PendingAttackContinuationId.IsEmpty()
+					|| Payload.PendingAttackContinuationId
+						!= WorkingState.PendingAttack.ContinuationId)
+				{
+					bResolutionSucceeded = false;
+					ResolutionFailure = TEXT("pending_attack_target_mismatch");
+					break;
+				}
+				WorkingState.PendingAttack.bPrevented = true;
+				FWBTraceEvent Prevented = MakeMatchTrace(
+					FName(TEXT("attack_prevented")),
+					Frame.ActivatingPlayerId,
+					WorkingState.TurnNumber,
+					PhaseToName(WorkingPhase));
+				Prevented.ActionId = Frame.ActivationActionId;
+				Prevented.SourceUnitId = WorkingState.PendingAttack.AttackerUnitId;
+				Prevented.TargetUnitId = WorkingState.PendingAttack.DefenderUnitId;
+				Prevented.AttackContinuationId =
+					WorkingState.PendingAttack.ContinuationId;
+				Prevented.AttackContinuationStage = FName(TEXT("pre_hit"));
+				Prevented.bAttackPrevented = true;
+				OutTraceEvents.Add(MoveTemp(Prevented));
+			}
+		}
 	}
 
 	WorkingPendingEffects.Pop(EAllowShrinking::No);
@@ -2445,6 +2545,9 @@ bool WBMatchCoordinator::CloseReactionWindow(
 	const bool bClosesPendingEffect =
 		WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PostEffect
 		&& !WorkingPendingEffects.IsEmpty();
+	const bool bClosesAttackWindow =
+		WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PreHit
+		|| WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PostHit;
 	WorkingState.ClearReactionWindow();
 	if (bClosesPendingEffect)
 	{
@@ -2455,9 +2558,208 @@ bool WBMatchCoordinator::CloseReactionWindow(
 			OutTraceEvents,
 			OutReason);
 	}
+	if (bClosesAttackWindow && WorkingState.HasPendingAttack())
+	{
+		return AdvanceAttackContinuation(
+			WorkingState,
+			WorkingPhase,
+			WorkingPendingEffects,
+			OutTraceEvents,
+			OutReason);
+	}
 	WorkingState.PriorityPlayer = WorkingState.CurrentPlayer;
 	WorkingState.Phase = EWBGamePhase::NormalTurn;
 	WorkingPhase = EWBMatchLoopPhase::Action;
+	OutReason.Reset();
+	return true;
+}
+
+bool WBMatchCoordinator::AdvanceAttackContinuation(
+	FWBGameStateData& WorkingState,
+	EWBMatchLoopPhase& WorkingPhase,
+	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	auto AddStageTraceForAttack = [&](const FWBPendingAttackState& Attack, const FName Kind, const FName Stage)
+	{
+		FWBTraceEvent Event = MakeMatchTrace(
+			Kind,
+			Attack.AttackingPlayerId,
+			WorkingState.TurnNumber,
+			PhaseToName(WorkingPhase));
+		Event.ActionId = Attack.DeclarationActionId;
+		Event.SourceUnitId = Attack.AttackerUnitId;
+		Event.TargetUnitId = Attack.DefenderUnitId;
+		Event.AttackContinuationId = Attack.ContinuationId;
+		Event.AttackContinuationStage = Stage;
+		Event.bAttackPrevented = Attack.bPrevented;
+		Event.bCounterAttack = Attack.bCounter;
+		OutTraceEvents.Add(MoveTemp(Event));
+	};
+	auto AddStageTrace = [&](const FName Kind, const FName Stage)
+	{
+		AddStageTraceForAttack(WorkingState.PendingAttack, Kind, Stage);
+	};
+	auto Complete = [&]()
+	{
+		AddStageTrace(
+			FName(TEXT("attack_continuation_completed")),
+			FName(TEXT("complete")));
+		WorkingState.ClearPendingAttack();
+		WorkingState.ClearReactionWindow();
+		WorkingState.PriorityPlayer = WorkingState.CurrentPlayer;
+		WorkingState.Phase = EWBGamePhase::NormalTurn;
+		WorkingPhase = WorkingState.bGameOver
+			? EWBMatchLoopPhase::GameOver
+			: EWBMatchLoopPhase::Action;
+		OutReason.Reset();
+		return true;
+	};
+
+	int32 Guard = 0;
+	while (WorkingState.HasPendingAttack() && !WorkingState.HasOpenReactionWindow())
+	{
+		if (++Guard > 16)
+		{
+			OutReason = TEXT("attack_continuation_guard_exceeded");
+			return false;
+		}
+		if (WorkingState.bGameOver)
+		{
+			WorkingPendingEffects.Reset();
+			return Complete();
+		}
+
+		switch (WorkingState.PendingAttack.Stage)
+		{
+		case EWBAttackContinuationStage::PreHit:
+		{
+			AddStageTrace(FName(TEXT("attack_pre_hit_closed")), FName(TEXT("pre_hit")));
+			if (WorkingState.PendingAttack.bPrevented)
+			{
+				return Complete();
+			}
+			if (WBRules::CanResolvePendingAttackDamage(WorkingState).bOk == false)
+			{
+				AddStageTrace(FName(TEXT("attack_continuation_cancelled")), FName(TEXT("pre_hit")));
+				return Complete();
+			}
+			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
+			AddStageTrace(FName(TEXT("attack_damage_started")), FName(TEXT("damage")));
+			const FWBPendingAttackState AttackBeforeDamage = WorkingState.PendingAttack;
+			{
+				const FWBApplyActionResult Damage =
+					WBEffectRunner::ApplyPendingAttackDamage(WorkingState, true);
+				if (!Damage.bOk)
+				{
+					OutReason = Damage.Reason;
+					return false;
+				}
+				OutTraceEvents.Append(Damage.TraceEvents);
+			}
+			if (WorkingState.bGameOver || !WorkingState.HasPendingAttack())
+			{
+				AddStageTraceForAttack(
+					AttackBeforeDamage,
+					FName(TEXT("attack_continuation_completed")),
+					FName(TEXT("complete")));
+				WorkingPendingEffects.Reset();
+				WorkingState.ClearReactionWindow();
+				WorkingPhase = WorkingState.bGameOver
+					? EWBMatchLoopPhase::GameOver
+					: EWBMatchLoopPhase::Action;
+				OutReason.Reset();
+				return true;
+			}
+			AddStageTrace(FName(TEXT("attack_damage_resolved_stage")), FName(TEXT("damage")));
+			if (WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId) == nullptr)
+			{
+				return Complete();
+			}
+			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
+			if (!OpenReactionWindowIfApplicable(
+				WorkingState,
+				WorkingPhase,
+				WorkingPendingEffects,
+				EWBReactionWindowKind::PostHit,
+				WorkingState.PendingAttack.AttackingPlayerId,
+				WorkingState.PendingAttack.DeclarationActionId,
+				WorkingState.PendingAttack.AttackerUnitId,
+				WorkingState.PendingAttack.DefenderUnitId,
+				OutTraceEvents,
+				OutReason))
+			{
+				return false;
+			}
+			if (WorkingState.HasOpenReactionWindow())
+			{
+				return true;
+			}
+			break;
+		}
+
+		case EWBAttackContinuationStage::PostHit:
+			WorkingState.PendingAttack.bPostHitCompleted = true;
+			AddStageTrace(FName(TEXT("attack_post_hit_closed")), FName(TEXT("post_hit")));
+			if (WorkingState.PendingAttack.bCounter
+				|| WorkingState.PendingAttack.bFrozenBroken)
+			{
+				return Complete();
+			}
+			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::Counter;
+			if (!WBRules::CanResolveCounterattack(WorkingState).bOk)
+			{
+				return Complete();
+			}
+			{
+				const int32 OriginalAttacker = WorkingState.PendingAttack.AttackerUnitId;
+				const int32 OriginalDefender = WorkingState.PendingAttack.DefenderUnitId;
+				const FWBUnitState* CounterAttacker = WorkingState.GetUnitById(OriginalDefender);
+				const FWBUnitState* CounterDefender = WorkingState.GetUnitById(OriginalAttacker);
+				if (CounterAttacker == nullptr || CounterDefender == nullptr)
+				{
+					return Complete();
+				}
+				WorkingState.PendingAttack.AttackerUnitId = OriginalDefender;
+				WorkingState.PendingAttack.DefenderUnitId = OriginalAttacker;
+				WorkingState.PendingAttack.AttackingPlayerId = CounterAttacker->OwnerId;
+				WorkingState.PendingAttack.AttackerTile = FWBTile(CounterAttacker->X, CounterAttacker->Y);
+				WorkingState.PendingAttack.DefenderTile = FWBTile(CounterDefender->X, CounterDefender->Y);
+				WorkingState.PendingAttack.bCounter = true;
+				WorkingState.PendingAttack.bDamageResolved = false;
+				WorkingState.PendingAttack.bPostHitCompleted = false;
+				WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
+				AddStageTrace(FName(TEXT("counter_started")), FName(TEXT("counter")));
+			}
+			if (!OpenReactionWindowIfApplicable(
+				WorkingState,
+				WorkingPhase,
+				WorkingPendingEffects,
+				EWBReactionWindowKind::PreHit,
+				WorkingState.PendingAttack.AttackingPlayerId,
+				WorkingState.PendingAttack.DeclarationActionId,
+				WorkingState.PendingAttack.AttackerUnitId,
+				WorkingState.PendingAttack.DefenderUnitId,
+				OutTraceEvents,
+				OutReason))
+			{
+				return false;
+			}
+			if (WorkingState.HasOpenReactionWindow())
+			{
+				return true;
+			}
+			break;
+
+		case EWBAttackContinuationStage::Damage:
+		case EWBAttackContinuationStage::Counter:
+		case EWBAttackContinuationStage::Complete:
+		case EWBAttackContinuationStage::None:
+		default:
+			return Complete();
+		}
+	}
 	OutReason.Reset();
 	return true;
 }

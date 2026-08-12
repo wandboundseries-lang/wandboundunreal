@@ -406,6 +406,26 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetBoolField(TEXT("pending_effect_negated"), true);
 	}
+	if (!Event.AttackContinuationId.IsEmpty())
+	{
+		Object->SetStringField(
+			TEXT("attack_continuation_id"),
+			Event.AttackContinuationId);
+	}
+	if (!Event.AttackContinuationStage.IsNone())
+	{
+		Object->SetStringField(
+			TEXT("attack_continuation_stage"),
+			Event.AttackContinuationStage.ToString());
+	}
+	if (Event.bAttackPrevented)
+	{
+		Object->SetBoolField(TEXT("attack_prevented"), true);
+	}
+	if (Event.bCounterAttack)
+	{
+		Object->SetBoolField(TEXT("counter_attack"), true);
+	}
 
 	if (Event.bDeferredBoundary)
 	{

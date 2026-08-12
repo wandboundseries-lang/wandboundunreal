@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "commit": "51f7f8c1b372cecc2a1b8858fdcf5a90865a2f02",
+    "origin_main_synchronized": true,
+    "initial_automation_count": 2203,
+    "replay_schema_version": 1,
+    "action_codec_header_hash": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "action_codec_source_hash": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "staged_files": []
+  },
+  "canonical_sequence": [
+    "declare",
+    "pre_hit",
+    "damage",
+    "post_hit",
+    "counter",
+    "complete"
+  ],
+  "reaction_semantics": {
+    "first_priority": "opponent_of_current_attacker",
+    "priority_alternates": true,
+    "consecutive_passes_to_close": 2,
+    "react_resets_passes": true,
+    "auto_pass_without_legal_react": true
+  },
+  "counter_rules_sourced": {
+    "automatic": true,
+    "accepted_player_action": false,
+    "requires_both_units_on_board": true,
+    "checks_current_status": true,
+    "checks_current_range": true,
+    "checks_current_line_of_sight": true,
+    "uses_current_atk": true,
+    "checks_attacks_left": false,
+    "consumes_attacks_left": false,
+    "target": "original_attacker_only",
+    "opens_pre_hit": true,
+    "opens_post_hit": true,
+    "recursive_counter": false,
+    "frozen_break_suppresses_counter": true
+  },
+  "components": [
+    {
+      "path": "Source/WandboundCore/Public/WBGameStateData.h",
+      "symbol": "EWBAttackContinuationStage/FWBPendingAttackState",
+      "role": "typed private continuation state",
+      "production_reachable": true,
+      "state_owner": "WBMatchCoordinator whole-flow authority",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "extended"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+      "symbol": "AdvanceAttackContinuation",
+      "role": "open, suspend, resume, counter, complete",
+      "production_reachable": true,
+      "state_owner": "WBMatchCoordinator",
+      "replay_behavior": "one accepted Attack plus automatic traces",
+      "privacy_behavior": "continuation identity is not public observation",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "extended"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBEffectRunner.cpp",
+      "symbol": "ApplyPendingAttackDamage",
+      "role": "existing damage mutation with optional continuation preservation",
+      "production_reachable": true,
+      "state_owner": "damage mutation only",
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "extended"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBRules.cpp",
+      "symbol": "CanResolveCounterattack/PreventPendingAttack validation",
+      "role": "legality and fail-closed exact identity validation",
+      "production_reachable": true,
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "extended"
+    },
+    {
+      "path": "Source/WandboundRuntime/Private/WBProductionSuspendedAttackSmoke.cpp",
+      "symbol": "WBProductionSuspendedAttackSmoke::Run",
+      "role": "production bootstrap, public observation, action submission, persistence, fresh replay",
+      "production_reachable": true,
+      "baseline_dirty": false,
+      "overlap": false,
+      "required_change": "added"
+    },
+    {
+      "path": "Reference/GodotProject/godotcanon/scripts/sim/rules.gd",
+      "symbol": "attack_pre_hit/attack_post_hit continuation",
+      "role": "read-only behavior reference",
+      "production_reachable": false,
+      "required_change": "none"
+    }
+  ],
+  "fixture": {
+    "path": "Data/Replay/SuspendedAttackFixture",
+    "content_digest": "62bda788d6e603b03428d2f4b27a538e94c44b847f87e343d7054adfa85133a9",
+    "scenario": "Attack -> A prevents -> B negates A -> C negates B -> A resolves -> no damage"
+  },
+  "validation": {
+    "focused_succeeded": 16,
+    "affected_succeeded": 40,
+    "full_succeeded": 2220,
+    "failed": 0,
+    "not_run": 0,
+    "editor_non_unity_build": "succeeded",
+    "game_non_unity_build": "succeeded",
+    "cook_stage_package_archive": "succeeded",
+    "packaged_smoke_runs": 2,
+    "packaged_smoke_byte_identical": true,
+    "canonical_startup_hash": "cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004",
+    "partial_replay_regression": {
+      "status": "succeeded",
+      "invocation_correction_only": true,
+      "source_code_changed": false,
+      "explicit_map": "/Game/Wandbound/Maps/Wandbound_LocalPlay_Dev",
+      "card_bundle": "Data/CardDB/Production/InitialCanonical/root_manifest.json",
+      "match_spec": "Data/Replay/production_replay_smoke_match_spec.json",
+      "run_1_exit_code": 0,
+      "run_2_exit_code": 0,
+      "archive_hash": "d30304a936fd3b5c2163209546b9063a64ed7a223a65b217092cb64ef6495463",
+      "receipt_hash": "881ffb586544d5ed78156635754b5eeddf555c7ef000c472f79ac607cc4d2dd9",
+      "startup_hash": "cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004",
+      "replay_digest": "391f0a6e836fc19439f110a5bd0a748367c00c826e73ad1d615fe53d9b492e7e",
+      "state_digest": "cdf2a709f551eb6e678dba97e191fb014b1b943017eaf71bc84c5f8b58dd034a",
+      "trace_digest": "ff30cac96c8b8b286f13faff9593a968585f712cc25ae08665a3669ab075fe2f",
+      "final_generation": 1,
+      "final_revision": 4,
+      "byte_identical": true,
+      "fresh_replay_verified": true,
+      "receipt_field_count": 8,
+      "privacy_scan": "passed",
+      "remaining_packaged_processes": 0,
+      "previous_wait_root_cause": "explicit local-play map omitted and wrong match specification selected"
+    },
+    "terminal_regression": {
+      "old_archive_hash": "4e30424a56b613cbbda225295a0775473ed661cda390f172b609e529450235cc",
+      "new_archive_hash": "37d1256be0157bd07eab750c4b827801eb2ccfb155a73a0c8ca1683cb3a43896",
+      "first_differing_record": 3,
+      "old_trace_span": "75..80",
+      "new_trace_span": "75..86",
+      "after_state_digest_unchanged": "fe099fd4fcc86031551c078bf91ffca7cc3ddc755bed78c0318986c66c218dac",
+      "semantic_reason": "typed attack continuation traces and canonical counter resolution"
+    }
+  },
+  "deferred": [
+    "cannot_be_countered passive data mapping",
+    "NPC player reaction windows",
+    "attack retargeting",
+    "card-specific combat branches",
+    "independent after-damage trigger collection"
+  ]
+}

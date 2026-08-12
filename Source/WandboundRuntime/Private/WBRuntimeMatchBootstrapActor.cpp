@@ -19,6 +19,7 @@
 #include "WBProductionMatchReplaySmoke.h"
 #include "WBProductionPendingEffectSmoke.h"
 #include "WBProductionReactionWindowSmoke.h"
+#include "WBProductionSuspendedAttackSmoke.h"
 #include "WBProductionTerminalReplaySmoke.h"
 #include "WBProductionStartupResult.h"
 
@@ -171,7 +172,16 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionPendingEffectSmoke::IsRequested())
+		if (WBProductionSuspendedAttackSmoke::IsRequested())
+		{
+			const FWBProductionSuspendedAttackSmokeResult SuspendedAttackSmoke =
+				WBProductionSuspendedAttackSmoke::Run(PendingBootstrapRequest);
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				SuspendedAttackSmoke.bOk ? 0 : 27,
+				TEXT("WandboundProductionSuspendedAttackSmoke"));
+		}
+		else if (WBProductionPendingEffectSmoke::IsRequested())
 		{
 			const FWBProductionPendingEffectSmokeResult PendingEffectSmoke =
 				WBProductionPendingEffectSmoke::Run(PendingBootstrapRequest);

@@ -971,6 +971,18 @@ void ParsePayload(
 		OutPayload.Operation = EWBGenericEffectOp::NegatePendingEffect;
 		return;
 	}
+	if (Type == TEXT("prevent_pending_attack"))
+	{
+		ValidateKnownFields(
+			Object,
+			{ TEXT("type") },
+			Result,
+			CardId,
+			EffectId,
+			Path);
+		OutPayload.Operation = EWBGenericEffectOp::PreventPendingAttack;
+		return;
+	}
 
 	AddDiagnostic(Result, TEXT("unsupported_payload_type"), CardId, EffectId, Path);
 }
