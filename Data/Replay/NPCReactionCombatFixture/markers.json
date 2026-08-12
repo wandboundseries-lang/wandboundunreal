@@ -1,0 +1,36 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "npc_reaction_combat_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": { "notes": "Synthetic NPC combat markers.", "test_only": true },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "npc_reaction_trap",
+      "public_name": "NPC Reaction Trap",
+      "kind": "trap",
+      "public_text": "A fixture marker.",
+      "public_category": "Trap",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "trap": { "damage": 1 }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "npc_reaction_npc",
+      "public_name": "NPC Reaction NPC",
+      "kind": "npc",
+      "public_text": "A fixture neutral unit.",
+      "public_category": "NPC",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 1, "ar": 1, "rl": 0 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 }
+    }
+  ]
+}

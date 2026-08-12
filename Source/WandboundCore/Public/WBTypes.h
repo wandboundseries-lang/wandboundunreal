@@ -2,6 +2,11 @@
 
 #include "CoreMinimal.h"
 
+enum class EWBCombatCapability : uint8
+{
+	AttacksCannotBeCountered
+};
+
 struct WANDBOUNDCORE_API FWBTile
 {
 	int32 X = -1;

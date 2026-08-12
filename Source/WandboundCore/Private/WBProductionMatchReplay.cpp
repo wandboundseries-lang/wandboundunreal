@@ -141,6 +141,19 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		{
 			AppendName(Out, TEXT("unit.passive"), Passive);
 		}
+		TArray<EWBCombatCapability> CombatCapabilities = Unit.CombatCapabilities.Array();
+		CombatCapabilities.Sort([](const EWBCombatCapability A, const EWBCombatCapability B)
+		{
+			return static_cast<uint8>(A) < static_cast<uint8>(B);
+		});
+		if (!CombatCapabilities.IsEmpty())
+		{
+			AppendInt(Out, TEXT("unit.combat_capability_count"), CombatCapabilities.Num());
+			for (const EWBCombatCapability Capability : CombatCapabilities)
+			{
+				AppendInt(Out, TEXT("unit.combat_capability"), static_cast<int32>(Capability));
+			}
+		}
 		TArray<FWBResonanceModifierState> Modifiers = Unit.ResonanceModifiers;
 		Modifiers.Sort([](const FWBResonanceModifierState& A, const FWBResonanceModifierState& B)
 		{
@@ -202,6 +215,11 @@ FString CanonicalGameState(const FWBGameStateData& State)
 	}
 
 	AppendBool(Out, TEXT("attack.active"), State.PendingAttack.bActive);
+	if (State.PendingAttack.bActive
+		&& State.PendingAttack.AuthorityKind == EWBAttackAuthorityKind::NeutralNPC)
+	{
+		AppendInt(Out, TEXT("attack.authority"), static_cast<int32>(State.PendingAttack.AuthorityKind));
+	}
 	AppendInt(Out, TEXT("attack.attacker"), State.PendingAttack.AttackerUnitId);
 	AppendInt(Out, TEXT("attack.defender"), State.PendingAttack.DefenderUnitId);
 	AppendInt(Out, TEXT("attack.player"), State.PendingAttack.AttackingPlayerId);
@@ -219,6 +237,23 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendBool(Out, TEXT("attack.post_hit_completed"), State.PendingAttack.bPostHitCompleted);
 		AppendBool(Out, TEXT("attack.frozen_broken"), State.PendingAttack.bFrozenBroken);
 		AppendBool(Out, TEXT("attack.counter"), State.PendingAttack.bCounter);
+	}
+	if (State.NPCPhaseContinuation.bActive)
+	{
+		AppendBool(Out, TEXT("npc_phase.active"), true);
+		AppendInt(Out, TEXT("npc_phase.owner"), State.NPCPhaseContinuation.PhaseOwnerPlayerId);
+		AppendInt(Out, TEXT("npc_phase.queue_index"), State.NPCPhaseContinuation.QueueIndex);
+		AppendInt(Out, TEXT("npc_phase.current_unit"), State.NPCPhaseContinuation.CurrentNPCUnitId);
+		AppendInt(Out, TEXT("npc_phase.action_sequence"), State.NPCPhaseContinuation.CurrentActionSequence);
+		AppendInt(Out, TEXT("npc_phase.path_step"), State.NPCPhaseContinuation.CurrentPathStepIndex);
+		AppendBool(Out, TEXT("npc_phase.current_started"), State.NPCPhaseContinuation.bCurrentNPCStarted);
+		AppendBool(Out, TEXT("npc_phase.current_progress"), State.NPCPhaseContinuation.bCurrentNPCMadeProgress);
+		AppendBool(Out, TEXT("npc_phase.waiting_attack"), State.NPCPhaseContinuation.bWaitingForAttackContinuation);
+		AppendInt(Out, TEXT("npc_phase.queue_count"), State.NPCPhaseContinuation.OrderedNPCUnitIds.Num());
+		for (const int32 UnitId : State.NPCPhaseContinuation.OrderedNPCUnitIds)
+		{
+			AppendInt(Out, TEXT("npc_phase.queue_unit"), UnitId);
+		}
 	}
 
 	TArray<FWBPendingNPCSpawnState> Spawns = State.PendingNPCSpawns;

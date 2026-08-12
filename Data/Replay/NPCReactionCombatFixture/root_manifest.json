@@ -1,0 +1,11 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "npc_reaction_combat_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    { "name": "npc_reaction_combat", "path": "bundle_manifest.json" }
+  ],
+  "metadata": {
+    "notes": "Synthetic production NPC reaction and typed counterability fixture."
+  }
+}

@@ -331,6 +331,321 @@ FWBTraceEvent MakeNPCTrace(
 }
 }
 
+FWBNPCPhaseResolutionResult WBNPCPhaseResolution::BeginPhase(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const int32 PhaseOwnerPlayerId)
+{
+	FString ValidationReason;
+	if (!ValidateNPCState(State, Repository, ValidationReason))
+	{
+		return Failure(ValidationReason);
+	}
+	if (State.NPCPhaseContinuation.bActive)
+	{
+		return Failure(TEXT("npc_phase_already_active"));
+	}
+
+	FWBNPCPhaseResolutionResult Result;
+	FWBTraceEvent PhaseStarted;
+	PhaseStarted.Kind = FName(TEXT("npc_phase_started"));
+	PhaseStarted.PlayerId = PhaseOwnerPlayerId;
+	PhaseStarted.TurnNumber = State.TurnNumber;
+	PhaseStarted.MatchPhase = FName(TEXT("NPCPhase"));
+	PhaseStarted.bOk = true;
+	Result.TraceEvents.Add(PhaseStarted);
+
+	const FWBNPCPhaseResult SpawnResult = WBMarkerResolution::ProcessPendingNPCSpawns(
+		State,
+		Repository,
+		PhaseOwnerPlayerId);
+	if (!SpawnResult.bOk)
+	{
+		return Failure(SpawnResult.Reason);
+	}
+	Result.SpawnedCount = SpawnResult.SpawnedCount;
+	Result.BlockedSpawnCount = SpawnResult.BlockedCount;
+	Result.TraceEvents.Append(SpawnResult.TraceEvents);
+
+	TArray<FWBUnitState> OrderedNPCs;
+	for (const FWBUnitState& Unit : State.Units)
+	{
+		if (Unit.OwnerId == -1 && Unit.IsUnitOnBoard() && !Unit.bDefeated)
+		{
+			OrderedNPCs.Add(Unit);
+		}
+	}
+	OrderedNPCs.Sort(NPCOrderLess);
+	State.NPCPhaseContinuation.Reset();
+	State.NPCPhaseContinuation.bActive = true;
+	State.NPCPhaseContinuation.PhaseOwnerPlayerId = PhaseOwnerPlayerId;
+	for (const FWBUnitState& NPC : OrderedNPCs)
+	{
+		State.NPCPhaseContinuation.OrderedNPCUnitIds.Add(NPC.UnitId);
+	}
+	Result.EligibleNPCCount = State.NPCPhaseContinuation.OrderedNPCUnitIds.Num();
+
+	FWBTraceEvent QueueTrace;
+	QueueTrace.Kind = FName(TEXT("npc_action_queue_created"));
+	QueueTrace.PlayerId = PhaseOwnerPlayerId;
+	QueueTrace.CardCount = Result.EligibleNPCCount;
+	QueueTrace.TurnNumber = State.TurnNumber;
+	QueueTrace.MatchPhase = FName(TEXT("NPCPhase"));
+	QueueTrace.bOk = true;
+	Result.TraceEvents.Add(QueueTrace);
+	Result.bOk = true;
+	return Result;
+}
+
+FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	uint32& InOutRandomState)
+{
+	if (InOutRandomState == 0)
+	{
+		return Failure(TEXT("npc_rng_state_invalid"));
+	}
+	if (!State.NPCPhaseContinuation.bActive)
+	{
+		return Failure(TEXT("npc_phase_not_active"));
+	}
+	if (State.HasPendingAttack() || State.HasOpenReactionWindow())
+	{
+		return Failure(TEXT("npc_phase_attack_still_pending"));
+	}
+
+	FWBNPCPhaseResolutionResult Result;
+	FWBNPCPhaseContinuationState& Continuation = State.NPCPhaseContinuation;
+	while (Continuation.QueueIndex < Continuation.OrderedNPCUnitIds.Num()
+		&& !State.bGameOver)
+	{
+		const int32 NPCUnitId = Continuation.OrderedNPCUnitIds[Continuation.QueueIndex];
+		FWBUnitState* NPC = State.GetMutableUnitById(NPCUnitId);
+		if (NPC == nullptr || NPC->bDefeated || !NPC->IsUnitOnBoard())
+		{
+			FWBTraceEvent Skipped;
+			Skipped.Kind = FName(TEXT("npc_skipped"));
+			Skipped.SourceUnitId = NPCUnitId;
+			Skipped.ActionSequence = Continuation.QueueIndex;
+			Skipped.Reason = TEXT("npc_no_longer_available");
+			Skipped.MatchPhase = FName(TEXT("NPCPhase"));
+			Skipped.bOk = true;
+			Result.TraceEvents.Add(Skipped);
+			++Continuation.QueueIndex;
+			Continuation.bCurrentNPCStarted = false;
+			continue;
+		}
+
+		if (!Continuation.bCurrentNPCStarted)
+		{
+			Continuation.CurrentNPCUnitId = NPCUnitId;
+			Continuation.CurrentActionSequence = Continuation.QueueIndex;
+			Continuation.CurrentPathStepIndex = 0;
+			Continuation.bCurrentNPCMadeProgress = false;
+			Continuation.bCurrentNPCStarted = true;
+			Result.TraceEvents.Add(MakeNPCTrace(
+				FName(TEXT("npc_action_started")),
+				*NPC,
+				Continuation.CurrentActionSequence));
+			NPC->AttacksLeft = FMath::Max(NPC->MaxAttacksPerTurn, 1);
+			NPC->MPRemaining = RollD6(InOutRandomState);
+			Result.MPRolls.Add(NPC->MPRemaining);
+			FWBTraceEvent Roll = MakeNPCTrace(
+				FName(TEXT("npc_mp_rolled")),
+				*NPC,
+				Continuation.CurrentActionSequence);
+			Roll.MPRoll = NPC->MPRemaining;
+			Roll.RemainingMP = NPC->MPRemaining;
+			Result.TraceEvents.Add(Roll);
+		}
+
+		while (!State.bGameOver)
+		{
+			NPC = State.GetMutableUnitById(NPCUnitId);
+			if (NPC == nullptr || NPC->bDefeated || !NPC->IsUnitOnBoard())
+			{
+				break;
+			}
+			if (NPC->AttacksLeft > 0)
+			{
+				const int32 AttackTargetId = SelectTarget(State, *NPC, true);
+				if (AttackTargetId != INDEX_NONE)
+				{
+					const FWBUnitState* Target = State.GetUnitById(AttackTargetId);
+					FWBTraceEvent Selected = MakeNPCTrace(
+						FName(TEXT("npc_target_selected")),
+						*NPC,
+						Continuation.CurrentActionSequence);
+					Selected.TargetUnitId = AttackTargetId;
+					Selected.Reason = TEXT("attackable_target");
+					Result.TraceEvents.Add(Selected);
+					const FWBApplyActionResult DeclareResult =
+						WBEffectRunner::ApplyNPCAttackDeclare(
+							State,
+							MakeNPCAttackAction(*NPC, *Target));
+					if (!DeclareResult.bOk)
+					{
+						return Failure(DeclareResult.Reason);
+					}
+					TArray<FWBTraceEvent> DeclareEvents = DeclareResult.TraceEvents;
+					AnnotateEvents(
+						DeclareEvents,
+						*NPC,
+						Continuation.CurrentActionSequence);
+					Result.TraceEvents.Append(DeclareEvents);
+					Continuation.bCurrentNPCMadeProgress = true;
+					Continuation.bWaitingForAttackContinuation = true;
+					Result.bPausedForAttack = true;
+					Result.bOk = true;
+					return Result;
+				}
+			}
+
+			if (NPC->MPRemaining <= 0)
+			{
+				break;
+			}
+			const int32 ChaseTargetId = SelectTarget(State, *NPC, false);
+			if (ChaseTargetId == INDEX_NONE)
+			{
+				FWBTraceEvent NoTarget = MakeNPCTrace(
+					FName(TEXT("npc_no_target")),
+					*NPC,
+					Continuation.CurrentActionSequence);
+				NoTarget.Reason = TEXT("no_player_controlled_targets");
+				Result.TraceEvents.Add(NoTarget);
+				break;
+			}
+			FWBTraceEvent Selected = MakeNPCTrace(
+				FName(TEXT("npc_target_selected")),
+				*NPC,
+				Continuation.CurrentActionSequence);
+			Selected.TargetUnitId = ChaseTargetId;
+			Selected.Reason = TEXT("chase_target");
+			Result.TraceEvents.Add(Selected);
+
+			TArray<FWBTile> Path;
+			if (!FindPathToTarget(State, NPCUnitId, ChaseTargetId, Path)
+				|| Path.IsEmpty()
+				|| State.UnitIdAt(Path[0]) != -1)
+			{
+				FWBTraceEvent Skipped = MakeNPCTrace(
+					FName(TEXT("npc_skipped")),
+					*NPC,
+					Continuation.CurrentActionSequence);
+				Skipped.TargetUnitId = ChaseTargetId;
+				Skipped.Reason = TEXT("no_legal_path");
+				Result.TraceEvents.Add(Skipped);
+				break;
+			}
+
+			FWBTraceEvent Planned = MakeNPCTrace(
+				FName(TEXT("npc_movement_planned")),
+				*NPC,
+				Continuation.CurrentActionSequence);
+			Planned.TargetUnitId = ChaseTargetId;
+			Planned.FromTile = FWBTile(NPC->X, NPC->Y);
+			Planned.ToTile = Path[0];
+			Planned.PathStepIndex = Continuation.CurrentPathStepIndex;
+			Result.TraceEvents.Add(Planned);
+			const FWBApplyActionResult MoveResult = WBEffectRunner::ApplyNPCMove(
+				State,
+				MakeNPCMoveAction(*NPC, Path[0]));
+			if (!MoveResult.bOk)
+			{
+				return Failure(MoveResult.Reason);
+			}
+			TArray<FWBTraceEvent> MoveEvents = MoveResult.TraceEvents;
+			AnnotateEvents(
+				MoveEvents,
+				*NPC,
+				Continuation.CurrentActionSequence,
+				Continuation.CurrentPathStepIndex++);
+			Result.TraceEvents.Append(MoveEvents);
+			Continuation.bCurrentNPCMadeProgress = true;
+
+			const FWBMarkerResolutionResult MarkerResult =
+				WBMarkerResolution::ResolveMarkerAtUnitTile(State, Repository, NPCUnitId);
+			if (!MarkerResult.bOk)
+			{
+				return Failure(MarkerResult.Reason);
+			}
+			TArray<FWBTraceEvent> MarkerEvents = MarkerResult.TraceEvents;
+			AnnotateEvents(
+				MarkerEvents,
+				*NPC,
+				Continuation.CurrentActionSequence,
+				Continuation.CurrentPathStepIndex - 1);
+			Result.TraceEvents.Append(MarkerEvents);
+			if (MarkerResult.bNPCSpawnScheduled && !State.bGameOver)
+			{
+				const FWBNPCPhaseResult MidPhaseSpawn =
+					WBMarkerResolution::ProcessPendingNPCSpawns(
+						State,
+						Repository,
+						Continuation.PhaseOwnerPlayerId);
+				if (!MidPhaseSpawn.bOk)
+				{
+					return Failure(MidPhaseSpawn.Reason);
+				}
+				Result.TraceEvents.Append(MidPhaseSpawn.TraceEvents);
+				TArray<FWBUnitState> NewlySpawned;
+				for (const FWBUnitState& Candidate : State.Units)
+				{
+					if (Candidate.OwnerId == -1 && Candidate.IsUnitOnBoard()
+						&& !Continuation.OrderedNPCUnitIds.Contains(Candidate.UnitId))
+					{
+						NewlySpawned.Add(Candidate);
+					}
+				}
+				NewlySpawned.Sort(NPCOrderLess);
+				for (const FWBUnitState& Candidate : NewlySpawned)
+				{
+					Continuation.OrderedNPCUnitIds.Add(Candidate.UnitId);
+				}
+			}
+		}
+
+		NPC = State.GetMutableUnitById(NPCUnitId);
+		if (NPC != nullptr)
+		{
+			FWBTraceEvent Completed = MakeNPCTrace(
+				FName(TEXT("npc_action_completed")),
+				*NPC,
+				Continuation.CurrentActionSequence);
+			Completed.Reason = Continuation.bCurrentNPCMadeProgress
+				? TEXT("resolved")
+				: TEXT("no_action");
+			Completed.RemainingMP = NPC->MPRemaining;
+			Result.TraceEvents.Add(Completed);
+		}
+		++Result.CompletedNPCCount;
+		++Continuation.QueueIndex;
+		Continuation.bCurrentNPCStarted = false;
+		Continuation.CurrentNPCUnitId = INDEX_NONE;
+	}
+
+	FString ValidationReason;
+	if (!ValidateNPCState(State, Repository, ValidationReason))
+	{
+		return Failure(ValidationReason);
+	}
+	const int32 PhaseOwnerPlayerId = Continuation.PhaseOwnerPlayerId;
+	Continuation.Reset();
+	FWBTraceEvent PhaseEnded;
+	PhaseEnded.Kind = FName(TEXT("npc_phase_ended"));
+	PhaseEnded.PlayerId = PhaseOwnerPlayerId;
+	PhaseEnded.TurnNumber = State.TurnNumber;
+	PhaseEnded.MatchPhase = FName(TEXT("NPCPhase"));
+	PhaseEnded.WinningPlayerId = State.WinnerPlayerId;
+	PhaseEnded.bOk = true;
+	Result.TraceEvents.Add(PhaseEnded);
+	Result.bCompleted = true;
+	Result.bOk = true;
+	return Result;
+}
+
 FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 	FWBGameStateData& State,
 	const FWBCardDefinitionRepository& Repository,

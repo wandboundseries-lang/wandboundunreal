@@ -199,7 +199,8 @@ private:
 		int32 SourceUnitId,
 		int32 TargetUnitId,
 		TArray<FWBTraceEvent>& OutTraceEvents,
-		FString& OutReason) const;
+		FString& OutReason,
+		int32 ExplicitFirstPriorityPlayerId = INDEX_NONE) const;
 	bool ApplyReactionPass(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
@@ -253,6 +254,22 @@ private:
 		FString& OutReason) const;
 
 	bool ApplyTurnTransition(
+		FWBGameStateData& WorkingState,
+		uint32& WorkingRandomState,
+		EWBMatchLoopPhase& WorkingPhase,
+		FWBTurnStartSequenceState& WorkingTurnStartSequence,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool ResumeNPCPhaseAndTurnTransition(
+		FWBGameStateData& WorkingState,
+		uint32& WorkingRandomState,
+		EWBMatchLoopPhase& WorkingPhase,
+		FWBTurnStartSequenceState& WorkingTurnStartSequence,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool BeginTurnStartAfterNPCPhase(
 		FWBGameStateData& WorkingState,
 		uint32& WorkingRandomState,
 		EWBMatchLoopPhase& WorkingPhase,

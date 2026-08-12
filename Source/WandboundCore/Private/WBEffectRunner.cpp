@@ -517,6 +517,7 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State,
 
 	FWBPendingAttackState PendingAttack;
 	PendingAttack.bActive = true;
+	PendingAttack.AuthorityKind = EWBAttackAuthorityKind::Player;
 	PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
 	PendingAttack.AttackerUnitId = Attacker->UnitId;
 	PendingAttack.DefenderUnitId = Defender->UnitId;
@@ -570,7 +571,8 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(FWBGameStateData& Sta
 
 	FWBPendingAttackState PendingAttack;
 	PendingAttack.bActive = true;
-	PendingAttack.Stage = EWBAttackContinuationStage::Damage;
+	PendingAttack.AuthorityKind = EWBAttackAuthorityKind::NeutralNPC;
+	PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
 	PendingAttack.AttackerUnitId = Attacker->UnitId;
 	PendingAttack.DefenderUnitId = Defender->UnitId;
 	PendingAttack.OriginalAttackerUnitId = Attacker->UnitId;

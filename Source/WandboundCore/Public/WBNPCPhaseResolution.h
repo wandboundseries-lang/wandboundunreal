@@ -13,6 +13,8 @@ struct WANDBOUNDCORE_API FWBNPCPhaseResolutionResult
 	int32 BlockedSpawnCount = 0;
 	int32 EligibleNPCCount = 0;
 	int32 CompletedNPCCount = 0;
+	bool bPausedForAttack = false;
+	bool bCompleted = false;
 	TArray<int32> MPRolls;
 	TArray<FWBTraceEvent> TraceEvents;
 };
@@ -25,6 +27,16 @@ public:
 		const FWBCardDefinitionRepository& Repository,
 		uint32& InOutRandomState,
 		int32 PhaseOwnerPlayerId);
+
+	static FWBNPCPhaseResolutionResult BeginPhase(
+		FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository,
+		int32 PhaseOwnerPlayerId);
+
+	static FWBNPCPhaseResolutionResult AdvanceUntilAttackOrComplete(
+		FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository,
+		uint32& InOutRandomState);
 
 	static int32 RollD6(uint32& InOutRandomState);
 };

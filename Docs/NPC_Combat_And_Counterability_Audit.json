@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "commit": "b4d36ba19f0c9086960d9a448e13947e64a8a389",
+    "origin_main_matched": true,
+    "staged_files": 0,
+    "replay_schema_version": 1,
+    "action_codec_header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "action_codec_source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "outcome": "A",
+  "npc_priority": {
+    "player_0_target_first_priority": 0,
+    "player_1_target_first_priority": 1,
+    "policy": "defending_player_owner",
+    "priority_alternates": true,
+    "react_resets_passes": true,
+    "two_consecutive_passes_close": true,
+    "auto_pass_without_legal_react": true
+  },
+  "npc_continuation": {
+    "shared_pending_attack": true,
+    "separate_npc_attack_continuation": false,
+    "queue_position_preserved": true,
+    "mp_roll_preserved": true,
+    "declared_target_preserved": true,
+    "later_npcs_wait": true
+  },
+  "counterability": {
+    "owner": "original_attacker",
+    "canonical_source": "equipped Wand rule",
+    "canonical_rule_id": "equipped_unit_cannot_be_counter_attacked",
+    "typed_unreal_capability": "AttacksCannotBeCountered",
+    "evaluated_at": "counter_stage",
+    "pre_hit_unchanged": true,
+    "post_hit_unchanged": true,
+    "reaction_legality_unchanged": true,
+    "current_production_assignments": []
+  },
+  "sources": [
+    {
+      "path": "Reference/GodotProject/godotcanon/autoload/Game.gd",
+      "symbols": [
+        "_npc_start_attack_impl",
+        "open_response_window_impl",
+        "_auto_pass_if_needed",
+        "pass_priority",
+        "_npc_phase_step_impl",
+        "_begin_counter_attack_with_delay",
+        "_recompute_unit_equip_rules_impl"
+      ],
+      "read_only": true
+    },
+    {
+      "path": "Reference/GodotProject/godotcanon/scripts/data/CardDB/wands_equip.json",
+      "definition": "wand_equip_no_counter",
+      "read_only": true
+    }
+  ],
+  "boundaries": {
+    "action_codec_changed": false,
+    "replay_schema_changed": false,
+    "godot_changed": false,
+    "production_card_assignment_added": false,
+    "card_id_combat_branch_added": false,
+    "assets_changed": false
+  }
+}

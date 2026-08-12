@@ -1,0 +1,94 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "npc_reaction_combat_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Generic NPC reaction and equipped counterability definitions.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "npc_reaction_hero_a",
+      "public_name": "NPC Reaction Hero A",
+      "kind": "hero",
+      "public_text": "May reinforce armor during a response.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 10, "atk": 2, "ar": 2, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" },
+      "activated_effects": [
+        {
+          "effect_id": "npc_reaction_reinforce",
+          "public_label": "Reinforce",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "response_window",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "npc_reaction_reinforce_once"
+          },
+          "payloads": [
+            {
+              "type": "armor_effect",
+              "operation": "add_current_armor",
+              "amount": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "npc_reaction_hero_b",
+      "public_name": "NPC Reaction Hero B",
+      "kind": "hero",
+      "public_text": "An opposing fixture Hero.",
+      "public_category": "Hero",
+      "factions": ["black_meridian"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 10, "atk": 1, "ar": 1, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "npc_reaction_wand",
+      "public_name": "NPC Reaction Wand",
+      "kind": "wand",
+      "public_text": "Equipped unit cannot be counter-attacked.",
+      "public_category": "Wand",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "rr": 1 },
+      "equip": {
+        "target_requirement": "owned_unit",
+        "resonance_requirement": 1,
+        "combat_capabilities": ["attacks_cannot_be_countered"]
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "npc_reaction_filler",
+      "public_name": "NPC Reaction Filler",
+      "kind": "action",
+      "public_text": "A fixture deck card.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {}
+    }
+  ]
+}

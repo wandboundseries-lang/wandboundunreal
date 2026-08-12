@@ -217,6 +217,49 @@ bool FWBProductionCardDBResponseTimingTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FWBProductionCardDBCombatCapabilityTest,
+	"Wandbound.CardDB.Production.Schema.EquippedCombatCapabilityTyped",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBProductionCardDBCombatCapabilityTest::RunTest(const FString&)
+{
+	const FString Sandbox = MakeSandbox(TEXT("equipped_combat_capability"));
+	TestTrue(
+		TEXT("Capability added"),
+		ReplaceInSandboxFile(
+			Sandbox,
+			TEXT("bundles/wands.json"),
+			TEXT("\"target_requirement\": \"owned_unit\","),
+			TEXT("\"target_requirement\": \"owned_unit\", \"combat_capabilities\": [\"attacks_cannot_be_countered\"],")));
+	const FWBProductionCardDatabaseLoadResult Result = LoadSandbox(Sandbox);
+	TestTrue(TEXT("Typed capability imports"), Result.bOk && Result.Snapshot.IsValid());
+	if (Result.Snapshot.IsValid())
+	{
+		const FWBProductionCardRecord* Wand =
+			Result.Snapshot->FindWand(TEXT("fixture_ember_wand"));
+		TestTrue(
+			TEXT("Capability mapped"),
+			Wand != nullptr
+			&& Wand->CoreDefinition.GrantedCombatCapabilitiesWhileEquipped.Contains(
+				EWBCombatCapability::AttacksCannotBeCountered));
+	}
+
+	const FString BadSandbox = MakeSandbox(TEXT("unsupported_combat_capability"));
+	TestTrue(
+		TEXT("Unsupported capability added"),
+		ReplaceInSandboxFile(
+			BadSandbox,
+			TEXT("bundles/wands.json"),
+			TEXT("\"target_requirement\": \"owned_unit\","),
+			TEXT("\"target_requirement\": \"owned_unit\", \"combat_capabilities\": [\"unknown_capability\"],")));
+	const FWBProductionCardDatabaseLoadResult BadResult = LoadSandbox(BadSandbox);
+	TestFalse(TEXT("Unsupported capability fails closed"), BadResult.bOk);
+	TestTrue(
+		TEXT("Named diagnostic"),
+		HasDiagnostic(BadResult, TEXT("combat_capability_unsupported")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FWBProductionCardDBUnknownFieldRejectedTest,
 	"Wandbound.CardDB.Production.Schema.UnknownFieldRejected",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

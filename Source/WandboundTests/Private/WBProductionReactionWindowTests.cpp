@@ -1240,7 +1240,8 @@ bool FWBReactionNPCUnchanged::RunTest(const FString& Parameters)
 {
 	FString CoordinatorSource;
 	TestTrue(TEXT("Coordinator source loads"), LoadFile(TEXT("Source/WandboundCore/Private/WBMatchCoordinator.cpp"), CoordinatorSource));
-	TestTrue(TEXT("NPC phase remains in turn transition"), CoordinatorSource.Contains(TEXT("WBNPCPhaseResolution::ResolvePhase")));
+	TestTrue(TEXT("NPC phase begins through coordinator turn transition"), CoordinatorSource.Contains(TEXT("WBNPCPhaseResolution::BeginPhase")));
+	TestTrue(TEXT("NPC phase resumes through coordinator authority"), CoordinatorSource.Contains(TEXT("ResumeNPCPhaseAndTurnTransition")));
 	return true;
 }
 

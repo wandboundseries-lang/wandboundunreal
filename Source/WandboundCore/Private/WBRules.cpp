@@ -579,7 +579,50 @@ FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateDa
 	return FWBActionQueryResult::Ok();
 }
 
+bool WBRules::UnitHasCombatCapability(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository* Repository,
+	const int32 UnitId,
+	const EWBCombatCapability Capability)
+{
+	const FWBUnitState* Unit = State.GetUnitById(UnitId);
+	if (Unit == nullptr)
+	{
+		return false;
+	}
+	if (Unit->CombatCapabilities.Contains(Capability))
+	{
+		return true;
+	}
+	if (Repository == nullptr)
+	{
+		return false;
+	}
+	for (const FWBEquippedCardEntry& Entry : State.GetCardZoneState().EquippedCards)
+	{
+		if (Entry.EquippedToUnitId != UnitId)
+		{
+			continue;
+		}
+		const FWBCardDefinitionRepositoryLookupResult Lookup =
+			WBCardDefinitionRepository::FindCardById(*Repository, Entry.Card.CardId);
+		if (Lookup.bFound
+			&& Lookup.Definition.GrantedCombatCapabilitiesWhileEquipped.Contains(Capability))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 FWBActionQueryResult WBRules::CanResolveCounterattack(const FWBGameStateData& State)
+{
+	return CanResolveCounterattack(State, FWBCardDefinitionRepository());
+}
+
+FWBActionQueryResult WBRules::CanResolveCounterattack(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository)
 {
 	if (State.bGameOver || !State.HasPendingAttack())
 	{
@@ -602,6 +645,16 @@ FWBActionQueryResult WBRules::CanResolveCounterattack(const FWBGameStateData& St
 		|| !OriginalDefender->IsUnitOnBoard())
 	{
 		return FWBActionQueryResult::Deny(TEXT("counter_unit_unavailable"));
+	}
+	const FWBCardDefinitionRepository* RepositoryForCapabilities =
+		Repository.RepositoryId.IsEmpty() ? nullptr : &Repository;
+	if (UnitHasCombatCapability(
+		State,
+		RepositoryForCapabilities,
+		OriginalAttacker->UnitId,
+		EWBCombatCapability::AttacksCannotBeCountered))
+	{
+		return FWBActionQueryResult::Deny(TEXT("attack_cannot_be_countered"));
 	}
 	if (HasAttackBlockingStatus(*OriginalDefender))
 	{

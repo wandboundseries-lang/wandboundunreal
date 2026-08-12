@@ -52,6 +52,7 @@ struct WANDBOUNDCORE_API FWBUnitState
 	TSet<FName> Statuses;
 	TMap<FName, int32> StatusTurnsRemaining;
 	TSet<FName> Passives;
+	TSet<EWBCombatCapability> CombatCapabilities;
 	TArray<FWBResonanceModifierState> ResonanceModifiers;
 
 	bool IsUnitOnBoard() const;
@@ -124,9 +125,16 @@ enum class EWBAttackContinuationStage : uint8
 	Complete
 };
 
+enum class EWBAttackAuthorityKind : uint8
+{
+	Player,
+	NeutralNPC
+};
+
 struct WANDBOUNDCORE_API FWBPendingAttackState
 {
 	bool bActive = false;
+	EWBAttackAuthorityKind AuthorityKind = EWBAttackAuthorityKind::Player;
 	EWBAttackContinuationStage Stage = EWBAttackContinuationStage::None;
 	int32 AttackerUnitId = -1;
 	int32 DefenderUnitId = -1;
@@ -142,6 +150,25 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	bool bPostHitCompleted = false;
 	bool bFrozenBroken = false;
 	bool bCounter = false;
+};
+
+struct WANDBOUNDCORE_API FWBNPCPhaseContinuationState
+{
+	bool bActive = false;
+	int32 PhaseOwnerPlayerId = -1;
+	TArray<int32> OrderedNPCUnitIds;
+	int32 QueueIndex = 0;
+	int32 CurrentNPCUnitId = INDEX_NONE;
+	int32 CurrentActionSequence = INDEX_NONE;
+	int32 CurrentPathStepIndex = 0;
+	bool bCurrentNPCStarted = false;
+	bool bCurrentNPCMadeProgress = false;
+	bool bWaitingForAttackContinuation = false;
+
+	void Reset()
+	{
+		*this = FWBNPCPhaseContinuationState();
+	}
 };
 
 struct WANDBOUNDCORE_API FWBPendingNPCSpawnState
@@ -177,6 +204,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	TArray<FWBPlayerStateData> Players;
 	FWBReactionWindowState ReactionWindow;
 	FWBPendingAttackState PendingAttack;
+	FWBNPCPhaseContinuationState NPCPhaseContinuation;
 	TArray<FWBPendingNPCSpawnState> PendingNPCSpawns;
 	TMap<int32, TSet<FString>> ActivationUsageKeysThisTurn;
 	FWBCardZoneState CardZoneState;

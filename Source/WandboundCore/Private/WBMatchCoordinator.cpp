@@ -248,6 +248,7 @@ void CommitTerminalOutcome(
 		Events.Add(Cleared);
 		State.ClearReactionWindow();
 	}
+	State.NPCPhaseContinuation.Reset();
 	FWBTerminalOutcome& Outcome = State.TerminalOutcome;
 	Outcome.bTerminal = true;
 	Outcome.WinnerPlayerId = State.WinnerPlayerId;
@@ -1447,6 +1448,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			WorkingRandomState,
 			WorkingPhase,
 			WorkingTurnStartSequence,
+			WorkingPendingEffects,
 			WorkingTraceEvents,
 			FailureReason);
 	}
@@ -1712,6 +1714,22 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 	}
 
+	if (bActionApplied
+		&& WorkingState.NPCPhaseContinuation.bActive
+		&& !WorkingState.HasPendingAttack()
+		&& !WorkingState.HasOpenReactionWindow()
+		&& !WorkingState.bGameOver)
+	{
+		bActionApplied = ResumeNPCPhaseAndTurnTransition(
+			WorkingState,
+			WorkingRandomState,
+			WorkingPhase,
+			WorkingTurnStartSequence,
+			WorkingPendingEffects,
+			WorkingTraceEvents,
+			FailureReason);
+	}
+
 	if (!bActionApplied)
 	{
 		return MakeCurrentFailure(FailureReason.IsEmpty()
@@ -1943,7 +1961,8 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 	const int32 SourceUnitId,
 	const int32 TargetUnitId,
 	TArray<FWBTraceEvent>& OutTraceEvents,
-	FString& OutReason) const
+	FString& OutReason,
+	const int32 ExplicitFirstPriorityPlayerId) const
 {
 	if (Kind == EWBReactionWindowKind::None
 		|| WorkingState.bGameOver
@@ -1952,7 +1971,8 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 		OutReason.Reset();
 		return true;
 	}
-	if (!FWBGameStateData::IsValidPlayerId(OriginatingPlayerId))
+	if (!FWBGameStateData::IsValidPlayerId(OriginatingPlayerId)
+		&& !FWBGameStateData::IsValidPlayerId(ExplicitFirstPriorityPlayerId))
 	{
 		OutReason = TEXT("reaction_originating_player_invalid");
 		return false;
@@ -1970,7 +1990,10 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 	ProbeState.ReactionWindow.SourceUnitId = SourceUnitId;
 	ProbeState.ReactionWindow.TargetUnitId = TargetUnitId;
 	ProbeState.Phase = EWBGamePhase::Response;
-	const int32 FirstPriorityPlayerId = 1 - OriginatingPlayerId;
+	const int32 FirstPriorityPlayerId =
+		FWBGameStateData::IsValidPlayerId(ExplicitFirstPriorityPlayerId)
+			? ExplicitFirstPriorityPlayerId
+			: 1 - OriginatingPlayerId;
 	ProbeState.PriorityPlayer = FirstPriorityPlayerId;
 
 	FString ProbeReason;
@@ -1982,8 +2005,9 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 		OutReason = ProbeReason;
 		return false;
 	}
-	ProbeState.PriorityPlayer = OriginatingPlayerId;
-	const bool bOriginatingPlayerHasReact =
+	const int32 OtherPlayerId = 1 - FirstPriorityPlayerId;
+	ProbeState.PriorityPlayer = OtherPlayerId;
+	const bool bOtherPlayerHasReact =
 		HasLegalReactForPriority(
 			ProbeState, WorkingPendingEffects, ProbeReason);
 	if (!ProbeReason.IsEmpty())
@@ -1991,7 +2015,7 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 		OutReason = ProbeReason;
 		return false;
 	}
-	if (!bFirstPlayerHasReact && !bOriginatingPlayerHasReact)
+	if (!bFirstPlayerHasReact && !bOtherPlayerHasReact)
 	{
 		OutReason.Reset();
 		return true;
@@ -2581,6 +2605,17 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
+	const auto ResolveFirstReactionPlayer = [&WorkingState]()
+	{
+		const FWBUnitState* Defender =
+			WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId);
+		if (Defender != nullptr
+			&& FWBGameStateData::IsValidPlayerId(Defender->OwnerId))
+		{
+			return Defender->OwnerId;
+		}
+		return 1 - WorkingState.CurrentPlayer;
+	};
 	auto AddStageTraceForAttack = [&](const FWBPendingAttackState& Attack, const FName Kind, const FName Stage)
 	{
 		FWBTraceEvent Event = MakeMatchTrace(
@@ -2657,6 +2692,39 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 					return false;
 				}
 				OutTraceEvents.Append(Damage.TraceEvents);
+				if (AttackBeforeDamage.AuthorityKind
+					== EWBAttackAuthorityKind::NeutralNPC)
+				{
+					FWBTraceEvent NPCResolved = MakeMatchTrace(
+						FName(TEXT("npc_attack_damage_resolved")),
+						-1,
+						WorkingState.TurnNumber,
+						FName(TEXT("NPCPhase")));
+					NPCResolved.SourceUnitId = AttackBeforeDamage.AttackerUnitId;
+					NPCResolved.TargetUnitId = AttackBeforeDamage.DefenderUnitId;
+					NPCResolved.ActionSequence =
+						WorkingState.NPCPhaseContinuation.CurrentActionSequence;
+					if (const FWBUnitState* NPC =
+						WorkingState.GetUnitById(AttackBeforeDamage.AttackerUnitId))
+					{
+						NPCResolved.SpawnOrder = NPC->NPCSpawnOrder;
+						NPCResolved.CardId = NPC->CardId;
+					}
+					if (const FWBTraceEvent* CoreDamage = Damage.TraceEvents.FindByPredicate(
+						[](const FWBTraceEvent& Event)
+						{
+							return Event.Kind == FName(TEXT("attack_damage_resolved"));
+						}))
+					{
+						NPCResolved.DamageAmount = CoreDamage->DamageAmount;
+						NPCResolved.FinalDamageAmount = CoreDamage->FinalDamageAmount;
+						NPCResolved.ArmorAbsorbedAmount = CoreDamage->ArmorAbsorbedAmount;
+						NPCResolved.HPDamageAmount = CoreDamage->HPDamageAmount;
+						NPCResolved.PreviousHP = CoreDamage->PreviousHP;
+						NPCResolved.NewHP = CoreDamage->NewHP;
+					}
+					OutTraceEvents.Add(MoveTemp(NPCResolved));
+				}
 			}
 			if (WorkingState.bGameOver || !WorkingState.HasPendingAttack())
 			{
@@ -2688,7 +2756,8 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				WorkingState.PendingAttack.AttackerUnitId,
 				WorkingState.PendingAttack.DefenderUnitId,
 				OutTraceEvents,
-				OutReason))
+				OutReason,
+				ResolveFirstReactionPlayer()))
 			{
 				return false;
 			}
@@ -2700,6 +2769,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 		}
 
 		case EWBAttackContinuationStage::PostHit:
+		{
 			WorkingState.PendingAttack.bPostHitCompleted = true;
 			AddStageTrace(FName(TEXT("attack_post_hit_closed")), FName(TEXT("post_hit")));
 			if (WorkingState.PendingAttack.bCounter
@@ -2708,7 +2778,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				return Complete();
 			}
 			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::Counter;
-			if (!WBRules::CanResolveCounterattack(WorkingState).bOk)
+			if (!WBRules::CanResolveCounterattack(WorkingState, Repository).bOk)
 			{
 				return Complete();
 			}
@@ -2724,13 +2794,25 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				WorkingState.PendingAttack.AttackerUnitId = OriginalDefender;
 				WorkingState.PendingAttack.DefenderUnitId = OriginalAttacker;
 				WorkingState.PendingAttack.AttackingPlayerId = CounterAttacker->OwnerId;
+				WorkingState.PendingAttack.AuthorityKind =
+					CounterAttacker->OwnerId == -1
+						? EWBAttackAuthorityKind::NeutralNPC
+						: EWBAttackAuthorityKind::Player;
 				WorkingState.PendingAttack.AttackerTile = FWBTile(CounterAttacker->X, CounterAttacker->Y);
 				WorkingState.PendingAttack.DefenderTile = FWBTile(CounterDefender->X, CounterDefender->Y);
 				WorkingState.PendingAttack.bCounter = true;
 				WorkingState.PendingAttack.bDamageResolved = false;
 				WorkingState.PendingAttack.bPostHitCompleted = false;
-				WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
-				AddStageTrace(FName(TEXT("counter_started")), FName(TEXT("counter")));
+			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
+			AddStageTrace(FName(TEXT("counter_started")), FName(TEXT("counter")));
+			}
+			const FWBUnitState* CounterTarget =
+				WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId);
+			const bool bNeutralCounterTarget =
+				CounterTarget != nullptr && CounterTarget->OwnerId == -1;
+			if (bNeutralCounterTarget)
+			{
+				break;
 			}
 			if (!OpenReactionWindowIfApplicable(
 				WorkingState,
@@ -2742,7 +2824,8 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				WorkingState.PendingAttack.AttackerUnitId,
 				WorkingState.PendingAttack.DefenderUnitId,
 				OutTraceEvents,
-				OutReason))
+				OutReason,
+				ResolveFirstReactionPlayer()))
 			{
 				return false;
 			}
@@ -2751,6 +2834,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				return true;
 			}
 			break;
+		}
 
 		case EWBAttackContinuationStage::Damage:
 		case EWBAttackContinuationStage::Counter:
@@ -2769,6 +2853,7 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 	uint32& WorkingRandomState,
 	EWBMatchLoopPhase& WorkingPhase,
 	FWBTurnStartSequenceState& WorkingTurnStartSequence,
+	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
@@ -2813,10 +2898,9 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 
 	WorkingPhase = EWBMatchLoopPhase::NPCPhase;
 	const FWBNPCPhaseResolutionResult NPCPhaseResult =
-		WBNPCPhaseResolution::ResolvePhase(
+		WBNPCPhaseResolution::BeginPhase(
 			WorkingState,
 			Repository,
-			WorkingRandomState,
 			EndingPlayerId);
 	if (!NPCPhaseResult.bOk)
 	{
@@ -2824,19 +2908,26 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 		return false;
 	}
 	OutTraceEvents.Append(NPCPhaseResult.TraceEvents);
-	if (WorkingState.bGameOver)
-	{
-		WorkingPhase = EWBMatchLoopPhase::GameOver;
-		OutTraceEvents.Add(MakeMatchTrace(
-			FName(TEXT("automatic_resolution")),
-			EndingPlayerId,
-			WorkingState.TurnNumber,
-			PhaseToName(WorkingPhase)));
-		OutReason.Reset();
-		return true;
-	}
+	return ResumeNPCPhaseAndTurnTransition(
+		WorkingState,
+		WorkingRandomState,
+		WorkingPhase,
+		WorkingTurnStartSequence,
+		WorkingPendingEffects,
+		OutTraceEvents,
+		OutReason);
+}
 
+bool WBMatchCoordinator::BeginTurnStartAfterNPCPhase(
+	FWBGameStateData& WorkingState,
+	uint32& WorkingRandomState,
+	EWBMatchLoopPhase& WorkingPhase,
+	FWBTurnStartSequenceState& WorkingTurnStartSequence,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
 	const int32 NextPlayerId = WorkingState.CurrentPlayer;
+	const int32 EndingPlayerId = 1 - NextPlayerId;
 	WorkingPhase = EWBMatchLoopPhase::TurnStart;
 	const int32 MPRoll = RollD6(WorkingRandomState);
 	WorkingTurnStartSequence =
@@ -2888,6 +2979,145 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 			: EWBMatchLoopPhase::TurnStart);
 	OutReason.Reset();
 	return true;
+}
+
+bool WBMatchCoordinator::ResumeNPCPhaseAndTurnTransition(
+	FWBGameStateData& WorkingState,
+	uint32& WorkingRandomState,
+	EWBMatchLoopPhase& WorkingPhase,
+	FWBTurnStartSequenceState& WorkingTurnStartSequence,
+	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	WorkingPhase = EWBMatchLoopPhase::NPCPhase;
+	int32 Guard = 0;
+	while (WorkingState.NPCPhaseContinuation.bActive
+		&& !WorkingState.bGameOver)
+	{
+		if (++Guard > 128)
+		{
+			OutReason = TEXT("npc_phase_continuation_guard_exceeded");
+			return false;
+		}
+		if (WorkingState.NPCPhaseContinuation.bWaitingForAttackContinuation)
+		{
+			if (WorkingState.HasPendingAttack()
+				|| WorkingState.HasOpenReactionWindow())
+			{
+				OutReason = TEXT("npc_phase_attack_still_pending");
+				return false;
+			}
+			if (!ApplyAutomaticResolution(
+				WorkingState,
+				OutTraceEvents,
+				OutReason))
+			{
+				return false;
+			}
+			WorkingState.NPCPhaseContinuation.bWaitingForAttackContinuation = false;
+			if (WorkingState.bGameOver)
+			{
+				break;
+			}
+		}
+		const FWBNPCPhaseResolutionResult NPCResult =
+			WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
+				WorkingState,
+				Repository,
+				WorkingRandomState);
+		if (!NPCResult.bOk)
+		{
+			OutReason = NPCResult.Reason;
+			return false;
+		}
+		OutTraceEvents.Append(NPCResult.TraceEvents);
+		if (!NPCResult.bPausedForAttack)
+		{
+			break;
+		}
+
+		FWBTraceEvent Started = MakeMatchTrace(
+			FName(TEXT("attack_continuation_started")),
+			-1,
+			WorkingState.TurnNumber,
+			PhaseToName(WorkingPhase));
+		Started.ActionId = WorkingState.PendingAttack.DeclarationActionId;
+		Started.SourceUnitId = WorkingState.PendingAttack.AttackerUnitId;
+		Started.TargetUnitId = WorkingState.PendingAttack.DefenderUnitId;
+		Started.AttackContinuationId = WorkingState.PendingAttack.ContinuationId;
+		Started.AttackContinuationStage = FName(TEXT("pre_hit"));
+		OutTraceEvents.Add(MoveTemp(Started));
+
+		const FWBUnitState* Defender =
+			WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId);
+		if (Defender == nullptr
+			|| !FWBGameStateData::IsValidPlayerId(Defender->OwnerId))
+		{
+			OutReason = TEXT("npc_attack_response_owner_invalid");
+			return false;
+		}
+		if (!OpenReactionWindowIfApplicable(
+			WorkingState,
+			WorkingPhase,
+			WorkingPendingEffects,
+			EWBReactionWindowKind::PreHit,
+			-1,
+			WorkingState.PendingAttack.DeclarationActionId,
+			WorkingState.PendingAttack.AttackerUnitId,
+			WorkingState.PendingAttack.DefenderUnitId,
+			OutTraceEvents,
+			OutReason,
+			Defender->OwnerId))
+		{
+			return false;
+		}
+		if (WorkingState.HasOpenReactionWindow())
+		{
+			return true;
+		}
+		if (!AdvanceAttackContinuation(
+			WorkingState,
+			WorkingPhase,
+			WorkingPendingEffects,
+			OutTraceEvents,
+			OutReason))
+		{
+			return false;
+		}
+		if (WorkingState.HasOpenReactionWindow())
+		{
+			return true;
+		}
+		if (!ApplyAutomaticResolution(
+			WorkingState,
+			OutTraceEvents,
+			OutReason))
+		{
+			return false;
+		}
+		WorkingState.NPCPhaseContinuation.bWaitingForAttackContinuation = false;
+	}
+
+	if (WorkingState.bGameOver)
+	{
+		WorkingState.NPCPhaseContinuation.Reset();
+		WorkingPhase = EWBMatchLoopPhase::GameOver;
+		OutTraceEvents.Add(MakeMatchTrace(
+			FName(TEXT("automatic_resolution")),
+			WorkingState.CurrentPlayer,
+			WorkingState.TurnNumber,
+			PhaseToName(WorkingPhase)));
+		OutReason.Reset();
+		return true;
+	}
+	return BeginTurnStartAfterNPCPhase(
+		WorkingState,
+		WorkingRandomState,
+		WorkingPhase,
+		WorkingTurnStartSequence,
+		OutTraceEvents,
+		OutReason);
 }
 
 FWBMatchObservation WBMatchCoordinator::BuildObservation(const int32 ViewerPlayerId) const

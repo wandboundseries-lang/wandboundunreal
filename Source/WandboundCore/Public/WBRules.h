@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBAction.h"
+#include "WBCardDefinitionRepository.h"
 #include "WBGameStateData.h"
 
 struct FWBEffectRequest;
@@ -46,6 +47,14 @@ public:
 	static FWBActionQueryResult CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanResolvePendingAttackDamage(const FWBGameStateData& State);
 	static FWBActionQueryResult CanResolveCounterattack(const FWBGameStateData& State);
+	static FWBActionQueryResult CanResolveCounterattack(
+		const FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository);
+	static bool UnitHasCombatCapability(
+		const FWBGameStateData& State,
+		const FWBCardDefinitionRepository* Repository,
+		int32 UnitId,
+		EWBCombatCapability Capability);
 	static bool ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit);
 	static FWBActionQueryResult CanApplyZeroHPDeathRemoval(const FWBGameStateData& State);
 	static FWBActionQueryResult CanApplyCardActivationCommand(const FWBGameStateData& State, const FWBCardActivationCommand& Command);

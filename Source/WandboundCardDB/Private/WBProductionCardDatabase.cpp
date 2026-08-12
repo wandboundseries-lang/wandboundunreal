@@ -525,6 +525,18 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 		{
 			Source += TEXT("|") + EffectDigest(Effect);
 		}
+		TArray<EWBCombatCapability> CombatCapabilities =
+			Definition.GrantedCombatCapabilitiesWhileEquipped.Array();
+		CombatCapabilities.Sort([](const EWBCombatCapability A, const EWBCombatCapability B)
+		{
+			return static_cast<uint8>(A) < static_cast<uint8>(B);
+		});
+		for (const EWBCombatCapability Capability : CombatCapabilities)
+		{
+			Source += FString::Printf(
+				TEXT("|equipped_combat_capability=%d"),
+				static_cast<int32>(Capability));
+		}
 		Source += TEXT("\n");
 	}
 	return Source;
@@ -1977,7 +1989,11 @@ private:
 		}
 		ValidateKnownFields(
 			Equip,
-			{ TEXT("target_requirement"), TEXT("resonance_requirement") },
+			{
+				TEXT("target_requirement"),
+				TEXT("resonance_requirement"),
+				TEXT("combat_capabilities")
+			},
 			Record.SourceManifestPath,
 			Record.CoreDefinition.CardId,
 			CardPath + TEXT(".equip"));
@@ -1999,6 +2015,39 @@ private:
 				Record.CoreDefinition.CardId,
 				CardPath + TEXT(".equip"),
 				TEXT("Equip data must target an owned unit and match the Wand RR."));
+		}
+		if (HasField(Equip, TEXT("combat_capabilities")))
+		{
+			TArray<FString> CapabilityNames;
+			if (!ReadStringArray(Equip, TEXT("combat_capabilities"), CapabilityNames))
+			{
+				AddError(
+					TEXT("combat_capabilities_malformed"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					CardPath + TEXT(".equip.combat_capabilities"),
+					TEXT("Equip combat capabilities must be a deterministic string array."));
+			}
+			else
+			{
+				for (const FString& CapabilityName : CapabilityNames)
+				{
+					if (CapabilityName == TEXT("attacks_cannot_be_countered"))
+					{
+						Record.CoreDefinition.GrantedCombatCapabilitiesWhileEquipped.Add(
+							EWBCombatCapability::AttacksCannotBeCountered);
+					}
+					else
+					{
+						AddError(
+							TEXT("combat_capability_unsupported"),
+							Record.SourceManifestPath,
+							Record.CoreDefinition.CardId,
+							CardPath + TEXT(".equip.combat_capabilities"),
+							TEXT("The equip combat capability is not supported by this schema version."));
+					}
+				}
+			}
 		}
 	}
 
@@ -3458,6 +3507,18 @@ bool WBProductionCardDatabase::SnapshotToCanonicalJson(
 		Card->SetNumberField(TEXT("ar"), Definition.CharacterStats.AR);
 		Card->SetNumberField(TEXT("rl"), Definition.CharacterStats.RL);
 		Card->SetNumberField(TEXT("rr"), Definition.WandStats.RR);
+		if (!Definition.GrantedCombatCapabilitiesWhileEquipped.IsEmpty())
+		{
+			TArray<FString> CapabilityNames;
+			if (Definition.GrantedCombatCapabilitiesWhileEquipped.Contains(
+				EWBCombatCapability::AttacksCannotBeCountered))
+			{
+				CapabilityNames.Add(TEXT("attacks_cannot_be_countered"));
+			}
+			Card->SetArrayField(
+				TEXT("equipped_combat_capabilities"),
+				StringArrayToJson(CapabilityNames));
+		}
 		if (Record.Type == EWBProductionCardType::Trap)
 		{
 			TSharedRef<FJsonObject> Trap = MakeShared<FJsonObject>();

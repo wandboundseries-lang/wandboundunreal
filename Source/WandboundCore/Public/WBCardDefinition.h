@@ -107,6 +107,7 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	EWBCardDefinitionKind Kind = EWBCardDefinitionKind::Unknown;
 	FWBCardCharacterStatsDefinition CharacterStats;
 	FWBCardWandStatsDefinition WandStats;
+	TSet<EWBCombatCapability> GrantedCombatCapabilitiesWhileEquipped;
 	FWBCardHybridSummonDefinition HybridSummon;
 	int32 TrapDamage = 0;
 	TArray<FWBCardEffectDefinition> ActivatedEffects;
