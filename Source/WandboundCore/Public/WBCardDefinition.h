@@ -26,6 +26,35 @@ enum class EWBCardEffectTargetRequirement : uint8
 	WallEdge
 };
 
+enum class EWBCardEffectAttackDefenderRequirement : uint8
+{
+	Any,
+	OwnHeroCurrentDefender
+};
+
+enum class EWBCardEffectTargetControllerRequirement : uint8
+{
+	Any,
+	Self
+};
+
+enum class EWBCardEffectTargetRelationRequirement : uint8
+{
+	Any,
+	OrthogonallyAdjacentToOwnHero
+};
+
+struct WANDBOUNDCORE_API FWBCardEffectActivationCondition
+{
+	EWBCardEffectAttackDefenderRequirement AttackDefender =
+		EWBCardEffectAttackDefenderRequirement::Any;
+	EWBCardEffectTargetControllerRequirement TargetController =
+		EWBCardEffectTargetControllerRequirement::Any;
+	EWBCardEffectTargetRelationRequirement TargetRelation =
+		EWBCardEffectTargetRelationRequirement::Any;
+	FString RequiredTargetFaction;
+};
+
 enum class EWBSetupSummonTriggerScope : uint8
 {
 	OwnWhenSummoned,
@@ -53,6 +82,7 @@ struct WANDBOUNDCORE_API FWBCardEffectDefinition
 	EWBCardEffectTargetRequirement TargetRequirement = EWBCardEffectTargetRequirement::None;
 	TArray<FWBGenericEffectPayload> Payloads;
 	FWBCardActivationSourceGateDefinition SourceGate;
+	FWBCardEffectActivationCondition ActivationCondition;
 };
 
 enum class EWBTurnStartTriggerScope : uint8

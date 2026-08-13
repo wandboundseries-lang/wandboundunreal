@@ -385,6 +385,85 @@ TArray<FWBEffectTargetRef> BuildActivationTargets(const FWBGameStateData& State)
 	return Targets;
 }
 
+bool DoesActivationConditionMatch(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const int32 PlayerId,
+	const FWBCardEffectDefinition& Effect,
+	const FWBEffectTargetRef& Target)
+{
+	const FWBCardEffectActivationCondition& Condition =
+		Effect.ActivationCondition;
+	if (Condition.AttackDefender
+		== EWBCardEffectAttackDefenderRequirement::OwnHeroCurrentDefender)
+	{
+		const FWBPlayerStateData* Player = State.GetPlayerById(PlayerId);
+		if (Player == nullptr
+			|| !State.HasPendingAttack()
+			|| State.PendingAttack.Stage != EWBAttackContinuationStage::PreHit
+			|| State.PendingAttack.DefenderUnitId != Player->HeroUnitId)
+		{
+			return false;
+		}
+	}
+
+	const bool bHasTargetCondition =
+		Condition.TargetController
+			!= EWBCardEffectTargetControllerRequirement::Any
+		|| Condition.TargetRelation
+			!= EWBCardEffectTargetRelationRequirement::Any
+		|| !Condition.RequiredTargetFaction.IsEmpty();
+	if (!bHasTargetCondition)
+	{
+		return true;
+	}
+
+	const FWBUnitState* TargetUnit = State.GetUnitById(Target.TargetUnitId);
+	if (TargetUnit == nullptr
+		|| TargetUnit->bDefeated
+		|| !TargetUnit->IsUnitOnBoard())
+	{
+		return false;
+	}
+	if (Condition.TargetController
+		== EWBCardEffectTargetControllerRequirement::Self
+		&& TargetUnit->OwnerId != PlayerId)
+	{
+		return false;
+	}
+
+	const FWBPlayerStateData* Player = State.GetPlayerById(PlayerId);
+	const FWBUnitState* Hero = Player != nullptr
+		? State.GetUnitById(Player->HeroUnitId)
+		: nullptr;
+	if (Condition.TargetRelation
+		== EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero)
+	{
+		if (Hero == nullptr
+			|| Hero->bDefeated
+			|| !Hero->IsUnitOnBoard()
+			|| TargetUnit->UnitId == Hero->UnitId
+			|| FMath::Abs(TargetUnit->X - Hero->X)
+				+ FMath::Abs(TargetUnit->Y - Hero->Y) != 1)
+		{
+			return false;
+		}
+	}
+	if (!Condition.RequiredTargetFaction.IsEmpty())
+	{
+		const FWBCardDefinitionRepositoryLookupResult TargetDefinition =
+			WBCardDefinitionRepository::FindCardById(
+				Repository, TargetUnit->CardId);
+		if (!TargetDefinition.bFound
+			|| !TargetDefinition.Definition.PublicFactions.Contains(
+				Condition.RequiredTargetFaction))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 FWBCardActivationSourceGateContext BuildActivationGateContext(
 	const FWBGameStateData& State,
 	const FWBCardActivationFixtureZoneContext& ZoneContext,
@@ -398,6 +477,11 @@ FWBCardActivationSourceGateContext BuildActivationGateContext(
 	FWBCardActivationSourceGateContext Context;
 	Context.PlayerId = PlayerId;
 	Context.SourceUnitId = SourceUnitId;
+	Context.CostPayerUnitId = SourceZone == EWBCardActivationSourceZone::Hand
+		? (State.GetPlayerById(PlayerId) != nullptr
+			? State.GetPlayerById(PlayerId)->HeroUnitId
+			: -1)
+		: SourceUnitId;
 	Context.SourceCardId = Definition.CardId;
 	Context.SourceCardInstanceId = SourceCardInstanceId;
 	Context.SourceZone = SourceZone;
@@ -408,9 +492,9 @@ FWBCardActivationSourceGateContext BuildActivationGateContext(
 	Context.CostContext.SuppliedRequiredRR = Effect.SourceGate.CostGate.RequiredRR;
 	Context.CostContext.CostKind = Effect.SourceGate.CostGate.CostKind;
 
-	const FWBUnitState* SourceUnit = State.GetUnitById(SourceUnitId);
-	Context.CostContext.SuppliedAvailableRL = SourceUnit != nullptr
-		? SourceUnit->GetAvailableRLForRules()
+	const FWBUnitState* CostPayer = State.GetUnitById(Context.CostPayerUnitId);
+	Context.CostContext.SuppliedAvailableRL = CostPayer != nullptr
+		? CostPayer->GetAvailableRLForRules()
 		: 0;
 	Context.CostContext.bExternallyAffordable =
 		Effect.SourceGate.CostGate.RequiredRR <= Context.CostContext.SuppliedAvailableRL;
@@ -598,6 +682,31 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 		});
 	for (const FWBCardActivationLegalAction& ActivationAction : ActivationActions)
 	{
+		const FWBCardDefinitionRepositoryLookupResult SourceDefinition =
+			WBCardDefinitionRepository::FindCardById(
+				Repository,
+				ActivationAction.Command.Source.SourceCardId);
+		if (!SourceDefinition.bFound)
+		{
+			continue;
+		}
+		const FWBCardEffectDefinition* SourceEffect =
+			SourceDefinition.Definition.ActivatedEffects.FindByPredicate(
+				[&ActivationAction](const FWBCardEffectDefinition& Effect)
+				{
+					return Effect.EffectId
+						== ActivationAction.Command.Source.SourceEffectId;
+				});
+		if (SourceEffect == nullptr
+			|| !DoesActivationConditionMatch(
+				State,
+				Repository,
+				PlayerId,
+				*SourceEffect,
+				ActivationAction.Command.EffectRequest.Target))
+		{
+			continue;
+		}
 		const bool bControlsPendingAttack =
 			ActivationAction.Command.EffectRequest.Payloads.ContainsByPredicate(
 				[](const FWBGenericEffectPayload& Payload)
@@ -605,7 +714,9 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 					return Payload.Operation
 							== EWBGenericEffectOp::PreventPendingAttack
 						|| Payload.Operation
-							== EWBGenericEffectOp::RedirectPendingAttack;
+							== EWBGenericEffectOp::RedirectPendingAttack
+						|| Payload.Operation
+							== EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient;
 				});
 		if (bControlsPendingAttack
 			&& (PendingAttackContinuationId.IsEmpty()
@@ -636,7 +747,9 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				Action.ActivationCommand.EffectRequest.Payloads)
 			{
 				if (Payload.Operation == EWBGenericEffectOp::PreventPendingAttack
-					|| Payload.Operation == EWBGenericEffectOp::RedirectPendingAttack)
+					|| Payload.Operation == EWBGenericEffectOp::RedirectPendingAttack
+					|| Payload.Operation
+						== EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient)
 				{
 					Payload.PendingAttackContinuationId =
 						PendingAttackContinuationId;

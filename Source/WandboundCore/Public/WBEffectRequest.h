@@ -17,7 +17,8 @@ enum class EWBGenericEffectOp : uint8
 	HealEffect,
 	NegatePendingEffect,
 	PreventPendingAttack,
-	RedirectPendingAttack
+	RedirectPendingAttack,
+	SubstitutePendingAttackDamageRecipient
 };
 
 struct WANDBOUNDCORE_API FWBEffectSourceRef

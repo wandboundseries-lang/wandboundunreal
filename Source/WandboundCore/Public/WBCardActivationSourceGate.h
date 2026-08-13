@@ -82,6 +82,7 @@ struct WANDBOUNDCORE_API FWBCardActivationSourceGateContext
 {
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
+	int32 CostPayerUnitId = -1;
 
 	FString SourceCardId;
 	FString SourceCardInstanceId;

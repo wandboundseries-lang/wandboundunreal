@@ -20,7 +20,8 @@ bool IsKnownPayloadOperation(const EWBGenericEffectOp Operation)
 		|| Operation == EWBGenericEffectOp::HealEffect
 		|| Operation == EWBGenericEffectOp::NegatePendingEffect
 		|| Operation == EWBGenericEffectOp::PreventPendingAttack
-		|| Operation == EWBGenericEffectOp::RedirectPendingAttack;
+		|| Operation == EWBGenericEffectOp::RedirectPendingAttack
+		|| Operation == EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient;
 }
 
 bool IsValidTileCoordinate(const FWBTile& Tile)
@@ -190,7 +191,10 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 	{
 		Result.Command.CostPaymentCommit.bPayCostOnSuccess = true;
 		Result.Command.CostPaymentCommit.PlayerId = Request.PlayerId;
-		Result.Command.CostPaymentCommit.SourceUnitId = Request.SourceUnitId;
+		Result.Command.CostPaymentCommit.SourceUnitId =
+			Request.SourceGateContext.CostPayerUnitId != -1
+				? Request.SourceGateContext.CostPayerUnitId
+				: Request.SourceUnitId;
 		Result.Command.CostPaymentCommit.RequiredRR = MatchingEffect->SourceGate.CostGate.RequiredRR;
 		Result.Command.CostPaymentCommit.CostKind = MatchingEffect->SourceGate.CostGate.CostKind;
 	}

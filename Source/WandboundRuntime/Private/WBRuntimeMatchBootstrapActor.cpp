@@ -19,6 +19,7 @@
 #include "WBProductionMatchReplaySmoke.h"
 #include "WBProductionNPCReactionCombatSmoke.h"
 #include "WBProductionPendingAttackRedirectSmoke.h"
+#include "WBProductionCSNBodyDoubleSmoke.h"
 #include "WBProductionPendingEffectSmoke.h"
 #include "WBProductionReactionWindowSmoke.h"
 #include "WBProductionSuspendedAttackSmoke.h"
@@ -174,7 +175,24 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionPendingAttackRedirectSmoke::IsRequested())
+		if (WBProductionCSNBodyDoubleSmoke::IsRequested())
+		{
+			const FWBProductionCSNBodyDoubleSmokeResult BodyDoubleSmoke =
+				WBProductionCSNBodyDoubleSmoke::Run(PendingBootstrapRequest);
+			if (!BodyDoubleSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound CSN Body Double smoke failed: %s"),
+					*BodyDoubleSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				BodyDoubleSmoke.bOk ? 0 : 30,
+				TEXT("WandboundProductionCSNBodyDoubleSmoke"));
+		}
+		else if (WBProductionPendingAttackRedirectSmoke::IsRequested())
 		{
 			const FWBProductionPendingAttackRedirectSmokeResult RedirectSmoke =
 				WBProductionPendingAttackRedirectSmoke::Run(PendingBootstrapRequest);

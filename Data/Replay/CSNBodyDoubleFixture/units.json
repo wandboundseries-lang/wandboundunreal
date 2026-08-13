@@ -1,0 +1,124 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "csn_body_double_fixture_v1",
+  "source_version": "body_double_damage_substitution_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Authoritative Body Double text supersedes historical Godot redirect behavior.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "body_double_fixture_hero_a",
+      "public_name": "Body Double Fixture Hero A",
+      "kind": "hero",
+      "public_text": "Fixture Hero.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 10, "atk": 0, "ar": 0, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 0 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "body_double_fixture_hero_b",
+      "public_name": "Body Double Fixture Hero B",
+      "kind": "hero",
+      "public_text": "Fixture Hero.",
+      "public_category": "Hero",
+      "factions": ["csn"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 10, "atk": 1, "ar": 1, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "body_double_fixture_attacker",
+      "public_name": "Body Double Fixture Attacker",
+      "kind": "character",
+      "public_text": "Fixture attacker.",
+      "public_category": "Character",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 3, "ar": 8, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "body_double_fixture_csn",
+      "public_name": "Body Double Fixture CSN",
+      "kind": "character",
+      "public_text": "A CSN unit that may take attack damage for its Hero.",
+      "public_category": "Character",
+      "factions": ["csn"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 1, "ar": 1, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "effect_react_csn_body_double",
+      "public_name": "CSN Body Double",
+      "kind": "action",
+      "public_text": "When your Hero is attacked, choose 1 CSN unit you control adjacent to your Hero. That unit takes the damage from that attack instead.",
+      "public_category": "Effect React",
+      "factions": ["csn"],
+      "tags": ["react"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "activated_effects": [
+        {
+          "effect_id": "csn_body_double_pre_hit",
+          "public_label": "Body Double",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "hand",
+            "timing": "response_window",
+            "requires_source_unit": false,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": false,
+            "cost_gate": {
+              "required_rr": 2,
+              "cost_kind": "RR"
+            }
+          },
+          "activation_condition": {
+            "attack_defender": "own_hero_current_defender",
+            "target_controller": "self",
+            "target_faction": "csn",
+            "target_relation": "orthogonally_adjacent_to_own_hero"
+          },
+          "payloads": [
+            {
+              "type": "substitute_pending_attack_damage_recipient",
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "body_double_fixture_filler",
+      "public_name": "Body Double Fixture Filler",
+      "kind": "action",
+      "public_text": "Fixture deck card.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {}
+    }
+  ]
+}

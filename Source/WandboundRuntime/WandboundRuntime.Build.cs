@@ -7,6 +7,7 @@ public class WandboundRuntime : ModuleRules
 	public WandboundRuntime(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Niagara", "UMG", "Slate", "SlateCore", "WandboundCore", "WandboundCardDB" });
 		PrivateDependencyModuleNames.Add("Json");
@@ -135,6 +136,21 @@ public class WandboundRuntime : ModuleRules
 			StagedFileType.NonUFS);
 		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/Replay/PendingAttackRedirectFixture/match_spec.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CSNBodyDoubleFixture/root_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CSNBodyDoubleFixture/bundle_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CSNBodyDoubleFixture/units.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CSNBodyDoubleFixture/markers.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CSNBodyDoubleFixture/match_spec.json",
 			StagedFileType.NonUFS);
 	}
 }

@@ -650,6 +650,42 @@ FWBActionQueryResult WBRules::CanRedirectPendingAttack(
 	return FWBActionQueryResult::Ok();
 }
 
+FWBActionQueryResult WBRules::CanSubstitutePendingAttackDamageRecipient(
+	const FWBGameStateData& State,
+	const FString& PendingAttackContinuationId,
+	const int32 NewDamageRecipientUnitId)
+{
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+	if (!State.HasPendingAttack()
+		|| State.PendingAttack.Stage != EWBAttackContinuationStage::PreHit)
+	{
+		return FWBActionQueryResult::Deny(TEXT("pending_attack_not_pre_hit"));
+	}
+	if (PendingAttackContinuationId.IsEmpty()
+		|| PendingAttackContinuationId != State.PendingAttack.ContinuationId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("pending_attack_target_mismatch"));
+	}
+	if (State.PendingAttack.bPrevented || State.PendingAttack.bDamageResolved)
+	{
+		return FWBActionQueryResult::Deny(TEXT("pending_attack_not_damage_eligible"));
+	}
+
+	const FWBUnitState* Recipient = State.GetUnitById(NewDamageRecipientUnitId);
+	if (Recipient == nullptr)
+	{
+		return FWBActionQueryResult::Deny(TEXT("missing_damage_recipient"));
+	}
+	if (Recipient->bDefeated || !Recipient->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("damage_recipient_removed"));
+	}
+	return FWBActionQueryResult::Ok();
+}
+
 bool WBRules::UnitHasCombatCapability(
 	const FWBGameStateData& State,
 	const FWBCardDefinitionRepository* Repository,
@@ -1089,6 +1125,19 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			if (!RedirectQuery.bOk)
 			{
 				return RedirectQuery;
+			}
+			break;
+		}
+		case EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient:
+		{
+			const FWBActionQueryResult SubstitutionQuery =
+				CanSubstitutePendingAttackDamageRecipient(
+					State,
+					Payload.PendingAttackContinuationId,
+					Request.Target.TargetUnitId);
+			if (!SubstitutionQuery.bOk)
+			{
+				return SubstitutionQuery;
 			}
 			break;
 		}

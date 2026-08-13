@@ -425,6 +425,21 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 		*Effect.SourceGate.OncePerTurnKey,
 		Effect.SourceGate.CostGate.RequiredRR,
 		*Effect.SourceGate.CostGate.CostKind.ToString());
+	if (Effect.ActivationCondition.AttackDefender
+			!= EWBCardEffectAttackDefenderRequirement::Any
+		|| Effect.ActivationCondition.TargetController
+			!= EWBCardEffectTargetControllerRequirement::Any
+		|| Effect.ActivationCondition.TargetRelation
+			!= EWBCardEffectTargetRelationRequirement::Any
+		|| !Effect.ActivationCondition.RequiredTargetFaction.IsEmpty())
+	{
+		Digest += FString::Printf(
+			TEXT("|condition=%d:%d:%d:%s"),
+			static_cast<int32>(Effect.ActivationCondition.AttackDefender),
+			static_cast<int32>(Effect.ActivationCondition.TargetController),
+			static_cast<int32>(Effect.ActivationCondition.TargetRelation),
+			*Effect.ActivationCondition.RequiredTargetFaction);
+	}
 	for (const FWBGenericEffectPayload& Payload : Effect.Payloads)
 	{
 		Digest += FString::Printf(TEXT("|payload=%d"), static_cast<int32>(Payload.Operation));
@@ -454,6 +469,7 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 			break;
 		case EWBGenericEffectOp::PreventPendingAttack:
 		case EWBGenericEffectOp::RedirectPendingAttack:
+		case EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient:
 			break;
 		default:
 			break;
@@ -2152,6 +2168,7 @@ private:
 					TEXT("public_label"),
 					TEXT("target_requirement"),
 					TEXT("source_gate"),
+					TEXT("activation_condition"),
 					TEXT("payloads")
 				},
 				Record.SourceManifestPath,
@@ -2227,6 +2244,7 @@ private:
 			Effect.TargetRequirement = ParseTargetRequirement(TargetRequirement);
 
 			ParseSourceGate(EffectObject, EffectPath, Record, Effect);
+			ParseActivationCondition(EffectObject, EffectPath, Record, Effect);
 			ParsePayloads(EffectObject, EffectPath, Record, Effect);
 			ValidateEffectCompatibility(EffectPath, Record, Effect);
 			Record.CoreDefinition.ActivatedEffects.Add(MoveTemp(Effect));
@@ -2237,6 +2255,81 @@ private:
 			{
 				return A.EffectId < B.EffectId;
 			});
+	}
+
+	void ParseActivationCondition(
+		const TSharedPtr<FJsonObject>& EffectObject,
+		const FString& EffectPath,
+		const FWBProductionCardRecord& Record,
+		FWBCardEffectDefinition& Effect)
+	{
+		if (!HasField(EffectObject, TEXT("activation_condition")))
+		{
+			return;
+		}
+		TSharedPtr<FJsonObject> Condition;
+		if (!TryReadObject(
+			EffectObject, TEXT("activation_condition"), Condition))
+		{
+			AddError(
+				TEXT("activation_condition_malformed"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				EffectPath + TEXT(".activation_condition"),
+				TEXT("Activation conditions must be a typed object."));
+			return;
+		}
+		ValidateKnownFields(
+			Condition,
+			{
+				TEXT("attack_defender"),
+				TEXT("target_controller"),
+				TEXT("target_faction"),
+				TEXT("target_relation")
+			},
+			Record.SourceManifestPath,
+			Record.CoreDefinition.CardId,
+			EffectPath + TEXT(".activation_condition"));
+
+		FString Value;
+		if (!TryReadString(Condition, TEXT("attack_defender"), Value)
+			|| Value != TEXT("own_hero_current_defender"))
+		{
+			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.attack_defender"), TEXT("attack_defender must be own_hero_current_defender."));
+		}
+		else
+		{
+			Effect.ActivationCondition.AttackDefender =
+				EWBCardEffectAttackDefenderRequirement::OwnHeroCurrentDefender;
+		}
+		if (!TryReadString(Condition, TEXT("target_controller"), Value)
+			|| Value != TEXT("self"))
+		{
+			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_controller"), TEXT("target_controller must be self."));
+		}
+		else
+		{
+			Effect.ActivationCondition.TargetController =
+				EWBCardEffectTargetControllerRequirement::Self;
+		}
+		if (!TryReadString(
+			Condition,
+			TEXT("target_faction"),
+			Effect.ActivationCondition.RequiredTargetFaction)
+			|| Effect.ActivationCondition.RequiredTargetFaction.IsEmpty())
+		{
+			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_faction"), TEXT("target_faction must be a non-empty typed faction id."));
+		}
+		if (!TryReadString(Condition, TEXT("target_relation"), Value)
+			|| Value != TEXT("orthogonally_adjacent_to_own_hero"))
+		{
+			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_relation"), TEXT("target_relation must be orthogonally_adjacent_to_own_hero."));
+		}
+		else
+		{
+			Effect.ActivationCondition.TargetRelation =
+				EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero;
+		}
 	}
 
 	void ParseSourceGate(
@@ -2569,6 +2662,18 @@ private:
 				ValidateSelectedTarget(
 					PayloadObject, PayloadPath, Record);
 				Payload.Operation = EWBGenericEffectOp::RedirectPendingAttack;
+			}
+			else if (Type == TEXT("substitute_pending_attack_damage_recipient"))
+			{
+				ValidateKnownFields(
+					PayloadObject,
+					{ TEXT("type"), TEXT("target") },
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					PayloadPath);
+				ValidateSelectedTarget(PayloadObject, PayloadPath, Record);
+				Payload.Operation =
+					EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient;
 			}
 			else
 			{

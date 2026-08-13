@@ -21,6 +21,10 @@ public:
 		FWBGameStateData& State,
 		const FString& PendingAttackContinuationId,
 		int32 NewTargetUnitId);
+	static FWBApplyActionResult ApplyPendingAttackDamageRecipientSubstitution(
+		FWBGameStateData& State,
+		const FString& PendingAttackContinuationId,
+		int32 NewDamageRecipientUnitId);
 	static FWBApplyActionResult ApplyZeroHPDeathRemoval(FWBGameStateData& State);
 	static FWBApplyActionResult ApplyEndTurn(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPass(FWBGameStateData& State, const FWBAction& Action);

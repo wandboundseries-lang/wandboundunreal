@@ -1,0 +1,12 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "csn_body_double_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    { "name": "csn_body_double", "path": "bundle_manifest.json" }
+  ],
+  "metadata": {
+    "notes": "Production-schema fixture for CSN Body Double damage substitution.",
+    "test_only": true
+  }
+}

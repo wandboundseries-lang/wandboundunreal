@@ -157,7 +157,12 @@ void AppendAttackDamageResolvedTrace(
 	Event.Kind = FName(TEXT("attack_damage_resolved"));
 	Event.PlayerId = PendingAttack.AttackingPlayerId;
 	Event.SourceUnitId = PendingAttack.AttackerUnitId;
-	Event.TargetUnitId = PendingAttack.DefenderUnitId;
+	Event.TargetUnitId = DamageResult.Request.TargetUnitId;
+	if (PendingAttack.DamageRecipientUnitId != INDEX_NONE)
+	{
+		Event.AttackDefenderUnitId = PendingAttack.DefenderUnitId;
+		Event.DamageRecipientUnitId = DamageResult.Request.TargetUnitId;
+	}
 	Event.FromTile = PendingAttack.AttackerTile;
 	Event.ToTile = PendingAttack.DefenderTile;
 	Event.ActionId = PendingAttack.DeclarationActionId;
@@ -618,15 +623,54 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
 		return Result;
 	}
 
-	const int32 PreviousHP = Defender->HP;
-	if (Defender->HasStatus(FrozenStatusId))
+	int32 EffectiveDamageRecipientUnitId = PendingAttack.DefenderUnitId;
+	if (PendingAttack.DamageRecipientUnitId != INDEX_NONE)
 	{
-		Defender->RemoveStatus(FrozenStatusId);
+		const FWBUnitState* SelectedRecipient =
+			State.GetUnitById(PendingAttack.DamageRecipientUnitId);
+		if (SelectedRecipient != nullptr
+			&& !SelectedRecipient->bDefeated
+			&& SelectedRecipient->IsUnitOnBoard())
+		{
+			EffectiveDamageRecipientUnitId = PendingAttack.DamageRecipientUnitId;
+		}
+		else
+		{
+			FWBTraceEvent Fallback;
+			Fallback.Kind = FName(TEXT("pending_attack_damage_recipient_fallback"));
+			Fallback.SourceUnitId = PendingAttack.AttackerUnitId;
+			Fallback.PreviousTargetUnitId = PendingAttack.DamageRecipientUnitId;
+			Fallback.TargetUnitId = PendingAttack.DefenderUnitId;
+			Fallback.AttackDefenderUnitId = PendingAttack.DefenderUnitId;
+			Fallback.DamageRecipientUnitId = PendingAttack.DefenderUnitId;
+			Fallback.AttackContinuationId = PendingAttack.ContinuationId;
+			Fallback.AttackContinuationStage = FName(TEXT("damage"));
+			Fallback.bCounterAttack = PendingAttack.bCounter;
+			Fallback.bOk = true;
+			Result.TraceEvents.Add(MoveTemp(Fallback));
+		}
+	}
+
+	FWBUnitState* DamageRecipient =
+		State.GetMutableUnitById(EffectiveDamageRecipientUnitId);
+	if (DamageRecipient == nullptr)
+	{
+		Result.bOk = false;
+		Result.Reason = TEXT("unit_disappeared_before_attack_damage");
+		return Result;
+	}
+
+	const int32 PreviousHP = DamageRecipient->HP;
+	if (DamageRecipient->HasStatus(FrozenStatusId))
+	{
+		DamageRecipient->RemoveStatus(FrozenStatusId);
 		if (bPreservePendingAttack)
 		{
 			State.PendingAttack.bDamageResolved = true;
-			State.PendingAttack.bFrozenBroken = true;
+			State.PendingAttack.bFrozenBroken =
+				EffectiveDamageRecipientUnitId == PendingAttack.DefenderUnitId;
 			State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
+			State.PendingAttack.DamageRecipientUnitId = INDEX_NONE;
 		}
 		else
 		{
@@ -638,17 +682,17 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
 			Result.TraceEvents,
 			PendingAttack.AttackingPlayerId,
 			FrozenStatusId,
-			PendingAttack.DefenderUnitId,
+			EffectiveDamageRecipientUnitId,
 			PendingAttack.AttackerUnitId,
 			PendingAttack.AttackerTile,
-			PendingAttack.DefenderTile,
+			FWBTile(DamageRecipient->X, DamageRecipient->Y),
 			PreviousHP,
-			Defender->HP);
+			DamageRecipient->HP);
 		FWBDamageResolutionResult FrozenDamageResult;
 		FrozenDamageResult.bOk = true;
 		FrozenDamageResult.Request.DamageKind = EWBDamageKind::Attack;
 		FrozenDamageResult.Request.SourceUnitId = PendingAttack.AttackerUnitId;
-		FrozenDamageResult.Request.TargetUnitId = PendingAttack.DefenderUnitId;
+		FrozenDamageResult.Request.TargetUnitId = EffectiveDamageRecipientUnitId;
 		FrozenDamageResult.Request.SourcePlayerId = PendingAttack.AttackingPlayerId;
 		FrozenDamageResult.Request.BaseDamage = 0;
 		FrozenDamageResult.Request.bBypassArmor = false;
@@ -658,15 +702,15 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
 		FrozenDamageResult.Prevention.FinalDamage = 0;
 		FrozenDamageResult.Prevention.PreventionReason = NAME_None;
 		FrozenDamageResult.PreviousHP = PreviousHP;
-		FrozenDamageResult.NewHP = Defender->HP;
-		FrozenDamageResult.PreviousArmor = Defender->GetCurrentArmor();
-		FrozenDamageResult.NewArmor = Defender->GetCurrentArmor();
+		FrozenDamageResult.NewHP = DamageRecipient->HP;
+		FrozenDamageResult.PreviousArmor = DamageRecipient->GetCurrentArmor();
+		FrozenDamageResult.NewArmor = DamageRecipient->GetCurrentArmor();
 		FrozenDamageResult.ArmorAbsorbedAmount = 0;
 		FrozenDamageResult.bBypassedArmor = false;
 		FrozenDamageResult.HPDamageAmount = 0;
-		FrozenDamageResult.bAtOrBelowZeroHP = Defender->HP <= 0;
+		FrozenDamageResult.bAtOrBelowZeroHP = DamageRecipient->HP <= 0;
 		AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, 0, FrozenDamageResult);
-		if (Defender->HP <= 0)
+		if (DamageRecipient->HP <= 0)
 		{
 			FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
 			Result.TraceEvents.Append(CleanupResult.TraceEvents);
@@ -682,7 +726,7 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
 	FWBDamageRequest DamageRequest;
 	DamageRequest.DamageKind = EWBDamageKind::Attack;
 	DamageRequest.SourceUnitId = PendingAttack.AttackerUnitId;
-	DamageRequest.TargetUnitId = PendingAttack.DefenderUnitId;
+	DamageRequest.TargetUnitId = EffectiveDamageRecipientUnitId;
 	DamageRequest.SourcePlayerId = PendingAttack.AttackingPlayerId;
 	DamageRequest.BaseDamage = FMath::Max(Attacker->ATK, 0);
 	DamageRequest.bBypassArmor = false;
@@ -702,6 +746,7 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
 	{
 		State.PendingAttack.bDamageResolved = true;
 		State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
+		State.PendingAttack.DamageRecipientUnitId = INDEX_NONE;
 	}
 	else
 	{
@@ -769,6 +814,42 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackRedirect(
 	Redirected.bCounterAttack = State.PendingAttack.bCounter;
 	Redirected.bOk = true;
 	Result.TraceEvents.Add(MoveTemp(Redirected));
+	Result.bOk = true;
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamageRecipientSubstitution(
+	FWBGameStateData& State,
+	const FString& PendingAttackContinuationId,
+	const int32 NewDamageRecipientUnitId)
+{
+	FWBApplyActionResult Result;
+	const FWBActionQueryResult Query =
+		WBRules::CanSubstitutePendingAttackDamageRecipient(
+			State, PendingAttackContinuationId, NewDamageRecipientUnitId);
+	if (!Query.bOk)
+	{
+		Result.Reason = Query.Reason;
+		return Result;
+	}
+
+	const int32 PreviousRecipientUnitId =
+		State.PendingAttack.DamageRecipientUnitId;
+	State.PendingAttack.DamageRecipientUnitId = NewDamageRecipientUnitId;
+
+	FWBTraceEvent Substituted;
+	Substituted.Kind =
+		FName(TEXT("pending_attack_damage_recipient_substituted"));
+	Substituted.SourceUnitId = State.PendingAttack.AttackerUnitId;
+	Substituted.PreviousTargetUnitId = PreviousRecipientUnitId;
+	Substituted.TargetUnitId = NewDamageRecipientUnitId;
+	Substituted.AttackDefenderUnitId = State.PendingAttack.DefenderUnitId;
+	Substituted.DamageRecipientUnitId = NewDamageRecipientUnitId;
+	Substituted.AttackContinuationId = State.PendingAttack.ContinuationId;
+	Substituted.AttackContinuationStage = FName(TEXT("pre_hit"));
+	Substituted.bCounterAttack = State.PendingAttack.bCounter;
+	Substituted.bOk = true;
+	Result.TraceEvents.Add(MoveTemp(Substituted));
 	Result.bOk = true;
 	return Result;
 }
@@ -968,6 +1049,14 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 		case EWBGenericEffectOp::RedirectPendingAttack:
 		{
 			PayloadResult = ApplyPendingAttackRedirect(
+				WorkingState,
+				Payload.PendingAttackContinuationId,
+				Request.Target.TargetUnitId);
+			break;
+		}
+		case EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient:
+		{
+			PayloadResult = ApplyPendingAttackDamageRecipientSubstitution(
 				WorkingState,
 				Payload.PendingAttackContinuationId,
 				Request.Target.TargetUnitId);

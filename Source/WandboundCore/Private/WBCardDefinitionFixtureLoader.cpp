@@ -996,6 +996,20 @@ void ParsePayload(
 		OutPayload.Operation = EWBGenericEffectOp::RedirectPendingAttack;
 		return;
 	}
+	if (Type == TEXT("substitute_pending_attack_damage_recipient"))
+	{
+		ValidateKnownFields(
+			Object,
+			{ TEXT("type"), TEXT("target") },
+			Result,
+			CardId,
+			EffectId,
+			Path);
+		ValidateOptionalSelectedTarget(Object, Result, CardId, EffectId, Path);
+		OutPayload.Operation =
+			EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient;
+		return;
+	}
 
 	AddDiagnostic(Result, TEXT("unsupported_payload_type"), CardId, EffectId, Path);
 }
@@ -1019,7 +1033,7 @@ void ParseEffect(
 
 	ValidateKnownFields(
 		Object,
-		{ TEXT("effect_id"), TEXT("public_label"), TEXT("target_requirement"), TEXT("source_gate"), TEXT("payloads") },
+		{ TEXT("effect_id"), TEXT("public_label"), TEXT("target_requirement"), TEXT("source_gate"), TEXT("activation_condition"), TEXT("payloads") },
 		Result,
 		CardId,
 		EffectId,
@@ -1035,6 +1049,83 @@ void ParseEffect(
 		if (!bSupportedTargetRequirement)
 		{
 			AddDiagnostic(Result, TEXT("unsupported_target_requirement"), CardId, EffectId, JoinPath(Path, TEXT("target_requirement")));
+		}
+	}
+
+	TSharedPtr<FJsonObject> ActivationConditionObject;
+	const TSharedPtr<FJsonValue>* ActivationConditionValue =
+		Object->Values.Find(TEXT("activation_condition"));
+	if (ActivationConditionValue != nullptr
+		&& !TryGetObjectField(
+			Object, TEXT("activation_condition"), ActivationConditionObject))
+	{
+		AddDiagnostic(
+			Result,
+			TEXT("activation_condition_malformed"),
+			CardId,
+			EffectId,
+			JoinPath(Path, TEXT("activation_condition")));
+	}
+	else if (ActivationConditionValue != nullptr)
+	{
+		ValidateKnownFields(
+			ActivationConditionObject,
+			{
+				TEXT("attack_defender"),
+				TEXT("target_controller"),
+				TEXT("target_faction"),
+				TEXT("target_relation")
+			},
+			Result,
+			CardId,
+			EffectId,
+			JoinPath(Path, TEXT("activation_condition")));
+
+		FString Value;
+		if (TryReadRequiredString(
+			ActivationConditionObject,
+			TEXT("attack_defender"),
+			Result,
+			TEXT("activation_condition_malformed"),
+			CardId,
+			EffectId,
+			JoinPath(Path, TEXT("activation_condition")),
+			Value))
+		{
+			if (Value == TEXT("own_hero_current_defender"))
+			{
+				OutEffect.ActivationCondition.AttackDefender =
+					EWBCardEffectAttackDefenderRequirement::OwnHeroCurrentDefender;
+			}
+			else
+			{
+				AddDiagnostic(Result, TEXT("activation_condition_malformed"), CardId, EffectId, JoinPath(Path, TEXT("activation_condition.attack_defender")));
+			}
+		}
+		if (TryReadRequiredString(ActivationConditionObject, TEXT("target_controller"), Result, TEXT("activation_condition_malformed"), CardId, EffectId, JoinPath(Path, TEXT("activation_condition")), Value))
+		{
+			if (Value == TEXT("self"))
+			{
+				OutEffect.ActivationCondition.TargetController =
+					EWBCardEffectTargetControllerRequirement::Self;
+			}
+			else
+			{
+				AddDiagnostic(Result, TEXT("activation_condition_malformed"), CardId, EffectId, JoinPath(Path, TEXT("activation_condition.target_controller")));
+			}
+		}
+		TryReadRequiredString(ActivationConditionObject, TEXT("target_faction"), Result, TEXT("activation_condition_malformed"), CardId, EffectId, JoinPath(Path, TEXT("activation_condition")), OutEffect.ActivationCondition.RequiredTargetFaction);
+		if (TryReadRequiredString(ActivationConditionObject, TEXT("target_relation"), Result, TEXT("activation_condition_malformed"), CardId, EffectId, JoinPath(Path, TEXT("activation_condition")), Value))
+		{
+			if (Value == TEXT("orthogonally_adjacent_to_own_hero"))
+			{
+				OutEffect.ActivationCondition.TargetRelation =
+					EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero;
+			}
+			else
+			{
+				AddDiagnostic(Result, TEXT("activation_condition_malformed"), CardId, EffectId, JoinPath(Path, TEXT("activation_condition.target_relation")));
+			}
 		}
 	}
 

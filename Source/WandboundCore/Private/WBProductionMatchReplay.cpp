@@ -79,6 +79,14 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendInt(Out, TEXT("reaction.source_unit"), State.ReactionWindow.SourceUnitId);
 		AppendInt(Out, TEXT("reaction.target_unit"), State.ReactionWindow.TargetUnitId);
 	}
+	if (State.HasPendingAttack()
+		&& State.PendingAttack.DamageRecipientUnitId != INDEX_NONE)
+	{
+		AppendInt(
+			Out,
+			TEXT("attack.damage_recipient"),
+			State.PendingAttack.DamageRecipientUnitId);
+	}
 	AppendBool(Out, TEXT("game_over"), State.bGameOver);
 	AppendInt(Out, TEXT("winner"), State.WinnerPlayerId);
 	if (State.bGameOver)

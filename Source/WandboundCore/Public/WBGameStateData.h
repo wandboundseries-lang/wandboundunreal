@@ -140,6 +140,7 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	int32 DefenderUnitId = -1;
 	int32 OriginalAttackerUnitId = -1;
 	int32 OriginalDefenderUnitId = -1;
+	int32 DamageRecipientUnitId = INDEX_NONE;
 	int32 AttackingPlayerId = -1;
 	FWBTile AttackerTile;
 	FWBTile DefenderTile;

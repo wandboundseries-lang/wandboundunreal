@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "card_id": "effect_react_csn_body_double",
+  "authority": "user_directed_body_double_damage_substitution",
+  "historical_godot": {
+    "read_only": true,
+    "operation": "redirect_attack_to_adjacent_friendly",
+    "status": "superseded_for_body_double_only"
+  },
+  "current": {
+    "rr": 2,
+    "source_zone": "hand",
+    "timing": "pre_hit_response_window",
+    "attack_defender": "own_hero_current_defender",
+    "target_controller": "self",
+    "target_faction": "csn",
+    "target_relation": "orthogonally_adjacent_to_own_hero",
+    "operation": "substitute_pending_attack_damage_recipient"
+  },
+  "invariants": {
+    "defender_unchanged": true,
+    "original_defender_unchanged": true,
+    "reaction_target_unchanged": true,
+    "attack_geometry_rechecked_for_recipient": false,
+    "current_recipient_armor_and_frozen_used": true,
+    "removed_after_resolution_falls_back_to_defender": true,
+    "latest_successful_substitution_wins": true
+  },
+  "redirect": {
+    "generic_operation_changed": false,
+    "body_double_uses_redirect": false,
+    "post_substitution_redirect_semantics": "canon_unresolved_not_invented"
+  },
+  "replay": {
+    "schema_version": 1,
+    "action_codec_changed": false,
+    "private_digest_active_field": "attack.damage_recipient",
+    "field_omitted_when_absent": true
+  },
+  "privacy": {
+    "receipt_field_count": 8,
+    "hidden_candidates_exposed": false,
+    "private_continuation_exposed": false
+  },
+  "fixture": "Data/Replay/CSNBodyDoubleFixture"
+}
