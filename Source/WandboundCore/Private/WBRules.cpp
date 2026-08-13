@@ -579,6 +579,77 @@ FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateDa
 	return FWBActionQueryResult::Ok();
 }
 
+FWBActionQueryResult WBRules::CanRedirectPendingAttack(
+	const FWBGameStateData& State,
+	const FString& PendingAttackContinuationId,
+	const int32 NewTargetUnitId)
+{
+	if (State.bGameOver)
+	{
+		return FWBActionQueryResult::Deny(TEXT("game_over"));
+	}
+	if (!State.HasPendingAttack()
+		|| State.PendingAttack.Stage != EWBAttackContinuationStage::PreHit)
+	{
+		return FWBActionQueryResult::Deny(TEXT("pending_attack_not_pre_hit"));
+	}
+	if (PendingAttackContinuationId.IsEmpty()
+		|| PendingAttackContinuationId != State.PendingAttack.ContinuationId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("pending_attack_target_mismatch"));
+	}
+	if (State.PendingAttack.bPrevented)
+	{
+		return FWBActionQueryResult::Deny(TEXT("pending_attack_already_prevented"));
+	}
+	if (NewTargetUnitId == State.PendingAttack.DefenderUnitId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("redirect_target_unchanged"));
+	}
+	if (NewTargetUnitId == State.PendingAttack.AttackerUnitId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("same_unit"));
+	}
+
+	const FWBUnitState* Attacker =
+		State.GetUnitById(State.PendingAttack.AttackerUnitId);
+	if (Attacker == nullptr || Attacker->bDefeated || !Attacker->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("attacker_removed"));
+	}
+	const FWBUnitState* NewTarget = State.GetUnitById(NewTargetUnitId);
+	if (NewTarget == nullptr)
+	{
+		return FWBActionQueryResult::Deny(TEXT("no_redirect_target"));
+	}
+	if (NewTarget->bDefeated || !NewTarget->IsUnitOnBoard())
+	{
+		return FWBActionQueryResult::Deny(TEXT("redirect_target_removed"));
+	}
+
+	const FWBTile AttackerTile(Attacker->X, Attacker->Y);
+	const FWBTile NewTargetTile(NewTarget->X, NewTarget->Y);
+	if (!IsTileInBounds(AttackerTile) || !IsTileInBounds(NewTargetTile))
+	{
+		return FWBActionQueryResult::Deny(TEXT("out_of_bounds"));
+	}
+	if (!AreTilesOrthogonallyAligned(AttackerTile, NewTargetTile))
+	{
+		return FWBActionQueryResult::Deny(TEXT("not_in_line"));
+	}
+	if (OrthogonalDistance(AttackerTile, NewTargetTile) > Attacker->AR)
+	{
+		return FWBActionQueryResult::Deny(TEXT("out_of_range"));
+	}
+	FString LOSReason;
+	if (!HasOrthogonalLineOfSight(
+		State, AttackerTile, NewTargetTile, LOSReason))
+	{
+		return FWBActionQueryResult::Deny(*LOSReason);
+	}
+	return FWBActionQueryResult::Ok();
+}
+
 bool WBRules::UnitHasCombatCapability(
 	const FWBGameStateData& State,
 	const FWBCardDefinitionRepository* Repository,
@@ -1009,6 +1080,18 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 				return FWBActionQueryResult::Deny(TEXT("pending_attack_target_mismatch"));
 			}
 			break;
+		case EWBGenericEffectOp::RedirectPendingAttack:
+		{
+			const FWBActionQueryResult RedirectQuery = CanRedirectPendingAttack(
+				State,
+				Payload.PendingAttackContinuationId,
+				Request.Target.TargetUnitId);
+			if (!RedirectQuery.bOk)
+			{
+				return RedirectQuery;
+			}
+			break;
+		}
 		default:
 			return FWBActionQueryResult::Deny(TEXT("unknown_effect_payload_operation"));
 		}

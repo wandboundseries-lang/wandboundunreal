@@ -19,7 +19,8 @@ bool IsKnownPayloadOperation(const EWBGenericEffectOp Operation)
 		|| Operation == EWBGenericEffectOp::DamageEffect
 		|| Operation == EWBGenericEffectOp::HealEffect
 		|| Operation == EWBGenericEffectOp::NegatePendingEffect
-		|| Operation == EWBGenericEffectOp::PreventPendingAttack;
+		|| Operation == EWBGenericEffectOp::PreventPendingAttack
+		|| Operation == EWBGenericEffectOp::RedirectPendingAttack;
 }
 
 bool IsValidTileCoordinate(const FWBTile& Tile)

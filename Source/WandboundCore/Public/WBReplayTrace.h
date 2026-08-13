@@ -26,6 +26,7 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 WallRemovalsLeft = -1;
 	FName StatusId;
 	int32 TargetUnitId = -1;
+	int32 PreviousTargetUnitId = -1;
 	int32 AttacksLeftBefore = -1;
 	int32 AttacksLeftAfter = -1;
 	int32 DamageAmount = -1;

@@ -1,0 +1,14 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "pending_attack_redirect_fixture",
+  "bundle_kind": "test",
+  "batches": [
+    {
+      "batch_name": "pending_attack_redirect_cards",
+      "bundles": [
+        { "name": "units", "path": "units.json" },
+        { "name": "markers", "path": "markers.json" }
+      ]
+    }
+  ]
+}

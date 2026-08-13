@@ -453,6 +453,7 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 				Payload.ArmorEffect.Amount);
 			break;
 		case EWBGenericEffectOp::PreventPendingAttack:
+		case EWBGenericEffectOp::RedirectPendingAttack:
 			break;
 		default:
 			break;
@@ -2556,6 +2557,18 @@ private:
 					Record.CoreDefinition.CardId,
 					PayloadPath);
 				Payload.Operation = EWBGenericEffectOp::PreventPendingAttack;
+			}
+			else if (Type == TEXT("redirect_pending_attack"))
+			{
+				ValidateKnownFields(
+					PayloadObject,
+					{ TEXT("type"), TEXT("target") },
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					PayloadPath);
+				ValidateSelectedTarget(
+					PayloadObject, PayloadPath, Record);
+				Payload.Operation = EWBGenericEffectOp::RedirectPendingAttack;
 			}
 			else
 			{

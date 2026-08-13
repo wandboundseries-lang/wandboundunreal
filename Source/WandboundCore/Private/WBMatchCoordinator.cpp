@@ -603,7 +603,9 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				[](const FWBGenericEffectPayload& Payload)
 				{
 					return Payload.Operation
-						== EWBGenericEffectOp::PreventPendingAttack;
+							== EWBGenericEffectOp::PreventPendingAttack
+						|| Payload.Operation
+							== EWBGenericEffectOp::RedirectPendingAttack;
 				});
 		if (bControlsPendingAttack
 			&& (PendingAttackContinuationId.IsEmpty()
@@ -633,11 +635,22 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 			for (FWBGenericEffectPayload& Payload :
 				Action.ActivationCommand.EffectRequest.Payloads)
 			{
-				if (Payload.Operation == EWBGenericEffectOp::PreventPendingAttack)
+				if (Payload.Operation == EWBGenericEffectOp::PreventPendingAttack
+					|| Payload.Operation == EWBGenericEffectOp::RedirectPendingAttack)
 				{
 					Payload.PendingAttackContinuationId =
 						PendingAttackContinuationId;
 				}
+			}
+		}
+		if (bControlsPendingAttack)
+		{
+			const FWBActionQueryResult Query =
+				WBRules::CanApplyCardActivationCommand(
+					State, Action.ActivationCommand);
+			if (!Query.bOk)
+			{
+				continue;
 			}
 		}
 		Result.Actions.Add(MoveTemp(Action));
@@ -658,6 +671,26 @@ FName ReactionWindowKindToName(const EWBReactionWindowKind Kind)
 	case EWBReactionWindowKind::None:
 	default: return NAME_None;
 	}
+}
+
+void RebindReactionTargetFromPendingAttack(FWBGameStateData& State)
+{
+	if (!State.HasOpenReactionWindow() || !State.HasPendingAttack())
+	{
+		return;
+	}
+	if (State.ReactionWindow.Kind != EWBReactionWindowKind::PreHit
+		&& State.ReactionWindow.Kind != EWBReactionWindowKind::PostHit)
+	{
+		return;
+	}
+	if (State.PendingAttack.Stage != EWBAttackContinuationStage::PreHit
+		&& State.PendingAttack.Stage != EWBAttackContinuationStage::PostHit)
+	{
+		return;
+	}
+	State.ReactionWindow.SourceUnitId = State.PendingAttack.AttackerUnitId;
+	State.ReactionWindow.TargetUnitId = State.PendingAttack.DefenderUnitId;
 }
 
 void AppendSummonTraceEvents(
@@ -2436,6 +2469,7 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 	if (Frame.bHasParentReaction)
 	{
 		WorkingState.ReactionWindow = Frame.ParentReactionWindow;
+		RebindReactionTargetFromPendingAttack(WorkingState);
 		WorkingState.PriorityPlayer = Frame.ParentPriorityPlayerId;
 		WorkingState.Phase = Frame.ParentGamePhase;
 		WorkingPhase = Frame.ParentMatchPhase;
@@ -2450,6 +2484,16 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 			? WorkingPendingEffects[WorkingPendingEffects.Num() - 2].FrameId
 			: FString();
 		Restored.PendingEffectStackDepth = WorkingPendingEffects.Num();
+		if (WorkingState.HasPendingAttack()
+			&& WorkingState.PendingAttack.DefenderUnitId
+				!= WorkingState.PendingAttack.OriginalDefenderUnitId)
+		{
+			Restored.SourceUnitId = WorkingState.PendingAttack.AttackerUnitId;
+			Restored.TargetUnitId = WorkingState.PendingAttack.DefenderUnitId;
+			Restored.AttackContinuationId =
+				WorkingState.PendingAttack.ContinuationId;
+			Restored.AttackContinuationStage = FName(TEXT("pre_hit"));
+		}
 		OutTraceEvents.Add(MoveTemp(Restored));
 		return ApplyForcedReactionPasses(
 			WorkingState,

@@ -46,6 +46,10 @@ public:
 	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanResolvePendingAttackDamage(const FWBGameStateData& State);
+	static FWBActionQueryResult CanRedirectPendingAttack(
+		const FWBGameStateData& State,
+		const FString& PendingAttackContinuationId,
+		int32 NewTargetUnitId);
 	static FWBActionQueryResult CanResolveCounterattack(const FWBGameStateData& State);
 	static FWBActionQueryResult CanResolveCounterattack(
 		const FWBGameStateData& State,

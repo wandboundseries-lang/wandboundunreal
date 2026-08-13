@@ -104,6 +104,12 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetNumberField(TEXT("target_unit_id"), Event.TargetUnitId);
 	}
+	if (Event.PreviousTargetUnitId != -1)
+	{
+		Object->SetNumberField(
+			TEXT("previous_target_unit_id"),
+			Event.PreviousTargetUnitId);
+	}
 
 	if (Event.AttacksLeftBefore != -1)
 	{

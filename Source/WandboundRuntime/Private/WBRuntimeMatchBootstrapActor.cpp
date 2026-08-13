@@ -18,6 +18,7 @@
 #include "WBProductionMatchReplayRuntime.h"
 #include "WBProductionMatchReplaySmoke.h"
 #include "WBProductionNPCReactionCombatSmoke.h"
+#include "WBProductionPendingAttackRedirectSmoke.h"
 #include "WBProductionPendingEffectSmoke.h"
 #include "WBProductionReactionWindowSmoke.h"
 #include "WBProductionSuspendedAttackSmoke.h"
@@ -173,7 +174,24 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionNPCReactionCombatSmoke::IsRequested())
+		if (WBProductionPendingAttackRedirectSmoke::IsRequested())
+		{
+			const FWBProductionPendingAttackRedirectSmokeResult RedirectSmoke =
+				WBProductionPendingAttackRedirectSmoke::Run(PendingBootstrapRequest);
+			if (!RedirectSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound pending-attack redirect smoke failed: %s"),
+					*RedirectSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				RedirectSmoke.bOk ? 0 : 29,
+				TEXT("WandboundProductionPendingAttackRedirectSmoke"));
+		}
+		else if (WBProductionNPCReactionCombatSmoke::IsRequested())
 		{
 			const FWBProductionNPCReactionCombatSmokeResult NPCCombatSmoke =
 				WBProductionNPCReactionCombatSmoke::Run(PendingBootstrapRequest);

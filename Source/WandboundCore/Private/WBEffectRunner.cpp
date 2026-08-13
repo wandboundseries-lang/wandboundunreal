@@ -727,6 +727,52 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
 	return Result;
 }
 
+FWBApplyActionResult WBEffectRunner::ApplyPendingAttackRedirect(
+	FWBGameStateData& State,
+	const FString& PendingAttackContinuationId,
+	const int32 NewTargetUnitId)
+{
+	FWBApplyActionResult Result;
+	const FWBActionQueryResult Query = WBRules::CanRedirectPendingAttack(
+		State, PendingAttackContinuationId, NewTargetUnitId);
+	if (!Query.bOk)
+	{
+		Result.Reason = Query.Reason;
+		return Result;
+	}
+
+	const FWBUnitState* NewTarget = State.GetUnitById(NewTargetUnitId);
+	if (NewTarget == nullptr)
+	{
+		Result.Reason = TEXT("no_redirect_target");
+		return Result;
+	}
+
+	const int32 PreviousTargetUnitId = State.PendingAttack.DefenderUnitId;
+	State.PendingAttack.DefenderUnitId = NewTargetUnitId;
+	State.PendingAttack.DefenderTile = FWBTile(NewTarget->X, NewTarget->Y);
+	if (State.ReactionWindow.Kind == EWBReactionWindowKind::PreHit)
+	{
+		State.ReactionWindow.SourceUnitId = State.PendingAttack.AttackerUnitId;
+		State.ReactionWindow.TargetUnitId = NewTargetUnitId;
+	}
+
+	FWBTraceEvent Redirected;
+	Redirected.Kind = FName(TEXT("pending_attack_redirected"));
+	Redirected.SourceUnitId = State.PendingAttack.AttackerUnitId;
+	Redirected.PreviousTargetUnitId = PreviousTargetUnitId;
+	Redirected.TargetUnitId = NewTargetUnitId;
+	Redirected.FromTile = State.PendingAttack.AttackerTile;
+	Redirected.ToTile = State.PendingAttack.DefenderTile;
+	Redirected.AttackContinuationId = State.PendingAttack.ContinuationId;
+	Redirected.AttackContinuationStage = FName(TEXT("pre_hit"));
+	Redirected.bCounterAttack = State.PendingAttack.bCounter;
+	Redirected.bOk = true;
+	Result.TraceEvents.Add(MoveTemp(Redirected));
+	Result.bOk = true;
+	return Result;
+}
+
 FWBApplyActionResult WBEffectRunner::ApplyZeroHPDeathRemoval(FWBGameStateData& State)
 {
 	return WBDeathResolution::ApplyZeroHPDeathResolution(State);
@@ -917,6 +963,14 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 		case EWBGenericEffectOp::PreventPendingAttack:
 		{
 			PayloadResult.bOk = true;
+			break;
+		}
+		case EWBGenericEffectOp::RedirectPendingAttack:
+		{
+			PayloadResult = ApplyPendingAttackRedirect(
+				WorkingState,
+				Payload.PendingAttackContinuationId,
+				Request.Target.TargetUnitId);
 			break;
 		}
 		default:

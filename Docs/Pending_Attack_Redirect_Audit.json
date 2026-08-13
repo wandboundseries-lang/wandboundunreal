@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "867cb2e0ae6c86e3076eec0462c3b937ee0c3fbf",
+  "baseline_tests": 2230,
+  "scope": "generic_pending_attack_redirect",
+  "production_card_added": false,
+  "godot_runtime_dependency": false,
+  "operation": {
+    "name": "RedirectPendingAttack",
+    "attack_identity": "PendingAttackContinuationId",
+    "target_identity": "FWBEffectRequest.Target.TargetUnitId",
+    "timing": "pre_hit",
+    "nested_base_timing_supported": true
+  },
+  "legality": {
+    "requires_active_pending_attack": true,
+    "requires_exact_continuation": true,
+    "requires_live_on_board_target": true,
+    "requires_different_current_target": true,
+    "forbids_attacker_as_target": true,
+    "uses_current_attacker_range": true,
+    "uses_orthogonal_alignment": true,
+    "uses_wall_and_unit_los": true,
+    "rechecks_attacks_left": false,
+    "rechecks_attack_blocking_statuses": false,
+    "rechecks_normal_turn": false,
+    "rechecks_turn_one_restriction": false,
+    "generic_owner_or_faction_gate": false,
+    "neutral_target_excluded": false,
+    "npc_attack_excluded": false,
+    "counter_attack_excluded": false
+  },
+  "mutation": {
+    "changed_fields": [
+      "PendingAttack.DefenderUnitId",
+      "PendingAttack.DefenderTile",
+      "active_combat_reaction_target"
+    ],
+    "preserved_fields": [
+      "PendingAttack.OriginalDefenderUnitId",
+      "PendingAttack.OriginalAttackerUnitId",
+      "PendingAttack.AttackerUnitId",
+      "PendingAttack.AttackingPlayerId",
+      "PendingAttack.DeclarationActionId",
+      "PendingAttack.ContinuationId",
+      "PendingAttack.bCounter",
+      "PendingAttack.AuthorityKind"
+    ],
+    "creates_second_attack": false,
+    "consumes_attack_resource": false,
+    "restarts_response_window": false,
+    "resets_pass_count": false,
+    "changes_priority": false
+  },
+  "restoration": {
+    "control_flow_from_parent_snapshot": true,
+    "combat_identity_from_active_pending_attack": true,
+    "applies_to": ["PreHit", "PostHit"]
+  },
+  "card_specific_exclusions": [
+    "hero_must_be_target",
+    "friendly_replacement",
+    "csn_faction",
+    "adjacent_to_hero",
+    "sacrifice",
+    "summon_from_hand",
+    "replacement_tile"
+  ],
+  "unresolved": [
+    {
+      "question": "redirect_after_attack_already_prevented",
+      "policy": "fail_closed",
+      "reason": "pending_attack_already_prevented"
+    }
+  ],
+  "protected_boundaries": {
+    "replay_schema_version": 1,
+    "action_codec_changed": false,
+    "godot_changed": false,
+    "asset_changed": false
+  },
+  "production_validation": {
+    "fixture_path": "Data/Replay/PendingAttackRedirectFixture",
+    "fixture_bundle_digest": "a0a52a3fca402b38b506d270c5ce502e4940de023700c49055d4271a357be0dd",
+    "smoke_flag": "WandboundProductionPendingAttackRedirectSmoke",
+    "explicit_map": "/Game/Wandbound/Maps/Wandbound_LocalPlay_Dev",
+    "package_relative_paths": true,
+    "run_1_exit_code": 0,
+    "run_2_exit_code": 0,
+    "archive_sha256": "25c1e81c458ad343192942ffe54a28510dea88c7aee5381e753293ff3682af79",
+    "receipt_sha256": "801a88e95569e4a435731fc83adad7e7287d07efb4aaf568af14dc3ce6234895",
+    "startup_sha256": "979559cf54a1deb5460b290819791f81c5cf8ca61635c9501fad37ccdd268ac5",
+    "byte_identical": true,
+    "replay_digest": "0aff196f0b5aefc31f01653037b7adeec9068fbfe499cad04737083f0514543c",
+    "state_digest": "1745bae8bdd221ce2626ce6022b3909067d341ece3a6e6dc2a8968eb431e8ef7",
+    "trace_digest": "08bf582c5820a6d5086138294a3df67929ead289a29514828d0a96dac31842d9",
+    "final_generation": 1,
+    "final_revision": 9,
+    "accepted_records": 8,
+    "accepted_attack_records": 1,
+    "fresh_replay_verified_both_runs": true,
+    "nested_parent_restores_verified": 3,
+    "redirect_damage_target_only": true,
+    "prevent_negated": true,
+    "attack_resource_consumed_once": true,
+    "receipt_field_count": 8,
+    "privacy_scan": "passed",
+    "remaining_packaged_processes": 0
+  },
+  "validation": {
+    "focused_redirect_succeeded": 15,
+    "affected_attack_succeeded": 31,
+    "full_wandbound_succeeded": 2245,
+    "failed": 0,
+    "warnings": 0,
+    "not_run": 0,
+    "editor_non_unity_build": "succeeded",
+    "game_non_unity_build": "succeeded",
+    "cook_stage_package_archive": "succeeded",
+    "canonical_startup_sha256": "cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004",
+    "protected_packaged_regressions": [
+      "partial_replay",
+      "terminal_replay",
+      "hybrid_hero",
+      "hybrid_nonhero",
+      "reaction_window",
+      "pending_effect",
+      "suspended_attack",
+      "npc_reaction_combat"
+    ],
+    "all_protected_regressions_passed": true,
+    "direct_combined_bcr_compile_issue": "pre_existing_adaptive_unity_anonymous_helper_collisions",
+    "task_owned_unity_collision": false
+  }
+}
