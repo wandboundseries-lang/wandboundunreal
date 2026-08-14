@@ -356,6 +356,42 @@ EWBCardEffectTargetRequirement ParseTargetRequirement(const FString& Value)
 	return EWBCardEffectTargetRequirement::None;
 }
 
+bool ParseAfterDamageSourceRole(
+	const FString& Value,
+	EWBAfterDamageParticipantRole& OutRole)
+{
+	if (Value == TEXT("attacker")) OutRole = EWBAfterDamageParticipantRole::Attacker;
+	else if (Value == TEXT("hit_unit")) OutRole = EWBAfterDamageParticipantRole::HitUnit;
+	else if (Value == TEXT("final_damage_recipient")) OutRole = EWBAfterDamageParticipantRole::FinalDamageRecipient;
+	else if (Value == TEXT("battle_participant")) OutRole = EWBAfterDamageParticipantRole::BattleParticipant;
+	else return false;
+	return true;
+}
+
+bool ParseAfterDamageRequirement(
+	const FString& Value,
+	EWBAfterDamageRequirement& OutRequirement)
+{
+	if (Value == TEXT("damage_resolved")) OutRequirement = EWBAfterDamageRequirement::DamageResolved;
+	else if (Value == TEXT("positive_hp_damage")) OutRequirement = EWBAfterDamageRequirement::PositiveHPDamage;
+	else return false;
+	return true;
+}
+
+bool ParseAfterDamageTargetRole(
+	const FString& Value,
+	EWBAfterDamageTargetRole& OutRole)
+{
+	if (Value == TEXT("none")) OutRole = EWBAfterDamageTargetRole::None;
+	else if (Value == TEXT("self")) OutRole = EWBAfterDamageTargetRole::Self;
+	else if (Value == TEXT("attacker")) OutRole = EWBAfterDamageTargetRole::Attacker;
+	else if (Value == TEXT("hit_unit")) OutRole = EWBAfterDamageTargetRole::HitUnit;
+	else if (Value == TEXT("final_damage_recipient")) OutRole = EWBAfterDamageTargetRole::FinalDamageRecipient;
+	else if (Value == TEXT("opposing_battle_unit")) OutRole = EWBAfterDamageTargetRole::OpposingBattleUnit;
+	else return false;
+	return true;
+}
+
 EWBCardActivationSourceZone ParseSourceZone(const FString& Value)
 {
 	if (Value == TEXT("board"))
@@ -478,6 +514,25 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 	return Digest;
 }
 
+FString AfterDamageTriggerDigest(
+	const FWBAfterDamageTriggerDefinition& Trigger)
+{
+	FString Digest = FString::Printf(
+		TEXT("after_damage=%s|source=%d|requirement=%d|target=%d|mandatory=%d|once=%d|once_per_opposing=%d"),
+		*Trigger.TriggerId,
+		static_cast<int32>(Trigger.SourceRole),
+		static_cast<int32>(Trigger.DamageRequirement),
+		static_cast<int32>(Trigger.TargetRole),
+		Trigger.bMandatory ? 1 : 0,
+		Trigger.bOncePerTurn ? 1 : 0,
+		Trigger.bOncePerTurnPerOpposingUnit ? 1 : 0);
+	FWBCardEffectDefinition PayloadHolder;
+	PayloadHolder.EffectId = Trigger.TriggerId;
+	PayloadHolder.Payloads = Trigger.Payloads;
+	Digest += TEXT("|") + EffectDigest(PayloadHolder);
+	return Digest;
+}
+
 FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 {
 	FString Source = FString::Printf(
@@ -541,6 +596,19 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 		for (const FWBCardEffectDefinition& Effect : Effects)
 		{
 			Source += TEXT("|") + EffectDigest(Effect);
+		}
+		TArray<FWBAfterDamageTriggerDefinition> AfterDamageTriggers =
+			Definition.AfterDamageTriggers;
+		AfterDamageTriggers.Sort([](
+			const FWBAfterDamageTriggerDefinition& A,
+			const FWBAfterDamageTriggerDefinition& B)
+		{
+			return A.TriggerId < B.TriggerId;
+		});
+		for (const FWBAfterDamageTriggerDefinition& Trigger :
+			AfterDamageTriggers)
+		{
+			Source += TEXT("|") + AfterDamageTriggerDigest(Trigger);
 		}
 		TArray<EWBCombatCapability> CombatCapabilities =
 			Definition.GrantedCombatCapabilitiesWhileEquipped.Array();
@@ -1470,7 +1538,8 @@ private:
 				TEXT("hybrid_summon"),
 				TEXT("trap"),
 				TEXT("equip"),
-				TEXT("activated_effects")
+				TEXT("activated_effects"),
+				TEXT("after_damage_triggers")
 			},
 			Reference.OwnerManifestPath,
 			CardId,
@@ -1651,6 +1720,7 @@ private:
 		ParseTrap(Card, CardPath, Record);
 		ParseEquip(Card, CardPath, Record);
 		ParseEffects(Card, CardPath, Record);
+		ParseAfterDamageTriggers(Card, CardPath, Record);
 
 		ParsedRecords.Add(MoveTemp(Record));
 	}
@@ -2255,6 +2325,146 @@ private:
 			{
 				return A.EffectId < B.EffectId;
 			});
+	}
+
+	void ParseAfterDamageTriggers(
+		const TSharedPtr<FJsonObject>& Card,
+		const FString& CardPath,
+		FWBProductionCardRecord& Record)
+	{
+		if (!HasField(Card, TEXT("after_damage_triggers")))
+		{
+			return;
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Triggers = nullptr;
+		if (!TryReadArray(Card, TEXT("after_damage_triggers"), Triggers))
+		{
+			AddError(
+				TEXT("after_damage_triggers_malformed"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				CardPath + TEXT(".after_damage_triggers"),
+				TEXT("After-damage triggers must be an array."));
+			return;
+		}
+
+		TSet<FString> TriggerIds;
+		for (int32 Index = 0; Index < Triggers->Num(); ++Index)
+		{
+			const FString TriggerPath = FString::Printf(
+				TEXT("%s.after_damage_triggers[%d]"), *CardPath, Index);
+			const TSharedPtr<FJsonValue>& Value = (*Triggers)[Index];
+			if (!Value.IsValid() || Value->Type != EJson::Object)
+			{
+				AddError(TEXT("after_damage_trigger_malformed"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath, TEXT("After-damage trigger entries must be objects."));
+				continue;
+			}
+			const TSharedPtr<FJsonObject> TriggerObject = Value->AsObject();
+			ValidateKnownFields(
+				TriggerObject,
+				{
+					TEXT("trigger_id"), TEXT("source_role"),
+					TEXT("damage_requirement"), TEXT("target"),
+					TEXT("payloads"), TEXT("mandatory"),
+					TEXT("once_per_turn"),
+					TEXT("once_per_turn_per_opposing_unit")
+				},
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				TriggerPath);
+
+			FWBAfterDamageTriggerDefinition Trigger;
+			if (!TryReadString(TriggerObject, TEXT("trigger_id"), Trigger.TriggerId)
+				|| !WBProductionCardDatabase::IsSafeDefinitionId(Trigger.TriggerId))
+			{
+				AddError(TEXT("after_damage_trigger_id_invalid"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".trigger_id"),
+					TEXT("After-damage trigger ids must be canonical lowercase identifiers."));
+			}
+			else if (TriggerIds.Contains(Trigger.TriggerId))
+			{
+				AddError(TEXT("after_damage_trigger_id_duplicate"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".trigger_id"),
+					TEXT("After-damage trigger ids must be unique within a definition."));
+			}
+			else
+			{
+				TriggerIds.Add(Trigger.TriggerId);
+			}
+
+			FString Text;
+			if (!TryReadString(TriggerObject, TEXT("source_role"), Text)
+				|| !ParseAfterDamageSourceRole(Text, Trigger.SourceRole))
+			{
+				AddError(TEXT("after_damage_source_role_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".source_role"),
+					TEXT("The after-damage source role is unsupported."));
+			}
+			if (!TryReadString(TriggerObject, TEXT("damage_requirement"), Text)
+				|| !ParseAfterDamageRequirement(Text, Trigger.DamageRequirement))
+			{
+				AddError(TEXT("after_damage_requirement_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".damage_requirement"),
+					TEXT("The after-damage requirement is unsupported."));
+			}
+			if (!TryReadString(TriggerObject, TEXT("target"), Text)
+				|| !ParseAfterDamageTargetRole(Text, Trigger.TargetRole))
+			{
+				AddError(TEXT("after_damage_target_role_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".target"),
+					TEXT("The after-damage target role is unsupported."));
+			}
+			if (!TryReadBool(TriggerObject, TEXT("mandatory"), Trigger.bMandatory))
+			{
+				AddError(TEXT("after_damage_mandatory_missing"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".mandatory"),
+					TEXT("After-damage triggers must explicitly declare mandatory behavior."));
+			}
+			else if (!Trigger.bMandatory)
+			{
+				AddError(TEXT("optional_after_damage_trigger_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".mandatory"),
+					TEXT("Optional after-damage choices are outside this runtime pass."));
+			}
+			if (HasField(TriggerObject, TEXT("once_per_turn"))
+				&& !TryReadBool(TriggerObject, TEXT("once_per_turn"), Trigger.bOncePerTurn))
+			{
+				AddError(TEXT("after_damage_usage_malformed"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".once_per_turn"),
+					TEXT("once_per_turn must be boolean."));
+			}
+			if (HasField(TriggerObject, TEXT("once_per_turn_per_opposing_unit"))
+				&& !TryReadBool(TriggerObject,
+					TEXT("once_per_turn_per_opposing_unit"),
+					Trigger.bOncePerTurnPerOpposingUnit))
+			{
+				AddError(TEXT("after_damage_usage_malformed"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".once_per_turn_per_opposing_unit"),
+					TEXT("once_per_turn_per_opposing_unit must be boolean."));
+			}
+
+			FWBCardEffectDefinition PayloadHolder;
+			ParsePayloads(TriggerObject, TriggerPath, Record, PayloadHolder);
+			Trigger.Payloads = MoveTemp(PayloadHolder.Payloads);
+			Record.CoreDefinition.AfterDamageTriggers.Add(MoveTemp(Trigger));
+		}
+		Record.CoreDefinition.AfterDamageTriggers.Sort([](
+			const FWBAfterDamageTriggerDefinition& A,
+			const FWBAfterDamageTriggerDefinition& B)
+		{
+			return A.TriggerId < B.TriggerId;
+		});
 	}
 
 	void ParseActivationCondition(

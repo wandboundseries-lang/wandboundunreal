@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "after_damage_trigger_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "after_damage_trigger",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic production mandatory after-damage trigger fixture only."
+  }
+}

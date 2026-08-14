@@ -13,6 +13,7 @@
 #include "WBRuntimePlayerController.h"
 #include "WBRuntimePresentationAssetBinding.h"
 #include "WBProductionRuntimeBootstrap.h"
+#include "WBProductionAfterDamageTriggerSmoke.h"
 #include "WBProductionHybridNonHeroSmoke.h"
 #include "WBProductionHybridReplacementSmoke.h"
 #include "WBProductionMatchReplayRuntime.h"
@@ -175,7 +176,24 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionCSNBodyDoubleSmoke::IsRequested())
+		if (WBProductionAfterDamageTriggerSmoke::IsRequested())
+		{
+			const FWBProductionAfterDamageTriggerSmokeResult AfterDamageSmoke =
+				WBProductionAfterDamageTriggerSmoke::Run(PendingBootstrapRequest);
+			if (!AfterDamageSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound after-damage trigger smoke failed: %s"),
+					*AfterDamageSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				AfterDamageSmoke.bOk ? 0 : 31,
+				TEXT("WandboundProductionAfterDamageTriggerSmoke"));
+		}
+		else if (WBProductionCSNBodyDoubleSmoke::IsRequested())
 		{
 			const FWBProductionCSNBodyDoubleSmokeResult BodyDoubleSmoke =
 				WBProductionCSNBodyDoubleSmoke::Run(PendingBootstrapRequest);

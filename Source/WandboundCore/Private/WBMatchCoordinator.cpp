@@ -1,6 +1,7 @@
 #include "WBMatchCoordinator.h"
 
 #include "WBActionCodec.h"
+#include "WBAfterDamageTrigger.h"
 #include "WBCardActivationCandidateGenerator.h"
 #include "WBCardActivationLegalActionGenerator.h"
 #include "WBCardLifecycle.h"
@@ -2905,8 +2906,17 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 		case EWBAttackContinuationStage::ApplyDamage:
 		{
 			const FWBPendingAttackState AttackBeforeDamage = WorkingState.PendingAttack;
+			FWBAfterDamageTriggerCollection AfterDamage =
+				WBAfterDamageTrigger::CaptureBeforeDamage(
+					WorkingState, Repository);
+			if (!AfterDamage.bOk)
 			{
-				const FWBApplyActionResult Damage =
+				OutReason = AfterDamage.Reason;
+				return false;
+			}
+			FWBApplyActionResult Damage;
+			{
+				Damage =
 					WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 						WorkingState, true);
 				if (!Damage.bOk)
@@ -2949,6 +2959,22 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 					OutTraceEvents.Add(MoveTemp(NPCResolved));
 				}
 			}
+			if (!WBAfterDamageTrigger::FinalizeContextAfterDamage(
+				WorkingState,
+				Damage.TraceEvents,
+				AfterDamage,
+				OutReason))
+			{
+				return false;
+			}
+			const FWBAfterDamageTriggerResolutionResult AfterDamageResolution =
+				WBAfterDamageTrigger::Resolve(WorkingState, AfterDamage);
+			if (!AfterDamageResolution.bOk)
+			{
+				OutReason = AfterDamageResolution.Reason;
+				return false;
+			}
+			OutTraceEvents.Append(AfterDamageResolution.TraceEvents);
 			if (WorkingState.bGameOver || !WorkingState.HasPendingAttack())
 			{
 				AddStageTraceForAttack(
@@ -3079,6 +3105,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 		}
 
 		case EWBAttackContinuationStage::Damage:
+		case EWBAttackContinuationStage::AfterDamage:
 		case EWBAttackContinuationStage::Counter:
 		case EWBAttackContinuationStage::Complete:
 		case EWBAttackContinuationStage::None:

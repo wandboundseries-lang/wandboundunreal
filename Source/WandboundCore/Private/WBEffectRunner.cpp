@@ -872,7 +872,7 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 	{
 		State.PendingAttack.bDamageResolved = true;
 		State.PendingAttack.bFrozenBroken = Calculation.bFrozenBreak;
-		State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
+		State.PendingAttack.Stage = EWBAttackContinuationStage::AfterDamage;
 	}
 	else
 	{
@@ -958,6 +958,16 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
 	}
 	FWBApplyActionResult Applied =
 		ApplyCalculatedPendingAttackDamage(State, bPreservePendingAttack);
+	if (Applied.bOk
+		&& bPreservePendingAttack
+		&& State.HasPendingAttack()
+		&& State.PendingAttack.Stage
+			== EWBAttackContinuationStage::AfterDamage)
+	{
+		// Compatibility callers do not provide a definition repository. The
+		// production coordinator owns automatic AfterDamage trigger resolution.
+		State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
+	}
 	for (const FWBTraceEvent& Event : Applied.TraceEvents)
 	{
 		if (Event.Kind != FName(TEXT("attack_damage_applied")))

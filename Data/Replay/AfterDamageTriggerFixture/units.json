@@ -1,0 +1,82 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "after_damage_trigger_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic units for production after-damage trigger validation.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "after_damage_fixture_hero_alpha",
+      "public_name": "After Damage Fixture Hero Alpha",
+      "kind": "hero",
+      "public_text": "An isolated after-damage fixture attacker.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 3, "ar": 8, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "after_damage_fixture_hero_beta",
+      "public_name": "After Damage Fixture Hero Beta",
+      "kind": "hero",
+      "public_text": "Applies Rooted to the opposing battle unit after HP damage.",
+      "public_category": "Hero",
+      "factions": ["black_meridian"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 1, "ar": 8, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      },
+      "after_damage_triggers": [
+        {
+          "trigger_id": "fixture_root_opposing_unit",
+          "source_role": "hit_unit",
+          "damage_requirement": "positive_hp_damage",
+          "target": "opposing_battle_unit",
+          "mandatory": true,
+          "once_per_turn": false,
+          "once_per_turn_per_opposing_unit": false,
+          "payloads": [
+            {
+              "type": "status_effect",
+              "operation": "apply_status",
+              "status_id": "Rooted",
+              "turns_remaining": 1,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "after_damage_fixture_filler",
+      "public_name": "After Damage Fixture Filler",
+      "kind": "character",
+      "public_text": "An isolated fixture deck card.",
+      "public_category": "Character",
+      "factions": ["officer"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 1, "ar": 1, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 }
+    }
+  ]
+}

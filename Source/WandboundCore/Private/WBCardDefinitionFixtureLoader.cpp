@@ -1181,6 +1181,146 @@ void ParseEffect(
 	}
 }
 
+bool ParseAfterDamageSourceRole(
+	const FString& Value,
+	EWBAfterDamageParticipantRole& OutRole)
+{
+	if (Value == TEXT("attacker")) OutRole = EWBAfterDamageParticipantRole::Attacker;
+	else if (Value == TEXT("hit_unit")) OutRole = EWBAfterDamageParticipantRole::HitUnit;
+	else if (Value == TEXT("final_damage_recipient")) OutRole = EWBAfterDamageParticipantRole::FinalDamageRecipient;
+	else if (Value == TEXT("battle_participant")) OutRole = EWBAfterDamageParticipantRole::BattleParticipant;
+	else return false;
+	return true;
+}
+
+bool ParseAfterDamageRequirement(
+	const FString& Value,
+	EWBAfterDamageRequirement& OutRequirement)
+{
+	if (Value == TEXT("damage_resolved")) OutRequirement = EWBAfterDamageRequirement::DamageResolved;
+	else if (Value == TEXT("positive_hp_damage")) OutRequirement = EWBAfterDamageRequirement::PositiveHPDamage;
+	else return false;
+	return true;
+}
+
+bool ParseAfterDamageTargetRole(
+	const FString& Value,
+	EWBAfterDamageTargetRole& OutRole)
+{
+	if (Value == TEXT("none")) OutRole = EWBAfterDamageTargetRole::None;
+	else if (Value == TEXT("self")) OutRole = EWBAfterDamageTargetRole::Self;
+	else if (Value == TEXT("attacker")) OutRole = EWBAfterDamageTargetRole::Attacker;
+	else if (Value == TEXT("hit_unit")) OutRole = EWBAfterDamageTargetRole::HitUnit;
+	else if (Value == TEXT("final_damage_recipient")) OutRole = EWBAfterDamageTargetRole::FinalDamageRecipient;
+	else if (Value == TEXT("opposing_battle_unit")) OutRole = EWBAfterDamageTargetRole::OpposingBattleUnit;
+	else return false;
+	return true;
+}
+
+void ParseAfterDamageTrigger(
+	const TSharedPtr<FJsonObject>& Object,
+	FWBAfterDamageTriggerDefinition& OutTrigger,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const FString& CardId,
+	const FString& Path)
+{
+	if (!Object.IsValid())
+	{
+		AddDiagnostic(Result, TEXT("after_damage_trigger_malformed"), CardId, TEXT(""), Path);
+		return;
+	}
+	ValidateKnownFields(
+		Object,
+		{
+			TEXT("trigger_id"), TEXT("source_role"),
+			TEXT("damage_requirement"), TEXT("target"),
+			TEXT("payloads"), TEXT("mandatory"),
+			TEXT("once_per_turn"),
+			TEXT("once_per_turn_per_opposing_unit")
+		},
+		Result, CardId, TEXT(""), Path);
+
+	TryReadRequiredString(Object, TEXT("trigger_id"), Result,
+		TEXT("after_damage_trigger_id_missing"), CardId, TEXT(""), Path,
+		OutTrigger.TriggerId);
+	FString Value;
+	if (TryReadRequiredString(Object, TEXT("source_role"), Result,
+		TEXT("after_damage_source_role_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, Value)
+		&& !ParseAfterDamageSourceRole(Value, OutTrigger.SourceRole))
+	{
+		AddDiagnostic(Result, TEXT("after_damage_source_role_unsupported"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("source_role")));
+	}
+	if (TryReadRequiredString(Object, TEXT("damage_requirement"), Result,
+		TEXT("after_damage_requirement_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, Value)
+		&& !ParseAfterDamageRequirement(Value, OutTrigger.DamageRequirement))
+	{
+		AddDiagnostic(Result, TEXT("after_damage_requirement_unsupported"),
+			CardId, OutTrigger.TriggerId,
+			JoinPath(Path, TEXT("damage_requirement")));
+	}
+	if (TryReadRequiredString(Object, TEXT("target"), Result,
+		TEXT("after_damage_target_role_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, Value)
+		&& !ParseAfterDamageTargetRole(Value, OutTrigger.TargetRole))
+	{
+		AddDiagnostic(Result, TEXT("after_damage_target_role_unsupported"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("target")));
+	}
+
+	if (!Object->Values.Contains(TEXT("mandatory")))
+	{
+		AddDiagnostic(Result, TEXT("after_damage_mandatory_missing"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("mandatory")));
+	}
+	else
+	{
+		TryReadOptionalBool(Object, TEXT("mandatory"), Result,
+			TEXT("after_damage_mandatory_malformed"), CardId,
+			OutTrigger.TriggerId, Path, OutTrigger.bMandatory);
+		if (!OutTrigger.bMandatory)
+		{
+			AddDiagnostic(Result, TEXT("optional_after_damage_trigger_unsupported"),
+				CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("mandatory")));
+		}
+	}
+	TryReadOptionalBool(Object, TEXT("once_per_turn"), Result,
+		TEXT("after_damage_usage_malformed"), CardId, OutTrigger.TriggerId,
+		Path, OutTrigger.bOncePerTurn);
+	TryReadOptionalBool(Object, TEXT("once_per_turn_per_opposing_unit"), Result,
+		TEXT("after_damage_usage_malformed"), CardId, OutTrigger.TriggerId,
+		Path, OutTrigger.bOncePerTurnPerOpposingUnit);
+
+	const TArray<TSharedPtr<FJsonValue>>* PayloadValues = nullptr;
+	if (!TryGetArrayField(Object, TEXT("payloads"), PayloadValues))
+	{
+		AddDiagnostic(Result, TEXT("after_damage_trigger_payloads_missing"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("payloads")));
+		return;
+	}
+	if (PayloadValues->IsEmpty())
+	{
+		AddDiagnostic(Result, TEXT("after_damage_trigger_payloads_missing"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("payloads")));
+		return;
+	}
+	for (int32 Index = 0; Index < PayloadValues->Num(); ++Index)
+	{
+		const FString PayloadPath = JoinPath(
+			JoinPath(Path, TEXT("payloads")),
+			FString::Printf(TEXT("[%d]"), Index));
+		const TSharedPtr<FJsonObject> PayloadObject =
+			(*PayloadValues)[Index].IsValid()
+			? (*PayloadValues)[Index]->AsObject() : nullptr;
+		FWBGenericEffectPayload Payload;
+		ParsePayload(PayloadObject, Payload, Result, CardId,
+			OutTrigger.TriggerId, PayloadPath);
+		OutTrigger.Payloads.Add(MoveTemp(Payload));
+	}
+}
+
 void ParseCard(
 	const TSharedPtr<FJsonObject>& Object,
 	FWBCardDefinition& OutDefinition,
@@ -1205,7 +1345,8 @@ void ParseCard(
 			TEXT("kind"),
 			TEXT("character_stats"),
 			TEXT("wand_stats"),
-			TEXT("activated_effects")
+			TEXT("activated_effects"),
+			TEXT("after_damage_triggers")
 		},
 		Result,
 		CardId,
@@ -1261,28 +1402,51 @@ void ParseCard(
 	}
 
 	const TSharedPtr<FJsonValue>* EffectsValue = Object->Values.Find(TEXT("activated_effects"));
-	if (EffectsValue == nullptr)
-	{
-		return;
-	}
-
 	const TArray<TSharedPtr<FJsonValue>>* EffectValues = nullptr;
-	if (!TryGetArrayField(Object, TEXT("activated_effects"), EffectValues))
+	if (EffectsValue != nullptr
+		&& !TryGetArrayField(Object, TEXT("activated_effects"), EffectValues))
 	{
 		AddDiagnostic(Result, TEXT("activated_effects_malformed"), CardId, TEXT(""), JoinPath(Path, TEXT("activated_effects")));
-		return;
+	}
+	else if (EffectValues != nullptr)
+	{
+		for (int32 EffectIndex = 0; EffectIndex < EffectValues->Num(); ++EffectIndex)
+		{
+			const FString EffectPath = JoinPath(JoinPath(Path, TEXT("activated_effects")), FString::Printf(TEXT("[%d]"), EffectIndex));
+			const TSharedPtr<FJsonObject> EffectObject = (*EffectValues)[EffectIndex].IsValid()
+				? (*EffectValues)[EffectIndex]->AsObject()
+				: nullptr;
+
+			FWBCardEffectDefinition Effect;
+			ParseEffect(EffectObject, Effect, Result, CardId, EffectPath);
+			OutDefinition.ActivatedEffects.Add(Effect);
+		}
 	}
 
-	for (int32 EffectIndex = 0; EffectIndex < EffectValues->Num(); ++EffectIndex)
+	const TSharedPtr<FJsonValue>* TriggerValue =
+		Object->Values.Find(TEXT("after_damage_triggers"));
+	if (TriggerValue == nullptr)
 	{
-		const FString EffectPath = JoinPath(JoinPath(Path, TEXT("activated_effects")), FString::Printf(TEXT("[%d]"), EffectIndex));
-		const TSharedPtr<FJsonObject> EffectObject = (*EffectValues)[EffectIndex].IsValid()
-			? (*EffectValues)[EffectIndex]->AsObject()
-			: nullptr;
-
-		FWBCardEffectDefinition Effect;
-		ParseEffect(EffectObject, Effect, Result, CardId, EffectPath);
-		OutDefinition.ActivatedEffects.Add(Effect);
+		return;
+	}
+	const TArray<TSharedPtr<FJsonValue>>* TriggerValues = nullptr;
+	if (!TryGetArrayField(Object, TEXT("after_damage_triggers"), TriggerValues))
+	{
+		AddDiagnostic(Result, TEXT("after_damage_triggers_malformed"),
+			CardId, TEXT(""), JoinPath(Path, TEXT("after_damage_triggers")));
+		return;
+	}
+	for (int32 TriggerIndex = 0; TriggerIndex < TriggerValues->Num(); ++TriggerIndex)
+	{
+		const FString TriggerPath = JoinPath(
+			JoinPath(Path, TEXT("after_damage_triggers")),
+			FString::Printf(TEXT("[%d]"), TriggerIndex));
+		FWBAfterDamageTriggerDefinition Trigger;
+		ParseAfterDamageTrigger(
+			(*TriggerValues)[TriggerIndex].IsValid()
+				? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
+			Trigger, Result, CardId, TriggerPath);
+		OutDefinition.AfterDamageTriggers.Add(MoveTemp(Trigger));
 	}
 }
 

@@ -186,6 +186,12 @@
         },
         "activated_effects": {
           "type": "array"
+        },
+        "after_damage_triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/after_damage_trigger"
+          }
         }
       },
       "allOf": [
@@ -194,6 +200,64 @@
           "then": { "required": ["hybrid_summon"] }
         }
       ]
+    },
+    "after_damage_trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trigger_id",
+        "source_role",
+        "damage_requirement",
+        "target",
+        "payloads",
+        "mandatory"
+      ],
+      "properties": {
+        "trigger_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "source_role": {
+          "enum": [
+            "attacker",
+            "hit_unit",
+            "final_damage_recipient",
+            "battle_participant"
+          ]
+        },
+        "damage_requirement": {
+          "enum": [
+            "damage_resolved",
+            "positive_hp_damage"
+          ]
+        },
+        "target": {
+          "enum": [
+            "none",
+            "self",
+            "attacker",
+            "hit_unit",
+            "final_damage_recipient",
+            "opposing_battle_unit"
+          ]
+        },
+        "payloads": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object"
+          }
+        },
+        "mandatory": {
+          "const": true
+        },
+        "once_per_turn": {
+          "type": "boolean"
+        },
+        "once_per_turn_per_opposing_unit": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }

@@ -1,0 +1,20 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "after_damage_trigger_fixture",
+  "bundle_kind": "test",
+  "batches": [
+    {
+      "batch_name": "after_damage_trigger_cards",
+      "bundles": [
+        {
+          "name": "units",
+          "path": "units.json"
+        },
+        {
+          "name": "markers",
+          "path": "markers.json"
+        }
+      ]
+    }
+  ]
+}

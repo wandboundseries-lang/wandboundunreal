@@ -126,7 +126,8 @@ enum class EWBAttackContinuationStage : uint8
 	CalculateDamage,
 	SubstituteDamage,
 	ApplyDamage,
-	CounterEligibility
+	CounterEligibility,
+	AfterDamage
 };
 
 enum class EWBAttackAuthorityKind : uint8

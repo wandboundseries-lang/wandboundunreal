@@ -110,6 +110,54 @@ bool HasDuplicateTurnStartTriggerIds(
 	return false;
 }
 
+bool HasDuplicateAfterDamageTriggerIds(
+	const FWBCardDefinition& Definition)
+{
+	TSet<FString> SeenTriggerIds;
+	for (const FWBAfterDamageTriggerDefinition& Trigger :
+		Definition.AfterDamageTriggers)
+	{
+		if (!Trigger.TriggerId.IsEmpty()
+			&& SeenTriggerIds.Contains(Trigger.TriggerId))
+		{
+			return true;
+		}
+		SeenTriggerIds.Add(Trigger.TriggerId);
+	}
+	return false;
+}
+
+bool IsSupportedAfterDamageSourceRole(
+	const EWBAfterDamageParticipantRole Role)
+{
+	switch (Role)
+	{
+	case EWBAfterDamageParticipantRole::Attacker:
+	case EWBAfterDamageParticipantRole::HitUnit:
+	case EWBAfterDamageParticipantRole::FinalDamageRecipient:
+	case EWBAfterDamageParticipantRole::BattleParticipant:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool IsSupportedAfterDamageTargetRole(const EWBAfterDamageTargetRole Role)
+{
+	switch (Role)
+	{
+	case EWBAfterDamageTargetRole::None:
+	case EWBAfterDamageTargetRole::Self:
+	case EWBAfterDamageTargetRole::Attacker:
+	case EWBAfterDamageTargetRole::HitUnit:
+	case EWBAfterDamageTargetRole::FinalDamageRecipient:
+	case EWBAfterDamageTargetRole::OpposingBattleUnit:
+		return true;
+	default:
+		return false;
+	}
+}
+
 bool HasValidKindMetadata(const FWBCardDefinition& Definition, FString& OutReason)
 {
 	switch (Definition.Kind)
@@ -265,6 +313,47 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 			return MakeValidationFailure(
 				Repository,
 				TEXT("duplicate_turn_start_trigger_id"));
+		}
+
+		for (const FWBAfterDamageTriggerDefinition& Trigger :
+			Definition.AfterDamageTriggers)
+		{
+			if (Trigger.TriggerId.IsEmpty())
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("after_damage_trigger_id_missing"));
+			}
+			if (!IsSupportedAfterDamageSourceRole(Trigger.SourceRole))
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("after_damage_source_role_unsupported"));
+			}
+			if (!IsSupportedAfterDamageTargetRole(Trigger.TargetRole))
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("after_damage_target_role_unsupported"));
+			}
+			if (!Trigger.bMandatory)
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("optional_after_damage_trigger_unsupported"));
+			}
+			if (Trigger.Payloads.IsEmpty())
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("after_damage_trigger_payloads_missing"));
+			}
+		}
+		if (HasDuplicateAfterDamageTriggerIds(Definition))
+		{
+			return MakeValidationFailure(
+				Repository,
+				TEXT("duplicate_after_damage_trigger_id"));
 		}
 	}
 

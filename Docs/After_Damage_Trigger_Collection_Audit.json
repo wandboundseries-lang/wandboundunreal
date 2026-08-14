@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "commit": "e919f5e9736d3c5650dfa9df94038466304d44d3",
+    "origin_main": "e919f5e9736d3c5650dfa9df94038466304d44d3",
+    "automation_tests": 2262,
+    "replay_schema": 1,
+    "action_codec_changed": false
+  },
+  "canonical_timing": [
+    "pre_hit",
+    "calculate_damage",
+    "substitute_damage",
+    "apply_damage",
+    "after_damage",
+    "post_hit",
+    "counter_eligibility",
+    "counter",
+    "complete"
+  ],
+  "historical_godot": {
+    "path": "Reference/GodotProject/godotcanon/scripts/sim/combat_runner.gd",
+    "hook": "battle_hit_resolved",
+    "observed_timing": "before_damage",
+    "canonical_timing": "after_damage_resolves",
+    "ported_behavior": "capture_before_apply_resolve_after_death_cleanup",
+    "godot_modified": false
+  },
+  "event_context": {
+    "unit_identities": [
+      "attacker_unit_id",
+      "hit_unit_id",
+      "final_damage_recipient_unit_id"
+    ],
+    "damage_fields": [
+      "raw_attack_damage",
+      "armor_absorbed_amount",
+      "calculated_hp_damage",
+      "applied_hp_damage"
+    ],
+    "applied_hp_damage_semantics": "clamped_actual_hp_delta",
+    "private_continuation_exposed_publicly": false
+  },
+  "trigger_model": {
+    "damage_requirements": ["damage_resolved", "positive_hp_damage"],
+    "participant_roles": [
+      "attacker",
+      "hit_unit",
+      "final_damage_recipient",
+      "battle_participant"
+    ],
+    "target_roles": [
+      "none",
+      "self",
+      "attacker",
+      "hit_unit",
+      "final_damage_recipient",
+      "opposing_battle_unit"
+    ],
+    "source_categories": ["unit", "equipped_wand"],
+    "mandatory_only": true,
+    "optional_failure": "optional_after_damage_trigger_unsupported",
+    "generic_effect_request": true,
+    "new_reaction_window": false
+  },
+  "snapshot": {
+    "captured_before_apply_damage": true,
+    "resolved_after_death_cleanup": true,
+    "lethal_source_persists": true,
+    "removed_before_event_excluded": true,
+    "unit_suppression": ["defeated", "removed", "stunned", "frozen", "negated"],
+    "frozen_unit_suppresses_equipped_wand": false
+  },
+  "identity_semantics": {
+    "body_double": "hero_is_hit_unit_substitute_is_final_recipient_only",
+    "redirect": "redirected_target_is_hit_unit_and_final_recipient",
+    "opposing_battle_unit_uses_final_recipient": false
+  },
+  "ordering": {
+    "canonical_cross_controller_rule_defined": false,
+    "convention": [
+      "originating_controller_first",
+      "controller_id",
+      "source_unit_id",
+      "source_kind",
+      "equip_order",
+      "stable_trigger_id"
+    ]
+  },
+  "usage": {
+    "once_per_turn": true,
+    "once_per_turn_per_opposing_unit": true,
+    "marked_only_after_resolution": true
+  },
+  "trace_events": [
+    "after_damage_trigger_collected",
+    "after_damage_trigger_resolved"
+  ],
+  "replay_privacy": {
+    "replay_schema": 1,
+    "fresh_replay_matches": true,
+    "receipt_field_count": 8,
+    "protected_digests_in_receipt": false,
+    "continuation_id_in_receipt": false,
+    "hidden_hand_identity_in_receipt": false,
+    "filesystem_path_in_receipt": false
+  },
+  "fixture": {
+    "path": "Data/Replay/AfterDamageTriggerFixture",
+    "production_card_ids_used": false,
+    "bundle_digest": "0f4daf68ba16b91e6431458b87b0d24202631ff77f7e1da17df57205f49b4b4c",
+    "archive_sha256": "b4eb9718d14e14bf3b928762ccc7aa0631d1f1a27d0cb9e42fe6ad3fddb4cce6",
+    "receipt_sha256": "7cf62ba01e3db687d7ad937d3a7f22ef3fd17299bcc236b6c943932b2bc254eb",
+    "startup_sha256": "d741233fc8d65646aa6862237dc197bae60164d926c61469ee716eb4b4f73616",
+    "replay_digest": "f11920277b8383e64548dd47315fe17a8765a606b44eecf5ecc31f7313615dc8",
+    "state_digest": "1624292e34a0060235c62233a328b94788f695780f8989cce84d50ed78eb5b84",
+    "trace_digest": "2dc1481b1cd6e3949575f76e31d840187520065adbb1e3101781b6764c3cd338",
+    "generation": 1,
+    "revision": 4,
+    "accepted_records": 3,
+    "run_count": 2,
+    "byte_identical": true
+  },
+  "protected_regressions": {
+    "run_count": 2,
+    "all_exit_zero": true,
+    "all_current_artifacts_byte_identical": true,
+    "canonical_startup_sha256": "cf7dc1956e3ee10035a585a9b9e64fea1e5436492ad83f17e453194dbc7ed004",
+    "archives": {
+      "partial": "d30304a936fd3b5c2163209546b9063a64ed7a223a65b217092cb64ef6495463",
+      "terminal": "64dbec678c44a1a369c392c82bcfc8c646eca4f308c62b1f5c610b57f663f444",
+      "hybrid_hero": "e1fa69301728e8129e69866ce0a91fbeaf77cc990d08f0a33133943bc629be20",
+      "hybrid_nonhero": "f3b0cb64cb2bd45ae6816ddc871b0a08d89cac55272110a102e94fb666380c1d",
+      "reaction": "e08121092f5769ca50ba4061d65ea895c761c611772182cdba508eebbb92cdf9",
+      "pending_effect": "5a986774800be98fec924253d2bd301a00b39cb3f84d313778b689991ffd5bed",
+      "suspended_attack": "f36c42e0da6a2c65dc1f1423ccd0c3c35ddb1398ab6107a29df6cc059cc2ded9",
+      "npc_reaction": "40e108f2e0a359fba58e649f283054e38091fb382224dfc445a68103c4f65fab",
+      "redirect": "1eaa2f658ae9b28eeeb0cbe0ded473489331d1abfdfa34ec51151d2a53a44c36",
+      "body_double": "98a5ecc6a78991ab0e85568cf4134a5684b8ebfecefbcca313b4cb5ab22b6c0d"
+    }
+  },
+  "validation": {
+    "focused_succeeded": 35,
+    "focused_failed": 0,
+    "full_succeeded": 2297,
+    "full_failed": 0,
+    "editor_non_unity_build": "succeeded",
+    "game_non_unity_build": "succeeded",
+    "clean_build_cook_run": "succeeded",
+    "build_cook_run_seconds": 789.06
+  }
+}

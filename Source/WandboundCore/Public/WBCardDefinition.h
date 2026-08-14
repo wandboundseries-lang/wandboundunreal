@@ -104,6 +104,45 @@ struct WANDBOUNDCORE_API FWBTurnStartTriggerDefinition
 	bool bMandatory = true;
 };
 
+enum class EWBAfterDamageRequirement : uint8
+{
+	DamageResolved,
+	PositiveHPDamage
+};
+
+enum class EWBAfterDamageParticipantRole : uint8
+{
+	Attacker,
+	HitUnit,
+	FinalDamageRecipient,
+	BattleParticipant
+};
+
+enum class EWBAfterDamageTargetRole : uint8
+{
+	None,
+	Self,
+	Attacker,
+	HitUnit,
+	FinalDamageRecipient,
+	OpposingBattleUnit
+};
+
+struct WANDBOUNDCORE_API FWBAfterDamageTriggerDefinition
+{
+	FString TriggerId;
+	EWBAfterDamageParticipantRole SourceRole =
+		EWBAfterDamageParticipantRole::BattleParticipant;
+	EWBAfterDamageRequirement DamageRequirement =
+		EWBAfterDamageRequirement::PositiveHPDamage;
+	EWBAfterDamageTargetRole TargetRole =
+		EWBAfterDamageTargetRole::None;
+	TArray<FWBGenericEffectPayload> Payloads;
+	bool bMandatory = true;
+	bool bOncePerTurn = false;
+	bool bOncePerTurnPerOpposingUnit = false;
+};
+
 struct WANDBOUNDCORE_API FWBCardCharacterStatsDefinition
 {
 	int32 HP = 0;
@@ -144,4 +183,5 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	TArray<FWBCardEffectDefinition> ActivatedEffects;
 	TArray<FWBSetupSummonTriggerDefinition> SetupSummonTriggers;
 	TArray<FWBTurnStartTriggerDefinition> TurnStartTriggers;
+	TArray<FWBAfterDamageTriggerDefinition> AfterDamageTriggers;
 };
