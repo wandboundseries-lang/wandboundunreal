@@ -1,0 +1,309 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-08-14",
+  "baseline": {
+    "branch": "main",
+    "head": "8f6359ecaf8c41e701ce20af6161dc2640da35ed",
+    "origin_main": "8f6359ecaf8c41e701ce20af6161dc2640da35ed",
+    "staged_paths_at_start": [],
+    "git_lfs_version": "git-lfs/3.7.1",
+    "git_lfs_functional": true
+  },
+  "ownership": {
+    "Content/MeshyImports/**": "intentional production 3D models for Wandbound cards",
+    "Plugins/meshy/Content/**": "separate Meshy editor-plugin support content"
+  },
+  "default_editor_ini": {
+    "path": "Config/DefaultEditor.ini",
+    "head_state": "empty tracked file",
+    "working_copy_bytes": 55531,
+    "section": "/Script/AdvancedPreviewScene.SharedProfiles",
+    "profiles": [
+      "Epic Headquarters",
+      "Grey Wireframe",
+      "Grey Ambient"
+    ],
+    "owner": "Unreal AdvancedPreviewScene USharedProfiles",
+    "scope": "editor asset-preview only",
+    "meshy_specific": false,
+    "classification": "GENERATED_EDITOR_STATE",
+    "final_tree_classification": "LOCAL_EDITOR_CONFIG",
+    "recommended_disposition": "leave uncommitted unless the team intentionally adopts shared preview profiles"
+  },
+  "android_file_server_security": {
+    "path": "Config/DefaultEngine.ini",
+    "section": "/Script/AndroidFileServerEditor.AndroidFileServerRuntimeSettings",
+    "key": "SecurityToken",
+    "value_disclosed": false,
+    "working_copy_value_state": "NONBLANK",
+    "head_value_state": "NONBLANK",
+    "exists_in_head": true,
+    "first_key_commit": "cf4f6849e24da4f2e7f10435090fe5ca34b9c61c",
+    "first_key_commit_subject": "Add Unreal project setup and WandboundCore baseline",
+    "engine_semantics": "Config=Engine DefaultConfig; initialized to [AUTO], replaced with a generated GUID, persisted to default config, and used to verify Android FileServer access; blank disables verification",
+    "classification": "SECURITY_CONFIG_REMEDIATION",
+    "recommendation": [
+      "determine whether Android FileServer and network access are required",
+      "rotate or regenerate the current credential",
+      "remove the concrete value from committed defaults or inject it through a non-versioned or CI-controlled mechanism",
+      "assess history cleanup only after repository exposure and secret-scanning risk are known"
+    ]
+  },
+  "stale_documents": [
+    {
+      "path": "Docs/CardDB_Unreal_Importer_Manifest_Suite_Audit.md",
+      "bytes": 4564,
+      "classification": "KEEP_AS_HISTORICAL",
+      "final_tree_classification": "HISTORICAL_DOC",
+      "superseding_commit": "7625719",
+      "superseding_report": "Docs/CardDB_Unreal_Importer_Manifest_Suite_Report.md",
+      "current_source_or_test_filename_references": 0,
+      "recommended_disposition": "add a superseded header before a separate documentation commit"
+    },
+    {
+      "path": "Docs/Production_Activation_Target_Selection_Bridge_Audit.md",
+      "bytes": 4934,
+      "classification": "KEEP_AS_HISTORICAL",
+      "final_tree_classification": "HISTORICAL_DOC",
+      "superseding_commit": "51b0487",
+      "superseding_report": "Docs/Production_Activation_Target_Selection_Bridge_Report.md",
+      "current_source_or_test_filename_references": 0,
+      "recommended_disposition": "add a superseded header before a separate documentation commit"
+    }
+  ],
+  "card_model_inventory": {
+    "root": "Content/MeshyImports",
+    "classification": "WANDBOUND_3D_CARD_MODELS",
+    "tracked": false,
+    "file_count": 58,
+    "total_bytes": 1058484438,
+    "approx_mib": 1009.45,
+    "extension_summary": [
+      { "extension": ".fbx", "count": 6, "bytes": 358343368 },
+      { "extension": ".jpg", "count": 17, "bytes": 163172718 },
+      { "extension": ".uasset", "count": 35, "bytes": 536968352 }
+    ],
+    "umap_count": 0,
+    "lfs": true,
+    "lfs_rule": "Content/MeshyImports/** filter=lfs diff=lfs merge=lfs -text",
+    "largest_20": [
+      { "path": "Content/MeshyImports/Pink Velvet Harlequin_Import0001.fbx", "bytes": 93359180 },
+      { "path": "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001.uasset", "bytes": 70091212 },
+      { "path": "Content/MeshyImports/Meshy_Model_Import0004.fbx", "bytes": 58923916 },
+      { "path": "Content/MeshyImports/Stonebound Warrior_Import0005.fbx", "bytes": 58718556 },
+      { "path": "Content/MeshyImports/Golden Tome Keeper_Import0002.fbx", "bytes": 56296764 },
+      { "path": "Content/MeshyImports/Arcane Gentleman_Import0003.fbx", "bytes": 47899260 },
+      { "path": "Content/MeshyImports/Gilded Gambler_Import0002.fbx", "bytes": 43145692 },
+      { "path": "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_Normal.uasset", "bytes": 35182380 },
+      { "path": "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_BaseColor.uasset", "bytes": 35051236 },
+      { "path": "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_BaseColor.uasset", "bytes": 34866875 },
+      { "path": "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_Normal.uasset", "bytes": 34794538 },
+      { "path": "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_Normal.uasset", "bytes": 34374093 },
+      { "path": "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_BaseColor.uasset", "bytes": 34197850 },
+      { "path": "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_Normal.uasset", "bytes": 34020719 },
+      { "path": "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_Normal.uasset", "bytes": 32954536 },
+      { "path": "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_BaseColor.uasset", "bytes": 31484027 },
+      { "path": "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_BaseColor.uasset", "bytes": 31322714 },
+      { "path": "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005.uasset", "bytes": 30989695 },
+      { "path": "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004.uasset", "bytes": 30793583 },
+      { "path": "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002.uasset", "bytes": 30748900 }
+    ],
+    "files": [
+      "Content/MeshyImports/Arcane Gentleman_Import0003.fbm/Image_0.jpg",
+      "Content/MeshyImports/Arcane Gentleman_Import0003.fbm/Image_2.jpg",
+      "Content/MeshyImports/Arcane Gentleman_Import0003.fbm/Image_3.jpg",
+      "Content/MeshyImports/Arcane Gentleman_Import0003.fbx",
+      "Content/MeshyImports/Gilded Gambler_Import0002.fbm/Image_0.jpg",
+      "Content/MeshyImports/Gilded Gambler_Import0002.fbm/Image_2.jpg",
+      "Content/MeshyImports/Gilded Gambler_Import0002.fbm/Image_3.jpg",
+      "Content/MeshyImports/Gilded Gambler_Import0002.fbx",
+      "Content/MeshyImports/Golden Tome Keeper_Import0002.fbm/Image_0.jpg",
+      "Content/MeshyImports/Golden Tome Keeper_Import0002.fbm/Image_2.jpg",
+      "Content/MeshyImports/Golden Tome Keeper_Import0002.fbm/Image_3.jpg",
+      "Content/MeshyImports/Golden Tome Keeper_Import0002.fbx",
+      "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001.uasset",
+      "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_BaseColor.uasset",
+      "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_Emissive.uasset",
+      "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_Mat.uasset",
+      "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_Metallic.uasset",
+      "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_Normal.uasset",
+      "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001_Roughness.uasset",
+      "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002.uasset",
+      "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_BaseColor.uasset",
+      "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_Emissive.uasset",
+      "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_Mat.uasset",
+      "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_Metallic.uasset",
+      "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_Normal.uasset",
+      "Content/MeshyImports/Import_20260706_194452/Golden_Tome_Keeper_Import0002_Roughness.uasset",
+      "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003.uasset",
+      "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_BaseColor.uasset",
+      "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_Emissive.uasset",
+      "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_Mat.uasset",
+      "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_Metallic.uasset",
+      "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_Normal.uasset",
+      "Content/MeshyImports/Import_20260706_194947/Arcane_Gentleman_Import0003_Roughness.uasset",
+      "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004.uasset",
+      "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_BaseColor.uasset",
+      "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_Emissive.uasset",
+      "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_Mat.uasset",
+      "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_Metallic.uasset",
+      "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_Normal.uasset",
+      "Content/MeshyImports/Import_20260706_195821/Meshy_Model_Import0004_Roughness.uasset",
+      "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005.uasset",
+      "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_BaseColor.uasset",
+      "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_Emissive.uasset",
+      "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_Mat.uasset",
+      "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_Metallic.uasset",
+      "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_Normal.uasset",
+      "Content/MeshyImports/Import_20260706_195903/Stonebound_Warrior_Import0005_Roughness.uasset",
+      "Content/MeshyImports/Meshy_Model_Import0004.fbm/Image_0.jpg",
+      "Content/MeshyImports/Meshy_Model_Import0004.fbm/Image_2.jpg",
+      "Content/MeshyImports/Meshy_Model_Import0004.fbm/Image_3.jpg",
+      "Content/MeshyImports/Meshy_Model_Import0004.fbx",
+      "Content/MeshyImports/Pink Velvet Harlequin_Import0001.fbm/Image_2.jpg",
+      "Content/MeshyImports/Pink Velvet Harlequin_Import0001.fbm/Image_3.jpg",
+      "Content/MeshyImports/Pink Velvet Harlequin_Import0001.fbx",
+      "Content/MeshyImports/Stonebound Warrior_Import0005.fbm/Image_0.jpg",
+      "Content/MeshyImports/Stonebound Warrior_Import0005.fbm/Image_2.jpg",
+      "Content/MeshyImports/Stonebound Warrior_Import0005.fbm/Image_3.jpg",
+      "Content/MeshyImports/Stonebound Warrior_Import0005.fbx"
+    ]
+  },
+  "map": {
+    "path": "Content/Maps/NewProjectTest.umap",
+    "tracked": false,
+    "bytes": 20614,
+    "classification": "DEV_TEST_MAP",
+    "final_tree_classification": "INTENTIONAL_MAP",
+    "text_reference_count_excluding_hygiene_inventory": 0,
+    "current_development_map": "Content/Wandbound/Maps/Wandbound_LocalPlay_Dev.umap",
+    "lfs": false,
+    "recommended_disposition": "keep untracked pending user intent; if retained, add an exact LFS rule and separate commit"
+  },
+  "meshy_plugin": {
+    "root": "Plugins/meshy",
+    "tracked_file_count": 13,
+    "descriptor_can_contain_content": true,
+    "descriptor_installed": true,
+    "untracked_content": [
+      {
+        "path": "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+        "bytes": 9461,
+        "classification": "MESHY_PLUGIN_VENDOR_CONTENT",
+        "lfs": false
+      }
+    ],
+    "runtime_relationship": "tracked MeshyBridge.cpp hard-codes and loads this material for PBR reconstruction; absence degrades gracefully to imported materials",
+    "redistribution_metadata_found": false,
+    "recommended_disposition": "confirm plugin ownership and redistribution; commit separately if intentionally vendored, otherwise restore through the plugin dependency mechanism"
+  },
+  "lfs": {
+    "existing_rules": [
+      "Content/Wandbound/Maps/Wandbound_LocalPlay_Dev.umap filter=lfs diff=lfs merge=lfs -text",
+      "Content/Wandbound/Presentation/DA_WandboundStarterPresentation.uasset filter=lfs diff=lfs merge=lfs -text"
+    ],
+    "new_rule": "Content/MeshyImports/** filter=lfs diff=lfs merge=lfs -text",
+    "new_rule_scope": "all descendants only",
+    "representative_attribute_checks": [
+      {
+        "path": "Content/MeshyImports/Pink Velvet Harlequin_Import0001.fbx",
+        "filter": "lfs",
+        "diff": "lfs",
+        "merge": "lfs",
+        "text": "unset"
+      },
+      {
+        "path": "Content/MeshyImports/Import_20260706_194044/Pink_Velvet_Harlequin_Import0001.uasset",
+        "filter": "lfs",
+        "diff": "lfs",
+        "merge": "lfs",
+        "text": "unset"
+      },
+      {
+        "path": "Content/MeshyImports/Arcane Gentleman_Import0003.fbm/Image_0.jpg",
+        "filter": "lfs",
+        "diff": "lfs",
+        "merge": "lfs",
+        "text": "unset"
+      }
+    ],
+    "outside_scope_checks": [
+      {
+        "path": "Content/Maps/NewProjectTest.umap",
+        "attributes": "unspecified"
+      },
+      {
+        "path": "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+        "attributes": "unspecified"
+      }
+    ],
+    "clean_filter_probe": {
+      "method": "git hash-object --path with in-memory input",
+      "valid_three_line_lfs_pointer": true,
+      "raw_and_filtered_hashes_differ": true,
+      "working_tree_probe_created": false,
+      "index_entry_created": false
+    },
+    "approx_new_upload_bytes": 1058484438,
+    "history_migrated": false,
+    "assets_staged": false,
+    "uploaded": false,
+    "github_quota_note": "storage and bandwidth depend on the account and repository plan"
+  },
+  "recommended_commit_groups": [
+    {
+      "name": "LFS configuration and asset audit",
+      "paths": [
+        ".gitattributes",
+        "Docs/Asset_Source_Control_Audit.md",
+        "Docs/Asset_Source_Control_Audit.json"
+      ]
+    },
+    {
+      "name": "Wandbound 3D card models",
+      "paths": ["Content/MeshyImports/**"],
+      "precondition": "confirm GitHub LFS capacity"
+    },
+    {
+      "name": "NewProjectTest map",
+      "paths": ["Content/Maps/NewProjectTest.umap"],
+      "precondition": "confirm user intent and add an exact map LFS rule"
+    },
+    {
+      "name": "Meshy plugin support material",
+      "paths": ["Plugins/meshy/Content/Materials/M_MeshyPBR.uasset"],
+      "precondition": "confirm plugin ownership and redistribution"
+    },
+    {
+      "name": "Superseded historical audits",
+      "paths": [
+        "Docs/CardDB_Unreal_Importer_Manifest_Suite_Audit.md",
+        "Docs/Production_Activation_Target_Selection_Bridge_Audit.md"
+      ],
+      "precondition": "add superseded headers"
+    },
+    {
+      "name": "Android File Server security remediation",
+      "paths": ["Config/DefaultEngine.ini or approved non-versioned/CI configuration"],
+      "precondition": "choose deployment policy and rotate credential without disclosing it"
+    }
+  ],
+  "final_classification": [
+    { "path": ".gitattributes", "classification": "LFS_CONFIGURATION", "tracked": true },
+    { "path": "Config/DefaultEditor.ini", "classification": "LOCAL_EDITOR_CONFIG", "tracked": true },
+    { "path": "Config/DefaultEngine.ini#SecurityToken", "classification": "SECURITY_CONFIG_REMEDIATION", "tracked": true },
+    { "path": "Content/MeshyImports/**", "classification": "WANDBOUND_3D_CARD_MODELS", "tracked": false },
+    { "path": "Content/Maps/NewProjectTest.umap", "classification": "INTENTIONAL_MAP", "tracked": false },
+    { "path": "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset", "classification": "MESHY_PLUGIN_VENDOR_CONTENT", "tracked": false },
+    { "path": "Docs/CardDB_Unreal_Importer_Manifest_Suite_Audit.md", "classification": "HISTORICAL_DOC", "tracked": false },
+    { "path": "Docs/Production_Activation_Target_Selection_Bridge_Audit.md", "classification": "HISTORICAL_DOC", "tracked": false },
+    { "path": "Docs/Asset_Source_Control_Audit.md", "classification": "AUDIT_DOC", "tracked": false },
+    { "path": "Docs/Asset_Source_Control_Audit.json", "classification": "AUDIT_DOC", "tracked": false }
+  ],
+  "unknown_count": 0,
+  "gameplay_source_changed": false,
+  "staged": false,
+  "committed": false,
+  "pushed": false,
+  "assets_modified": false
+}
