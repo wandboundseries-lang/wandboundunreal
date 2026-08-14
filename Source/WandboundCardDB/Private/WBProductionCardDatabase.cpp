@@ -469,7 +469,7 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 			break;
 		case EWBGenericEffectOp::PreventPendingAttack:
 		case EWBGenericEffectOp::RedirectPendingAttack:
-		case EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient:
+		case EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution:
 			break;
 		default:
 			break;
@@ -2321,14 +2321,17 @@ private:
 			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_faction"), TEXT("target_faction must be a non-empty typed faction id."));
 		}
 		if (!TryReadString(Condition, TEXT("target_relation"), Value)
-			|| Value != TEXT("orthogonally_adjacent_to_own_hero"))
+			|| (Value != TEXT("orthogonally_adjacent_to_own_hero")
+				&& Value != TEXT("other_than_own_hero")))
 		{
-			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_relation"), TEXT("target_relation must be orthogonally_adjacent_to_own_hero."));
+			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_relation"), TEXT("target_relation must be a supported typed relation."));
 		}
 		else
 		{
 			Effect.ActivationCondition.TargetRelation =
-				EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero;
+				Value == TEXT("other_than_own_hero")
+					? EWBCardEffectTargetRelationRequirement::OtherThanOwnHero
+					: EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero;
 		}
 	}
 
@@ -2663,7 +2666,7 @@ private:
 					PayloadObject, PayloadPath, Record);
 				Payload.Operation = EWBGenericEffectOp::RedirectPendingAttack;
 			}
-			else if (Type == TEXT("substitute_pending_attack_damage_recipient"))
+			else if (Type == TEXT("register_pending_attack_hp_damage_substitution"))
 			{
 				ValidateKnownFields(
 					PayloadObject,
@@ -2673,7 +2676,7 @@ private:
 					PayloadPath);
 				ValidateSelectedTarget(PayloadObject, PayloadPath, Record);
 				Payload.Operation =
-					EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient;
+					EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution;
 			}
 			else
 			{

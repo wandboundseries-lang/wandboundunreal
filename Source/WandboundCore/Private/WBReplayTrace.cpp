@@ -122,6 +122,10 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 			TEXT("damage_recipient_unit_id"),
 			Event.DamageRecipientUnitId);
 	}
+	if (Event.HitUnitId != -1)
+	{
+		Object->SetNumberField(TEXT("hit_unit_id"), Event.HitUnitId);
+	}
 
 	if (Event.AttacksLeftBefore != -1)
 	{
@@ -181,6 +185,15 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	if (Event.ArmorAbsorbedAmount != -1)
 	{
 		Object->SetNumberField(TEXT("armor_absorbed_amount"), Event.ArmorAbsorbedAmount);
+	}
+	if (Event.ActualHPDamageAmount != -1)
+	{
+		Object->SetNumberField(
+			TEXT("actual_hp_damage_amount"), Event.ActualHPDamageAmount);
+	}
+	if (Event.bFrozenBreak)
+	{
+		Object->SetBoolField(TEXT("frozen_break"), true);
 	}
 
 	if (Event.bBypassedArmor)

@@ -996,7 +996,7 @@ void ParsePayload(
 		OutPayload.Operation = EWBGenericEffectOp::RedirectPendingAttack;
 		return;
 	}
-	if (Type == TEXT("substitute_pending_attack_damage_recipient"))
+	if (Type == TEXT("register_pending_attack_hp_damage_substitution"))
 	{
 		ValidateKnownFields(
 			Object,
@@ -1007,7 +1007,7 @@ void ParsePayload(
 			Path);
 		ValidateOptionalSelectedTarget(Object, Result, CardId, EffectId, Path);
 		OutPayload.Operation =
-			EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient;
+			EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution;
 		return;
 	}
 
@@ -1121,6 +1121,11 @@ void ParseEffect(
 			{
 				OutEffect.ActivationCondition.TargetRelation =
 					EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero;
+			}
+			else if (Value == TEXT("other_than_own_hero"))
+			{
+				OutEffect.ActivationCondition.TargetRelation =
+					EWBCardEffectTargetRelationRequirement::OtherThanOwnHero;
 			}
 			else
 			{

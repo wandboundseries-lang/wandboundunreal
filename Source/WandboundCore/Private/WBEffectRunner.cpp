@@ -158,11 +158,11 @@ void AppendAttackDamageResolvedTrace(
 	Event.PlayerId = PendingAttack.AttackingPlayerId;
 	Event.SourceUnitId = PendingAttack.AttackerUnitId;
 	Event.TargetUnitId = DamageResult.Request.TargetUnitId;
-	if (PendingAttack.DamageRecipientUnitId != INDEX_NONE)
-	{
-		Event.AttackDefenderUnitId = PendingAttack.DefenderUnitId;
-		Event.DamageRecipientUnitId = DamageResult.Request.TargetUnitId;
-	}
+	Event.AttackDefenderUnitId = PendingAttack.DefenderUnitId;
+	Event.HitUnitId = PendingAttack.DamageCalculation.bValid
+		? PendingAttack.DamageCalculation.HitUnitId
+		: PendingAttack.DefenderUnitId;
+	Event.DamageRecipientUnitId = DamageResult.Request.TargetUnitId;
 	Event.FromTile = PendingAttack.AttackerTile;
 	Event.ToTile = PendingAttack.DefenderTile;
 	Event.ActionId = PendingAttack.DeclarationActionId;
@@ -178,6 +178,9 @@ void AppendAttackDamageResolvedTrace(
 	Event.ArmorAbsorbedAmount = DamageResult.ArmorAbsorbedAmount;
 	Event.bBypassedArmor = DamageResult.bBypassedArmor;
 	Event.HPDamageAmount = DamageResult.HPDamageAmount;
+	Event.ActualHPDamageAmount = FMath::Max(
+		DamageResult.PreviousHP - DamageResult.NewHP, 0);
+	Event.bFrozenBreak = PendingAttack.DamageCalculation.bFrozenBreak;
 	Event.DamageCause = DamageResult.Request.DamageCause;
 	Event.bAtOrBelowZeroHP = DamageResult.NewHP <= 0;
 	Event.bOk = true;
@@ -599,176 +602,371 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(FWBGameStateData& Sta
 	return Result;
 }
 
-FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
+FWBApplyActionResult WBEffectRunner::CalculatePendingAttackDamage(
+	FWBGameStateData& State)
+{
+	FWBApplyActionResult Result;
+	if (!State.HasPendingAttack()
+		|| State.PendingAttack.Stage
+			!= EWBAttackContinuationStage::CalculateDamage)
+	{
+		Result.Reason = TEXT("pending_attack_not_calculate_damage");
+		return Result;
+	}
+	const FWBActionQueryResult Query = WBRules::CanResolvePendingAttackDamage(State);
+	if (!Query.bOk)
+	{
+		Result.Reason = Query.Reason;
+		return Result;
+	}
+
+	const FWBUnitState* Attacker =
+		State.GetUnitById(State.PendingAttack.AttackerUnitId);
+	const FWBUnitState* HitUnit =
+		State.GetUnitById(State.PendingAttack.DefenderUnitId);
+	if (Attacker == nullptr || HitUnit == nullptr)
+	{
+		Result.Reason = TEXT("unit_disappeared_before_attack_damage");
+		return Result;
+	}
+
+	FWBPendingAttackState::FDamageCalculation Calculation;
+	Calculation.bValid = true;
+	Calculation.HitUnitId = HitUnit->UnitId;
+	Calculation.RawAttackDamage = FMath::Max(Attacker->ATK, 0);
+	Calculation.PreviousHP = HitUnit->HP;
+	Calculation.PreviousArmor = HitUnit->GetCurrentArmor();
+	Calculation.CalculatedArmor = Calculation.PreviousArmor;
+	Calculation.bPrevented = State.PendingAttack.bPrevented;
+
+	if (!Calculation.bPrevented && HitUnit->HasStatus(FrozenStatusId))
+	{
+		Calculation.bFrozenBreak = true;
+	}
+	else if (!Calculation.bPrevented)
+	{
+		FWBDamageRequest Request;
+		Request.DamageKind = EWBDamageKind::Attack;
+		Request.SourceUnitId = State.PendingAttack.AttackerUnitId;
+		Request.TargetUnitId = HitUnit->UnitId;
+		Request.SourcePlayerId = State.PendingAttack.AttackingPlayerId;
+		Request.BaseDamage = Calculation.RawAttackDamage;
+		Request.DamageCause = FName(TEXT("Attack"));
+		const FWBDamageResolutionResult Preview =
+			WBDamageResolution::CalculateDamageRequest(State, Request);
+		if (!Preview.bOk)
+		{
+			Result.Reason = Preview.Reason;
+			return Result;
+		}
+		Calculation.CalculatedArmor = Preview.NewArmor;
+		Calculation.ArmorAbsorbedAmount = Preview.ArmorAbsorbedAmount;
+		Calculation.CalculatedHPDamage = Preview.HPDamageAmount;
+	}
+
+	State.PendingAttack.DamageCalculation = Calculation;
+	State.PendingAttack.FinalDamageRecipientUnitId = Calculation.HitUnitId;
+	State.PendingAttack.Stage = EWBAttackContinuationStage::SubstituteDamage;
+
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("attack_damage_calculated"));
+	Event.PlayerId = State.PendingAttack.AttackingPlayerId;
+	Event.SourceUnitId = State.PendingAttack.AttackerUnitId;
+	Event.TargetUnitId = Calculation.HitUnitId;
+	Event.AttackDefenderUnitId = State.PendingAttack.DefenderUnitId;
+	Event.HitUnitId = Calculation.HitUnitId;
+	Event.DamageRecipientUnitId = Calculation.HitUnitId;
+	Event.DamageAmount = Calculation.RawAttackDamage;
+	Event.PreviousHP = Calculation.PreviousHP;
+	Event.NewHP = FMath::Max(
+		Calculation.PreviousHP - Calculation.CalculatedHPDamage, 0);
+	Event.PreviousArmor = Calculation.PreviousArmor;
+	Event.NewArmor = Calculation.CalculatedArmor;
+	Event.ArmorAbsorbedAmount = Calculation.ArmorAbsorbedAmount;
+	Event.HPDamageAmount = Calculation.CalculatedHPDamage;
+	Event.ActualHPDamageAmount = 0;
+	Event.bFrozenBreak = Calculation.bFrozenBreak;
+	Event.bDamagePrevented = Calculation.bPrevented;
+	Event.AttackContinuationId = State.PendingAttack.ContinuationId;
+	Event.AttackContinuationStage = FName(TEXT("calculate_damage"));
+	Event.bCounterAttack = State.PendingAttack.bCounter;
+	Event.bOk = true;
+	Result.TraceEvents.Add(MoveTemp(Event));
+	Result.bOk = true;
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ResolvePendingAttackDamageSubstitution(
+	FWBGameStateData& State)
+{
+	FWBApplyActionResult Result;
+	if (!State.HasPendingAttack()
+		|| State.PendingAttack.Stage != EWBAttackContinuationStage::SubstituteDamage
+		|| !State.PendingAttack.DamageCalculation.bValid)
+	{
+		Result.Reason = TEXT("pending_attack_not_substitute_damage");
+		return Result;
+	}
+
+	const FWBPendingAttackState::FDamageCalculation& Calculation =
+		State.PendingAttack.DamageCalculation;
+	State.PendingAttack.FinalDamageRecipientUnitId = Calculation.HitUnitId;
+	const FWBPendingAttackState::FDamageSubstitution& Substitution =
+		State.PendingAttack.DamageSubstitution;
+	if (Substitution.bActive
+		&& Calculation.HitUnitId == Substitution.ProtectedUnitId
+		&& Calculation.CalculatedHPDamage > 0)
+	{
+		const FWBUnitState* Substitute =
+			State.GetUnitById(Substitution.SubstituteUnitId);
+		if (Substitute != nullptr
+			&& !Substitute->bDefeated
+			&& Substitute->IsUnitOnBoard())
+		{
+			State.PendingAttack.FinalDamageRecipientUnitId =
+				Substitution.SubstituteUnitId;
+			FWBTraceEvent Event;
+			Event.Kind = FName(TEXT("attack_damage_substituted"));
+			Event.SourceUnitId = State.PendingAttack.AttackerUnitId;
+			Event.PreviousTargetUnitId = Calculation.HitUnitId;
+			Event.TargetUnitId = Substitution.SubstituteUnitId;
+			Event.AttackDefenderUnitId = State.PendingAttack.DefenderUnitId;
+			Event.HitUnitId = Calculation.HitUnitId;
+			Event.DamageRecipientUnitId = Substitution.SubstituteUnitId;
+			Event.HPDamageAmount = Calculation.CalculatedHPDamage;
+			Event.AttackContinuationId = State.PendingAttack.ContinuationId;
+			Event.AttackContinuationStage = FName(TEXT("substitute_damage"));
+			Event.bCounterAttack = State.PendingAttack.bCounter;
+			Event.bOk = true;
+			Result.TraceEvents.Add(MoveTemp(Event));
+		}
+		else
+		{
+			FWBTraceEvent Event;
+			Event.Kind = FName(TEXT("pending_attack_damage_substitution_fallback"));
+			Event.SourceUnitId = State.PendingAttack.AttackerUnitId;
+			Event.PreviousTargetUnitId = Substitution.SubstituteUnitId;
+			Event.TargetUnitId = Calculation.HitUnitId;
+			Event.HitUnitId = Calculation.HitUnitId;
+			Event.DamageRecipientUnitId = Calculation.HitUnitId;
+			Event.AttackContinuationId = State.PendingAttack.ContinuationId;
+			Event.AttackContinuationStage = FName(TEXT("substitute_damage"));
+			Event.bCounterAttack = State.PendingAttack.bCounter;
+			Event.bOk = true;
+			Result.TraceEvents.Add(MoveTemp(Event));
+		}
+	}
+	State.PendingAttack.Stage = EWBAttackContinuationStage::ApplyDamage;
+	Result.bOk = true;
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 	FWBGameStateData& State,
 	const bool bPreservePendingAttack)
 {
 	FWBApplyActionResult Result;
-
-	const FWBActionQueryResult DamageQuery = WBRules::CanResolvePendingAttackDamage(State);
-	if (!DamageQuery.bOk)
+	if (!State.HasPendingAttack()
+		|| State.PendingAttack.Stage != EWBAttackContinuationStage::ApplyDamage
+		|| !State.PendingAttack.DamageCalculation.bValid)
 	{
-		Result.bOk = false;
-		Result.Reason = DamageQuery.Reason;
+		Result.Reason = TEXT("pending_attack_not_apply_damage");
 		return Result;
 	}
 
 	const FWBPendingAttackState PendingAttack = State.PendingAttack;
-	const FWBUnitState* Attacker = State.GetUnitById(PendingAttack.AttackerUnitId);
-	FWBUnitState* Defender = State.GetMutableUnitById(PendingAttack.DefenderUnitId);
-	if (Attacker == nullptr || Defender == nullptr)
+	const FWBPendingAttackState::FDamageCalculation& Calculation =
+		PendingAttack.DamageCalculation;
+	FWBUnitState* HitUnit = State.GetMutableUnitById(Calculation.HitUnitId);
+	if (HitUnit == nullptr || !HitUnit->IsUnitOnBoard())
 	{
-		Result.bOk = false;
-		Result.Reason = TEXT("unit_disappeared_before_attack_damage");
+		Result.Reason = TEXT("damage_target_removed");
 		return Result;
 	}
-
-	int32 EffectiveDamageRecipientUnitId = PendingAttack.DefenderUnitId;
-	if (PendingAttack.DamageRecipientUnitId != INDEX_NONE)
+	int32 FinalRecipientUnitId = PendingAttack.FinalDamageRecipientUnitId;
+	if (FinalRecipientUnitId != Calculation.HitUnitId)
 	{
-		const FWBUnitState* SelectedRecipient =
-			State.GetUnitById(PendingAttack.DamageRecipientUnitId);
-		if (SelectedRecipient != nullptr
-			&& !SelectedRecipient->bDefeated
-			&& SelectedRecipient->IsUnitOnBoard())
-		{
-			EffectiveDamageRecipientUnitId = PendingAttack.DamageRecipientUnitId;
-		}
-		else
+		const FWBUnitState* Recipient = State.GetUnitById(FinalRecipientUnitId);
+		if (Recipient == nullptr || Recipient->bDefeated || !Recipient->IsUnitOnBoard())
 		{
 			FWBTraceEvent Fallback;
-			Fallback.Kind = FName(TEXT("pending_attack_damage_recipient_fallback"));
+			Fallback.Kind = FName(TEXT("pending_attack_damage_substitution_fallback"));
 			Fallback.SourceUnitId = PendingAttack.AttackerUnitId;
-			Fallback.PreviousTargetUnitId = PendingAttack.DamageRecipientUnitId;
-			Fallback.TargetUnitId = PendingAttack.DefenderUnitId;
-			Fallback.AttackDefenderUnitId = PendingAttack.DefenderUnitId;
-			Fallback.DamageRecipientUnitId = PendingAttack.DefenderUnitId;
+			Fallback.PreviousTargetUnitId = FinalRecipientUnitId;
+			Fallback.TargetUnitId = Calculation.HitUnitId;
+			Fallback.HitUnitId = Calculation.HitUnitId;
+			Fallback.DamageRecipientUnitId = Calculation.HitUnitId;
 			Fallback.AttackContinuationId = PendingAttack.ContinuationId;
-			Fallback.AttackContinuationStage = FName(TEXT("damage"));
+			Fallback.AttackContinuationStage = FName(TEXT("apply_damage"));
 			Fallback.bCounterAttack = PendingAttack.bCounter;
 			Fallback.bOk = true;
 			Result.TraceEvents.Add(MoveTemp(Fallback));
+			FinalRecipientUnitId = Calculation.HitUnitId;
+			State.PendingAttack.FinalDamageRecipientUnitId = Calculation.HitUnitId;
 		}
 	}
 
-	FWBUnitState* DamageRecipient =
-		State.GetMutableUnitById(EffectiveDamageRecipientUnitId);
-	if (DamageRecipient == nullptr)
+	FWBDamageResolutionResult Applied;
+	Applied.bOk = true;
+	Applied.Request.DamageKind = EWBDamageKind::Attack;
+	Applied.Request.SourceUnitId = PendingAttack.AttackerUnitId;
+	Applied.Request.TargetUnitId = FinalRecipientUnitId;
+	Applied.Request.SourcePlayerId = PendingAttack.AttackingPlayerId;
+	Applied.Request.BaseDamage = Calculation.RawAttackDamage;
+	Applied.Request.DamageCause = FName(TEXT("Attack"));
+	Applied.Prevention.bPrevented = Calculation.bPrevented;
+	Applied.Prevention.PreventedAmount = Calculation.bPrevented
+		? Calculation.RawAttackDamage : 0;
+	Applied.Prevention.FinalDamage = Calculation.bPrevented
+		? 0 : Calculation.RawAttackDamage;
+	if (Calculation.bFrozenBreak)
 	{
-		Result.bOk = false;
-		Result.Reason = TEXT("unit_disappeared_before_attack_damage");
-		return Result;
+		Applied.Prevention.FinalDamage = 0;
 	}
+	Applied.PreviousHP = HitUnit->HP;
+	Applied.NewHP = HitUnit->HP;
+	Applied.PreviousArmor = Calculation.PreviousArmor;
+	Applied.NewArmor = Calculation.CalculatedArmor;
+	Applied.ArmorAbsorbedAmount = Calculation.ArmorAbsorbedAmount;
+	Applied.HPDamageAmount = Calculation.CalculatedHPDamage;
 
-	const int32 PreviousHP = DamageRecipient->HP;
-	if (DamageRecipient->HasStatus(FrozenStatusId))
+	if (Calculation.bFrozenBreak)
 	{
-		DamageRecipient->RemoveStatus(FrozenStatusId);
-		if (bPreservePendingAttack)
-		{
-			State.PendingAttack.bDamageResolved = true;
-			State.PendingAttack.bFrozenBroken =
-				EffectiveDamageRecipientUnitId == PendingAttack.DefenderUnitId;
-			State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
-			State.PendingAttack.DamageRecipientUnitId = INDEX_NONE;
-		}
-		else
-		{
-			State.ClearPendingAttack();
-		}
-
-		Result.bOk = true;
+		HitUnit->RemoveStatus(FrozenStatusId);
 		AppendStatusRemovedTrace(
 			Result.TraceEvents,
 			PendingAttack.AttackingPlayerId,
 			FrozenStatusId,
-			EffectiveDamageRecipientUnitId,
+			Calculation.HitUnitId,
 			PendingAttack.AttackerUnitId,
 			PendingAttack.AttackerTile,
-			FWBTile(DamageRecipient->X, DamageRecipient->Y),
-			PreviousHP,
-			DamageRecipient->HP);
-		FWBDamageResolutionResult FrozenDamageResult;
-		FrozenDamageResult.bOk = true;
-		FrozenDamageResult.Request.DamageKind = EWBDamageKind::Attack;
-		FrozenDamageResult.Request.SourceUnitId = PendingAttack.AttackerUnitId;
-		FrozenDamageResult.Request.TargetUnitId = EffectiveDamageRecipientUnitId;
-		FrozenDamageResult.Request.SourcePlayerId = PendingAttack.AttackingPlayerId;
-		FrozenDamageResult.Request.BaseDamage = 0;
-		FrozenDamageResult.Request.bBypassArmor = false;
-		FrozenDamageResult.Request.DamageCause = FName(TEXT("Attack"));
-		FrozenDamageResult.Prevention.bPrevented = false;
-		FrozenDamageResult.Prevention.PreventedAmount = 0;
-		FrozenDamageResult.Prevention.FinalDamage = 0;
-		FrozenDamageResult.Prevention.PreventionReason = NAME_None;
-		FrozenDamageResult.PreviousHP = PreviousHP;
-		FrozenDamageResult.NewHP = DamageRecipient->HP;
-		FrozenDamageResult.PreviousArmor = DamageRecipient->GetCurrentArmor();
-		FrozenDamageResult.NewArmor = DamageRecipient->GetCurrentArmor();
-		FrozenDamageResult.ArmorAbsorbedAmount = 0;
-		FrozenDamageResult.bBypassedArmor = false;
-		FrozenDamageResult.HPDamageAmount = 0;
-		FrozenDamageResult.bAtOrBelowZeroHP = DamageRecipient->HP <= 0;
-		AppendAttackDamageResolvedTrace(Result.TraceEvents, PendingAttack, 0, FrozenDamageResult);
-		if (DamageRecipient->HP <= 0)
-		{
-			FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
-			Result.TraceEvents.Append(CleanupResult.TraceEvents);
-			if (!CleanupResult.bOk && CleanupResult.Reason != TEXT("no_zero_hp_units"))
-			{
-				Result.bOk = false;
-				Result.Reason = CleanupResult.Reason;
-			}
-		}
-		return Result;
+			FWBTile(HitUnit->X, HitUnit->Y),
+			HitUnit->HP,
+			HitUnit->HP);
 	}
-
-	FWBDamageRequest DamageRequest;
-	DamageRequest.DamageKind = EWBDamageKind::Attack;
-	DamageRequest.SourceUnitId = PendingAttack.AttackerUnitId;
-	DamageRequest.TargetUnitId = EffectiveDamageRecipientUnitId;
-	DamageRequest.SourcePlayerId = PendingAttack.AttackingPlayerId;
-	DamageRequest.BaseDamage = FMath::Max(Attacker->ATK, 0);
-	DamageRequest.bBypassArmor = false;
-	DamageRequest.DamageCause = FName(TEXT("Attack"));
-
-	const FWBDamageResolutionResult DamageResult = WBDamageResolution::ResolveDamageRequest(State, DamageRequest);
-	if (!DamageResult.bOk)
+	else if (!Calculation.bPrevented)
 	{
-		Result.bOk = false;
-		Result.Reason = DamageResult.Reason;
-		return Result;
+		FWBDamageResolutionResult Preview;
+		Preview.bOk = true;
+		Preview.Request = Applied.Request;
+		Preview.Request.TargetUnitId = Calculation.HitUnitId;
+		Preview.Prevention = Applied.Prevention;
+		Preview.PreviousHP = Calculation.PreviousHP;
+		Preview.NewHP = FMath::Max(
+			Calculation.PreviousHP - Calculation.CalculatedHPDamage, 0);
+		Preview.PreviousArmor = Calculation.PreviousArmor;
+		Preview.NewArmor = Calculation.CalculatedArmor;
+		Preview.ArmorAbsorbedAmount = Calculation.ArmorAbsorbedAmount;
+		Preview.HPDamageAmount = Calculation.CalculatedHPDamage;
+		Preview.bAtOrBelowZeroHP = Preview.NewHP <= 0;
+		Applied = WBDamageResolution::ApplyCalculatedDamage(
+			State, Preview, FinalRecipientUnitId);
+		if (!Applied.bOk)
+		{
+			Result.Reason = Applied.Reason;
+			return Result;
+		}
 	}
 
-	const int32 DamageAmount = FMath::Max(DamageRequest.BaseDamage, 0);
-	const int32 NewHP = DamageResult.NewHP;
 	if (bPreservePendingAttack)
 	{
 		State.PendingAttack.bDamageResolved = true;
+		State.PendingAttack.bFrozenBroken = Calculation.bFrozenBreak;
 		State.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
-		State.PendingAttack.DamageRecipientUnitId = INDEX_NONE;
 	}
 	else
 	{
 		State.ClearPendingAttack();
 	}
 
-	Result.bOk = true;
+	FWBTraceEvent AppliedEvent;
+	AppliedEvent.Kind = FName(TEXT("attack_damage_applied"));
+	AppliedEvent.SourceUnitId = PendingAttack.AttackerUnitId;
+	AppliedEvent.TargetUnitId = Applied.Request.TargetUnitId;
+	AppliedEvent.AttackDefenderUnitId = PendingAttack.DefenderUnitId;
+	AppliedEvent.HitUnitId = Calculation.HitUnitId;
+	AppliedEvent.DamageRecipientUnitId = Applied.Request.TargetUnitId;
+	AppliedEvent.DamageAmount = Calculation.RawAttackDamage;
+	AppliedEvent.PreviousHP = Applied.PreviousHP;
+	AppliedEvent.NewHP = Applied.NewHP;
+	AppliedEvent.PreviousArmor = Calculation.PreviousArmor;
+	AppliedEvent.NewArmor = Calculation.CalculatedArmor;
+	AppliedEvent.ArmorAbsorbedAmount = Calculation.ArmorAbsorbedAmount;
+	AppliedEvent.HPDamageAmount = Calculation.CalculatedHPDamage;
+	AppliedEvent.ActualHPDamageAmount = FMath::Max(
+		Applied.PreviousHP - Applied.NewHP, 0);
+	AppliedEvent.bFrozenBreak = Calculation.bFrozenBreak;
+	AppliedEvent.bDamagePrevented = Calculation.bPrevented;
+	AppliedEvent.AttackContinuationId = PendingAttack.ContinuationId;
+	AppliedEvent.AttackContinuationStage = FName(TEXT("apply_damage"));
+	AppliedEvent.bCounterAttack = PendingAttack.bCounter;
+	AppliedEvent.bOk = true;
+	Result.TraceEvents.Add(MoveTemp(AppliedEvent));
 	AppendAttackDamageResolvedTrace(
 		Result.TraceEvents,
 		PendingAttack,
-		DamageAmount,
-		DamageResult);
-	if (NewHP <= 0)
+		Calculation.bFrozenBreak ? 0 : Calculation.RawAttackDamage,
+		Applied);
+
+	if (Applied.NewHP <= 0 && !Calculation.bPrevented
+		&& !Calculation.bFrozenBreak)
 	{
-		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
-		Result.TraceEvents.Append(CleanupResult.TraceEvents);
-		if (!CleanupResult.bOk && CleanupResult.Reason != TEXT("no_zero_hp_units"))
+		FWBApplyActionResult Cleanup = ApplyZeroHPDeathRemoval(State);
+		Result.TraceEvents.Append(Cleanup.TraceEvents);
+		if (!Cleanup.bOk && Cleanup.Reason != TEXT("no_zero_hp_units"))
 		{
-			Result.bOk = false;
-			Result.Reason = CleanupResult.Reason;
+			Result.Reason = Cleanup.Reason;
+			return Result;
 		}
 	}
+	Result.bOk = true;
+	return Result;
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamage(
+	FWBGameStateData& State,
+	const bool bPreservePendingAttack)
+{
+	FWBApplyActionResult Result;
+	const FWBActionQueryResult CompatibilityQuery =
+		WBRules::CanResolvePendingAttackDamage(State);
+	if (!CompatibilityQuery.bOk)
+	{
+		Result.Reason = CompatibilityQuery.Reason;
+		return Result;
+	}
+	if (State.HasPendingAttack()
+		&& (State.PendingAttack.Stage == EWBAttackContinuationStage::PreHit
+			|| State.PendingAttack.Stage == EWBAttackContinuationStage::Damage
+			|| State.PendingAttack.Stage == EWBAttackContinuationStage::None))
+	{
+		State.PendingAttack.Stage = EWBAttackContinuationStage::CalculateDamage;
+	}
+	const FWBApplyActionResult Calculated = CalculatePendingAttackDamage(State);
+	if (!Calculated.bOk)
+	{
+		Result.Reason = Calculated.Reason;
+		return Result;
+	}
+	const FWBApplyActionResult Substituted =
+		ResolvePendingAttackDamageSubstitution(State);
+	Result.TraceEvents.Append(Substituted.TraceEvents);
+	if (!Substituted.bOk)
+	{
+		Result.Reason = Substituted.Reason;
+		return Result;
+	}
+	FWBApplyActionResult Applied =
+		ApplyCalculatedPendingAttackDamage(State, bPreservePendingAttack);
+	for (const FWBTraceEvent& Event : Applied.TraceEvents)
+	{
+		if (Event.Kind != FName(TEXT("attack_damage_applied")))
+		{
+			Result.TraceEvents.Add(Event);
+		}
+	}
+	Result.bOk = Applied.bOk;
+	Result.Reason = Applied.Reason;
 	return Result;
 }
 
@@ -818,33 +1016,38 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackRedirect(
 	return Result;
 }
 
-FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamageRecipientSubstitution(
+FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
 	FWBGameStateData& State,
 	const FString& PendingAttackContinuationId,
-	const int32 NewDamageRecipientUnitId)
+	const int32 SubstituteUnitId)
 {
 	FWBApplyActionResult Result;
 	const FWBActionQueryResult Query =
-		WBRules::CanSubstitutePendingAttackDamageRecipient(
-			State, PendingAttackContinuationId, NewDamageRecipientUnitId);
+		WBRules::CanRegisterPendingAttackDamageSubstitution(
+			State, PendingAttackContinuationId, SubstituteUnitId);
 	if (!Query.bOk)
 	{
 		Result.Reason = Query.Reason;
 		return Result;
 	}
 
-	const int32 PreviousRecipientUnitId =
-		State.PendingAttack.DamageRecipientUnitId;
-	State.PendingAttack.DamageRecipientUnitId = NewDamageRecipientUnitId;
+	const int32 PreviousRecipientUnitId = State.PendingAttack.DamageSubstitution.bActive
+		? State.PendingAttack.DamageSubstitution.SubstituteUnitId
+		: INDEX_NONE;
+	State.PendingAttack.DamageSubstitution.bActive = true;
+	State.PendingAttack.DamageSubstitution.ProtectedUnitId =
+		State.PendingAttack.DefenderUnitId;
+	State.PendingAttack.DamageSubstitution.SubstituteUnitId = SubstituteUnitId;
 
 	FWBTraceEvent Substituted;
 	Substituted.Kind =
-		FName(TEXT("pending_attack_damage_recipient_substituted"));
+		FName(TEXT("pending_attack_damage_substitution_registered"));
 	Substituted.SourceUnitId = State.PendingAttack.AttackerUnitId;
 	Substituted.PreviousTargetUnitId = PreviousRecipientUnitId;
-	Substituted.TargetUnitId = NewDamageRecipientUnitId;
+	Substituted.TargetUnitId = SubstituteUnitId;
 	Substituted.AttackDefenderUnitId = State.PendingAttack.DefenderUnitId;
-	Substituted.DamageRecipientUnitId = NewDamageRecipientUnitId;
+	Substituted.HitUnitId = State.PendingAttack.DefenderUnitId;
+	Substituted.DamageRecipientUnitId = SubstituteUnitId;
 	Substituted.AttackContinuationId = State.PendingAttack.ContinuationId;
 	Substituted.AttackContinuationStage = FName(TEXT("pre_hit"));
 	Substituted.bCounterAttack = State.PendingAttack.bCounter;
@@ -1054,9 +1257,9 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 				Request.Target.TargetUnitId);
 			break;
 		}
-		case EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient:
+		case EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution:
 		{
-			PayloadResult = ApplyPendingAttackDamageRecipientSubstitution(
+			PayloadResult = ApplyPendingAttackDamageSubstitutionRegistration(
 				WorkingState,
 				Payload.PendingAttackContinuationId,
 				Request.Target.TargetUnitId);

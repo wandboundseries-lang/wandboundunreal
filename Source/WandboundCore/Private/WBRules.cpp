@@ -650,10 +650,10 @@ FWBActionQueryResult WBRules::CanRedirectPendingAttack(
 	return FWBActionQueryResult::Ok();
 }
 
-FWBActionQueryResult WBRules::CanSubstitutePendingAttackDamageRecipient(
+FWBActionQueryResult WBRules::CanRegisterPendingAttackDamageSubstitution(
 	const FWBGameStateData& State,
 	const FString& PendingAttackContinuationId,
-	const int32 NewDamageRecipientUnitId)
+	const int32 SubstituteUnitId)
 {
 	if (State.bGameOver)
 	{
@@ -674,7 +674,11 @@ FWBActionQueryResult WBRules::CanSubstitutePendingAttackDamageRecipient(
 		return FWBActionQueryResult::Deny(TEXT("pending_attack_not_damage_eligible"));
 	}
 
-	const FWBUnitState* Recipient = State.GetUnitById(NewDamageRecipientUnitId);
+	if (SubstituteUnitId == State.PendingAttack.DefenderUnitId)
+	{
+		return FWBActionQueryResult::Deny(TEXT("damage_substitute_is_protected_unit"));
+	}
+	const FWBUnitState* Recipient = State.GetUnitById(SubstituteUnitId);
 	if (Recipient == nullptr)
 	{
 		return FWBActionQueryResult::Deny(TEXT("missing_damage_recipient"));
@@ -1128,10 +1132,10 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			}
 			break;
 		}
-		case EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient:
+	case EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution:
 		{
 			const FWBActionQueryResult SubstitutionQuery =
-				CanSubstitutePendingAttackDamageRecipient(
+				CanRegisterPendingAttackDamageSubstitution(
 					State,
 					Payload.PendingAttackContinuationId,
 					Request.Target.TargetUnitId);

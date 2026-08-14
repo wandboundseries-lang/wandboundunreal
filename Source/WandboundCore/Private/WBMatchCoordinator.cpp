@@ -449,6 +449,17 @@ bool DoesActivationConditionMatch(
 			return false;
 		}
 	}
+	else if (Condition.TargetRelation
+		== EWBCardEffectTargetRelationRequirement::OtherThanOwnHero)
+	{
+		if (Hero == nullptr
+			|| Hero->bDefeated
+			|| !Hero->IsUnitOnBoard()
+			|| TargetUnit->UnitId == Hero->UnitId)
+		{
+			return false;
+		}
+	}
 	if (!Condition.RequiredTargetFaction.IsEmpty())
 	{
 		const FWBCardDefinitionRepositoryLookupResult TargetDefinition =
@@ -716,7 +727,7 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 						|| Payload.Operation
 							== EWBGenericEffectOp::RedirectPendingAttack
 						|| Payload.Operation
-							== EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient;
+							== EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution;
 				});
 		if (bControlsPendingAttack
 			&& (PendingAttackContinuationId.IsEmpty()
@@ -749,7 +760,7 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				if (Payload.Operation == EWBGenericEffectOp::PreventPendingAttack
 					|| Payload.Operation == EWBGenericEffectOp::RedirectPendingAttack
 					|| Payload.Operation
-						== EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient)
+						== EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution)
 				{
 					Payload.PendingAttackContinuationId =
 						PendingAttackContinuationId;
@@ -2812,7 +2823,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 	int32 Guard = 0;
 	while (WorkingState.HasPendingAttack() && !WorkingState.HasOpenReactionWindow())
 	{
-		if (++Guard > 16)
+		if (++Guard > 24)
 		{
 			OutReason = TEXT("attack_continuation_guard_exceeded");
 			return false;
@@ -2823,26 +2834,81 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 			return Complete();
 		}
 
+		const FName CurrentStage = [&WorkingState]()
+		{
+			switch (WorkingState.PendingAttack.Stage)
+			{
+			case EWBAttackContinuationStage::CalculateDamage:
+				return FName(TEXT("calculate_damage"));
+			case EWBAttackContinuationStage::SubstituteDamage:
+				return FName(TEXT("substitute_damage"));
+			case EWBAttackContinuationStage::ApplyDamage:
+				return FName(TEXT("apply_damage"));
+			case EWBAttackContinuationStage::CounterEligibility:
+				return FName(TEXT("counter_eligibility"));
+			default:
+				return FName(NAME_None);
+			}
+		}();
+		if (!CurrentStage.IsNone())
+		{
+			AddStageTrace(FName(TEXT("attack_stage_entered")), CurrentStage);
+		}
+
 		switch (WorkingState.PendingAttack.Stage)
 		{
 		case EWBAttackContinuationStage::PreHit:
 		{
 			AddStageTrace(FName(TEXT("attack_pre_hit_closed")), FName(TEXT("pre_hit")));
-			if (WorkingState.PendingAttack.bPrevented)
-			{
-				return Complete();
-			}
+			const bool bPreventedBeforeDamage = WorkingState.PendingAttack.bPrevented;
 			if (WBRules::CanResolvePendingAttackDamage(WorkingState).bOk == false)
 			{
 				AddStageTrace(FName(TEXT("attack_continuation_cancelled")), FName(TEXT("pre_hit")));
 				return Complete();
 			}
-			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
-			AddStageTrace(FName(TEXT("attack_damage_started")), FName(TEXT("damage")));
+			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::CalculateDamage;
+			if (!bPreventedBeforeDamage)
+			{
+				AddStageTrace(
+					FName(TEXT("attack_damage_started")),
+					FName(TEXT("calculate_damage")));
+			}
+			break;
+		}
+
+		case EWBAttackContinuationStage::CalculateDamage:
+		{
+			const FWBApplyActionResult Calculated =
+				WBEffectRunner::CalculatePendingAttackDamage(WorkingState);
+			if (!Calculated.bOk)
+			{
+				OutReason = Calculated.Reason;
+				return false;
+			}
+			OutTraceEvents.Append(Calculated.TraceEvents);
+			break;
+		}
+
+		case EWBAttackContinuationStage::SubstituteDamage:
+		{
+			const FWBApplyActionResult Substituted =
+				WBEffectRunner::ResolvePendingAttackDamageSubstitution(WorkingState);
+			if (!Substituted.bOk)
+			{
+				OutReason = Substituted.Reason;
+				return false;
+			}
+			OutTraceEvents.Append(Substituted.TraceEvents);
+			break;
+		}
+
+		case EWBAttackContinuationStage::ApplyDamage:
+		{
 			const FWBPendingAttackState AttackBeforeDamage = WorkingState.PendingAttack;
 			{
 				const FWBApplyActionResult Damage =
-					WBEffectRunner::ApplyPendingAttackDamage(WorkingState, true);
+					WBEffectRunner::ApplyCalculatedPendingAttackDamage(
+						WorkingState, true);
 				if (!Damage.bOk)
 				{
 					OutReason = Damage.Reason;
@@ -2897,12 +2963,17 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				OutReason.Reset();
 				return true;
 			}
-			AddStageTrace(FName(TEXT("attack_damage_resolved_stage")), FName(TEXT("damage")));
+			AddStageTrace(
+				FName(TEXT("attack_damage_resolved_stage")),
+				FName(TEXT("apply_damage")));
+			if (AttackBeforeDamage.bPrevented)
+			{
+				return Complete();
+			}
 			if (WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId) == nullptr)
 			{
 				return Complete();
 			}
-			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::PostHit;
 			if (!OpenReactionWindowIfApplicable(
 				WorkingState,
 				WorkingPhase,
@@ -2929,6 +3000,16 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 		{
 			WorkingState.PendingAttack.bPostHitCompleted = true;
 			AddStageTrace(FName(TEXT("attack_post_hit_closed")), FName(TEXT("post_hit")));
+			WorkingState.PendingAttack.Stage =
+				EWBAttackContinuationStage::CounterEligibility;
+			break;
+		}
+
+		case EWBAttackContinuationStage::CounterEligibility:
+		{
+			AddStageTrace(
+				FName(TEXT("attack_counter_eligibility_evaluated")),
+				FName(TEXT("counter_eligibility")));
 			if (WorkingState.PendingAttack.bCounter
 				|| WorkingState.PendingAttack.bFrozenBroken)
 			{
@@ -2960,8 +3041,12 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				WorkingState.PendingAttack.bCounter = true;
 				WorkingState.PendingAttack.bDamageResolved = false;
 				WorkingState.PendingAttack.bPostHitCompleted = false;
-			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
-			AddStageTrace(FName(TEXT("counter_started")), FName(TEXT("counter")));
+				WorkingState.PendingAttack.bFrozenBroken = false;
+				WorkingState.PendingAttack.DamageCalculation = {};
+				WorkingState.PendingAttack.DamageSubstitution = {};
+				WorkingState.PendingAttack.FinalDamageRecipientUnitId = INDEX_NONE;
+				WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::PreHit;
+				AddStageTrace(FName(TEXT("counter_started")), FName(TEXT("counter")));
 			}
 			const FWBUnitState* CounterTarget =
 				WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId);

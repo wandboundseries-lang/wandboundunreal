@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "scope": "suspended_attack_damage",
+  "old_pipeline": ["pre_hit", "damage", "post_hit", "counter"],
+  "new_pipeline": [
+    "pre_hit",
+    "calculate_damage",
+    "substitute_damage",
+    "apply_damage",
+    "post_hit",
+    "counter_eligibility",
+    "counter",
+    "complete"
+  ],
+  "calculation": {
+    "pure": true,
+    "uses_current_attacker_atk": true,
+    "subject": "final_current_defender",
+    "mutates_hp": false,
+    "mutates_armor": false,
+    "removes_frozen": false,
+    "runs_death_resolution": false
+  },
+  "apply": {
+    "only_mutating_stage": true,
+    "armor_subject": "hit_unit",
+    "frozen_subject": "hit_unit",
+    "hp_recipient": "final_damage_recipient",
+    "death_resolution_after_hp": true
+  },
+  "replay": {
+    "schema_version": 1,
+    "action_codec_changed": false,
+    "conditional_private_state": true
+  },
+  "excluded": [
+    "after_damage_trigger_collector",
+    "damage_amplification",
+    "damage_reduction_cards",
+    "damage_reflection",
+    "declaration_time_atk_snapshot"
+  ]
+}

@@ -41,7 +41,8 @@ enum class EWBCardEffectTargetControllerRequirement : uint8
 enum class EWBCardEffectTargetRelationRequirement : uint8
 {
 	Any,
-	OrthogonallyAdjacentToOwnHero
+	OrthogonallyAdjacentToOwnHero,
+	OtherThanOwnHero
 };
 
 struct WANDBOUNDCORE_API FWBCardEffectActivationCondition

@@ -9,9 +9,10 @@ OLD: `redirect_attack_to_adjacent_friendly` changed the pending attack target an
 required the replacement to satisfy attacker range, alignment, walls, and line of
 sight.
 
-NEW: the attack remains targeted at the current Hero defender. A selected,
-controlled, orthogonally adjacent CSN unit receives only the attack's Damage-stage
-result. PostHit and counter context remain attached to the Hero defender.
+NEW: choose any other controlled, live, on-board CSN unit. The attack calculates
+against its final current defender after PreHit Redirects. If that hit unit is the
+protected Hero and the calculation produces HP damage, the selected CSN loses that
+already-calculated HP amount directly. PostHit remains attached to the hit unit.
 
 The global Redirect definition and `RedirectPendingAttack` implementation are not
 repurposed or removed.
@@ -20,26 +21,28 @@ repurposed or removed.
 
 The isolated production-schema fixture defines `effect_react_csn_body_double` as a
 Hand React with RR 2, response-window timing, an own-current-Hero-defender source
-condition, a controlled CSN orthogonal-Hero-adjacency target condition, and the
-generic `SubstitutePendingAttackDamageRecipient` payload.
+condition, a controlled CSN `other_than_own_hero` target condition, and the generic
+`RegisterPendingAttackHPDamageSubstitution` payload.
 
 No generic authority branches on the Body Double card id. Faction membership is
 read from `FWBCardDefinition::PublicFactions`.
 
 ## Continuation Semantics
 
-`FWBPendingAttackState::DamageRecipientUnitId` is continuation-bound private state.
-It does not change defender, original defender, defender tile, declaration id,
-continuation id, or reaction target.
+`FWBPendingAttackState::DamageSubstitution` stores protected and substitute unit
+ids. `DamageCalculation` separately stores hit identity, raw attack damage, Armor
+outcome, calculated HP damage, Frozen break, and prevention. Registration does not
+change defender, original defender, declaration, continuation, or reaction target.
 
 Generic application requires a live pending PreHit attack, exact continuation id,
 and a live on-board recipient. The latest successfully resolved substitution wins.
-Damage uses the recipient's current Armor and Frozen state without any attack
-geometry recheck. The substitution clears after Damage resolution.
+CalculateDamage is pure for HP, Armor, Frozen, and removal. ApplyDamage consumes the
+hit unit's Armor or removes its Frozen status. A transferred HP amount bypasses the
+substitute's Armor and does not remove substitute Frozen.
 
 If the selected unit disappears before the effect resolves, immutable-target
 validation fails closed. If it disappears after successful substitution but before
-Damage, resolution emits `pending_attack_damage_recipient_fallback` and applies the
+Damage, resolution emits `pending_attack_damage_substitution_fallback` and applies the
 ordinary attack to the current defender. Defender removal continues to use existing
 attack cancellation rules.
 
@@ -49,24 +52,22 @@ attack cancellation rules.
   not set the recipient. A negated Negate permits normal Body Double resolution.
 - Prevent: successful prevention still prevents the attack after substitution.
 - Multiple substitutions: latest successful resolution replaces the earlier one.
-- Move/status/Armor changes: target eligibility is checked when selected; after
-  resolution, current recipient state is used at Damage and adjacency is not
-  rechecked.
+- Move/status/Armor changes: target eligibility is checked when selected. No
+  adjacency, range, line-of-sight, alignment, or wall relationship is required.
 - NPC and counter attacks: the generic operation is authority-neutral. Typed Body
   Double legality depends only on a current own Hero defender during PreHit.
 
 ## Redirect Cross-Interaction
 
-Tracked canon does not establish whether a true Redirect after a successful damage
-substitution clears or preserves that substitution. This pass does not modify
-Redirect to guess. The unresolved ordering remains fail-closed at the card-design
-boundary: no production fixture combines the two effects, and no Body Double
-special case was added to Redirect authority.
+True Redirect changes the defender before calculation. Redirect away from the Hero
+makes Body Double inert; the redirected unit is hit and damaged normally. If later
+Redirects leave the Hero as final defender, Body Double may substitute. Intermediate
+targets do not matter and generic Redirect legality remains unchanged.
 
 ## Privacy and Replay
 
-The active recipient is included in the private canonical state digest only while
-present. Replay schema remains 1 and `WBActionCodec` is unchanged. Public receipts
+Active substitution and calculation state are conditionally included in the
+private canonical state digest. Replay schema remains 1 and `WBActionCodec` is unchanged. Public receipts
 remain eight fields and exclude card instance alternatives, continuations, state
 digests, and trace digests. Core traces use generic substitution terminology.
 

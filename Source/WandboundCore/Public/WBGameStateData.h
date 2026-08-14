@@ -122,7 +122,11 @@ enum class EWBAttackContinuationStage : uint8
 	Damage,
 	PostHit,
 	Counter,
-	Complete
+	Complete,
+	CalculateDamage,
+	SubstituteDamage,
+	ApplyDamage,
+	CounterEligibility
 };
 
 enum class EWBAttackAuthorityKind : uint8
@@ -133,6 +137,27 @@ enum class EWBAttackAuthorityKind : uint8
 
 struct WANDBOUNDCORE_API FWBPendingAttackState
 {
+	struct FDamageCalculation
+	{
+		bool bValid = false;
+		int32 HitUnitId = INDEX_NONE;
+		int32 RawAttackDamage = 0;
+		int32 PreviousHP = 0;
+		int32 PreviousArmor = 0;
+		int32 CalculatedArmor = 0;
+		int32 ArmorAbsorbedAmount = 0;
+		int32 CalculatedHPDamage = 0;
+		bool bFrozenBreak = false;
+		bool bPrevented = false;
+	};
+
+	struct FDamageSubstitution
+	{
+		bool bActive = false;
+		int32 ProtectedUnitId = INDEX_NONE;
+		int32 SubstituteUnitId = INDEX_NONE;
+	};
+
 	bool bActive = false;
 	EWBAttackAuthorityKind AuthorityKind = EWBAttackAuthorityKind::Player;
 	EWBAttackContinuationStage Stage = EWBAttackContinuationStage::None;
@@ -140,7 +165,9 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	int32 DefenderUnitId = -1;
 	int32 OriginalAttackerUnitId = -1;
 	int32 OriginalDefenderUnitId = -1;
-	int32 DamageRecipientUnitId = INDEX_NONE;
+	FDamageCalculation DamageCalculation;
+	FDamageSubstitution DamageSubstitution;
+	int32 FinalDamageRecipientUnitId = INDEX_NONE;
 	int32 AttackingPlayerId = -1;
 	FWBTile AttackerTile;
 	FWBTile DefenderTile;

@@ -1,7 +1,7 @@
 {
   "bundle_schema_version": 1,
   "carddb_version": "csn_body_double_fixture_v1",
-  "source_version": "body_double_damage_substitution_v1",
+  "source_version": "body_double_hp_damage_substitution_v2",
   "bundle_kind": "test",
   "metadata": {
     "notes": "Authoritative Body Double text supersedes historical Godot redirect behavior.",
@@ -22,6 +22,24 @@
       "movement": { "pattern": "orthogonal_adjacent" },
       "attack": { "pattern": "orthogonal_line", "range": 0 },
       "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" }
+	  ,"activated_effects": [
+		{
+		  "effect_id": "fixture_set_armor",
+		  "public_label": "Set Armor",
+		  "target_requirement": "unit",
+		  "source_gate": {
+			"required_zone": "board",
+			"timing": "normal_turn_priority",
+			"requires_source_unit": true,
+			"requires_source_unit_ownership": true,
+			"once_per_turn": false
+		  },
+		  "payloads": [
+			{ "type": "armor_effect", "operation": "set_max_armor", "amount": 2, "target": "selected" },
+			{ "type": "armor_effect", "operation": "set_current_armor", "amount": 2, "target": "selected" }
+		  ]
+		}
+	  ]
     },
     {
       "schema_version": 1,
@@ -48,7 +66,7 @@
       "factions": ["wandwright"],
       "tags": ["fixture"],
       "source_manifest": "bundle_manifest.json",
-      "stats": { "hp": 8, "atk": 3, "ar": 8, "rl": 1 },
+      "stats": { "hp": 8, "atk": 5, "ar": 8, "rl": 1 },
       "movement": { "pattern": "orthogonal_adjacent" },
       "attack": { "pattern": "orthogonal_line", "range": 8 }
     },
@@ -65,13 +83,31 @@
       "stats": { "hp": 8, "atk": 1, "ar": 1, "rl": 1 },
       "movement": { "pattern": "orthogonal_adjacent" },
       "attack": { "pattern": "orthogonal_line", "range": 1 }
+	  ,"activated_effects": [
+		{
+		  "effect_id": "fixture_set_armor",
+		  "public_label": "Set Armor",
+		  "target_requirement": "unit",
+		  "source_gate": {
+			"required_zone": "board",
+			"timing": "normal_turn_priority",
+			"requires_source_unit": true,
+			"requires_source_unit_ownership": true,
+			"once_per_turn": false
+		  },
+		  "payloads": [
+			{ "type": "armor_effect", "operation": "set_max_armor", "amount": 7, "target": "selected" },
+			{ "type": "armor_effect", "operation": "set_current_armor", "amount": 7, "target": "selected" }
+		  ]
+		}
+	  ]
     },
     {
       "schema_version": 1,
       "card_id": "effect_react_csn_body_double",
       "public_name": "CSN Body Double",
       "kind": "action",
-      "public_text": "When your Hero is attacked, choose 1 CSN unit you control adjacent to your Hero. That unit takes the damage from that attack instead.",
+      "public_text": "When your Hero is attacked, choose 1 other CSN unit you control. If that attack would deal damage to your Hero, that unit takes that damage instead.",
       "public_category": "Effect React",
       "factions": ["csn"],
       "tags": ["react"],
@@ -97,11 +133,11 @@
             "attack_defender": "own_hero_current_defender",
             "target_controller": "self",
             "target_faction": "csn",
-            "target_relation": "orthogonally_adjacent_to_own_hero"
+            "target_relation": "other_than_own_hero"
           },
           "payloads": [
             {
-              "type": "substitute_pending_attack_damage_recipient",
+              "type": "register_pending_attack_hp_damage_substitution",
               "target": "selected"
             }
           ]

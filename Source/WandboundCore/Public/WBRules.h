@@ -50,10 +50,10 @@ public:
 		const FWBGameStateData& State,
 		const FString& PendingAttackContinuationId,
 		int32 NewTargetUnitId);
-	static FWBActionQueryResult CanSubstitutePendingAttackDamageRecipient(
+	static FWBActionQueryResult CanRegisterPendingAttackDamageSubstitution(
 		const FWBGameStateData& State,
 		const FString& PendingAttackContinuationId,
-		int32 NewDamageRecipientUnitId);
+		int32 SubstituteUnitId);
 	static FWBActionQueryResult CanResolveCounterattack(const FWBGameStateData& State);
 	static FWBActionQueryResult CanResolveCounterattack(
 		const FWBGameStateData& State,

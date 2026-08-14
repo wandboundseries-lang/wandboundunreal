@@ -16,15 +16,18 @@ public:
 	static FWBApplyActionResult ApplyNPCMove(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyAttackDeclare(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyNPCAttackDeclare(FWBGameStateData& State, const FWBAction& Action);
+	static FWBApplyActionResult CalculatePendingAttackDamage(FWBGameStateData& State);
+	static FWBApplyActionResult ResolvePendingAttackDamageSubstitution(FWBGameStateData& State);
+	static FWBApplyActionResult ApplyCalculatedPendingAttackDamage(FWBGameStateData& State, bool bPreservePendingAttack = false);
 	static FWBApplyActionResult ApplyPendingAttackDamage(FWBGameStateData& State, bool bPreservePendingAttack = false);
 	static FWBApplyActionResult ApplyPendingAttackRedirect(
 		FWBGameStateData& State,
 		const FString& PendingAttackContinuationId,
 		int32 NewTargetUnitId);
-	static FWBApplyActionResult ApplyPendingAttackDamageRecipientSubstitution(
+	static FWBApplyActionResult ApplyPendingAttackDamageSubstitutionRegistration(
 		FWBGameStateData& State,
 		const FString& PendingAttackContinuationId,
-		int32 NewDamageRecipientUnitId);
+		int32 SubstituteUnitId);
 	static FWBApplyActionResult ApplyZeroHPDeathRemoval(FWBGameStateData& State);
 	static FWBApplyActionResult ApplyEndTurn(FWBGameStateData& State, const FWBAction& Action);
 	static FWBApplyActionResult ApplyPass(FWBGameStateData& State, const FWBAction& Action);

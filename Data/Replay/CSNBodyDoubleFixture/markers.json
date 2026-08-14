@@ -1,7 +1,7 @@
 {
   "bundle_schema_version": 1,
   "carddb_version": "csn_body_double_fixture_v1",
-  "source_version": "body_double_damage_substitution_v1",
+  "source_version": "body_double_hp_damage_substitution_v2",
   "bundle_kind": "test",
   "metadata": { "notes": "Synthetic setup markers.", "test_only": true },
   "cards": [

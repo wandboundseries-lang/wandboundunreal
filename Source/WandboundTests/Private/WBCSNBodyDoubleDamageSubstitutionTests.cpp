@@ -56,8 +56,8 @@ FWBGameStateData MakeState()
 
 	State.AddUnitForTest(MakeUnit(10, 0, TEXT("attacker"), FWBTile(4, 4), 8, 3));
 	State.AddUnitForTest(MakeUnit(20, 1, TEXT("hero"), FWBTile(4, 1), 8));
-	State.AddUnitForTest(MakeUnit(30, 1, TEXT("csn"), FWBTile(5, 1), 8));
-	State.AddUnitForTest(MakeUnit(31, 1, TEXT("csn"), FWBTile(3, 1), 8));
+	State.AddUnitForTest(MakeUnit(30, 1, TEXT("csn"), FWBTile(0, 8), 8));
+	State.AddUnitForTest(MakeUnit(31, 1, TEXT("csn"), FWBTile(8, 8), 8));
 
 	FWBPendingAttackState Pending;
 	Pending.bActive = true;
@@ -102,15 +102,15 @@ bool FWBCSNBodyDoubleGenericLegalityTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
 	TestTrue(TEXT("Live recipient accepted"),
-		WBRules::CanSubstitutePendingAttackDamageRecipient(
+		WBRules::CanRegisterPendingAttackDamageSubstitution(
 			State, TEXT("body_double_continuation"), 30).bOk);
 	TestEqual(TEXT("Stale continuation denied"),
-		WBRules::CanSubstitutePendingAttackDamageRecipient(
+		WBRules::CanRegisterPendingAttackDamageSubstitution(
 			State, TEXT("stale"), 30).Reason,
 		FString(TEXT("pending_attack_target_mismatch")));
 	State.GetMutableUnitById(30)->RemoveUnitFromBoard();
 	TestEqual(TEXT("Removed recipient denied"),
-		WBRules::CanSubstitutePendingAttackDamageRecipient(
+		WBRules::CanRegisterPendingAttackDamageSubstitution(
 			State, TEXT("body_double_continuation"), 30).Reason,
 		FString(TEXT("damage_recipient_removed")));
 	return true;
@@ -122,20 +122,23 @@ bool FWBCSNBodyDoubleIdentityAndLatestWinsTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
 	const FWBApplyActionResult First =
-		WBEffectRunner::ApplyPendingAttackDamageRecipientSubstitution(
+		WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
 			State, TEXT("body_double_continuation"), 30);
 	const FWBApplyActionResult Second =
-		WBEffectRunner::ApplyPendingAttackDamageRecipientSubstitution(
+		WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
 			State, TEXT("body_double_continuation"), 31);
 	TestTrue(TEXT("First substitution succeeds"), First.bOk);
 	TestTrue(TEXT("Second substitution succeeds"), Second.bOk);
-	TestEqual(TEXT("Latest recipient wins"), State.PendingAttack.DamageRecipientUnitId, 31);
+	TestEqual(TEXT("Latest recipient wins"),
+		State.PendingAttack.DamageSubstitution.SubstituteUnitId, 31);
+	TestEqual(TEXT("Protected unit is captured at resolution"),
+		State.PendingAttack.DamageSubstitution.ProtectedUnitId, 20);
 	TestEqual(TEXT("Defender remains Hero"), State.PendingAttack.DefenderUnitId, 20);
 	TestEqual(TEXT("Original defender remains Hero"), State.PendingAttack.OriginalDefenderUnitId, 20);
 	TestEqual(TEXT("Reaction target remains Hero"), State.ReactionWindow.TargetUnitId, 20);
 	const FWBTraceEvent* Trace = FindTrace(
 		Second.TraceEvents,
-		FName(TEXT("pending_attack_damage_recipient_substituted")));
+		FName(TEXT("pending_attack_damage_substitution_registered")));
 	TestNotNull(TEXT("Generic substitution trace emitted"), Trace);
 	if (Trace != nullptr)
 	{
@@ -147,23 +150,46 @@ bool FWBCSNBodyDoubleIdentityAndLatestWinsTest::RunTest(const FString&)
 }
 
 WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleDamageArmorTest,
-	"Wandbound.CSNBodyDouble.Damage.RecipientArmorAndHeroUntouched")
+	"Wandbound.CSNBodyDouble.Damage.HeroArmorCalculatedBeforeSubstituteArmorIgnored")
 bool FWBCSNBodyDoubleDamageArmorTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
-	State.GetMutableUnitById(30)->SetArmorForTest(2, 2);
+	State.GetMutableUnitById(20)->SetArmorForTest(2, 2);
+	State.GetMutableUnitById(30)->SetArmorForTest(7, 7);
 	TestTrue(TEXT("Substitution succeeds"),
-		WBEffectRunner::ApplyPendingAttackDamageRecipientSubstitution(
+		WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
 			State, TEXT("body_double_continuation"), 30).bOk);
-	State.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
+	const int32 HeroHPBefore = State.GetUnitById(20)->HP;
+	const int32 HeroArmorBefore = State.GetUnitById(20)->GetCurrentArmor();
+	const int32 SubstituteHPBefore = State.GetUnitById(30)->HP;
+	const int32 SubstituteArmorBefore = State.GetUnitById(30)->GetCurrentArmor();
+	State.PendingAttack.Stage = EWBAttackContinuationStage::CalculateDamage;
+	const FWBApplyActionResult Calculation =
+		WBEffectRunner::CalculatePendingAttackDamage(State);
+	TestTrue(TEXT("Calculation succeeds"), Calculation.bOk);
+	TestEqual(TEXT("Calculation hit unit is Hero"),
+		State.PendingAttack.DamageCalculation.HitUnitId, 20);
+	TestEqual(TEXT("Hero armor determines transferred HP damage"),
+		State.PendingAttack.DamageCalculation.CalculatedHPDamage, 1);
+	TestEqual(TEXT("Calculation does not mutate Hero HP"),
+		State.GetUnitById(20)->HP, HeroHPBefore);
+	TestEqual(TEXT("Calculation does not mutate Hero armor"),
+		State.GetUnitById(20)->GetCurrentArmor(), HeroArmorBefore);
+	TestTrue(TEXT("Substitute stage succeeds"),
+		WBEffectRunner::ResolvePendingAttackDamageSubstitution(State).bOk);
 	const FWBApplyActionResult Damage =
-		WBEffectRunner::ApplyPendingAttackDamage(State, true);
+		WBEffectRunner::ApplyCalculatedPendingAttackDamage(State, true);
 	TestTrue(TEXT("Damage resolves"), Damage.bOk);
-	TestEqual(TEXT("Hero HP unchanged"), State.GetUnitById(20)->HP, 8);
-	TestEqual(TEXT("Recipient armor consumed"), State.GetUnitById(30)->GetCurrentArmor(), 0);
-	TestEqual(TEXT("Recipient takes remaining HP damage"), State.GetUnitById(30)->HP, 7);
+	TestEqual(TEXT("Hero HP unchanged"), State.GetUnitById(20)->HP, HeroHPBefore);
+	TestEqual(TEXT("Hero armor is consumed at ApplyDamage"),
+		State.GetUnitById(20)->GetCurrentArmor(), 0);
+	TestEqual(TEXT("Substitute armor is ignored"),
+		State.GetUnitById(30)->GetCurrentArmor(), SubstituteArmorBefore);
+	TestEqual(TEXT("Substitute takes exact calculated HP damage"),
+		State.GetUnitById(30)->HP, SubstituteHPBefore - 1);
 	TestEqual(TEXT("PostHit defender remains Hero"), State.PendingAttack.DefenderUnitId, 20);
-	TestEqual(TEXT("Substitution clears after damage"), State.PendingAttack.DamageRecipientUnitId, INDEX_NONE);
+	TestEqual(TEXT("Final recipient records substitute"),
+		State.PendingAttack.FinalDamageRecipientUnitId, 30);
 	const FWBTraceEvent* Trace = FindTrace(
 		Damage.TraceEvents, FName(TEXT("attack_damage_resolved")));
 	TestNotNull(TEXT("Damage trace emitted"), Trace);
@@ -176,23 +202,23 @@ bool FWBCSNBodyDoubleDamageArmorTest::RunTest(const FString&)
 }
 
 WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleFrozenTest,
-	"Wandbound.CSNBodyDouble.Damage.RecipientFrozenOwnsResolution")
+	"Wandbound.CSNBodyDouble.Damage.HitFrozenBreaksSubstituteFrozenIgnored")
 bool FWBCSNBodyDoubleFrozenTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
 	State.GetMutableUnitById(20)->AddStatus(FName(TEXT("Frozen")), 1);
 	State.GetMutableUnitById(30)->AddStatus(FName(TEXT("Frozen")), 1);
-	WBEffectRunner::ApplyPendingAttackDamageRecipientSubstitution(
+	WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
 		State, TEXT("body_double_continuation"), 30);
 	State.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
 	const FWBApplyActionResult Damage =
 		WBEffectRunner::ApplyPendingAttackDamage(State, true);
 	TestTrue(TEXT("Frozen resolution succeeds"), Damage.bOk);
-	TestFalse(TEXT("Recipient Frozen breaks"), State.GetUnitById(30)->HasStatus(FName(TEXT("Frozen"))));
-	TestTrue(TEXT("Hero Frozen remains"), State.GetUnitById(20)->HasStatus(FName(TEXT("Frozen"))));
+	TestTrue(TEXT("Recipient Frozen remains"), State.GetUnitById(30)->HasStatus(FName(TEXT("Frozen"))));
+	TestFalse(TEXT("Hero Frozen breaks"), State.GetUnitById(20)->HasStatus(FName(TEXT("Frozen"))));
 	TestEqual(TEXT("Recipient takes no HP damage"), State.GetUnitById(30)->HP, 8);
 	TestEqual(TEXT("Hero takes no HP damage"), State.GetUnitById(20)->HP, 8);
-	TestFalse(TEXT("Substitute Frozen does not suppress Hero counter eligibility"),
+	TestTrue(TEXT("Hit-unit Frozen suppresses counter eligibility"),
 		State.PendingAttack.bFrozenBroken);
 	return true;
 }
@@ -202,7 +228,7 @@ WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleFallbackTest,
 bool FWBCSNBodyDoubleFallbackTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
-	WBEffectRunner::ApplyPendingAttackDamageRecipientSubstitution(
+	WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
 		State, TEXT("body_double_continuation"), 30);
 	State.GetMutableUnitById(30)->RemoveUnitFromBoard();
 	State.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
@@ -212,7 +238,7 @@ bool FWBCSNBodyDoubleFallbackTest::RunTest(const FString&)
 	TestEqual(TEXT("Hero receives ordinary damage"), State.GetUnitById(20)->HP, 5);
 	TestNotNull(TEXT("Fallback trace emitted"), FindTrace(
 		Damage.TraceEvents,
-		FName(TEXT("pending_attack_damage_recipient_fallback"))));
+		FName(TEXT("pending_attack_damage_substitution_fallback"))));
 	return true;
 }
 
@@ -222,9 +248,11 @@ bool FWBCSNBodyDoubleDigestTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
 	const FString Before = WBProductionMatchReplay::BuildGameStateDigest(State);
-	State.PendingAttack.DamageRecipientUnitId = 30;
+	State.PendingAttack.DamageSubstitution.bActive = true;
+	State.PendingAttack.DamageSubstitution.ProtectedUnitId = 20;
+	State.PendingAttack.DamageSubstitution.SubstituteUnitId = 30;
 	const FString Active = WBProductionMatchReplay::BuildGameStateDigest(State);
-	State.PendingAttack.DamageRecipientUnitId = INDEX_NONE;
+	State.PendingAttack.DamageSubstitution = {};
 	const FString Restored = WBProductionMatchReplay::BuildGameStateDigest(State);
 	TestNotEqual(TEXT("Active substitution changes digest"), Active, Before);
 	TestEqual(TEXT("Absent substitution preserves baseline digest"), Restored, Before);
@@ -283,7 +311,7 @@ bool FWBCSNBodyDoubleProductionDefinitionTest::RunTest(const FString&)
 		FString(TEXT("csn")));
 	TestEqual(TEXT("Uses damage substitution, not Redirect"),
 		static_cast<int32>(Effect.Payloads[0].Operation),
-		static_cast<int32>(EWBGenericEffectOp::SubstitutePendingAttackDamageRecipient));
+		static_cast<int32>(EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution));
 	return true;
 }
 
@@ -298,8 +326,97 @@ bool FWBCSNBodyDoubleNoRedirectGeometryTest::RunTest(const FString&)
 	TestEqual(TEXT("Attacker alignment blocks Redirect"),
 		Redirect.Reason, FString(TEXT("not_in_line")));
 	TestTrue(TEXT("Damage substitution ignores attacker geometry"),
-		WBRules::CanSubstitutePendingAttackDamageRecipient(
+		WBRules::CanRegisterPendingAttackDamageSubstitution(
 			State, TEXT("body_double_continuation"), 30).bOk);
+	return true;
+}
+
+WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleSubstituteFrozenTransferTest,
+	"Wandbound.CSNBodyDouble.Damage.SubstituteFrozenDoesNotBlockTransferredHPDamage")
+bool FWBCSNBodyDoubleSubstituteFrozenTransferTest::RunTest(const FString&)
+{
+	FWBGameStateData State = MakeState();
+	State.GetMutableUnitById(30)->AddStatus(FName(TEXT("Frozen")), 1);
+	WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
+		State, TEXT("body_double_continuation"), 30);
+	State.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
+	const FWBApplyActionResult Result =
+		WBEffectRunner::ApplyPendingAttackDamage(State, true);
+	TestTrue(TEXT("Attack resolves"), Result.bOk);
+	TestEqual(TEXT("Hero HP is protected"), State.GetUnitById(20)->HP, 8);
+	TestEqual(TEXT("Substitute loses exact damage"), State.GetUnitById(30)->HP, 5);
+	TestTrue(TEXT("Substitute remains Frozen"),
+		State.GetUnitById(30)->HasStatus(FName(TEXT("Frozen"))));
+	return true;
+}
+
+WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleRedirectAwayTest,
+	"Wandbound.CSNBodyDouble.Redirect.RedirectAwayFromHeroMakesSubstitutionInert")
+bool FWBCSNBodyDoubleRedirectAwayTest::RunTest(const FString&)
+{
+	FWBGameStateData State = MakeState();
+	State.AddUnitForTest(MakeUnit(40, 1, TEXT("redirect_target"), FWBTile(4, 5), 8));
+	WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
+		State, TEXT("body_double_continuation"), 30);
+	TestTrue(TEXT("True Redirect resolves"),
+		WBEffectRunner::ApplyPendingAttackRedirect(
+			State, TEXT("body_double_continuation"), 40).bOk);
+	State.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
+	const FWBApplyActionResult Result =
+		WBEffectRunner::ApplyPendingAttackDamage(State, true);
+	TestTrue(TEXT("Redirected attack resolves"), Result.bOk);
+	TestEqual(TEXT("Redirect target takes ordinary damage"), State.GetUnitById(40)->HP, 5);
+	TestEqual(TEXT("Hero remains undamaged"), State.GetUnitById(20)->HP, 8);
+	TestEqual(TEXT("Substitute remains undamaged"), State.GetUnitById(30)->HP, 8);
+	TestEqual(TEXT("Calculation subject is final defender"),
+		State.PendingAttack.DamageCalculation.HitUnitId, 40);
+	TestNull(TEXT("No transfer trace is emitted"), FindTrace(
+		Result.TraceEvents, FName(TEXT("attack_damage_substituted"))));
+	return true;
+}
+
+WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleRedirectBackTest,
+	"Wandbound.CSNBodyDouble.Redirect.RedirectBackToHeroAllowsSubstitution")
+bool FWBCSNBodyDoubleRedirectBackTest::RunTest(const FString&)
+{
+	FWBGameStateData State = MakeState();
+	State.AddUnitForTest(MakeUnit(40, 1, TEXT("redirect_target"), FWBTile(4, 5), 8));
+	WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
+		State, TEXT("body_double_continuation"), 30);
+	WBEffectRunner::ApplyPendingAttackRedirect(
+		State, TEXT("body_double_continuation"), 40);
+	TestTrue(TEXT("Redirect back resolves"),
+		WBEffectRunner::ApplyPendingAttackRedirect(
+			State, TEXT("body_double_continuation"), 20).bOk);
+	State.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
+	const FWBApplyActionResult Result =
+		WBEffectRunner::ApplyPendingAttackDamage(State, true);
+	TestTrue(TEXT("Attack resolves"), Result.bOk);
+	TestEqual(TEXT("Hero remains undamaged"), State.GetUnitById(20)->HP, 8);
+	TestEqual(TEXT("Substitute receives transferred damage"), State.GetUnitById(30)->HP, 5);
+	TestEqual(TEXT("Final calculation subject is Hero"),
+		State.PendingAttack.DamageCalculation.HitUnitId, 20);
+	return true;
+}
+
+WB_BODY_DOUBLE_TEST(FWBCSNBodyDoublePreventTest,
+	"Wandbound.CSNBodyDouble.Damage.PreventedAttackProducesNoTransfer")
+bool FWBCSNBodyDoublePreventTest::RunTest(const FString&)
+{
+	FWBGameStateData State = MakeState();
+	WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistration(
+		State, TEXT("body_double_continuation"), 30);
+	State.PendingAttack.bPrevented = true;
+	State.PendingAttack.Stage = EWBAttackContinuationStage::Damage;
+	const FWBApplyActionResult Result =
+		WBEffectRunner::ApplyPendingAttackDamage(State, true);
+	TestTrue(TEXT("Prevented attack resolves automatically"), Result.bOk);
+	TestTrue(TEXT("Calculation records prevent"),
+		State.PendingAttack.DamageCalculation.bPrevented);
+	TestEqual(TEXT("Prevent produces zero HP damage"),
+		State.PendingAttack.DamageCalculation.CalculatedHPDamage, 0);
+	TestEqual(TEXT("Hero HP unchanged"), State.GetUnitById(20)->HP, 8);
+	TestEqual(TEXT("Substitute HP unchanged"), State.GetUnitById(30)->HP, 8);
 	return true;
 }
 

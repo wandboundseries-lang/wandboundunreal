@@ -80,12 +80,35 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendInt(Out, TEXT("reaction.target_unit"), State.ReactionWindow.TargetUnitId);
 	}
 	if (State.HasPendingAttack()
-		&& State.PendingAttack.DamageRecipientUnitId != INDEX_NONE)
+		&& State.PendingAttack.DamageSubstitution.bActive)
 	{
 		AppendInt(
 			Out,
-			TEXT("attack.damage_recipient"),
-			State.PendingAttack.DamageRecipientUnitId);
+			TEXT("attack.damage_substitution.protected"),
+			State.PendingAttack.DamageSubstitution.ProtectedUnitId);
+		AppendInt(
+			Out,
+			TEXT("attack.damage_substitution.substitute"),
+			State.PendingAttack.DamageSubstitution.SubstituteUnitId);
+	}
+	if (State.HasPendingAttack()
+		&& State.PendingAttack.DamageCalculation.bValid)
+	{
+		const FWBPendingAttackState::FDamageCalculation& Calculation =
+			State.PendingAttack.DamageCalculation;
+		AppendInt(Out, TEXT("attack.damage.hit"), Calculation.HitUnitId);
+		AppendInt(Out, TEXT("attack.damage.raw"), Calculation.RawAttackDamage);
+		AppendInt(Out, TEXT("attack.damage.previous_hp"), Calculation.PreviousHP);
+		AppendInt(Out, TEXT("attack.damage.previous_armor"), Calculation.PreviousArmor);
+		AppendInt(Out, TEXT("attack.damage.calculated_armor"), Calculation.CalculatedArmor);
+		AppendInt(Out, TEXT("attack.damage.armor_absorbed"), Calculation.ArmorAbsorbedAmount);
+		AppendInt(Out, TEXT("attack.damage.hp"), Calculation.CalculatedHPDamage);
+		AppendBool(Out, TEXT("attack.damage.frozen"), Calculation.bFrozenBreak);
+		AppendBool(Out, TEXT("attack.damage.prevented"), Calculation.bPrevented);
+		AppendInt(
+			Out,
+			TEXT("attack.damage.final_recipient"),
+			State.PendingAttack.FinalDamageRecipientUnitId);
 	}
 	AppendBool(Out, TEXT("game_over"), State.bGameOver);
 	AppendInt(Out, TEXT("winner"), State.WinnerPlayerId);

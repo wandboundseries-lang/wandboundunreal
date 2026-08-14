@@ -53,6 +53,15 @@ public:
 		const FWBGameStateData& State,
 		const FWBDamageRequest& Request);
 
+	static FWBDamageResolutionResult CalculateDamageRequest(
+		const FWBGameStateData& State,
+		const FWBDamageRequest& Request);
+
+	static FWBDamageResolutionResult ApplyCalculatedDamage(
+		FWBGameStateData& State,
+		const FWBDamageResolutionResult& Calculation,
+		int32 HPDamageRecipientUnitId = INDEX_NONE);
+
 	static FWBDamageResolutionResult ResolveDamageRequest(
 		FWBGameStateData& State,
 		const FWBDamageRequest& Request);

@@ -14,27 +14,29 @@
     "attack_defender": "own_hero_current_defender",
     "target_controller": "self",
     "target_faction": "csn",
-    "target_relation": "orthogonally_adjacent_to_own_hero",
-    "operation": "substitute_pending_attack_damage_recipient"
+    "target_relation": "other_than_own_hero",
+    "operation": "register_pending_attack_hp_damage_substitution"
   },
   "invariants": {
     "defender_unchanged": true,
     "original_defender_unchanged": true,
     "reaction_target_unchanged": true,
     "attack_geometry_rechecked_for_recipient": false,
-    "current_recipient_armor_and_frozen_used": true,
+    "calculation_subject_is_final_defender": true,
+    "substitute_armor_ignored": true,
+    "substitute_frozen_ignored": true,
     "removed_after_resolution_falls_back_to_defender": true,
     "latest_successful_substitution_wins": true
   },
   "redirect": {
     "generic_operation_changed": false,
     "body_double_uses_redirect": false,
-    "post_substitution_redirect_semantics": "canon_unresolved_not_invented"
+    "post_substitution_redirect_semantics": "final_hit_unit_must_equal_protected_unit"
   },
   "replay": {
     "schema_version": 1,
     "action_codec_changed": false,
-    "private_digest_active_field": "attack.damage_recipient",
+    "private_digest_active_field": "attack.damage_substitution",
     "field_omitted_when_absent": true
   },
   "privacy": {

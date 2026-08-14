@@ -37,6 +37,38 @@ const FWBMatchLegalAction* FindBodyDoubleSummon(
 	});
 }
 
+const FWBMatchLegalAction* FindBodyDoubleArmorSetup(
+	const TArray<FWBMatchLegalAction>& Actions,
+	const FString& SourceCardId,
+	const int32 TargetUnitId)
+{
+	return Actions.FindByPredicate(
+		[&SourceCardId, TargetUnitId](const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::Activation
+				&& Action.ActivationCommand.Source.SourceCardId == SourceCardId
+				&& Action.ActivationCommand.Source.SourceEffectId
+					== TEXT("fixture_set_armor")
+				&& Action.ActivationCommand.EffectRequest.Target.TargetUnitId
+					== TargetUnitId;
+		});
+}
+
+const FWBMatchLegalAction* FindBodyDoubleMove(
+	const TArray<FWBMatchLegalAction>& Actions,
+	const int32 SourceUnitId,
+	const FWBTile TargetTile)
+{
+	return Actions.FindByPredicate(
+		[SourceUnitId, TargetTile](const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::CoreAction
+				&& Action.CoreAction.Type == EWBActionType::Move
+				&& Action.CoreAction.SourceUnitId == SourceUnitId
+				&& Action.CoreAction.ToTile == TargetTile;
+		});
+}
+
 bool SubmitBodyDouble(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
@@ -203,13 +235,33 @@ FWBProductionCSNBodyDoubleSmokeResult WBProductionCSNBodyDoubleSmoke::Run(
 	if (AttackerSummon == nullptr
 		|| !SubmitBodyDouble(
 			Coordinator, Recorder, *AttackerSummon, Operation, Result.Reason)
-		|| !PassBodyDoubleResponse(Coordinator, Recorder, Result.Reason)
-		|| !EndBodyDoubleTurn(Coordinator, Recorder, Result.Reason))
+		|| !PassBodyDoubleResponse(Coordinator, Recorder, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty())
 		{
 			Result.Reason = TEXT("csn_body_double_attacker_summon_missing");
 		}
+		return Result;
+	}
+	const FWBPlayerStateData* SetupPlayerOne =
+		Coordinator.GetState().GetPlayerById(1);
+	const FWBMatchLegalActionGenerationResult ArmorHeroLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* ArmorHero = SetupPlayerOne != nullptr
+		? FindBodyDoubleArmorSetup(
+			ArmorHeroLegal.Actions,
+			TEXT("body_double_fixture_hero_a"),
+			SetupPlayerOne->HeroUnitId)
+		: nullptr;
+	if (ArmorHero == nullptr
+		|| !SubmitBodyDouble(
+			Coordinator, Recorder, *ArmorHero, Operation, Result.Reason)
+		|| !PassBodyDoubleResponse(Coordinator, Recorder, Result.Reason)
+		|| !EndBodyDoubleTurn(Coordinator, Recorder, Result.Reason))
+	{
+		Result.Reason = Result.Reason.IsEmpty()
+			? FString(TEXT("csn_body_double_hero_armor_setup_missing"))
+			: Result.Reason;
 		return Result;
 	}
 
@@ -224,8 +276,7 @@ FWBProductionCSNBodyDoubleSmokeResult WBProductionCSNBodyDoubleSmoke::Run(
 	if (CSNSummon == nullptr
 		|| !SubmitBodyDouble(
 			Coordinator, Recorder, *CSNSummon, Operation, Result.Reason)
-		|| !PassBodyDoubleResponse(Coordinator, Recorder, Result.Reason)
-		|| !EndBodyDoubleTurn(Coordinator, Recorder, Result.Reason))
+		|| !PassBodyDoubleResponse(Coordinator, Recorder, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty())
 		{
@@ -253,11 +304,45 @@ FWBProductionCSNBodyDoubleSmokeResult WBProductionCSNBodyDoubleSmoke::Run(
 		Result.Reason = TEXT("csn_body_double_participant_missing");
 		return Result;
 	}
+	const FWBMatchLegalActionGenerationResult ArmorCSNLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* ArmorCSN = FindBodyDoubleArmorSetup(
+		ArmorCSNLegal.Actions, TEXT("body_double_fixture_csn"), Recipient->UnitId);
+	if (ArmorCSN == nullptr
+		|| !SubmitBodyDouble(
+			Coordinator, Recorder, *ArmorCSN, Operation, Result.Reason)
+		|| !PassBodyDoubleResponse(Coordinator, Recorder, Result.Reason))
+	{
+		Result.Reason = Result.Reason.IsEmpty()
+			? FString(TEXT("csn_body_double_substitute_armor_setup_missing"))
+			: Result.Reason;
+		return Result;
+	}
+	const FWBMatchLegalActionGenerationResult MoveLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* MoveRemote = FindBodyDoubleMove(
+		MoveLegal.Actions, Recipient->UnitId, FWBTile(5, 1));
+	if (MoveRemote == nullptr
+		|| !SubmitBodyDouble(
+			Coordinator, Recorder, *MoveRemote, Operation, Result.Reason)
+		|| !PassBodyDoubleResponse(Coordinator, Recorder, Result.Reason)
+		|| !EndBodyDoubleTurn(Coordinator, Recorder, Result.Reason))
+	{
+		Result.Reason = Result.Reason.IsEmpty()
+			? FString(TEXT("csn_body_double_remote_move_missing"))
+			: Result.Reason;
+		return Result;
+	}
+	Attacker = Coordinator.GetState().GetUnitById(Attacker->UnitId);
+	Recipient = Coordinator.GetState().GetUnitById(Recipient->UnitId);
+	Hero = Coordinator.GetState().GetUnitById(Hero->UnitId);
 	const int32 AttackerUnitId = Attacker->UnitId;
 	const int32 RecipientUnitId = Recipient->UnitId;
 	const int32 HeroUnitId = Hero->UnitId;
 	const int32 HeroHPBefore = Hero->HP;
+	const int32 HeroArmorBefore = Hero->GetCurrentArmor();
 	const int32 RecipientHPBefore = Recipient->HP;
+	const int32 RecipientArmorBefore = Recipient->GetCurrentArmor();
 
 	const FWBMatchLegalActionGenerationResult AttackLegal =
 		Coordinator.EnumerateLegalActions();
@@ -311,7 +396,7 @@ FWBProductionCSNBodyDoubleSmokeResult WBProductionCSNBodyDoubleSmoke::Run(
 		[HeroUnitId, RecipientUnitId](const FWBTraceEvent& Event)
 		{
 			return Event.Kind
-					== FName(TEXT("pending_attack_damage_recipient_substituted"))
+					== FName(TEXT("attack_damage_substituted"))
 				&& Event.AttackDefenderUnitId == HeroUnitId
 				&& Event.DamageRecipientUnitId == RecipientUnitId;
 		});
@@ -341,18 +426,22 @@ FWBProductionCSNBodyDoubleSmokeResult WBProductionCSNBodyDoubleSmoke::Run(
 		|| Damage == nullptr
 		|| Hero == nullptr
 		|| Hero->HP != HeroHPBefore
+		|| HeroArmorBefore != 2
+		|| Hero->GetCurrentArmor() != 0
 		|| CostPaid == nullptr
 		|| CostPaid->SourceUnitId != HeroUnitId
 		|| CostPaid->CostAmount != 2
 		|| Discarded == nullptr
 		|| Recipient == nullptr
 		|| Recipient->HP != RecipientHPBefore - 3
+		|| RecipientArmorBefore != 7
+		|| Recipient->GetCurrentArmor() != 7
 		|| CountBodyDoubleAccepted(Coordinator, TEXT("attack:")) != 1
 		|| Coordinator.GetCommittedActionRecords().FilterByPredicate(
 			[](const FWBMatchCommittedActionRecord& Record)
 			{
 				return Record.ActionFamily == TEXT("activate");
-			}).Num() != 1)
+			}).Num() != 3)
 	{
 		Result.Reason = FString::Printf(
 			TEXT("csn_body_double_resolution_mismatch:defender=%d:original=%d:sub=%d:damage=%d:hero_hp=%d/%d:hero_rl=%d:cost=%d:cost_source=%d:recipient_hp=%d/%d:attacks=%d:activations=%d"),

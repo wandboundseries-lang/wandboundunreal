@@ -28,6 +28,7 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 TargetUnitId = -1;
 	int32 PreviousTargetUnitId = -1;
 	int32 AttackDefenderUnitId = -1;
+	int32 HitUnitId = -1;
 	int32 DamageRecipientUnitId = -1;
 	int32 AttacksLeftBefore = -1;
 	int32 AttacksLeftAfter = -1;
@@ -43,6 +44,8 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 ArmorAbsorbedAmount = -1;
 	bool bBypassedArmor = false;
 	int32 HPDamageAmount = -1;
+	int32 ActualHPDamageAmount = -1;
+	bool bFrozenBreak = false;
 	FName DamageCause;
 	int32 HealAmount = -1;
 	int32 EffectiveHealAmount = -1;
