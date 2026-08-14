@@ -97,7 +97,7 @@ Units:
 - x/y tile position
 - HP/max HP
 - ATK/AR
-- RL total/used
+- Base RL, Current RL, RL Used, and Available RL (`rl_total` remains an internal compatibility mirror)
 - attacks left
 - public status ids and turns remaining
 

@@ -105,7 +105,7 @@ The serialized final public board summary includes:
 - unit `x` and `y`
 - HP/max HP
 - ATK/AR
-- RL total/used
+- Base RL, Current RL, RL Used, and Available RL (`rl_total` remains an internal compatibility mirror)
 - attacks left
 - public statuses with turns remaining
 - public normalized wall edges in `walls`

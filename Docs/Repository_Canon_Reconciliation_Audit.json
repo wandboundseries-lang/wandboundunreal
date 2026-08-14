@@ -1,0 +1,79 @@
+{
+  "audit_version": 1,
+  "date": "2026-08-14",
+  "baseline_commit": "e919f5e9736d3c5650dfa9df94038466304d44d3",
+  "conflicts": [
+    {
+      "topic": "first_player_turn_one",
+      "document": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt",
+      "old_wording": "First player cannot attack on the first turn.",
+      "current_authority": "Docs/Wandbound_Game_Start_and_Turn_One_Addendum_v1.md",
+      "reason_newer_rule_wins": "The product-owner-approved addendum explicitly registers and supersedes the blanket attack ban.",
+      "fixed": true,
+      "files_changed": [
+        "Reference/GodotCanon/README.md"
+      ],
+      "tests": [
+        "Wandbound game-start and Turn-1 restriction automation"
+      ]
+    },
+    {
+      "topic": "turn_start_order",
+      "document": "Reference/GodotProject/godotcanon/Wandbound_Rules_Bible_v2_1_FINAL.txt",
+      "old_wording": "Status work precedes draw, MP, and resource refresh.",
+      "current_authority": "Docs/Deterministic_Turn_Start_Implementation_Report.md",
+      "reason_newer_rule_wins": "The later user-validated coordinator sequence and committed tests explicitly establish draw, MP, reset, statuses, then effects.",
+      "fixed": true,
+      "files_changed": [
+        "Docs/Repository_Canon_Reconciliation_Audit.md"
+      ],
+      "tests": [
+        "Wandbound.TurnStart.Order.DrawBeforeMP",
+        "Wandbound.TurnStart.Order.MPBeforeResourceReset",
+        "Wandbound.TurnStart.Order.ResourceResetBeforeStatuses",
+        "Wandbound.TurnStart.Order.StatusesBeforeEffects"
+      ]
+    },
+    {
+      "topic": "rl_terminology",
+      "document": "Repository public summary reports",
+      "old_wording": "RL total/used",
+      "current_authority": "Reference/GodotProject/godotcanon/Wandbound_Canonical_Glossary_v2_1_FINAL.txt",
+      "reason_newer_rule_wins": "The glossary requires Base RL, Current RL, RL Used, and Available RL and bans RL Total from final player-facing text.",
+      "fixed": true,
+      "files_changed": [
+        "Docs/Public_Board_Summary_Hidden_Info_Audit.md",
+        "Docs/Public_Board_Summary_Report.md",
+        "Docs/Runtime_Result_Serialization_Report.md"
+      ],
+      "tests": [
+        "Wandbound public board summary and runtime result serialization automation"
+      ]
+    },
+    {
+      "topic": "body_double",
+      "document": "Historical Godot Redirect behavior",
+      "old_wording": "Adjacent Redirect target with replacement-side combat calculation.",
+      "current_authority": "Docs/CSN_Body_Double_Transfer_Audit.md",
+      "reason_newer_rule_wins": "The newer product-owner card text and committed implementation define HP-damage substitution without adjacency or Redirect.",
+      "fixed": true,
+      "files_changed": [],
+      "tests": [
+        "Wandbound CSN Body Double damage-substitution automation"
+      ]
+    },
+    {
+      "topic": "damage_pipeline_after_damage",
+      "document": "Docs/Attack_Damage_Calculation_Pipeline_Audit.md",
+      "old_wording": "Committed pipeline has no AfterDamage stage.",
+      "current_authority": "Docs/After_Damage_Trigger_Collection_Audit.md",
+      "reason_newer_rule_wins": "AfterDamage is validated but intentionally uncommitted and must not be presented as committed baseline yet.",
+      "fixed": true,
+      "files_changed": [],
+      "tests": [
+        "Wandbound.AfterDamage"
+      ]
+    }
+  ],
+  "unresolved": []
+}
