@@ -109,8 +109,11 @@ FWBPublicUnitBoardSummary BuildPublicUnitSummary(
 	Summary.MaxArmor = Unit.GetMaxArmor();
 	Summary.ATK = Unit.ATK;
 	Summary.AR = Unit.AR;
-	Summary.RLTotal = Unit.RLTotal;
+	Summary.BaseRL = Unit.GetBaseRLForRules();
+	Summary.CurrentRL = Unit.GetCurrentRLForRules();
+	Summary.RLTotal = Summary.CurrentRL;
 	Summary.RLUsed = Unit.RLUsed;
+	Summary.AvailableRL = Summary.CurrentRL - Summary.RLUsed;
 	Summary.AttacksLeft = Unit.AttacksLeft;
 	Summary.Statuses = BuildPublicStatusSummaries(Unit);
 	return Summary;

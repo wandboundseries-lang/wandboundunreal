@@ -23,8 +23,11 @@ struct WANDBOUNDCORE_API FWBPublicUnitBoardSummary
 	int32 MaxArmor = 0;
 	int32 ATK = 0;
 	int32 AR = 0;
+	int32 BaseRL = 0;
+	int32 CurrentRL = 0;
 	int32 RLTotal = 0;
 	int32 RLUsed = 0;
+	int32 AvailableRL = 0;
 	int32 AttacksLeft = 0;
 	TArray<FWBPublicUnitStatusSummary> Statuses;
 };

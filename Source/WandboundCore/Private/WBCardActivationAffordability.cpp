@@ -79,7 +79,7 @@ FWBCardActivationAffordabilityResult WBCardActivationAffordability::QueryFromUni
 	Result.PlayerId = Request.PlayerId;
 	Result.SourceUnitId = Request.SourceUnitId;
 	Result.RequiredRR = Request.RequiredRR;
-	Result.CurrentRL = SourceUnit->RLTotal;
+	Result.CurrentRL = SourceUnit->GetCurrentRLForRules();
 	Result.RLUsed = SourceUnit->RLUsed;
 	Result.AvailableRL = FMath::Max(0, Result.CurrentRL - Result.RLUsed);
 	Result.bAffordable = Result.AvailableRL >= Result.RequiredRR;

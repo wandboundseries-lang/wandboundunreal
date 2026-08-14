@@ -139,6 +139,24 @@ void AddEquipHandoffDeckCard(
 	}
 }
 
+void AddEquipHandoffEquippedWand(
+	FWBGameStateData& State,
+	const FString& InstanceId,
+	const FString& CardId,
+	const int32 UnitId,
+	const FString& SlotId,
+	const int32 EquipOrder)
+{
+	FWBEquippedCardEntry Entry;
+	Entry.Card.InstanceId = InstanceId;
+	Entry.Card.CardId = CardId;
+	Entry.Card.OwnerPlayerId = EquipHandoffViewerId;
+	Entry.EquippedToUnitId = UnitId;
+	Entry.SlotId = SlotId;
+	Entry.EquipOrder = EquipOrder;
+	State.GetMutableCardZoneStateForTest().EquippedCards.Add(Entry);
+}
+
 void AddEquipHandoffMarker(
 	FWBGameStateData& State,
 	const FString& InternalCardId)
@@ -325,7 +343,10 @@ bool FWBProductionEquipExecutionHandoffStaleOptionTest::RunTest(const FString& P
 {
 	FWBGameStateData State = MakeEquipHandoffState();
 	AddEquipHandoffHandCard(State, EquipHandoffViewerId, TEXT("hand_wand"), TEXT("equip_wand"));
-	const FWBCardDefinitionRepository Repository = MakeEquipHandoffRepository({ MakeEquipHandoffWandDefinition(TEXT("equip_wand"), TEXT("Copper Wand"), 2) });
+	const FWBCardDefinitionRepository Repository = MakeEquipHandoffRepository({
+		MakeEquipHandoffWandDefinition(TEXT("equip_wand"), TEXT("Copper Wand"), 2),
+		MakeEquipHandoffWandDefinition(TEXT("already_equipped_wand"), TEXT("Training Wand"), 2)
+	});
 	const FWBProductionSummonEquipDecisionData DecisionData = BuildEquipHandoffDecisionData(State, Repository);
 	const FWBProductionEquipOption* Option = FindEquipHandoffOption(DecisionData, TEXT("hand_wand"));
 	if (!TestNotNull(TEXT("Provider option"), Option))
@@ -333,8 +354,16 @@ bool FWBProductionEquipExecutionHandoffStaleOptionTest::RunTest(const FString& P
 		return false;
 	}
 
+	AddEquipHandoffEquippedWand(
+		State,
+		TEXT("already_equipped_wand_instance"),
+		TEXT("already_equipped_wand"),
+		EquipHandoffHeroUnitId,
+		TEXT("wand"),
+		0);
 	State.GetMutableUnitById(EquipHandoffHeroUnitId)->RLUsed = 2;
 	const int32 BeforeHand = FindEquipHandoffZones(State, EquipHandoffViewerId)->Hand.Num();
+	const int32 BeforeEquipped = State.GetCardZoneState().EquippedCards.Num();
 
 	const FWBProductionEquipExecutionHandoffResult Result =
 		FWBProductionEquipExecutionHandoff().ExecuteEquipFromProviderOption(
@@ -346,7 +375,7 @@ bool FWBProductionEquipExecutionHandoffStaleOptionTest::RunTest(const FString& P
 	TestFalse(TEXT("Stale option rejected by core"), Result.bOk);
 	TestEqual(TEXT("Reason"), Result.Reason, FString(TEXT("insufficient_rl")));
 	TestEqual(TEXT("Hand unchanged"), FindEquipHandoffZones(State, EquipHandoffViewerId)->Hand.Num(), BeforeHand);
-	TestEqual(TEXT("Equipped unchanged"), State.GetCardZoneState().EquippedCards.Num(), 0);
+	TestEqual(TEXT("Equipped unchanged"), State.GetCardZoneState().EquippedCards.Num(), BeforeEquipped);
 	TestEqual(TEXT("RL unchanged"), State.GetUnitById(EquipHandoffHeroUnitId)->RLUsed, 2);
 	return true;
 }

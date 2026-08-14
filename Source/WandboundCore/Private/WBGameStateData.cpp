@@ -102,6 +102,42 @@ bool FWBUnitState::IsUnitOnBoard() const
 	return !bDefeated && !bRemovedFromBoard && X >= 0 && Y >= 0;
 }
 
+int32 FWBUnitState::GetBaseRLForRules() const
+{
+	if (BaseRL != 0 || CurrentRL != 0 || RLTotal == 0)
+	{
+		return BaseRL;
+	}
+
+	return RLTotal;
+}
+
+int32 FWBUnitState::GetCurrentRLForRules() const
+{
+	if (BaseRL != 0 || CurrentRL != 0 || RLTotal == 0)
+	{
+		return CurrentRL;
+	}
+
+	return RLTotal;
+}
+
+int32 FWBUnitState::GetAvailableRLForRules() const
+{
+	return GetCurrentRLForRules() - RLUsed;
+}
+
+void FWBUnitState::SetCanonicalRL(
+	const int32 InBaseRL,
+	const int32 InCurrentRL,
+	const int32 InRLUsed)
+{
+	BaseRL = InBaseRL;
+	CurrentRL = InCurrentRL;
+	RLTotal = InCurrentRL;
+	RLUsed = InRLUsed;
+}
+
 int32 FWBUnitState::GetMaxArmor() const
 {
 	return FMath::Max(MaxArmor, 0);
@@ -340,7 +376,7 @@ void FWBGameStateData::AdvanceTurnBasic()
 	PriorityPlayer = CurrentPlayer;
 	Phase = EWBGamePhase::NormalTurn;
 	TurnNumber += 1;
-	// TODO: MP dice rolls, card draw, and start-of-turn triggers are intentionally outside this deterministic baseline.
+	// Compatibility transition only; the coordinator owns the full turn-start sequence.
 }
 
 bool FWBGameStateData::ResetActionResourcesForPlayer(const int32 PlayerId, FString& OutReason)
@@ -413,15 +449,29 @@ bool FWBGameStateData::ApplyTurnStartMPRollForPlayer(
 	Phase = EWBGamePhase::NormalTurn;
 	Player->LastMPRoll = ExplicitMPRoll;
 	Player->RemainingMP = ExplicitMPRoll;
-	ClearActivationUsageKeysForPlayer(PlayerId);
+	OutReason.Reset();
+	return true;
+}
 
-	if (!ResetActionResourcesForPlayer(PlayerId, OutReason))
+bool FWBGameStateData::ResetTurnStartResourcesForPlayer(
+	const int32 PlayerId,
+	FString& OutReason)
+{
+	if (!IsValidPlayerId(PlayerId))
 	{
+		OutReason = TEXT("bad_player");
+		return false;
+	}
+	if (GetPlayerById(PlayerId) == nullptr)
+	{
+		OutReason = TEXT("missing_player_state");
 		return false;
 	}
 
-	OutReason.Reset();
-	return true;
+	ClearActivationUsageKeysForPlayer(PlayerId);
+	return ResetActionResourcesForPlayer(
+		PlayerId,
+		OutReason);
 }
 
 bool FWBGameStateData::HasActivationUsageKeyThisTurn(const int32 PlayerId, const FString& Key) const

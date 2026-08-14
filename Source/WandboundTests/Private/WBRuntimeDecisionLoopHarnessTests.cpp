@@ -516,7 +516,24 @@ bool FWBRuntimeDecisionLoopHarnessProductionRuntimeSourceGuardTest::RunTest(cons
 	TestTrue(TEXT("Runtime source loads"), LoadRuntimeSource(RuntimeSource));
 	TestFalse(TEXT("Runtime does not generate legal actions"), RuntimeSource.Contains(TEXT("GenerateLegalActions")));
 	TestFalse(TEXT("Runtime does not include WBRules"), RuntimeSource.Contains(TEXT("WBRules")));
-	TestFalse(TEXT("Runtime does not call WBEffectRunner"), RuntimeSource.Contains(TEXT("WBEffectRunner")));
+
+	const FString ActivationExecutionBridgePath = FPaths::Combine(
+		FPaths::ProjectDir(),
+		TEXT("Source"),
+		TEXT("WandboundRuntime"),
+		TEXT("Private"),
+		TEXT("WBRuntimeActivationExecutionBridge.cpp"));
+	FString ActivationExecutionBridgeSource;
+	TestTrue(
+		TEXT("Activation execution bridge source loads"),
+		FFileHelper::LoadFileToString(ActivationExecutionBridgeSource, *ActivationExecutionBridgePath));
+	TestTrue(
+		TEXT("Activation execution bridge delegates to ApplyCardActivationCommand"),
+		ActivationExecutionBridgeSource.Contains(TEXT("WBEffectRunner::ApplyCardActivationCommand")));
+	RuntimeSource = RuntimeSource.Replace(*ActivationExecutionBridgeSource, TEXT(""));
+	TestFalse(
+		TEXT("Runtime outside activation execution bridge does not call WBEffectRunner"),
+		RuntimeSource.Contains(TEXT("WBEffectRunner")));
 	return true;
 }
 

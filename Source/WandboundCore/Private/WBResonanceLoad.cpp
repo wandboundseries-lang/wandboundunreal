@@ -26,7 +26,7 @@ FWBResonanceLoadSummary WBResonanceLoad::BuildUnitLoadSummary(
 	FWBResonanceLoadSummary Summary;
 	Summary.UnitId = Unit->UnitId;
 	Summary.OwnerPlayerId = Unit->OwnerId;
-	Summary.CurrentRL = Unit->RLTotal;
+	Summary.CurrentRL = Unit->GetCurrentRLForRules();
 	Summary.RLUsed = Unit->RLUsed;
 
 	if (!FWBGameStateData::IsValidPlayerId(Unit->OwnerId))
@@ -35,13 +35,13 @@ FWBResonanceLoadSummary WBResonanceLoad::BuildUnitLoadSummary(
 		return Summary;
 	}
 
-	if (Unit->RLTotal < 0 || Unit->RLUsed < 0)
+	if (Summary.CurrentRL < 0 || Unit->RLUsed < 0)
 	{
 		Summary.Reason = TEXT("invalid_rl_state");
 		return Summary;
 	}
 
-	if (Unit->RLUsed > Unit->RLTotal)
+	if (Unit->RLUsed > Summary.CurrentRL)
 	{
 		Summary.Reason = TEXT("overflow_pending");
 		Summary.AvailableRL = 0;
@@ -50,7 +50,7 @@ FWBResonanceLoadSummary WBResonanceLoad::BuildUnitLoadSummary(
 
 	Summary.bOk = true;
 	Summary.Reason = TEXT("success");
-	Summary.AvailableRL = Unit->RLTotal - Unit->RLUsed;
+	Summary.AvailableRL = Summary.CurrentRL - Unit->RLUsed;
 	return Summary;
 }
 

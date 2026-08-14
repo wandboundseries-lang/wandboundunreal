@@ -200,6 +200,23 @@ Bundle validation now applies test-only version and metadata policy diagnostics:
 
 Strict unknown metadata fields still fail with `unknown_metadata_field`. Malformed metadata values fail with `metadata_malformed`.
 
+## Source Version Compatibility Diagnostics
+
+Bundle validation now supports an opt-in test-only compatibility matrix for future importer planning.
+
+Compatibility validation is disabled by default. When enabled, it validates a target source version, directly supported source versions, and explicit source-to-target transitions.
+
+Compatibility diagnostics:
+
+- `source_version_missing`
+- `source_version_unsupported`
+- `source_version_transition_unsupported`
+- `source_version_compatibility_matrix_malformed`
+
+Compatibility failures are bundle diagnostics, so dependency ordering remains empty under the existing invalid-bundle policy.
+
+This is validation only and does not implement migration logic, production import, production loading, zones, or runtime activation behavior.
+
 ## Confirmations
 
 - this remains test-only

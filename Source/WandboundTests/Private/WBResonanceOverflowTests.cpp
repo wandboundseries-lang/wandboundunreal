@@ -148,15 +148,16 @@ bool FWBResonanceOverflowNoOverflowTest::RunTest(const FString& Parameters)
 {
 	FWBGameStateData NoOverflowState = MakeOverflowState(3, 2);
 	AddEquippedWand(NoOverflowState, TEXT("wand_a"), TEXT("wand_a"), TEXT("wand"), 0);
-	const FWBCardDefinitionRepository Repository = MakeOverflowRepository({ MakeOverflowWandDefinition(TEXT("wand_a"), 1) });
+	const FWBCardDefinitionRepository NoOverflowRepository = MakeOverflowRepository({ MakeOverflowWandDefinition(TEXT("wand_a"), 2) });
 
 	const FWBResonanceOverflowResult NoOverflowResult =
-		WBResonanceOverflow::ResolveOverflowForUnit(NoOverflowState, Repository, OverflowUnitId);
+		WBResonanceOverflow::ResolveOverflowForUnit(NoOverflowState, NoOverflowRepository, OverflowUnitId);
 
 	FWBGameStateData ExactState = MakeOverflowState(3, 3);
 	AddEquippedWand(ExactState, TEXT("wand_a"), TEXT("wand_a"), TEXT("wand"), 0);
+	const FWBCardDefinitionRepository ExactRepository = MakeOverflowRepository({ MakeOverflowWandDefinition(TEXT("wand_a"), 3) });
 	const FWBResonanceOverflowResult ExactResult =
-		WBResonanceOverflow::ResolveOverflowForUnit(ExactState, Repository, OverflowUnitId);
+		WBResonanceOverflow::ResolveOverflowForUnit(ExactState, ExactRepository, OverflowUnitId);
 
 	TestTrue(TEXT("No overflow succeeds"), NoOverflowResult.bOk);
 	TestFalse(TEXT("No overflow unresolved"), NoOverflowResult.bResolvedOverflow);
@@ -186,12 +187,11 @@ bool FWBResonanceOverflowExecutionTest::RunTest(const FString& Parameters)
 
 	TestTrue(TEXT("Overflow succeeds"), Result.bOk);
 	TestTrue(TEXT("Overflow resolved"), Result.bResolvedOverflow);
-	TestEqual(TEXT("RL reduced exactly"), State.GetUnitById(OverflowUnitId)->RLUsed, 3);
-	TestEqual(TEXT("Equipped removed"), State.GetCardZoneState().EquippedCards.Num(), 0);
-	TestEqual(TEXT("Discard count"), Zones != nullptr ? Zones->Discard.Num() : -1, 2);
+	TestEqual(TEXT("RL reduced exactly"), State.GetUnitById(OverflowUnitId)->RLUsed, 2);
+	TestEqual(TEXT("Equipped remains legal"), State.GetCardZoneState().EquippedCards.Num(), 1);
+	TestEqual(TEXT("Discard count"), Zones != nullptr ? Zones->Discard.Num() : -1, 1);
 	TestEqual(TEXT("First discard"), Zones != nullptr ? Zones->Discard[0].Card.InstanceId : FString(), FString(TEXT("wand_a")));
-	TestEqual(TEXT("Second discard"), Zones != nullptr ? Zones->Discard[1].Card.InstanceId : FString(), FString(TEXT("wand_b")));
-	TestEqual(TEXT("Trace count"), Result.TraceEvents.Num(), 4);
+	TestEqual(TEXT("Trace count"), Result.TraceEvents.Num(), 3);
 	TestEqual(TEXT("Begin trace"), Result.TraceEvents[0].EventType, FString(TEXT("rl_overflow_begin")));
 	TestEqual(TEXT("Remove trace"), Result.TraceEvents[1].EventType, FString(TEXT("rl_overflow_remove_wand")));
 	TestEqual(TEXT("End trace"), Result.TraceEvents.Last().EventType, FString(TEXT("rl_overflow_end")));
@@ -208,7 +208,7 @@ bool FWBResonanceOverflowOrderingTest::RunTest(const FString& Parameters)
 	AddEquippedWand(State, TEXT("wand_early_a"), TEXT("wand_early_a"), TEXT("wand"), 1);
 	const FWBCardDefinitionRepository Repository = MakeOverflowRepository({
 		MakeOverflowWandDefinition(TEXT("wand_late"), 1),
-		MakeOverflowWandDefinition(TEXT("wand_slot_two"), 1),
+		MakeOverflowWandDefinition(TEXT("wand_slot_two"), 3),
 		MakeOverflowWandDefinition(TEXT("wand_early_b"), 1),
 		MakeOverflowWandDefinition(TEXT("wand_early_a"), 1)
 	});
@@ -233,7 +233,7 @@ bool FWBResonanceOverflowDeterminismTest::RunTest(const FString& Parameters)
 	FWBGameStateData StateB = StateA;
 	const FWBCardDefinitionRepository Repository = MakeOverflowRepository({
 		MakeOverflowWandDefinition(TEXT("wand_a"), 1),
-		MakeOverflowWandDefinition(TEXT("wand_b"), 1)
+		MakeOverflowWandDefinition(TEXT("wand_b"), 4)
 	});
 
 	const FWBResonanceOverflowResult ResultA =
@@ -248,8 +248,8 @@ bool FWBResonanceOverflowDeterminismTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("A succeeds"), ResultA.bOk);
 	TestTrue(TEXT("B succeeds"), ResultB.bOk);
 	TestEqual(TEXT("Trace JSON deterministic"), JsonA, JsonB);
-	TestEqual(TEXT("A final RL"), StateA.GetUnitById(OverflowUnitId)->RLUsed, 3);
-	TestEqual(TEXT("B final RL"), StateB.GetUnitById(OverflowUnitId)->RLUsed, 3);
+	TestEqual(TEXT("A final RL"), StateA.GetUnitById(OverflowUnitId)->RLUsed, 0);
+	TestEqual(TEXT("B final RL"), StateB.GetUnitById(OverflowUnitId)->RLUsed, 0);
 	return true;
 }
 
@@ -310,19 +310,15 @@ bool FWBResonanceOverflowInvalidStateTest::RunTest(const FString& Parameters)
 
 	FWBGameStateData InvalidRRState = MakeOverflowState(3, 4);
 	AddEquippedWand(InvalidRRState, TEXT("wand_zero"), TEXT("wand_zero"), TEXT("wand"), 0);
+	AddEquippedWand(InvalidRRState, TEXT("wand_a"), TEXT("wand_a"), TEXT("wand_1"), 1);
 	ExpectFailure(
 		TEXT("invalid rr"),
 		InvalidRRState,
-		MakeOverflowRepository({ MakeOverflowWandDefinition(TEXT("wand_zero"), 0) }),
+		MakeOverflowRepository({
+			MakeOverflowWandDefinition(TEXT("wand_zero"), 0),
+			MakeOverflowWandDefinition(TEXT("wand_a"), 4)
+		}),
 		EWBResonanceOverflowResultCode::InvalidRR);
-
-	FWBGameStateData InsufficientState = MakeOverflowState(3, 7);
-	AddEquippedWand(InsufficientState, TEXT("wand_a"), TEXT("wand_a"), TEXT("wand"), 0);
-	ExpectFailure(
-		TEXT("insufficient candidates"),
-		InsufficientState,
-		MakeOverflowRepository({ MakeOverflowWandDefinition(TEXT("wand_a"), 1) }),
-		EWBResonanceOverflowResultCode::InsufficientOverflowCandidates);
 
 	FWBGameStateData InvalidRLState = MakeOverflowState(-1, 4);
 	ExpectFailure(

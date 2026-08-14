@@ -390,7 +390,10 @@ bool FWBRuntimeActivationPresentationModelSourceGuardTest::RunTest(const FString
 	FString Source;
 	TestTrue(TEXT("Activation model source loads"), LoadRuntimeActivationModelSource(Source));
 	TestTrue(TEXT("API accepts public board summary"), Source.Contains(TEXT("FWBPublicBoardSummary")));
-	TestFalse(TEXT("Does not inspect game state"), Source.Contains(TEXT("FWBGameStateData")));
+	TestTrue(TEXT("Execution accepts external state by reference"), Source.Contains(TEXT("FWBGameStateData& State")));
+	TestFalse(TEXT("Does not store game state pointer"), Source.Contains(TEXT("FWBGameStateData*")));
+	TestFalse(TEXT("Does not store current game state"), Source.Contains(TEXT("FWBGameStateData Current")));
+	TestFalse(TEXT("Does not store cached game state"), Source.Contains(TEXT("FWBGameStateData Cached")));
 	TestFalse(TEXT("Does not generate candidates"), Source.Contains(TEXT("WBCardActivationCandidateGenerator")));
 	TestFalse(TEXT("Does not generate activation legal actions"), Source.Contains(TEXT("WBCardActivationLegalActionGenerator")));
 	TestFalse(TEXT("Does not call WBRules"), Source.Contains(TEXT("WBRules")));

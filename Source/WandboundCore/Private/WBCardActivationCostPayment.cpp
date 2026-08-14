@@ -47,7 +47,7 @@ FWBCardActivationCostPaymentResult WBCardActivationCostPayment::CanPayCost(
 	FWBCardActivationCostPaymentResult Result;
 	Result.bOk = true;
 	Result.Request = Request;
-	Result.RLTotal = SourceUnit->RLTotal;
+	Result.RLTotal = SourceUnit->GetCurrentRLForRules();
 	Result.PreviousRLUsed = SourceUnit->RLUsed;
 	Result.AvailableRLBefore = FMath::Max(0, Result.RLTotal - Result.PreviousRLUsed);
 

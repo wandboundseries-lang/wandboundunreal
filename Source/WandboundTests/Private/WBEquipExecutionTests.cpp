@@ -273,7 +273,10 @@ bool FWBEquipExecutionDeterministicSlotTest::RunTest(const FString& Parameters)
 	Existing.EquippedToUnitId = EquipHeroUnitId;
 	Existing.SlotId = TEXT("wand");
 	State.GetMutableCardZoneStateForTest().EquippedCards.Add(Existing);
-	const FWBCardDefinitionRepository Repository = MakeEquipRepository({ MakeEquipWandDefinition() });
+	const FWBCardDefinitionRepository Repository = MakeEquipRepository({
+		MakeEquipWandDefinition(),
+		MakeEquipWandDefinition(TEXT("old_wand"), TEXT("Old Wand"), 1)
+	});
 
 	const FWBEquipExecutionResult Result = ExecuteDefaultEquip(State, Repository);
 

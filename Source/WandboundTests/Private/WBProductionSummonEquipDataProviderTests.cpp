@@ -173,6 +173,25 @@ void AddDeckCard(
 		MakeZoneEntry(InstanceId, CardId, PlayerId, EWBCardZone::Deck, ZoneIndex));
 }
 
+void AddEquippedWand(
+	FWBGameStateData& State,
+	const int32 OwnerPlayerId,
+	const FString& InstanceId,
+	const FString& CardId,
+	const int32 UnitId,
+	const FString& SlotId,
+	const int32 EquipOrder)
+{
+	FWBEquippedCardEntry Entry;
+	Entry.Card.InstanceId = InstanceId;
+	Entry.Card.CardId = CardId;
+	Entry.Card.OwnerPlayerId = OwnerPlayerId;
+	Entry.EquippedToUnitId = UnitId;
+	Entry.SlotId = SlotId;
+	Entry.EquipOrder = EquipOrder;
+	State.GetMutableCardZoneStateForTest().EquippedCards.Add(Entry);
+}
+
 void AddHiddenMarker(
 	FWBGameStateData& State,
 	const FString& InternalCardId)
@@ -550,9 +569,20 @@ bool FWBProductionSummonEquipEnemyUnitsNotEligibleTest::RunTest(const FString& P
 	{
 		Hero->RLUsed = Hero->RLTotal;
 	}
+	AddEquippedWand(
+		State,
+		ViewerPlayerId,
+		TEXT("already_equipped_wand_instance"),
+		TEXT("already_equipped_wand"),
+		HeroUnitId,
+		TEXT("wand"),
+		0);
 	AddHandCard(State, ViewerPlayerId, TEXT("own_wand_1"), TEXT("wand_alpha"));
 	const FWBProductionSummonEquipDecisionData Data =
-		RunProvider(State, MakeProviderRepository({ MakeWandDefinition() }));
+		RunProvider(State, MakeProviderRepository({
+			MakeWandDefinition(),
+			MakeWandDefinition(TEXT("already_equipped_wand"), TEXT("Training Wand"), 3)
+		}));
 
 	TestEqual(TEXT("No equip option when only enemy can afford"), Data.EquipOptions.Num(), 0);
 	TestTrue(TEXT("No eligible diagnostic"), HasProviderDiagnostic(Data, TEXT("no_eligible_equip_unit")));

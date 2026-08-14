@@ -61,8 +61,11 @@ TSharedRef<FJsonObject> PublicUnitBoardSummaryToJsonObject(const FWBPublicUnitBo
 	Object->SetNumberField(TEXT("max_armor"), Unit.MaxArmor);
 	Object->SetNumberField(TEXT("atk"), Unit.ATK);
 	Object->SetNumberField(TEXT("ar"), Unit.AR);
+	Object->SetNumberField(TEXT("base_rl"), Unit.BaseRL);
+	Object->SetNumberField(TEXT("current_rl"), Unit.CurrentRL);
 	Object->SetNumberField(TEXT("rl_total"), Unit.RLTotal);
 	Object->SetNumberField(TEXT("rl_used"), Unit.RLUsed);
+	Object->SetNumberField(TEXT("available_rl"), Unit.AvailableRL);
 	Object->SetNumberField(TEXT("attacks_left"), Unit.AttacksLeft);
 
 	TArray<TSharedPtr<FJsonValue>> Statuses;

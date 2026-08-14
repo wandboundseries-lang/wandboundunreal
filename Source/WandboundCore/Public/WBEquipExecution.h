@@ -19,6 +19,7 @@ enum class EWBEquipExecutionResultCode : uint8
 	TargetUnitNotOwned,
 	InsufficientRL,
 	ZoneStateInvalid,
+	RLRecalculationFailed,
 	UnsupportedEquipOperation
 };
 

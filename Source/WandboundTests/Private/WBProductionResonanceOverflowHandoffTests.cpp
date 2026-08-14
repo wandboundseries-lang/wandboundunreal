@@ -226,10 +226,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionResonanceOverflowHandoffResolveTes
 bool FWBProductionResonanceOverflowHandoffResolveTest::RunTest(const FString& Parameters)
 {
 	FWBGameStateData State = MakeRuntimeOverflowState(3, 5);
-	AddRuntimeEquippedWand(State, TEXT("equipped_wand"), TEXT("equipped_wand"), TEXT("wand"), 0);
+	AddRuntimeEquippedWand(State, TEXT("equipped_wand_a"), TEXT("equipped_wand_a"), TEXT("wand"), 0);
+	AddRuntimeEquippedWand(State, TEXT("equipped_wand_b"), TEXT("equipped_wand_b"), TEXT("wand"), 1);
 	AddRuntimeHandCard(State, RuntimeOverflowPlayerId, TEXT("hand_wand"), TEXT("hand_wand"));
 	const FWBCardDefinitionRepository Repository = MakeRuntimeOverflowRepository({
-		MakeRuntimeOverflowWandDefinition(TEXT("equipped_wand"), 3),
+		MakeRuntimeOverflowWandDefinition(TEXT("equipped_wand_a"), 3),
+		MakeRuntimeOverflowWandDefinition(TEXT("equipped_wand_b"), 2),
 		MakeRuntimeOverflowWandDefinition(TEXT("hand_wand"), 1)
 	});
 	const FWBProductionSummonEquipDecisionData DecisionData = BuildRuntimeOverflowDecisionData(State, Repository);
@@ -244,7 +246,7 @@ bool FWBProductionResonanceOverflowHandoffResolveTest::RunTest(const FString& Pa
 	TestTrue(TEXT("Handoff succeeds"), Result.bOk);
 	TestTrue(TEXT("Overflow resolved"), Result.bResolvedOverflow);
 	TestEqual(TEXT("RL reduced"), State.GetUnitById(RuntimeOverflowUnitId)->RLUsed, 2);
-	TestEqual(TEXT("Equipped removed"), State.GetCardZoneState().EquippedCards.Num(), 0);
+	TestEqual(TEXT("Equipped removed"), State.GetCardZoneState().EquippedCards.Num(), 1);
 	TestEqual(TEXT("Trace count"), Result.TraceEvents.Num(), 3);
 	TestEqual(TEXT("Provider offers hand wand after RL recovers"), Result.RefreshedSummonEquipData.EquipOptions.Num(), 1);
 	return true;
