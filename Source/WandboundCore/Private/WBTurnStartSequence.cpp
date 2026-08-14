@@ -5,7 +5,7 @@
 
 namespace
 {
-const FName NegatedStatusId(TEXT("Negated"));
+const FName TurnStartNegatedStatusId(TEXT("Negated"));
 
 FWBTraceEvent MakeTurnStartTrace(
 	const FName Kind,
@@ -21,7 +21,7 @@ FWBTraceEvent MakeTurnStartTrace(
 	return Event;
 }
 
-FWBTurnStartSequenceResult Failure(const FString& Reason)
+FWBTurnStartSequenceResult MakeTurnStartFailure(const FString& Reason)
 {
 	FWBTurnStartSequenceResult Result;
 	Result.Reason = Reason;
@@ -61,7 +61,7 @@ bool IsEligibleSource(
 	return Source != nullptr
 		&& Source->IsUnitOnBoard()
 		&& !Source->bDefeated
-		&& !Source->HasStatus(NegatedStatusId)
+		&& !Source->HasStatus(TurnStartNegatedStatusId)
 		&& Source->CardId == Trigger.SourceCardId;
 }
 
@@ -133,7 +133,7 @@ void CollectTriggers(
 	{
 		if (!Unit.IsUnitOnBoard()
 			|| Unit.bDefeated
-			|| Unit.HasStatus(NegatedStatusId))
+			|| Unit.HasStatus(TurnStartNegatedStatusId))
 		{
 			continue;
 		}
@@ -361,7 +361,7 @@ FWBTurnStartSequenceResult ContinueAutomaticResolution(
 			EnumerateChoices(State, Sequence);
 		if (Choices.IsEmpty())
 		{
-			return Failure(
+			return MakeTurnStartFailure(
 				TEXT("turn_start_trigger_choice_invalid"));
 		}
 		if (Choices.Num() > 1)
@@ -391,7 +391,7 @@ FWBTurnStartSequenceResult ContinueAutomaticResolution(
 			Result.TraceEvents,
 			Reason))
 		{
-			return Failure(Reason);
+			return MakeTurnStartFailure(Reason);
 		}
 		if (State.bGameOver)
 		{
@@ -425,25 +425,25 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 	if (InOutSequence.Phase
 		!= EWBTurnStartSequencePhase::NotStarted)
 	{
-		return Failure(
+		return MakeTurnStartFailure(
 			TEXT("turn_start_sequence_already_started"));
 	}
 	if (!FWBGameStateData::IsValidPlayerId(ActivePlayerId)
 		|| State.GetPlayerById(ActivePlayerId) == nullptr)
 	{
-		return Failure(TEXT("bad_player"));
+		return MakeTurnStartFailure(TEXT("bad_player"));
 	}
 	if (ActivePlayerId != State.CurrentPlayer)
 	{
-		return Failure(TEXT("not_active_player"));
+		return MakeTurnStartFailure(TEXT("not_active_player"));
 	}
 	if (ExplicitMPRoll < 1 || ExplicitMPRoll > 6)
 	{
-		return Failure(TEXT("invalid_mp_roll"));
+		return MakeTurnStartFailure(TEXT("invalid_mp_roll"));
 	}
 	if (State.bGameOver)
 	{
-		return Failure(TEXT("game_over"));
+		return MakeTurnStartFailure(TEXT("game_over"));
 	}
 
 	FWBGameStateData WorkingState = State;
@@ -469,7 +469,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 			WorkingState.FirstPlayerId);
 	if (!DrawResult.bOk)
 	{
-		return Failure(DrawResult.Reason);
+		return MakeTurnStartFailure(DrawResult.Reason);
 	}
 	WorkingSequence.bDrawSkipped =
 		DrawResult.Code
@@ -498,7 +498,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 			ExplicitMPRoll);
 	if (!MPRollResult.bOk)
 	{
-		return Failure(MPRollResult.Reason);
+		return MakeTurnStartFailure(MPRollResult.Reason);
 	}
 	WorkingSequence.bMPGenerated = true;
 	Result.TraceEvents.Append(MPRollResult.TraceEvents);
@@ -511,7 +511,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 			ActivePlayerId);
 	if (!ResetResult.bOk)
 	{
-		return Failure(ResetResult.Reason);
+		return MakeTurnStartFailure(ResetResult.Reason);
 	}
 	WorkingSequence.bResourcesReset = true;
 	Result.TraceEvents.Append(ResetResult.TraceEvents);
@@ -537,7 +537,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 			ActivePlayerId);
 	if (!StatusResult.bOk)
 	{
-		return Failure(StatusResult.Reason);
+		return MakeTurnStartFailure(StatusResult.Reason);
 	}
 	Result.TraceEvents.Append(StatusResult.TraceEvents);
 	for (const int32 UnitId : UnitsBeforeStatus)
@@ -613,7 +613,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::SubmitChoice(
 		!= EWBTurnStartSequencePhase::EffectResolution
 		|| InOutSequence.bCompleted)
 	{
-		return Failure(
+		return MakeTurnStartFailure(
 			TEXT("turn_start_sequence_not_complete"));
 	}
 
@@ -630,7 +630,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::SubmitChoice(
 			});
 	if (Selected == nullptr)
 	{
-		return Failure(
+		return MakeTurnStartFailure(
 			TEXT("turn_start_trigger_choice_invalid"));
 	}
 
@@ -644,7 +644,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::SubmitChoice(
 		Result.TraceEvents,
 		Reason))
 	{
-		return Failure(Reason);
+		return MakeTurnStartFailure(Reason);
 	}
 
 	FWBTurnStartSequenceResult Resolution =

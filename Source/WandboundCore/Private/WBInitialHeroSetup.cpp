@@ -14,7 +14,7 @@ struct FCollectedSetupTrigger
 	FWBSetupSummonTriggerDefinition Definition;
 };
 
-FWBInitialHeroSetupResult Failure(const FString& Reason)
+FWBInitialHeroSetupResult MakeInitialHeroSetupFailure(const FString& Reason)
 {
 	FWBInitialHeroSetupResult Result;
 	Result.Reason = Reason;
@@ -62,7 +62,7 @@ bool TriggerMatches(
 	}
 }
 
-bool TriggerLess(
+bool InitialHeroSetupTriggerLess(
 	const FCollectedSetupTrigger& A,
 	const FCollectedSetupTrigger& B)
 {
@@ -78,7 +78,7 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 	if (!FWBGameStateData::IsValidPlayerId(Request.FirstPlayerId)
 		|| Request.Placements.Num() != 2)
 	{
-		return Failure(TEXT("initial_hero_setup_invalid"));
+		return MakeInitialHeroSetupFailure(TEXT("initial_hero_setup_invalid"));
 	}
 
 	TArray<FWBInitialHeroPlacement> Placements = Request.Placements;
@@ -91,7 +91,7 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 	if (Placements[0].PlayerId != 0 || Placements[1].PlayerId != 1
 		|| Placements[0].SpawnTile == Placements[1].SpawnTile)
 	{
-		return Failure(TEXT("initial_hero_setup_invalid"));
+		return MakeInitialHeroSetupFailure(TEXT("initial_hero_setup_invalid"));
 	}
 
 	FWBGameStateData WorkingState = State;
@@ -107,14 +107,14 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 			|| !WBRules::IsTileInBounds(Placement.SpawnTile)
 			|| WorkingState.IsTileOccupied(Placement.SpawnTile))
 		{
-			return Failure(TEXT("hero_definition_invalid"));
+			return MakeInitialHeroSetupFailure(TEXT("hero_definition_invalid"));
 		}
 
 		FWBPlayerStateData* Player =
 			WorkingState.GetMutablePlayerById(Placement.PlayerId);
 		if (Player == nullptr)
 		{
-			return Failure(TEXT("invalid_player_setup"));
+			return MakeInitialHeroSetupFailure(TEXT("invalid_player_setup"));
 		}
 
 		FWBUnitState Hero;
@@ -210,7 +210,7 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 			}
 		}
 	}
-	Collected.Sort(TriggerLess);
+	Collected.Sort(InitialHeroSetupTriggerLess);
 	for (const FCollectedSetupTrigger& Trigger : Collected)
 	{
 		Result.CollectedTriggerIds.Add(Trigger.InstanceId);
@@ -243,7 +243,7 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 				Request.TriggerOrderChoices.Find(Controller);
 			if (Choice == nullptr || Choice->Num() != Batch.Num())
 			{
-				return Failure(TEXT("setup_trigger_order_choice_required"));
+				return MakeInitialHeroSetupFailure(TEXT("setup_trigger_order_choice_required"));
 			}
 			TArray<FCollectedSetupTrigger> Ordered;
 			for (const FString& ChosenId : *Choice)
@@ -261,7 +261,7 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 							return Existing.InstanceId == ChosenId;
 						}))
 				{
-					return Failure(TEXT("setup_trigger_order_choice_invalid"));
+					return MakeInitialHeroSetupFailure(TEXT("setup_trigger_order_choice_invalid"));
 				}
 				Ordered.Add(*Match);
 			}
@@ -289,7 +289,7 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 						Trigger.ControllerPlayerId);
 				if (!Draw.bOk)
 				{
-					return Failure(Draw.Reason);
+					return MakeInitialHeroSetupFailure(Draw.Reason);
 				}
 				FWBTraceEvent DrawTrace = SetupTrace(
 					FName(TEXT("setup_trigger_draw")),

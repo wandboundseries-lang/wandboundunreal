@@ -9,7 +9,7 @@
 
 namespace
 {
-constexpr int32 BoardSize = 9;
+constexpr int32 RulesBoardSize = 9;
 const FWBTile MoveDirections[] = {
 	FWBTile(1, 0),
 	FWBTile(-1, 0),
@@ -142,7 +142,7 @@ FWBActionQueryResult FWBActionQueryResult::Deny(const TCHAR* InReason)
 
 bool WBRules::IsTileInBounds(const FWBTile& Tile)
 {
-	return Tile.X >= 0 && Tile.X < BoardSize && Tile.Y >= 0 && Tile.Y < BoardSize;
+	return Tile.X >= 0 && Tile.X < RulesBoardSize && Tile.Y >= 0 && Tile.Y < RulesBoardSize;
 }
 
 bool WBRules::AreOrthogonallyAdjacent(const FWBTile& A, const FWBTile& B)

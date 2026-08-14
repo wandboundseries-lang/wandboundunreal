@@ -23,7 +23,7 @@ const FWBMatchLegalAction* FindCharacterSummon(
 	});
 }
 
-const FWBMatchLegalAction* FindEquip(
+const FWBMatchLegalAction* FindNonHeroHybridEquip(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const int32 TargetUnitId)
 {
@@ -54,7 +54,7 @@ const FWBMatchLegalAction* FindNonHeroHybrid(
 		});
 }
 
-const FWBMatchLegalAction* FindDiscard(
+const FWBMatchLegalAction* FindNonHeroHybridDiscard(
 	const TArray<FWBMatchLegalAction>& Actions)
 {
 	return Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
@@ -74,7 +74,7 @@ const FWBPublicUnitBoardSummary* FindPublicUnitByCard(
 		});
 }
 
-bool SubmitAndCapture(
+bool SubmitNonHeroHybridAndCapture(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FWBMatchLegalAction& Action,
@@ -96,7 +96,7 @@ bool SubmitAndCapture(
 	return true;
 }
 
-bool HasTrace(const TArray<FWBTraceEvent>& Events, const TCHAR* Kind)
+bool HasNonHeroHybridTrace(const TArray<FWBTraceEvent>& Events, const TCHAR* Kind)
 {
 	return Events.ContainsByPredicate([Kind](const FWBTraceEvent& Event)
 	{
@@ -104,7 +104,7 @@ bool HasTrace(const TArray<FWBTraceEvent>& Events, const TCHAR* Kind)
 	});
 }
 
-int32 CountDiscardInstance(
+int32 CountNonHeroHybridDiscardInstance(
 	const FWBGameStateData& State,
 	const int32 PlayerId,
 	const FString& InstanceId)
@@ -240,7 +240,7 @@ FWBProductionHybridNonHeroSmokeResult WBProductionHybridNonHeroSmoke::Run(
 		Started.NextLegalActions,
 		TEXT("hybrid_nonhero_sacrifice_alpha"));
 	if (SummonAlpha == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitNonHeroHybridAndCapture(
 			Coordinator, Recorder, *SummonAlpha, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty())
@@ -267,7 +267,7 @@ FWBProductionHybridNonHeroSmokeResult WBProductionHybridNonHeroSmoke::Run(
 			TEXT("hybrid_nonhero_sacrifice_beta"))
 		: nullptr;
 	if (SummonBeta == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitNonHeroHybridAndCapture(
 			Coordinator, Recorder, *SummonBeta, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty())
@@ -278,10 +278,10 @@ FWBProductionHybridNonHeroSmokeResult WBProductionHybridNonHeroSmoke::Run(
 	const FWBMatchLegalActionGenerationResult AfterBeta =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Equip = AfterBeta.bOk
-		? FindEquip(AfterBeta.Actions, Result.SacrificedUnitId)
+		? FindNonHeroHybridEquip(AfterBeta.Actions, Result.SacrificedUnitId)
 		: nullptr;
 	if (Equip == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitNonHeroHybridAndCapture(
 			Coordinator, Recorder, *Equip, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty())
@@ -306,7 +306,7 @@ FWBProductionHybridNonHeroSmokeResult WBProductionHybridNonHeroSmoke::Run(
 		return Result;
 	}
 	Result.PaymentSource = Hybrid->HybridSummonPlan.WandPaymentSource;
-	if (!SubmitAndCapture(
+	if (!SubmitNonHeroHybridAndCapture(
 		Coordinator, Recorder, *Hybrid, Operation, Result.Reason))
 	{
 		return Result;
@@ -348,17 +348,17 @@ FWBProductionHybridNonHeroSmokeResult WBProductionHybridNonHeroSmoke::Run(
 		|| FWBTile(PublicHybrid->X, PublicHybrid->Y) != Result.Destination
 		|| bSacrificeStillPublic
 		|| !Coordinator.GetState().GetCardZoneState().EquippedCards.IsEmpty()
-		|| CountDiscardInstance(
+		|| CountNonHeroHybridDiscardInstance(
 			Coordinator.GetState(), 0, PaidWandInstanceId) != 1
 		|| bPaidWandPublic
 		|| bPaidIdentityInTrace
-		|| !HasTrace(Operation.TraceEvents, TEXT("unit_sacrificed"))
-		|| !HasTrace(Operation.TraceEvents, TEXT("wand_payment_committed"))
-		|| !HasTrace(Operation.TraceEvents, TEXT("hybrid_summoned"))
-		|| HasTrace(Operation.TraceEvents, TEXT("hero_sacrifice_committed"))
-		|| HasTrace(Operation.TraceEvents, TEXT("hero_replacement_committed"))
-		|| HasTrace(Operation.TraceEvents, TEXT("hero_defeated"))
-		|| HasTrace(Operation.TraceEvents, TEXT("game_over")))
+		|| !HasNonHeroHybridTrace(Operation.TraceEvents, TEXT("unit_sacrificed"))
+		|| !HasNonHeroHybridTrace(Operation.TraceEvents, TEXT("wand_payment_committed"))
+		|| !HasNonHeroHybridTrace(Operation.TraceEvents, TEXT("hybrid_summoned"))
+		|| HasNonHeroHybridTrace(Operation.TraceEvents, TEXT("hero_sacrifice_committed"))
+		|| HasNonHeroHybridTrace(Operation.TraceEvents, TEXT("hero_replacement_committed"))
+		|| HasNonHeroHybridTrace(Operation.TraceEvents, TEXT("hero_defeated"))
+		|| HasNonHeroHybridTrace(Operation.TraceEvents, TEXT("game_over")))
 	{
 		Result.Reason = TEXT("hybrid_nonhero_smoke_state_mismatch");
 		return Result;
@@ -367,10 +367,10 @@ FWBProductionHybridNonHeroSmokeResult WBProductionHybridNonHeroSmoke::Run(
 	const FWBMatchLegalActionGenerationResult Continued =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Discard = Continued.bOk
-		? FindDiscard(Continued.Actions)
+		? FindNonHeroHybridDiscard(Continued.Actions)
 		: nullptr;
 	if (Discard == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitNonHeroHybridAndCapture(
 			Coordinator, Recorder, *Discard, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty())

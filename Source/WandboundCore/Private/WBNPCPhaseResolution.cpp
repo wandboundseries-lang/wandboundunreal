@@ -30,7 +30,7 @@ struct FTargetRank
 	int32 OwnerId = MAX_int32;
 };
 
-FWBNPCPhaseResolutionResult Failure(const FString& Reason)
+FWBNPCPhaseResolutionResult MakeNPCPhaseFailure(const FString& Reason)
 {
 	FWBNPCPhaseResolutionResult Result;
 	Result.Reason = Reason;
@@ -339,11 +339,11 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::BeginPhase(
 	FString ValidationReason;
 	if (!ValidateNPCState(State, Repository, ValidationReason))
 	{
-		return Failure(ValidationReason);
+		return MakeNPCPhaseFailure(ValidationReason);
 	}
 	if (State.NPCPhaseContinuation.bActive)
 	{
-		return Failure(TEXT("npc_phase_already_active"));
+		return MakeNPCPhaseFailure(TEXT("npc_phase_already_active"));
 	}
 
 	FWBNPCPhaseResolutionResult Result;
@@ -361,7 +361,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::BeginPhase(
 		PhaseOwnerPlayerId);
 	if (!SpawnResult.bOk)
 	{
-		return Failure(SpawnResult.Reason);
+		return MakeNPCPhaseFailure(SpawnResult.Reason);
 	}
 	Result.SpawnedCount = SpawnResult.SpawnedCount;
 	Result.BlockedSpawnCount = SpawnResult.BlockedCount;
@@ -404,15 +404,15 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 {
 	if (InOutRandomState == 0)
 	{
-		return Failure(TEXT("npc_rng_state_invalid"));
+		return MakeNPCPhaseFailure(TEXT("npc_rng_state_invalid"));
 	}
 	if (!State.NPCPhaseContinuation.bActive)
 	{
-		return Failure(TEXT("npc_phase_not_active"));
+		return MakeNPCPhaseFailure(TEXT("npc_phase_not_active"));
 	}
 	if (State.HasPendingAttack() || State.HasOpenReactionWindow())
 	{
-		return Failure(TEXT("npc_phase_attack_still_pending"));
+		return MakeNPCPhaseFailure(TEXT("npc_phase_attack_still_pending"));
 	}
 
 	FWBNPCPhaseResolutionResult Result;
@@ -486,7 +486,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 							MakeNPCAttackAction(*NPC, *Target));
 					if (!DeclareResult.bOk)
 					{
-						return Failure(DeclareResult.Reason);
+						return MakeNPCPhaseFailure(DeclareResult.Reason);
 					}
 					TArray<FWBTraceEvent> DeclareEvents = DeclareResult.TraceEvents;
 					AnnotateEvents(
@@ -554,7 +554,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 				MakeNPCMoveAction(*NPC, Path[0]));
 			if (!MoveResult.bOk)
 			{
-				return Failure(MoveResult.Reason);
+				return MakeNPCPhaseFailure(MoveResult.Reason);
 			}
 			TArray<FWBTraceEvent> MoveEvents = MoveResult.TraceEvents;
 			AnnotateEvents(
@@ -569,7 +569,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 				WBMarkerResolution::ResolveMarkerAtUnitTile(State, Repository, NPCUnitId);
 			if (!MarkerResult.bOk)
 			{
-				return Failure(MarkerResult.Reason);
+				return MakeNPCPhaseFailure(MarkerResult.Reason);
 			}
 			TArray<FWBTraceEvent> MarkerEvents = MarkerResult.TraceEvents;
 			AnnotateEvents(
@@ -587,7 +587,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 						Continuation.PhaseOwnerPlayerId);
 				if (!MidPhaseSpawn.bOk)
 				{
-					return Failure(MidPhaseSpawn.Reason);
+					return MakeNPCPhaseFailure(MidPhaseSpawn.Reason);
 				}
 				Result.TraceEvents.Append(MidPhaseSpawn.TraceEvents);
 				TArray<FWBUnitState> NewlySpawned;
@@ -629,7 +629,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 	FString ValidationReason;
 	if (!ValidateNPCState(State, Repository, ValidationReason))
 	{
-		return Failure(ValidationReason);
+		return MakeNPCPhaseFailure(ValidationReason);
 	}
 	const int32 PhaseOwnerPlayerId = Continuation.PhaseOwnerPlayerId;
 	Continuation.Reset();
@@ -654,12 +654,12 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 {
 	if (InOutRandomState == 0)
 	{
-		return Failure(TEXT("npc_rng_state_invalid"));
+		return MakeNPCPhaseFailure(TEXT("npc_rng_state_invalid"));
 	}
 	FString ValidationReason;
 	if (!ValidateNPCState(State, Repository, ValidationReason))
 	{
-		return Failure(ValidationReason);
+		return MakeNPCPhaseFailure(ValidationReason);
 	}
 
 	FWBGameStateData WorkingState = State;
@@ -679,14 +679,14 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 		PhaseOwnerPlayerId);
 	if (!SpawnResult.bOk)
 	{
-		return Failure(SpawnResult.Reason);
+		return MakeNPCPhaseFailure(SpawnResult.Reason);
 	}
 	Result.SpawnedCount += SpawnResult.SpawnedCount;
 	Result.BlockedSpawnCount += SpawnResult.BlockedCount;
 	Result.TraceEvents.Append(SpawnResult.TraceEvents);
 	if (!ValidateNPCState(WorkingState, Repository, ValidationReason))
 	{
-		return Failure(ValidationReason);
+		return MakeNPCPhaseFailure(ValidationReason);
 	}
 
 	TArray<FWBUnitState> OrderedNPCs;
@@ -767,7 +767,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 						MakeNPCAttackAction(*NPC, *Target));
 					if (!DeclareResult.bOk)
 					{
-						return Failure(DeclareResult.Reason);
+						return MakeNPCPhaseFailure(DeclareResult.Reason);
 					}
 					TArray<FWBTraceEvent> DeclareEvents = DeclareResult.TraceEvents;
 					AnnotateEvents(DeclareEvents, *NPC, ActionSequence);
@@ -775,7 +775,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 					const FWBApplyActionResult DamageResult = WBEffectRunner::ApplyPendingAttackDamage(WorkingState);
 					if (!DamageResult.bOk)
 					{
-						return Failure(DamageResult.Reason);
+						return MakeNPCPhaseFailure(DamageResult.Reason);
 					}
 					TArray<FWBTraceEvent> DamageEvents = DamageResult.TraceEvents;
 					AnnotateEvents(DamageEvents, *NPC, ActionSequence);
@@ -840,7 +840,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 				MakeNPCMoveAction(*NPC, Path[0]));
 			if (!MoveResult.bOk)
 			{
-				return Failure(MoveResult.Reason);
+				return MakeNPCPhaseFailure(MoveResult.Reason);
 			}
 			TArray<FWBTraceEvent> MoveEvents = MoveResult.TraceEvents;
 			AnnotateEvents(MoveEvents, *NPC, ActionSequence, PathStepIndex++);
@@ -853,7 +853,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 				NPCUnitId);
 			if (!MarkerResult.bOk)
 			{
-				return Failure(MarkerResult.Reason);
+				return MakeNPCPhaseFailure(MarkerResult.Reason);
 			}
 			if (MarkerResult.bMarkerFound)
 			{
@@ -876,7 +876,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 					PhaseOwnerPlayerId);
 				if (!MidPhaseSpawn.bOk)
 				{
-					return Failure(MidPhaseSpawn.Reason);
+					return MakeNPCPhaseFailure(MidPhaseSpawn.Reason);
 				}
 				Result.SpawnedCount += MidPhaseSpawn.SpawnedCount;
 				Result.BlockedSpawnCount += MidPhaseSpawn.BlockedCount;
@@ -912,7 +912,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 
 	if (!ValidateNPCState(WorkingState, Repository, ValidationReason))
 	{
-		return Failure(ValidationReason);
+		return MakeNPCPhaseFailure(ValidationReason);
 	}
 	FWBTraceEvent PhaseEnded;
 	PhaseEnded.Kind = FName(TEXT("npc_phase_ended"));

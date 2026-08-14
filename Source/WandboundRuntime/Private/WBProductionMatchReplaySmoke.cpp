@@ -42,7 +42,7 @@ const FWBMatchLegalAction* FindEndTurn(
 		});
 }
 
-bool SubmitAndCapture(
+bool SubmitReplayAndCapture(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FWBMatchLegalAction& Action,
@@ -118,7 +118,7 @@ WBProductionMatchReplaySmoke::Run(
 	const FWBMatchLegalAction* Ordinary =
 		FindOrdinaryAction(Started.NextLegalActions);
 	if (Ordinary == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitReplayAndCapture(
 			Coordinator,
 			Recorder,
 			*Ordinary,
@@ -134,7 +134,7 @@ WBProductionMatchReplaySmoke::Run(
 	const FWBMatchLegalAction* EndTurn =
 		Legal.bOk ? FindEndTurn(Legal.Actions) : nullptr;
 	if (EndTurn == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitReplayAndCapture(
 			Coordinator,
 			Recorder,
 			*EndTurn,
@@ -149,7 +149,7 @@ WBProductionMatchReplaySmoke::Run(
 	{
 		Legal = Coordinator.EnumerateLegalActions();
 		if (!Legal.bOk || Legal.Actions.IsEmpty()
-			|| !SubmitAndCapture(
+			|| !SubmitReplayAndCapture(
 				Coordinator,
 				Recorder,
 				Legal.Actions[0],
@@ -165,7 +165,7 @@ WBProductionMatchReplaySmoke::Run(
 	const FWBMatchLegalAction* Later =
 		Legal.bOk ? FindOrdinaryAction(Legal.Actions) : nullptr;
 	if (Later == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitReplayAndCapture(
 			Coordinator,
 			Recorder,
 			*Later,

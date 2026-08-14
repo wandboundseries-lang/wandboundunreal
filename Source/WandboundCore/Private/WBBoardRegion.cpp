@@ -4,13 +4,13 @@
 
 namespace
 {
-constexpr int32 BoardSize = 9;
-constexpr int32 NeutralRow = BoardSize / 2;
+constexpr int32 BoardRegionBoardSize = 9;
+constexpr int32 NeutralRow = BoardRegionBoardSize / 2;
 
 bool IsInBounds(const FWBTile& Tile)
 {
-	return Tile.X >= 0 && Tile.X < BoardSize
-		&& Tile.Y >= 0 && Tile.Y < BoardSize;
+	return Tile.X >= 0 && Tile.X < BoardRegionBoardSize
+		&& Tile.Y >= 0 && Tile.Y < BoardRegionBoardSize;
 }
 }
 

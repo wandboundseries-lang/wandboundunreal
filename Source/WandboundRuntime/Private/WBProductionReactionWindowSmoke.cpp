@@ -12,7 +12,7 @@
 
 namespace
 {
-const FWBMatchLegalAction* FindEquip(
+const FWBMatchLegalAction* FindReactionEquip(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const int32 HeroUnitId)
 {
@@ -47,7 +47,7 @@ const FWBMatchLegalAction* FindActivation(
 	});
 }
 
-const FWBMatchLegalAction* FindDiscard(
+const FWBMatchLegalAction* FindReactionDiscard(
 	const TArray<FWBMatchLegalAction>& Actions)
 {
 	return Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
@@ -56,7 +56,7 @@ const FWBMatchLegalAction* FindDiscard(
 	});
 }
 
-bool HasTrace(const TArray<FWBTraceEvent>& Events, const TCHAR* Kind)
+bool HasReactionTrace(const TArray<FWBTraceEvent>& Events, const TCHAR* Kind)
 {
 	return Events.ContainsByPredicate([Kind](const FWBTraceEvent& Event)
 	{
@@ -91,7 +91,7 @@ bool IsOpponentHandHidden(
 			|| Hand->Visibility == EWBZoneObservationVisibility::CountOnly);
 }
 
-bool SubmitAndCapture(
+bool SubmitReactionAndCapture(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FWBMatchLegalAction& Action,
@@ -166,11 +166,11 @@ FWBProductionReactionWindowSmokeResult WBProductionReactionWindowSmoke::Run(
 	}
 
 	FWBMatchOperationResult Operation;
-	const FWBMatchLegalAction* Equip = FindEquip(
+	const FWBMatchLegalAction* Equip = FindReactionEquip(
 		Started.NextLegalActions,
 		OldHeroUnitId);
 	if (Equip == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitReactionAndCapture(
 			Coordinator, Recorder, *Equip, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("reaction_smoke_equip_missing");
@@ -183,7 +183,7 @@ FWBProductionReactionWindowSmokeResult WBProductionReactionWindowSmoke::Run(
 		? FindHybrid(HybridLegal.Actions, OldHeroUnitId)
 		: nullptr;
 	if (Hybrid == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitReactionAndCapture(
 			Coordinator, Recorder, *Hybrid, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("reaction_smoke_hybrid_missing");
@@ -224,7 +224,7 @@ FWBProductionReactionWindowSmokeResult WBProductionReactionWindowSmoke::Run(
 		Result.Reason = TEXT("reaction_smoke_hidden_hand_leak");
 		return Result;
 	}
-	if (!HasTrace(Operation.TraceEvents, TEXT("reaction_window_opened")))
+	if (!HasReactionTrace(Operation.TraceEvents, TEXT("reaction_window_opened")))
 	{
 		Result.Reason = TEXT("reaction_smoke_open_trace_missing");
 		return Result;
@@ -238,16 +238,16 @@ FWBProductionReactionWindowSmokeResult WBProductionReactionWindowSmoke::Run(
 		return Result;
 	}
 	Result.ReactionActionId = React->ActionId;
-	if (!SubmitAndCapture(
+	if (!SubmitReactionAndCapture(
 		Coordinator, Recorder, *React, Operation, Result.Reason))
 	{
 		return Result;
 	}
 	if (Coordinator.GetState().HasOpenReactionWindow()
 		|| Coordinator.GetMatchPhase() != EWBMatchLoopPhase::Action
-		|| !HasTrace(Operation.TraceEvents, TEXT("reaction_resolved"))
-		|| !HasTrace(Operation.TraceEvents, TEXT("reaction_auto_passed"))
-		|| !HasTrace(Operation.TraceEvents, TEXT("reaction_window_closed")))
+		|| !HasReactionTrace(Operation.TraceEvents, TEXT("reaction_resolved"))
+		|| !HasReactionTrace(Operation.TraceEvents, TEXT("reaction_auto_passed"))
+		|| !HasReactionTrace(Operation.TraceEvents, TEXT("reaction_window_closed")))
 	{
 		Result.Reason = TEXT("reaction_smoke_close_mismatch");
 		return Result;
@@ -256,10 +256,10 @@ FWBProductionReactionWindowSmokeResult WBProductionReactionWindowSmoke::Run(
 	const FWBMatchLegalActionGenerationResult Continued =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Discard = Continued.bOk
-		? FindDiscard(Continued.Actions)
+		? FindReactionDiscard(Continued.Actions)
 		: nullptr;
 	if (Discard == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitReactionAndCapture(
 			Coordinator, Recorder, *Discard, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("reaction_smoke_continuation_missing");

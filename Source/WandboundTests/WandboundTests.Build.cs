@@ -7,6 +7,7 @@ public class WandboundTests : ModuleRules
 	public WandboundTests(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		// Test fixtures intentionally use file-local helper names extensively.
 		bUseUnity = false;
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Json", "Niagara", "UMG", "Slate", "SlateCore", "WandboundCore", "WandboundCardDB", "WandboundRuntime" });

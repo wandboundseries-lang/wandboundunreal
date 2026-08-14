@@ -7,7 +7,7 @@
 
 namespace
 {
-constexpr int32 MaxOwnedUnitsIncludingHero = 4;
+constexpr int32 HybridMaxOwnedUnitsIncludingHero = 4;
 
 FWBHybridSummonPlanResult MakePlanFailure(
 	const EWBHybridSummonResultCode Code)
@@ -110,7 +110,7 @@ bool PlansEqual(const FWBHybridSummonPlan& A, const FWBHybridSummonPlan& B)
 		&& A.BeforeRevision == B.BeforeRevision;
 }
 
-int32 AllocateNextUnitId(const FWBGameStateData& State)
+int32 AllocateNextHybridUnitId(const FWBGameStateData& State)
 {
 	int32 MaxUnitId = -1;
 	for (const FWBUnitState& Unit : State.Units)
@@ -229,7 +229,7 @@ FWBHybridSummonPlanResult WBHybridSummon::BuildSummonPlans(
 	}
 	const int32 CompletedUnitCount =
 		State.GetUnitsForPlayer(ActingPlayerId).Num() - 1 + 1;
-	if (CompletedUnitCount > MaxOwnedUnitsIncludingHero)
+	if (CompletedUnitCount > HybridMaxOwnedUnitsIncludingHero)
 	{
 		return MakePlanFailure(EWBHybridSummonResultCode::HybridUnitCapExceeded);
 	}
@@ -558,7 +558,7 @@ FWBHybridSummonResult WBHybridSummon::ExecuteSummon(
 		WorkingState.ClearPendingAttack();
 	}
 
-	const int32 NewUnitId = AllocateNextUnitId(WorkingState);
+	const int32 NewUnitId = AllocateNextHybridUnitId(WorkingState);
 	if (NewUnitId < 0 || WorkingState.GetUnitById(NewUnitId) != nullptr)
 	{
 		return MakeExecutionFailure(EWBHybridSummonResultCode::HybridUnitIdAllocationFailed, Plan);

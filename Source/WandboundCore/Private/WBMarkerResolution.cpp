@@ -18,7 +18,7 @@ FWBMarkerResolutionResult MakeMarkerFailure(const FString& Reason)
 	return Result;
 }
 
-FWBNPCPhaseResult MakeNPCPhaseFailure(const FString& Reason)
+FWBNPCPhaseResult MakeMarkerNPCPhaseFailure(const FString& Reason)
 {
 	FWBNPCPhaseResult Result;
 	Result.Reason = Reason;
@@ -148,7 +148,7 @@ int32 AllocateNextSpawnOrder(const FWBGameStateData& State)
 	return MaxOrder + 1;
 }
 
-int32 AllocateNextUnitId(const FWBGameStateData& State)
+int32 AllocateNextMarkerUnitId(const FWBGameStateData& State)
 {
 	int32 MaxId = -1;
 	for (const FWBUnitState& Unit : State.Units)
@@ -587,7 +587,7 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 	FString ValidationReason;
 	if (!ValidateAuthoritativeState(State, Repository, ValidationReason))
 	{
-		return MakeNPCPhaseFailure(ValidationReason);
+		return MakeMarkerNPCPhaseFailure(ValidationReason);
 	}
 
 	FWBGameStateData WorkingState = State;
@@ -607,7 +607,7 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 			});
 		if (PendingIndex == INDEX_NONE)
 		{
-			return MakeNPCPhaseFailure(TEXT("pending_spawn_missing"));
+			return MakeMarkerNPCPhaseFailure(TEXT("pending_spawn_missing"));
 		}
 
 		TraceEvents.Add(MakePendingTrace(FName(TEXT("npc_spawn_attempted")), PendingSnapshot));
@@ -644,13 +644,13 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 			WBCardDefinitionRepository::FindCardById(Repository, PendingSnapshot.NPCDefinitionId);
 		if (!Lookup.bFound || Lookup.Definition.Kind != EWBCardDefinitionKind::NPC)
 		{
-			return MakeNPCPhaseFailure(TEXT("npc_definition_not_found"));
+			return MakeMarkerNPCPhaseFailure(TEXT("npc_definition_not_found"));
 		}
 
-		const int32 NewUnitId = AllocateNextUnitId(WorkingState);
+		const int32 NewUnitId = AllocateNextMarkerUnitId(WorkingState);
 		if (NewUnitId < 0)
 		{
-			return MakeNPCPhaseFailure(TEXT("npc_unit_id_allocation_failed"));
+			return MakeMarkerNPCPhaseFailure(TEXT("npc_unit_id_allocation_failed"));
 		}
 
 		FWBUnitState NPC;
@@ -685,7 +685,7 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 
 	if (!ValidateAuthoritativeState(WorkingState, Repository, ValidationReason))
 	{
-		return MakeNPCPhaseFailure(ValidationReason);
+		return MakeMarkerNPCPhaseFailure(ValidationReason);
 	}
 	State = MoveTemp(WorkingState);
 

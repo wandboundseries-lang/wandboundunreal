@@ -119,7 +119,7 @@ FWBMatchOperationResult MakeOperationFailure(const FString& Reason)
 	return Result;
 }
 
-FWBMatchLegalActionGenerationResult MakeGenerationFailure(const FString& Reason)
+FWBMatchLegalActionGenerationResult MakeMatchGenerationFailure(const FString& Reason)
 {
 	FWBMatchLegalActionGenerationResult Result;
 	Result.Reason = Reason;
@@ -673,14 +673,14 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 			ActivationSources);
 	if (!CandidateResult.bOk)
 	{
-		return MakeGenerationFailure(CandidateResult.Reason);
+		return MakeMatchGenerationFailure(CandidateResult.Reason);
 	}
 	const FWBCardActivationLegalActionGenerationResult ActivationResult =
 		WBCardActivationLegalActionGenerator::GenerateFromCandidates(
 			CandidateResult.Candidates);
 	if (!ActivationResult.bOk)
 	{
-		return MakeGenerationFailure(ActivationResult.Reason);
+		return MakeMatchGenerationFailure(ActivationResult.Reason);
 	}
 
 	TArray<FWBCardActivationLegalAction> ActivationActions =
@@ -1202,7 +1202,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActions() 
 {
 	if (!bInitialized)
 	{
-		return MakeGenerationFailure(TEXT("match_not_initialized"));
+		return MakeMatchGenerationFailure(TEXT("match_not_initialized"));
 	}
 	return EnumerateLegalActionsForState(
 		State,
@@ -1237,7 +1237,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 		if (InTurnStartSequence == nullptr
 			|| InTurnStartSequence->bCompleted)
 		{
-			return MakeGenerationFailure(
+			return MakeMatchGenerationFailure(
 				TEXT("turn_start_sequence_not_complete"));
 		}
 		for (const FString& ActionId :
@@ -1256,7 +1256,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 		}
 		if (Result.Actions.IsEmpty())
 		{
-			return MakeGenerationFailure(
+			return MakeMatchGenerationFailure(
 				TEXT("turn_start_trigger_order_required"));
 		}
 		Result.bOk = true;
@@ -1266,7 +1266,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 	if (InPhase != EWBMatchLoopPhase::Action
 		&& InPhase != EWBMatchLoopPhase::Response)
 	{
-		return MakeGenerationFailure(TEXT("match_not_accepting_actions"));
+		return MakeMatchGenerationFailure(TEXT("match_not_accepting_actions"));
 	}
 
 	const int32 PlayerId = InState.PriorityPlayer;
@@ -1294,7 +1294,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 			WBCardZoneState::FindPlayerZones(InState.GetCardZoneState(), PlayerId);
 		if (PlayerZones == nullptr)
 		{
-			return MakeGenerationFailure(TEXT("player_zones_missing"));
+			return MakeMatchGenerationFailure(TEXT("player_zones_missing"));
 		}
 
 		TArray<FWBZoneCardEntry> Hand = PlayerZones->Hand;
@@ -1305,7 +1305,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 				WBCardDefinitionRepository::FindCardById(Repository, Entry.Card.CardId);
 			if (!Lookup.bFound)
 			{
-				return MakeGenerationFailure(TEXT("card_definition_not_found"));
+				return MakeMatchGenerationFailure(TEXT("card_definition_not_found"));
 			}
 
 			if (Lookup.Definition.Kind == EWBCardDefinitionKind::Hybrid)

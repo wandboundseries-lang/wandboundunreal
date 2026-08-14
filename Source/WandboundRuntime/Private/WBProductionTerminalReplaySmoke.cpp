@@ -9,7 +9,7 @@
 
 namespace
 {
-const FWBMatchLegalAction* FindDiscard(
+const FWBMatchLegalAction* FindTerminalDiscard(
 	const TArray<FWBMatchLegalAction>& Actions)
 {
 	return Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
@@ -28,7 +28,7 @@ const FWBMatchLegalAction* FindTerminalEndTurn(
 	});
 }
 
-const FWBMatchLegalAction* FindAttack(
+const FWBMatchLegalAction* FindTerminalAttack(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const int32 AttackerUnitId,
 	const int32 DefenderUnitId)
@@ -43,7 +43,7 @@ const FWBMatchLegalAction* FindAttack(
 		});
 }
 
-bool SubmitAndCapture(
+bool SubmitTerminalAndCapture(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FWBMatchLegalAction& Action,
@@ -86,7 +86,7 @@ bool ResolvePendingTurnStart(
 			return false;
 		}
 		FWBMatchOperationResult Operation;
-		if (!SubmitAndCapture(
+		if (!SubmitTerminalAndCapture(
 			Coordinator,
 			Recorder,
 			Legal.Actions[0],
@@ -116,7 +116,7 @@ bool EndCurrentTurn(
 		return false;
 	}
 	FWBMatchOperationResult Operation;
-	return SubmitAndCapture(
+	return SubmitTerminalAndCapture(
 		Coordinator,
 		Recorder,
 		*EndTurn,
@@ -136,7 +136,7 @@ bool AttackHero(
 	const FWBMatchLegalActionGenerationResult Legal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Attack = Legal.bOk
-		? FindAttack(Legal.Actions, AttackerUnitId, DefenderUnitId)
+		? FindTerminalAttack(Legal.Actions, AttackerUnitId, DefenderUnitId)
 		: nullptr;
 	if (Attack == nullptr)
 	{
@@ -145,7 +145,7 @@ bool AttackHero(
 			: Legal.Reason;
 		return false;
 	}
-	return SubmitAndCapture(
+	return SubmitTerminalAndCapture(
 		Coordinator,
 		Recorder,
 		*Attack,
@@ -207,10 +207,10 @@ FWBProductionTerminalReplaySmokeResult WBProductionTerminalReplaySmoke::Run(
 		return Result;
 	}
 
-	const FWBMatchLegalAction* Discard = FindDiscard(Started.NextLegalActions);
+	const FWBMatchLegalAction* Discard = FindTerminalDiscard(Started.NextLegalActions);
 	FWBMatchOperationResult Operation;
 	if (Discard == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitTerminalAndCapture(
 			Coordinator,
 			Recorder,
 			*Discard,

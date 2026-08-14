@@ -11,7 +11,7 @@
 
 namespace
 {
-const FWBMatchLegalAction* FindEquip(
+const FWBMatchLegalAction* FindHybridReplacementEquip(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const FString& WandCardId,
 	const int32 HeroUnitId)
@@ -40,7 +40,7 @@ const FWBMatchLegalAction* FindHybridReplacement(
 		});
 }
 
-const FWBMatchLegalAction* FindDiscard(
+const FWBMatchLegalAction* FindHybridReplacementDiscard(
 	const TArray<FWBMatchLegalAction>& Actions)
 {
 	return Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
@@ -49,7 +49,7 @@ const FWBMatchLegalAction* FindDiscard(
 	});
 }
 
-bool SubmitAndCapture(
+bool SubmitHybridReplacementAndCapture(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FWBMatchLegalAction& Action,
@@ -71,7 +71,7 @@ bool SubmitAndCapture(
 	return true;
 }
 
-int32 CountDiscardInstance(
+int32 CountHybridReplacementDiscardInstance(
 	const FWBGameStateData& State,
 	const int32 PlayerId,
 	const FString& InstanceId)
@@ -153,13 +153,13 @@ WBProductionHybridReplacementSmoke::Run(
 		return Result;
 	}
 
-	const FWBMatchLegalAction* Equip = FindEquip(
+	const FWBMatchLegalAction* Equip = FindHybridReplacementEquip(
 		Started.NextLegalActions,
 		TEXT("hybrid_fixture_wand"),
 		Result.OldHeroUnitId);
 	FWBMatchOperationResult Operation;
 	if (Equip == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitHybridReplacementAndCapture(
 			Coordinator, Recorder, *Equip, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("hybrid_smoke_equip_missing");
@@ -172,7 +172,7 @@ WBProductionHybridReplacementSmoke::Run(
 		? FindHybridReplacement(Legal.Actions, Result.OldHeroUnitId)
 		: nullptr;
 	if (Replacement == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitHybridReplacementAndCapture(
 			Coordinator, Recorder, *Replacement, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("hybrid_smoke_replacement_missing");
@@ -193,7 +193,7 @@ WBProductionHybridReplacementSmoke::Run(
 		|| NewHero->CardId != TEXT("hybrid_fixture_replacement")
 		|| FWBTile(NewHero->X, NewHero->Y) != OldHeroTile
 		|| !Coordinator.GetState().GetCardZoneState().EquippedCards.IsEmpty()
-		|| CountDiscardInstance(Coordinator.GetState(), 0, PaidWandInstanceId) != 1)
+		|| CountHybridReplacementDiscardInstance(Coordinator.GetState(), 0, PaidWandInstanceId) != 1)
 	{
 		Result.Reason = TEXT("hybrid_smoke_replacement_state_mismatch");
 		return Result;
@@ -229,10 +229,10 @@ WBProductionHybridReplacementSmoke::Run(
 	const FWBMatchLegalActionGenerationResult Continued =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Discard = Continued.bOk
-		? FindDiscard(Continued.Actions)
+		? FindHybridReplacementDiscard(Continued.Actions)
 		: nullptr;
 	if (Discard == nullptr
-		|| !SubmitAndCapture(
+		|| !SubmitHybridReplacementAndCapture(
 			Coordinator, Recorder, *Discard, Operation, Result.Reason))
 	{
 		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("hybrid_smoke_continued_action_missing");

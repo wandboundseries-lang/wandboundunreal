@@ -7,7 +7,6 @@ public class WandboundCardDB : ModuleRules
 	public WandboundCardDB(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "WandboundCore" });
 		PrivateDependencyModuleNames.Add("Json");

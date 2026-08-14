@@ -10,7 +10,7 @@
 namespace
 {
 constexpr int32 SummonBoardSize = 9;
-constexpr int32 MaxOwnedUnitsIncludingHero = 4;
+constexpr int32 SummonMaxOwnedUnitsIncludingHero = 4;
 
 bool IsTileInBounds(const FWBTile& Tile)
 {
@@ -71,7 +71,7 @@ const FWBUnitState* FindHeroUnit(
 	return Hero;
 }
 
-int32 AllocateNextUnitId(const FWBGameStateData& State)
+int32 AllocateNextSummonedUnitId(const FWBGameStateData& State)
 {
 	int32 MaxUnitId = -1;
 	for (const FWBUnitState& Unit : State.Units)
@@ -219,7 +219,7 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 		return MakeResult(EWBSummonExecutionResultCode::HeroNotFound, Request);
 	}
 
-	if (State.GetUnitsForPlayer(Request.PlayerId).Num() >= MaxOwnedUnitsIncludingHero)
+	if (State.GetUnitsForPlayer(Request.PlayerId).Num() >= SummonMaxOwnedUnitsIncludingHero)
 	{
 		return MakeResult(EWBSummonExecutionResultCode::UnitCapReached, Request);
 	}
@@ -252,7 +252,7 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 			TurnOneQuery.Reason);
 	}
 
-	const int32 NewUnitId = AllocateNextUnitId(State);
+	const int32 NewUnitId = AllocateNextSummonedUnitId(State);
 	if (NewUnitId < 0 || State.GetUnitById(NewUnitId) != nullptr)
 	{
 		return MakeResult(EWBSummonExecutionResultCode::UnitIdAllocationFailed, Request);

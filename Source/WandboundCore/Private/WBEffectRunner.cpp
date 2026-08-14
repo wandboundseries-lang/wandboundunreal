@@ -17,8 +17,8 @@ namespace
 const FName BurnStatusId(TEXT("Burn"));
 const FName PoisonStatusId(TEXT("Poison"));
 const FName RootedStatusId(TEXT("Rooted"));
-const FName StunnedStatusId(TEXT("Stunned"));
-const FName FrozenStatusId(TEXT("Frozen"));
+const FName EffectRunnerStunnedStatusId(TEXT("Stunned"));
+const FName EffectRunnerFrozenStatusId(TEXT("Frozen"));
 
 void AppendStartTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const int32 PlayerId, const int32 TurnNumber)
 {
@@ -639,7 +639,7 @@ FWBApplyActionResult WBEffectRunner::CalculatePendingAttackDamage(
 	Calculation.CalculatedArmor = Calculation.PreviousArmor;
 	Calculation.bPrevented = State.PendingAttack.bPrevented;
 
-	if (!Calculation.bPrevented && HitUnit->HasStatus(FrozenStatusId))
+	if (!Calculation.bPrevented && HitUnit->HasStatus(EffectRunnerFrozenStatusId))
 	{
 		Calculation.bFrozenBreak = true;
 	}
@@ -832,11 +832,11 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 
 	if (Calculation.bFrozenBreak)
 	{
-		HitUnit->RemoveStatus(FrozenStatusId);
+		HitUnit->RemoveStatus(EffectRunnerFrozenStatusId);
 		AppendStatusRemovedTrace(
 			Result.TraceEvents,
 			PendingAttack.AttackingPlayerId,
-			FrozenStatusId,
+			EffectRunnerFrozenStatusId,
 			Calculation.HitUnitId,
 			PendingAttack.AttackerUnitId,
 			PendingAttack.AttackerTile,
@@ -1486,7 +1486,7 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 		}
 		FWBUnitState& Unit = *UnitPtr;
 
-		if (!Unit.HasStatus(PoisonStatusId) || Unit.HasStatus(FrozenStatusId))
+		if (!Unit.HasStatus(PoisonStatusId) || Unit.HasStatus(EffectRunnerFrozenStatusId))
 		{
 			continue;
 		}
@@ -1610,8 +1610,8 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 
 		const FName EndTurnDurationStatusIds[] = {
 			RootedStatusId,
-			StunnedStatusId,
-			FrozenStatusId
+			EffectRunnerStunnedStatusId,
+			EffectRunnerFrozenStatusId
 		};
 
 		for (const FName StatusId : EndTurnDurationStatusIds)
