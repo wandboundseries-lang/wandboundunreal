@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-08-15",
+  "baseline": {
+    "branch": "main",
+    "head": "fe346cd803b371e0aebcda3b14a132706bf00d0b",
+    "origin_main": "fe346cd803b371e0aebcda3b14a132706bf00d0b",
+    "commit_subject": "Add Wandbound 3D card models",
+    "repository_visibility": "public",
+    "staged_count_at_start": 0,
+    "staged_count_at_finish": 0
+  },
+  "android_file_server": {
+    "path": "Config/DefaultEngine.ini",
+    "section": "/Script/AndroidFileServerEditor.AndroidFileServerRuntimeSettings",
+    "owner_decision": "DISABLED",
+    "token_value_in_audit": false,
+    "historical_token_state": "EXPOSED_NONBLANK",
+    "first_key_commit": "cf4f6849e24da4f2e7f10435090fe5ca34b9c61c",
+    "ue57_disable_semantics": {
+      "authoritative_enable_key": "bEnablePlugin",
+      "plugin_enabled": false,
+      "embedded_afs_generated": false,
+      "standalone_afs_project_generated": false,
+      "afs_manifest_components_generated": false,
+      "usb_service_available": false,
+      "network_service_available": false,
+      "runtime_start_methods_succeed": false,
+      "blank_token_safe_because_service_disabled": true,
+      "android_platform_support_preserved": true,
+      "non_afs_gameplay_affected": false
+    },
+    "config_changes": [
+      {
+        "key": "bEnablePlugin",
+        "old_state": "ENABLED",
+        "new_state": "DISABLED"
+      },
+      {
+        "key": "bAllowNetworkConnection",
+        "old_state": "ENABLED",
+        "new_state": "DISABLED"
+      },
+      {
+        "key": "SecurityToken",
+        "old_state": "NONBLANK",
+        "new_state": "BLANK_NON_SECRET"
+      }
+    ],
+    "validation": {
+      "old_credential_present_in_current_config": false,
+      "new_credential_generated": false,
+      "auto_sentinel_present": false,
+      "unrelated_config_exact_after_expected_key_normalization": true,
+      "current_tree_remediation_ready": true
+    },
+    "future_reenable_requirement": "Use a newly generated private/local credential workflow; never reuse or recommit the historical value.",
+    "historical_exposure": {
+      "old_distributed_builds_retroactively_changed": false,
+      "old_value_remains_in_git_history": true,
+      "history_rewrite_required_for_future_build_revocation": false,
+      "history_purge_optional_for_repository_policy": true
+    }
+  },
+  "external_backup": {
+    "directory": "%LOCALAPPDATA%/Temp/WandboundAndroidSecurity_20260815_192304/",
+    "outside_repository": true,
+    "default_engine_backed_up": true,
+    "default_editor_backed_up": true,
+    "local_transcript_backed_up": true
+  },
+  "default_editor": {
+    "path": "Config/DefaultEditor.ini",
+    "classification": "LOCAL_EDITOR_STATE",
+    "backup_bytes": 55531,
+    "head_bytes": 0,
+    "final_worktree_bytes": 0,
+    "restored_to_exact_head_representation": true,
+    "clean_relative_to_head": true,
+    "ignore_policy_changed": false
+  },
+  "local_transcript": {
+    "path": "h origin main",
+    "classification": "LOCAL_EDITOR_STATE",
+    "bytes": 5245,
+    "source_or_asset": false,
+    "production_reference_found": false,
+    "backup_complete": true,
+    "deletion_authorized": true,
+    "deletion_complete": true
+  },
+  "historical_documents": [
+    {
+      "path": "Docs/CardDB_Unreal_Importer_Manifest_Suite_Audit.md",
+      "classification": "HISTORICAL_DOC",
+      "successor_commit": "7625719c2c02a57e998a872d9f369d4078e94f8f",
+      "successor_document": "Docs/CardDB_Unreal_Importer_Manifest_Suite_Report.md",
+      "superseded_banner_retained": true,
+      "current_authority": false
+    },
+    {
+      "path": "Docs/Production_Activation_Target_Selection_Bridge_Audit.md",
+      "classification": "HISTORICAL_DOC",
+      "successor_commit": "51b04876120a102dc7028c6390d003c3a1e46cae",
+      "successor_document": "Docs/Production_Activation_Target_Selection_Bridge_Report.md",
+      "superseded_banner_retained": true,
+      "current_authority": false
+    }
+  ],
+  "intentional_untracked_assets": [
+    {
+      "path": "Content/Maps/NewProjectTest.umap",
+      "classification": "LEGACY_DEV_ASSET",
+      "modified_in_pass": false,
+      "manual_editor_inspection_optional_before_later_disposition": true
+    },
+    {
+      "path": "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+      "classification": "MESHY_PLUGIN_VENDOR_UNRESOLVED",
+      "modified_in_pass": false,
+      "redistribution_grant_found": false,
+      "lfs_rule_added": false
+    }
+  ],
+  "lfs_integrity": {
+    "meshy_import_models_expected": 58,
+    "meshy_import_models_tracked": 58,
+    "meshy_import_models_lfs_tracked": 58,
+    "meshy_import_models_clean": true
+  },
+  "gameplay_integrity": {
+    "source_changes_created": false,
+    "carddb_data_changes_created": false,
+    "replay_data_changes_created": false,
+    "test_changes_created": false,
+    "unreal_binary_assets_modified": false
+  },
+  "commit_groups": [
+    {
+      "name": "SECURITY_CONFIG",
+      "ready": true,
+      "paths": [
+        "Config/DefaultEngine.ini"
+      ],
+      "whole_file_safe": true,
+      "pre_existing_dirty": false
+    },
+    {
+      "name": "DOCUMENTATION_HYGIENE",
+      "ready": true,
+      "paths": [
+        "Docs/CardDB_Unreal_Importer_Manifest_Suite_Audit.md",
+        "Docs/Production_Activation_Target_Selection_Bridge_Audit.md",
+        "Docs/Residual_Repository_Hygiene_Audit.md",
+        "Docs/Residual_Repository_Hygiene_Audit.json"
+      ],
+      "whole_file_safe": true
+    }
+  ],
+  "unknown_path_count": 0,
+  "security_remediation_ready": true,
+  "final_hygiene_ready": true,
+  "files_staged": false,
+  "files_committed": false,
+  "files_pushed": false,
+  "history_rewritten": false
+}
