@@ -1,0 +1,202 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "csn_crash_in_v1",
+  "source_version": "godot_carddb_canonical_v2_1",
+  "bundle_kind": "production",
+  "metadata": {
+    "source": "Reference/GodotProject/godotcanon/scripts/data/CardDB",
+    "version": "csn_crash_in_v1",
+    "notes": "Actual CSN Crash-In definition plus isolated production smoke participants."
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "crash_in_smoke_hero_attacker",
+      "public_name": "Crash-In Smoke Attacker",
+      "kind": "hero",
+      "public_text": "Production smoke participant.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 14, "atk": 4, "ar": 8, "rl": 4 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "crash_in_smoke_hero_csn",
+      "public_name": "Crash-In Smoke CSN Hero",
+      "kind": "hero",
+      "public_text": "Production smoke participant.",
+      "public_category": "Hero",
+      "factions": ["csn"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 14, "atk": 1, "ar": 2, "rl": 4 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "hero": { "role": "hero", "match_start_placement": "canonical_hero_spawn" }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_csn_rook",
+      "public_name": "CSN Rook",
+      "kind": "character",
+      "public_text": "CSN Inheritance applies when summoned by a CSN effect.",
+      "public_category": "Character",
+      "factions": ["csn"],
+      "tags": ["csn_inheritance"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 16, "atk": 3, "ar": 2, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_csn_echo",
+      "public_name": "CSN Echo",
+      "kind": "character",
+      "public_text": "CSN Inheritance applies when summoned by a CSN effect.",
+      "public_category": "Character",
+      "factions": ["csn"],
+      "tags": ["csn_inheritance"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 13, "atk": 2, "ar": 2, "rl": 2 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "wand_equip_switch",
+      "public_name": "Battle Spirit",
+      "kind": "wand",
+      "public_text": "Equipped unit gets +1 ATK.",
+      "public_category": "Wand",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "rr": 1 },
+      "equip": {
+        "target_requirement": "owned_unit",
+        "resonance_requirement": 1
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "effect_react_csn_crash_in",
+      "public_name": "CSN Crash-In",
+      "kind": "action",
+      "public_text": "When a CSN unit you control is attacked, you may destroy that unit. If you do, summon a CSN Character from your hand to that tile and redirect the attack to the summoned unit. CSN Inheritance applies.",
+      "public_category": "Effect React",
+      "factions": ["csn"],
+      "tags": ["react", "csn_inheritance"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "activated_effects": [
+        {
+          "effect_id": "csn_crash_in_pre_hit",
+          "public_label": "Crash-In",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "hand",
+            "timing": "response_window",
+            "requires_source_unit": false,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": false,
+            "cost_gate": { "required_rr": 2, "cost_kind": "RR" }
+          },
+          "activation_condition": {
+            "attack_defender": "own_current_defender",
+            "target_controller": "self",
+            "target_faction": "csn"
+          },
+          "payloads": [
+            {
+              "type": "replace_pending_attack_defender_from_hand",
+              "target": "selected",
+              "selection_zone": "hand",
+              "replacement_kind": "character",
+              "required_source_faction": "csn",
+              "required_replacement_faction": "csn",
+              "inheritance_policy": "transfer_wands_add_source_current_rl"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "crash_in_smoke_negate_b",
+      "public_name": "Crash-In Smoke Negate B",
+      "kind": "action",
+      "public_text": "Negate the current pending effect.",
+      "public_category": "Effect React",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "activated_effects": [
+        {
+          "effect_id": "crash_in_smoke_negate_b_effect",
+          "public_label": "Negate B",
+          "target_requirement": "none",
+          "source_gate": {
+            "required_zone": "hand",
+            "timing": "response_window",
+            "requires_source_unit": false,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "crash_in_smoke_negate_b_once"
+          },
+          "payloads": [
+            { "type": "negate_pending_effect" }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "crash_in_smoke_negate_c",
+      "public_name": "Crash-In Smoke Negate C",
+      "kind": "action",
+      "public_text": "Negate the current pending effect.",
+      "public_category": "Effect React",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "activated_effects": [
+        {
+          "effect_id": "crash_in_smoke_negate_c_effect",
+          "public_label": "Negate C",
+          "target_requirement": "none",
+          "source_gate": {
+            "required_zone": "hand",
+            "timing": "response_window",
+            "requires_source_unit": false,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "crash_in_smoke_negate_c_once"
+          },
+          "payloads": [
+            { "type": "negate_pending_effect" }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "crash_in_smoke_filler",
+      "public_name": "Crash-In Smoke Filler",
+      "kind": "action",
+      "public_text": "Production smoke deck card.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {}
+    }
+  ]
+}

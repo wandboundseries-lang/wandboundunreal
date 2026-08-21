@@ -21,7 +21,8 @@ bool IsKnownPayloadOperation(const EWBGenericEffectOp Operation)
 		|| Operation == EWBGenericEffectOp::NegatePendingEffect
 		|| Operation == EWBGenericEffectOp::PreventPendingAttack
 		|| Operation == EWBGenericEffectOp::RedirectPendingAttack
-		|| Operation == EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution;
+		|| Operation == EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution
+		|| Operation == EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand;
 }
 
 bool IsValidTileCoordinate(const FWBTile& Tile)
@@ -185,6 +186,8 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 	Result.Command.EffectRequest.Source.SourceCardId = Request.CardDefinition.CardId;
 	Result.Command.EffectRequest.Source.SourceEffectId = MatchingEffect->EffectId;
 	Result.Command.EffectRequest.Target = Request.Target;
+	Result.Command.EffectRequest.AuxiliaryCardSelection =
+		Request.AuxiliaryCardSelection;
 	Result.Command.EffectRequest.Payloads = MatchingEffect->Payloads;
 	if (MatchingEffect->SourceGate.CostGate.bRequiresExternalAffordability
 		|| MatchingEffect->SourceGate.CostGate.RequiredRR > 0)

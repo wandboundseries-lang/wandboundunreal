@@ -4,6 +4,7 @@
 #include "WBArmorEffect.h"
 #include "WBCardActivationCommand.h"
 #include "WBCardActivationCostPayment.h"
+#include "WBCardDefinitionRepository.h"
 #include "WBDamageEffect.h"
 #include "WBDamageResolution.h"
 #include "WBDeathResolution.h"
@@ -11,6 +12,7 @@
 #include "WBMatchCoordinator.h"
 #include "WBStatusEffect.h"
 #include "WBRules.h"
+#include "WBUnitReplacementEffect.h"
 
 namespace
 {
@@ -1163,6 +1165,16 @@ FWBApplyActionResult WBEffectRunner::ApplyHealEffect(
 FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 	FWBGameStateData& State,
 	const FWBEffectRequest& Request)
+
+{
+	return ApplyEffectRequest(
+		State, Request, FWBCardDefinitionRepository());
+}
+
+FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
+	FWBGameStateData& State,
+	const FWBEffectRequest& Request,
+	const FWBCardDefinitionRepository& Repository)
 {
 	FWBEffectRequestResult Result;
 	Result.Request = Request;
@@ -1275,6 +1287,21 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 				Request.Target.TargetUnitId);
 			break;
 		}
+		case EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand:
+		{
+			if (Repository.RepositoryId.IsEmpty())
+			{
+				PayloadResult.Reason =
+					TEXT("card_definition_repository_required");
+			}
+			else
+			{
+				PayloadResult =
+					WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacement(
+						WorkingState, Request, Payload, Repository);
+			}
+			break;
+		}
 		default:
 			Result.bOk = false;
 			Result.Reason = TEXT("unknown_effect_payload_operation");
@@ -1302,6 +1329,16 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
 	FWBGameStateData& State,
 	const FWBCardActivationCommand& Command)
+
+{
+	return ApplyCardActivationCommand(
+		State, Command, FWBCardDefinitionRepository());
+}
+
+FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
+	FWBGameStateData& State,
+	const FWBCardActivationCommand& Command,
+	const FWBCardDefinitionRepository& Repository)
 {
 	FWBCardActivationCommandResult Result;
 	Result.Command = Command;
@@ -1355,7 +1392,8 @@ FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
 		bPaidCost = true;
 	}
 
-	const FWBEffectRequestResult EffectResult = ApplyEffectRequest(WorkingState, FilledCommand.EffectRequest);
+	const FWBEffectRequestResult EffectResult = ApplyEffectRequest(
+		WorkingState, FilledCommand.EffectRequest, Repository);
 	Result.Command = FilledCommand;
 	Result.EffectResult = EffectResult;
 	if (!EffectResult.bOk)

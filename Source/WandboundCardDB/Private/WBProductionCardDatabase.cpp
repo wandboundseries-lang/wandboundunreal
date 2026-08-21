@@ -2502,46 +2502,59 @@ private:
 			EffectPath + TEXT(".activation_condition"));
 
 		FString Value;
-		if (!TryReadString(Condition, TEXT("attack_defender"), Value)
-			|| Value != TEXT("own_hero_current_defender"))
+		if (HasField(Condition, TEXT("attack_defender")))
 		{
-			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.attack_defender"), TEXT("attack_defender must be own_hero_current_defender."));
+			if (!TryReadString(Condition, TEXT("attack_defender"), Value)
+				|| (Value != TEXT("own_hero_current_defender")
+					&& Value != TEXT("own_current_defender")))
+			{
+				AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.attack_defender"), TEXT("attack_defender must be a supported current-defender requirement."));
+			}
+			else
+			{
+				Effect.ActivationCondition.AttackDefender =
+					Value == TEXT("own_current_defender")
+						? EWBCardEffectAttackDefenderRequirement::OwnCurrentDefender
+						: EWBCardEffectAttackDefenderRequirement::OwnHeroCurrentDefender;
+			}
 		}
-		else
+		if (HasField(Condition, TEXT("target_controller")))
 		{
-			Effect.ActivationCondition.AttackDefender =
-				EWBCardEffectAttackDefenderRequirement::OwnHeroCurrentDefender;
+			if (!TryReadString(Condition, TEXT("target_controller"), Value)
+				|| Value != TEXT("self"))
+			{
+				AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_controller"), TEXT("target_controller must be self."));
+			}
+			else
+			{
+				Effect.ActivationCondition.TargetController =
+					EWBCardEffectTargetControllerRequirement::Self;
+			}
 		}
-		if (!TryReadString(Condition, TEXT("target_controller"), Value)
-			|| Value != TEXT("self"))
-		{
-			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_controller"), TEXT("target_controller must be self."));
-		}
-		else
-		{
-			Effect.ActivationCondition.TargetController =
-				EWBCardEffectTargetControllerRequirement::Self;
-		}
-		if (!TryReadString(
-			Condition,
-			TEXT("target_faction"),
-			Effect.ActivationCondition.RequiredTargetFaction)
-			|| Effect.ActivationCondition.RequiredTargetFaction.IsEmpty())
+		if (HasField(Condition, TEXT("target_faction"))
+			&& (!TryReadString(
+				Condition,
+				TEXT("target_faction"),
+				Effect.ActivationCondition.RequiredTargetFaction)
+				|| Effect.ActivationCondition.RequiredTargetFaction.IsEmpty()))
 		{
 			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_faction"), TEXT("target_faction must be a non-empty typed faction id."));
 		}
-		if (!TryReadString(Condition, TEXT("target_relation"), Value)
-			|| (Value != TEXT("orthogonally_adjacent_to_own_hero")
-				&& Value != TEXT("other_than_own_hero")))
+		if (HasField(Condition, TEXT("target_relation")))
 		{
-			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_relation"), TEXT("target_relation must be a supported typed relation."));
-		}
-		else
-		{
-			Effect.ActivationCondition.TargetRelation =
-				Value == TEXT("other_than_own_hero")
-					? EWBCardEffectTargetRelationRequirement::OtherThanOwnHero
-					: EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero;
+			if (!TryReadString(Condition, TEXT("target_relation"), Value)
+				|| (Value != TEXT("orthogonally_adjacent_to_own_hero")
+					&& Value != TEXT("other_than_own_hero")))
+			{
+				AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath, Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.target_relation"), TEXT("target_relation must be a supported typed relation."));
+			}
+			else
+			{
+				Effect.ActivationCondition.TargetRelation =
+					Value == TEXT("other_than_own_hero")
+						? EWBCardEffectTargetRelationRequirement::OtherThanOwnHero
+						: EWBCardEffectTargetRelationRequirement::OrthogonallyAdjacentToOwnHero;
+			}
 		}
 	}
 
@@ -2887,6 +2900,61 @@ private:
 				ValidateSelectedTarget(PayloadObject, PayloadPath, Record);
 				Payload.Operation =
 					EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution;
+			}
+			else if (Type == TEXT("replace_pending_attack_defender_from_hand"))
+			{
+				ValidateKnownFields(
+					PayloadObject,
+					{
+						TEXT("type"), TEXT("target"),
+						TEXT("selection_zone"),
+						TEXT("replacement_kind"),
+						TEXT("required_source_faction"),
+						TEXT("required_replacement_faction"),
+						TEXT("inheritance_policy")
+					},
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					PayloadPath);
+				ValidateSelectedTarget(PayloadObject, PayloadPath, Record);
+				Payload.Operation =
+					EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand;
+				FString ValueText;
+				if (!TryReadString(PayloadObject, TEXT("selection_zone"), ValueText)
+					|| ValueText != TEXT("hand"))
+				{
+					AddError(TEXT("replacement_selection_zone_unsupported"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".selection_zone"), TEXT("Replacement selection must use the activating player's Hand."));
+				}
+				if (!TryReadString(PayloadObject, TEXT("replacement_kind"), ValueText)
+					|| ValueText != TEXT("character"))
+				{
+					AddError(TEXT("replacement_kind_unsupported"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".replacement_kind"), TEXT("This replacement operation supports Character cards only."));
+				}
+				else
+				{
+					Payload.RequiredReplacementKind =
+						EWBEffectReplacementCardKind::Character;
+				}
+				if (!TryReadString(PayloadObject, TEXT("required_source_faction"), Payload.RequiredSourceFaction)
+					|| Payload.RequiredSourceFaction.IsEmpty())
+				{
+					AddError(TEXT("replacement_source_faction_missing"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".required_source_faction"), TEXT("Replacement effects require explicit source faction metadata."));
+				}
+				if (!TryReadString(PayloadObject, TEXT("required_replacement_faction"), Payload.RequiredReplacementFaction)
+					|| Payload.RequiredReplacementFaction.IsEmpty())
+				{
+					AddError(TEXT("replacement_faction_missing"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".required_replacement_faction"), TEXT("Replacement effects require explicit replacement faction metadata."));
+				}
+				if (!TryReadString(PayloadObject, TEXT("inheritance_policy"), ValueText)
+					|| ValueText != TEXT("transfer_wands_add_source_current_rl"))
+				{
+					AddError(TEXT("inheritance_policy_unsupported"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".inheritance_policy"), TEXT("The inheritance policy is unsupported."));
+				}
+				else
+				{
+					Payload.InheritancePolicy =
+						EWBEffectInheritancePolicy::TransferEquippedWandsAndAddSourceCurrentRL;
+				}
 			}
 			else
 			{

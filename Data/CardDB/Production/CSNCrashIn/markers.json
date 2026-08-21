@@ -1,0 +1,36 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "csn_crash_in_v1",
+  "source_version": "godot_carddb_canonical_v2_1",
+  "bundle_kind": "production",
+  "metadata": { "notes": "Isolated production-smoke marker definitions." },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "crash_in_smoke_trap",
+      "public_name": "Crash-In Smoke Trap",
+      "kind": "trap",
+      "public_text": "Production smoke marker.",
+      "public_category": "Trap",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "trap": { "damage": 1 }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "crash_in_smoke_npc",
+      "public_name": "Crash-In Smoke NPC",
+      "kind": "npc",
+      "public_text": "Production smoke neutral unit.",
+      "public_category": "NPC",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 3, "atk": 0, "ar": 1, "rl": 0 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 }
+    }
+  ]
+}

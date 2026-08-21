@@ -12,6 +12,7 @@ struct WANDBOUNDCORE_API FWBCardActivationExpansionRequest
 	FWBCardDefinition CardDefinition;
 	FString EffectId;
 	FWBEffectTargetRef Target;
+	FWBEffectAuxiliaryCardSelection AuxiliaryCardSelection;
 	FWBCardActivationSourceGateContext SourceGateContext;
 	FString DebugActivationId;
 };

@@ -1145,6 +1145,59 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			}
 			break;
 		}
+		case EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand:
+		{
+			if (!State.HasPendingAttack()
+				|| State.PendingAttack.Stage
+					!= EWBAttackContinuationStage::PreHit)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("pending_attack_not_pre_hit"));
+			}
+			if (Payload.PendingAttackContinuationId.IsEmpty()
+				|| Payload.PendingAttackContinuationId
+					!= State.PendingAttack.ContinuationId)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("pending_attack_target_mismatch"));
+			}
+			if (Request.Target.TargetUnitId
+				!= State.PendingAttack.DefenderUnitId)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("replacement_source_not_current_defender"));
+			}
+			const FWBUnitState* Defender = State.GetUnitById(
+				State.PendingAttack.DefenderUnitId);
+			if (Defender == nullptr || Defender->bDefeated
+				|| !Defender->IsUnitOnBoard())
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("replacement_source_unavailable"));
+			}
+			if (Defender->OwnerId != Request.Source.PlayerId)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("replacement_source_owner_mismatch"));
+			}
+			if (Request.AuxiliaryCardSelection.Zone
+					!= EWBEffectAuxiliaryCardZone::Hand
+				|| Request.AuxiliaryCardSelection.CardInstanceId.IsEmpty()
+				|| Request.AuxiliaryCardSelection.CardId.IsEmpty())
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("auxiliary_hand_card_selection_missing"));
+			}
+			if (Payload.RequiredReplacementKind
+					!= EWBEffectReplacementCardKind::Character
+				|| Payload.InheritancePolicy !=
+					EWBEffectInheritancePolicy::TransferEquippedWandsAndAddSourceCurrentRL)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("unsupported_replacement_policy"));
+			}
+			break;
+		}
 		default:
 			return FWBActionQueryResult::Deny(TEXT("unknown_effect_payload_operation"));
 		}

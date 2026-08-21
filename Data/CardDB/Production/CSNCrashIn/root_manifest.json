@@ -1,0 +1,13 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "csn_crash_in_production",
+  "bundle_kind": "production",
+  "manifests": [
+    { "name": "csn_crash_in", "path": "bundle_manifest.json" }
+  ],
+  "metadata": {
+    "source": "Tracked Unreal canon and Reference/GodotProject/godotcanon/scripts/data/CardDB",
+    "version": "csn_crash_in_v1",
+    "notes": "Production transfer slice for CSN Crash-In and its isolated deterministic smoke cards."
+  }
+}

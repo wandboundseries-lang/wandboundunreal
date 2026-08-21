@@ -1,0 +1,167 @@
+{
+  "audit_id": "csn_crash_in_production_transfer",
+  "baseline": {
+    "head": "2206dee407d0031c2a2fb3e6d9691bd858defaad",
+    "origin_main": "2206dee407d0031c2a2fb3e6d9691bd858defaad",
+    "initial_automation_succeeded": 2297,
+    "replay_schema_version": 1,
+    "action_codec_header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "action_codec_source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "card": {
+    "definition_id": "effect_react_csn_crash_in",
+    "public_name": "CSN Crash-In",
+    "rr": 2,
+    "timing": "PreHit",
+    "required_defender": "owned CSN unit",
+    "eligible_replacement": "owned CSN Character instance in Hand",
+    "production_bundle_digest": "69e7036ac6814fb7bcec6c44056d44c980050ab6728f47abe5c2625471b35906"
+  },
+  "godot_audit": {
+    "preserved": [
+      "PreHit only",
+      "own attacked CSN defender",
+      "exact eligible CSN Character choice from Hand",
+      "source CurrentRL snapshot",
+      "exact equipped Wand snapshot and transfer",
+      "source destruction",
+      "replacement on vacated tile",
+      "replacement printed stats before inheritance",
+      "BaseRL addition by source CurrentRL",
+      "same pending attack redirect",
+      "replacement at unit cap"
+    ],
+    "not_copied": [
+      "bespoke asynchronous picker",
+      "CardId gameplay branching",
+      "Crash-In nested-response exemption"
+    ],
+    "reconciliations": {
+      "nested_reactions": "Unreal generic every-activation-is-reactable invariant retained",
+      "summon_post": "No second ordinary summon checkpoint inside the suspended effect/attack continuation",
+      "hero": "No promotion; canonical Hero destruction commits terminal state"
+    }
+  },
+  "generic_model": {
+    "operation": "ReplacePendingAttackDefenderFromHand",
+    "condition": "OwnCurrentDefender",
+    "selection_zone": "Hand",
+    "replacement_kind": "Character",
+    "inheritance_policy": "TransferEquippedWandsAndAddSourceCurrentRL",
+    "definition_driven": true,
+    "card_id_authority": false
+  },
+  "transaction": {
+    "working_copy": true,
+    "fail_closed": true,
+    "exact_instance_selection": true,
+    "source_current_rl_snapshot": true,
+    "base_rl_formula": "replacement_printed_base_rl + source_current_rl",
+    "canonical_resonance_recalculation": true,
+    "exact_wand_transfer": true,
+    "overflow_resolution": true,
+    "exact_continuation_redirect": true,
+    "second_attack_created": false,
+    "ordinary_summon_consumed": false
+  },
+  "privacy": {
+    "choice_private_until_summon": true,
+    "opponent_candidate_leak": false,
+    "receipt_field_count": 8,
+    "receipt_contains_state_digest": false,
+    "receipt_contains_trace_digest": false,
+    "receipt_contains_replacement_instance": false
+  },
+  "tests": {
+    "focused": {
+      "succeeded": 8,
+      "failed": 0,
+      "not_run": 0,
+      "duration_seconds": 0.2725396156311035,
+      "assertion_calls": 80,
+      "requested_matrix_cases_covered": 49
+    },
+    "full": {
+      "succeeded": 2305,
+      "failed": 0,
+      "warnings": 0,
+      "not_run": 0,
+      "duration_seconds": 27.564023971557617,
+      "commandline_plugin_isolation": [
+        "TakeRecorder",
+        "ChaosCaching"
+      ]
+    }
+  },
+  "build_matrix": [
+    { "target": "WandboundUEEditor Win64 Development", "mode": "non-unity", "succeeded": true, "seconds": 12.53 },
+    { "target": "WandboundUE Win64 Development", "mode": "non-unity", "succeeded": true, "seconds": 408.30 },
+    { "target": "WandboundUEEditor Win64 Development", "mode": "default", "succeeded": true, "seconds": 43.23 },
+    { "target": "WandboundUE Win64 Development", "mode": "default", "succeeded": true, "seconds": 67.05 },
+    { "target": "WandboundUEEditor Win64 Development", "mode": "forced-unity-no-adaptive", "succeeded": true, "seconds": 130.02 },
+    { "target": "WandboundUE Win64 Development", "mode": "forced-unity-no-adaptive", "succeeded": true, "seconds": 116.68 },
+    { "target": "BuildCookRun", "mode": "clean", "succeeded": true, "seconds": 1042.91 }
+  ],
+  "packaged_smoke": {
+    "valid_runs": 2,
+    "requested_exit_status": 0,
+    "byte_identical": true,
+    "archive_sha256": "8a5c3ca21d775ab058fd6bf1cad32db9648aff189ea3c3f1337110b97394817e",
+    "receipt_sha256": "2d0cb65d591ff9f31bfd8e5f0486b83e64ea7f276f7e78a580078589407779b1",
+    "startup_sha256": "504b635089afcf66482ad4f75ad06dddfa8db46461ef758c8e2167d544ea0a01",
+    "replay_digest": "ead4e9ddea6f07c14c3052a7c62896a36a8158ecdbdf9c2508561ad3289fdb0d",
+    "final_state_digest": "4dffbf11e80b9bae3f90b4aabcb4def46a321aafb779dd47a705eaa74c15997b",
+    "final_trace_digest": "c1c4e16164e4b0582169a6343da046b5f923ffdf1f8a64de31d94ecb7dd824a3",
+    "final_generation": 1,
+    "final_revision": 11,
+    "record_count": 10,
+    "fresh_replay_verified": true,
+    "package_relative_paths": true,
+    "production_carddb_loaded": true
+  },
+  "changed_files": [
+    "Data/CardDB/Production/CSNCrashIn/bundle_manifest.json",
+    "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "Data/CardDB/Production/CSNCrashIn/markers.json",
+    "Data/CardDB/Production/CSNCrashIn/root_manifest.json",
+    "Data/Replay/CSNCrashInFixture/match_spec.json",
+    "Docs/CSN_Crash_In_Production_Transfer_Audit.json",
+    "Docs/CSN_Crash_In_Production_Transfer_Audit.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCardActivationCandidateGenerator.cpp",
+    "Source/WandboundCore/Private/WBCardActivationExpansion.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBReplayTrace.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundCore/Private/WBUnitReplacementEffect.cpp",
+    "Source/WandboundCore/Public/WBCardActivationCandidate.h",
+    "Source/WandboundCore/Public/WBCardActivationExpansion.h",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBEffectRequest.h",
+    "Source/WandboundCore/Public/WBEffectRunner.h",
+    "Source/WandboundCore/Public/WBReplayTrace.h",
+    "Source/WandboundCore/Public/WBUnitReplacementEffect.h",
+    "Source/WandboundRuntime/Private/WBProductionCSNCrashInSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionCSNCrashInSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBCSNCrashInTests.cpp"
+  ],
+  "preserved_unrelated": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+    "Content/MeshyImports/**",
+    ".gitattributes",
+    "Config/DefaultEngine.ini",
+    "Config/DefaultEditor.ini"
+  ],
+  "deferred": [
+    "separate draw-on-inheritance passive",
+    "additional ordinary post-summon response checkpoint",
+    "replacement kinds other than Character",
+    "Hybrid eligibility",
+    "Hero promotion without explicit Hero replacement authority"
+  ]
+}

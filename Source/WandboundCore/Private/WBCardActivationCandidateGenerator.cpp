@@ -160,6 +160,29 @@ FString FormatTargetPart(const FWBEffectTargetRef& Target)
 		Target.TargetWallEdge.B.Y);
 }
 
+bool RequiresAuxiliaryCardSelection(const FWBCardEffectDefinition& Effect)
+{
+	return Effect.Payloads.ContainsByPredicate(
+		[](const FWBGenericEffectPayload& Payload)
+		{
+			return Payload.Operation ==
+				EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand;
+		});
+}
+
+FString FormatAuxiliarySelectionPart(
+	const FWBEffectAuxiliaryCardSelection& Selection)
+{
+	if (Selection.Zone == EWBEffectAuxiliaryCardZone::None)
+	{
+		return FString();
+	}
+
+	return FString::Printf(
+		TEXT(":zhand:i%s"),
+		*Selection.CardInstanceId);
+}
+
 FWBCardActivationCandidate MakeCandidate(
 	const FWBCardDefinition& CardDefinition,
 	const FWBCardEffectDefinition& Effect,
@@ -245,6 +268,21 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 				continue;
 			}
 
+			TArray<FWBEffectAuxiliaryCardSelection> Selections;
+			if (const TArray<FWBEffectAuxiliaryCardSelection>* ConfiguredSelections =
+				Source.EffectIdToAuxiliaryCardSelections.Find(Effect.EffectId))
+			{
+				Selections = *ConfiguredSelections;
+			}
+			if (RequiresAuxiliaryCardSelection(Effect) && Selections.IsEmpty())
+			{
+				continue;
+			}
+			if (Selections.IsEmpty())
+			{
+				Selections.Add(FWBEffectAuxiliaryCardSelection());
+			}
+
 			for (const FWBEffectTargetRef& Target : Source.CandidateTargets)
 			{
 				if (IsDynamicTargetExcluded(State, Effect, Target))
@@ -252,40 +290,44 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 					continue;
 				}
 
-				FWBCardActivationExpansionRequest Request;
-				Request.PlayerId = Source.PlayerId;
-				Request.SourceUnitId = Source.SourceUnitId;
-				Request.CardDefinition = Source.CardDefinition;
-				Request.EffectId = Effect.EffectId;
-				Request.Target = Target;
-				Request.SourceGateContext = GateContext;
-
-				const FWBCardActivationExpansionResult ExpansionResult =
-					WBCardActivationExpansion::BuildActivationCommand(Request);
-				if (ExpansionResult.bOk)
+				for (const FWBEffectAuxiliaryCardSelection& Selection : Selections)
 				{
-					Result.Candidates.Add(MakeCandidate(
-						Source.CardDefinition,
-						Effect,
-						Target,
-						ExpansionResult.Command,
-						Source.PlayerId,
-						Source.SourceUnitId));
-					continue;
-				}
+					FWBCardActivationExpansionRequest Request;
+					Request.PlayerId = Source.PlayerId;
+					Request.SourceUnitId = Source.SourceUnitId;
+					Request.CardDefinition = Source.CardDefinition;
+					Request.EffectId = Effect.EffectId;
+					Request.Target = Target;
+					Request.AuxiliaryCardSelection = Selection;
+					Request.SourceGateContext = GateContext;
 
-				if (IsTargetMismatchReason(ExpansionResult.Reason)
-					|| ExpansionResult.Reason == TEXT("effect_id_not_found"))
-				{
-					continue;
-				}
+					const FWBCardActivationExpansionResult ExpansionResult =
+						WBCardActivationExpansion::BuildActivationCommand(Request);
+					if (ExpansionResult.bOk)
+					{
+						Result.Candidates.Add(MakeCandidate(
+							Source.CardDefinition,
+							Effect,
+							Target,
+							ExpansionResult.Command,
+							Source.PlayerId,
+							Source.SourceUnitId));
+						continue;
+					}
 
-				if (IsMalformedCardReason(ExpansionResult.Reason))
-				{
+					if (IsTargetMismatchReason(ExpansionResult.Reason)
+						|| ExpansionResult.Reason == TEXT("effect_id_not_found"))
+					{
+						continue;
+					}
+
+					if (IsMalformedCardReason(ExpansionResult.Reason))
+					{
+						return MakeGenerationFailure(*ExpansionResult.Reason);
+					}
+
 					return MakeGenerationFailure(*ExpansionResult.Reason);
 				}
-
-				return MakeGenerationFailure(*ExpansionResult.Reason);
 			}
 		}
 	}
@@ -298,10 +340,12 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 FString WBCardActivationCandidateGenerator::MakeActivationCandidateId(const FWBCardActivationCandidate& Candidate)
 {
 	return FString::Printf(
-		TEXT("activate:p%d:u%d:c%s:e%s:%s"),
+		TEXT("activate:p%d:u%d:c%s:e%s:%s%s"),
 		Candidate.PlayerId,
 		Candidate.SourceUnitId,
 		*Candidate.SourceCardId,
 		*Candidate.SourceEffectId,
-		*FormatTargetPart(Candidate.Target));
+		*FormatTargetPart(Candidate.Target),
+		*FormatAuxiliarySelectionPart(
+			Candidate.Command.EffectRequest.AuxiliaryCardSelection));
 }

@@ -29,7 +29,8 @@ enum class EWBCardEffectTargetRequirement : uint8
 enum class EWBCardEffectAttackDefenderRequirement : uint8
 {
 	Any,
-	OwnHeroCurrentDefender
+	OwnHeroCurrentDefender,
+	OwnCurrentDefender
 };
 
 enum class EWBCardEffectTargetControllerRequirement : uint8

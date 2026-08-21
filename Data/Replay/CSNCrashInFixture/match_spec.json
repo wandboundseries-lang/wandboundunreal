@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "match_id": "csn_crash_in_production_smoke_match",
+  "seed": 42041,
+  "first_player": 0,
+  "initial_draw_count": 6,
+  "definition_bundle_digest": "69e7036ac6814fb7bcec6c44056d44c980050ab6728f47abe5c2625471b35906",
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "crash_in_smoke_hero_attacker",
+      "ordered_deck": [
+        "crash_in_smoke_negate_b", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler"
+      ]
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "crash_in_smoke_hero_csn",
+      "ordered_deck": [
+        "char_csn_rook", "char_csn_echo", "wand_equip_switch",
+        "effect_react_csn_crash_in", "crash_in_smoke_negate_c", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler"
+      ]
+    }
+  ],
+  "markers": [
+    { "player_id": 0, "type": "trap", "tile": { "x": 0, "y": 8 }, "definition_id": "crash_in_smoke_trap", "placement_order": 0 },
+    { "player_id": 0, "type": "trap", "tile": { "x": 1, "y": 8 }, "definition_id": "crash_in_smoke_trap", "placement_order": 1 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 0, "y": 7 }, "definition_id": "crash_in_smoke_npc", "placement_order": 2 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 1, "y": 7 }, "definition_id": "crash_in_smoke_npc", "placement_order": 3 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 0, "y": 0 }, "definition_id": "crash_in_smoke_trap", "placement_order": 4 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 1, "y": 0 }, "definition_id": "crash_in_smoke_trap", "placement_order": 5 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 0, "y": 1 }, "definition_id": "crash_in_smoke_npc", "placement_order": 6 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 1, "y": 1 }, "definition_id": "crash_in_smoke_npc", "placement_order": 7 }
+  ]
+}

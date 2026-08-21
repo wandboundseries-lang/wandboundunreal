@@ -14,6 +14,7 @@
 #include "WBRuntimePresentationAssetBinding.h"
 #include "WBProductionRuntimeBootstrap.h"
 #include "WBProductionAfterDamageTriggerSmoke.h"
+#include "WBProductionCSNCrashInSmoke.h"
 #include "WBProductionHybridNonHeroSmoke.h"
 #include "WBProductionHybridReplacementSmoke.h"
 #include "WBProductionMatchReplayRuntime.h"
@@ -176,7 +177,24 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionAfterDamageTriggerSmoke::IsRequested())
+		if (WBProductionCSNCrashInSmoke::IsRequested())
+		{
+			const FWBProductionCSNCrashInSmokeResult CrashInSmoke =
+				WBProductionCSNCrashInSmoke::Run(PendingBootstrapRequest);
+			if (!CrashInSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound CSN Crash-In smoke failed: %s"),
+					*CrashInSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				CrashInSmoke.bOk ? 0 : 32,
+				TEXT("WandboundProductionCSNCrashInSmoke"));
+		}
+		else if (WBProductionAfterDamageTriggerSmoke::IsRequested())
 		{
 			const FWBProductionAfterDamageTriggerSmokeResult AfterDamageSmoke =
 				WBProductionAfterDamageTriggerSmoke::Run(PendingBootstrapRequest);

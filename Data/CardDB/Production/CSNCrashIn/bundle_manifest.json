@@ -1,0 +1,18 @@
+{
+  "manifest_schema_version": 1,
+  "manifest_id": "csn_crash_in_production_definitions",
+  "bundle_kind": "production",
+  "batches": [
+    {
+      "batch_name": "csn_crash_in_cards",
+      "bundles": [
+        { "name": "cards", "path": "cards.json" },
+        { "name": "markers", "path": "markers.json" }
+      ]
+    }
+  ],
+  "metadata": {
+    "source": "Tracked Unreal canon and read-only Godot CardDB",
+    "version": "csn_crash_in_v1"
+  }
+}

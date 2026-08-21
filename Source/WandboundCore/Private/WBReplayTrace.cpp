@@ -235,6 +235,27 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetNumberField(TEXT("new_rl_used"), Event.NewRLUsed);
 	}
+	if (Event.PreviousBaseRL != -1)
+	{
+		Object->SetNumberField(TEXT("previous_base_rl"), Event.PreviousBaseRL);
+	}
+	if (Event.NewBaseRL != -1)
+	{
+		Object->SetNumberField(TEXT("new_base_rl"), Event.NewBaseRL);
+	}
+	if (Event.PreviousCurrentRL != -1)
+	{
+		Object->SetNumberField(
+			TEXT("previous_current_rl"), Event.PreviousCurrentRL);
+	}
+	if (Event.NewCurrentRL != -1)
+	{
+		Object->SetNumberField(TEXT("new_current_rl"), Event.NewCurrentRL);
+	}
+	if (Event.InheritedRL != -1)
+	{
+		Object->SetNumberField(TEXT("inherited_rl"), Event.InheritedRL);
+	}
 
 	if (Event.AvailableRLBefore != -1)
 	{

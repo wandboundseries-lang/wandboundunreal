@@ -268,6 +268,27 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 			{
 				return MakeValidationFailure(Repository, TEXT("public_label_contains_internal_term"));
 			}
+			for (const FWBGenericEffectPayload& Payload : Effect.Payloads)
+			{
+				if (Payload.Operation ==
+					EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand
+					&& (Effect.TargetRequirement
+							!= EWBCardEffectTargetRequirement::Unit
+						|| Effect.ActivationCondition.AttackDefender
+							!= EWBCardEffectAttackDefenderRequirement::OwnCurrentDefender
+						|| Effect.ActivationCondition.TargetController
+							!= EWBCardEffectTargetControllerRequirement::Self
+						|| Payload.RequiredSourceFaction.IsEmpty()
+						|| Payload.RequiredReplacementFaction.IsEmpty()
+						|| Payload.RequiredReplacementKind
+							!= EWBEffectReplacementCardKind::Character
+						|| Payload.InheritancePolicy !=
+							EWBEffectInheritancePolicy::TransferEquippedWandsAndAddSourceCurrentRL))
+				{
+					return MakeValidationFailure(
+						Repository, TEXT("invalid_unit_replacement_definition"));
+				}
+			}
 		}
 
 		if (HasDuplicateEffectIds(Definition))

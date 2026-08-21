@@ -52,6 +52,11 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 CostAmount = -1;
 	int32 PreviousRLUsed = -1;
 	int32 NewRLUsed = -1;
+	int32 PreviousBaseRL = -1;
+	int32 NewBaseRL = -1;
+	int32 PreviousCurrentRL = -1;
+	int32 NewCurrentRL = -1;
+	int32 InheritedRL = -1;
 	int32 AvailableRLBefore = -1;
 	int32 AvailableRLAfter = -1;
 	FName CostKind;

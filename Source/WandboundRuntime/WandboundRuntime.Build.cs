@@ -166,5 +166,20 @@ public class WandboundRuntime : ModuleRules
 		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/Replay/AfterDamageTriggerFixture/match_spec.json",
 			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/CardDB/Production/CSNCrashIn/root_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/CardDB/Production/CSNCrashIn/bundle_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/CardDB/Production/CSNCrashIn/cards.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/CardDB/Production/CSNCrashIn/markers.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CSNCrashInFixture/match_spec.json",
+			StagedFileType.NonUFS);
 	}
 }

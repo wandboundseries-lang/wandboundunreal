@@ -77,6 +77,16 @@ FString BuildPendingEffectCanonicalState(
 			Frame.Command.EffectRequest.Target.TargetWallEdge.B.Y);
 		AppendString(TEXT("request_source_card"), Frame.Command.EffectRequest.Source.SourceCardId);
 		AppendString(TEXT("request_source_effect"), Frame.Command.EffectRequest.Source.SourceEffectId);
+		AppendString(
+			TEXT("auxiliary_card_instance"),
+			Frame.Command.EffectRequest.AuxiliaryCardSelection.CardInstanceId);
+		AppendString(
+			TEXT("auxiliary_card_id"),
+			Frame.Command.EffectRequest.AuxiliaryCardSelection.CardId);
+		Out += FString::Printf(
+			TEXT("auxiliary_card_zone=%d;"),
+			static_cast<int32>(
+				Frame.Command.EffectRequest.AuxiliaryCardSelection.Zone));
 		for (const FWBGenericEffectPayload& Payload : Frame.Command.EffectRequest.Payloads)
 		{
 			Out += FString::Printf(
@@ -98,6 +108,12 @@ FString BuildPendingEffectCanonicalState(
 				Payload.HealEffect.SourcePlayerId,
 				Payload.HealEffect.Amount);
 			AppendString(TEXT("target_frame"), Payload.PendingEffectFrameId);
+			AppendString(TEXT("required_source_faction"), Payload.RequiredSourceFaction);
+			AppendString(TEXT("required_replacement_faction"), Payload.RequiredReplacementFaction);
+			Out += FString::Printf(
+				TEXT("replacement_kind=%d;inheritance_policy=%d;"),
+				static_cast<int32>(Payload.RequiredReplacementKind),
+				static_cast<int32>(Payload.InheritancePolicy));
 			if (!Payload.PendingAttackContinuationId.IsEmpty())
 			{
 				AppendString(TEXT("target_attack"), Payload.PendingAttackContinuationId);
@@ -407,6 +423,22 @@ bool DoesActivationConditionMatch(
 			return false;
 		}
 	}
+	else if (Condition.AttackDefender
+		== EWBCardEffectAttackDefenderRequirement::OwnCurrentDefender)
+	{
+		if (!State.HasPendingAttack()
+			|| State.PendingAttack.Stage != EWBAttackContinuationStage::PreHit
+			|| State.PendingAttack.DefenderUnitId != Target.TargetUnitId)
+		{
+			return false;
+		}
+		const FWBUnitState* Defender = State.GetUnitById(
+			State.PendingAttack.DefenderUnitId);
+		if (Defender == nullptr || Defender->OwnerId != PlayerId)
+		{
+			return false;
+		}
+	}
 
 	const bool bHasTargetCondition =
 		Condition.TargetController
@@ -517,6 +549,7 @@ FWBCardActivationSourceGateContext BuildActivationGateContext(
 void AddActivationSource(
 	TArray<FWBCardActivationCandidateSource>& Sources,
 	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	const FWBCardActivationFixtureZoneContext& ZoneContext,
 	const FWBCardDefinition& Definition,
 	const int32 PlayerId,
@@ -566,6 +599,49 @@ void AddActivationSource(
 				SourceCardInstanceId,
 				SourceZone,
 				Effect));
+		const FWBGenericEffectPayload* ReplacementPayload =
+			Effect.Payloads.FindByPredicate(
+				[](const FWBGenericEffectPayload& Payload)
+				{
+					return Payload.Operation ==
+						EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand;
+				});
+		if (ReplacementPayload != nullptr)
+		{
+			TArray<FWBEffectAuxiliaryCardSelection>& Selections =
+				Source.EffectIdToAuxiliaryCardSelections.FindOrAdd(
+					Effect.EffectId);
+			const FWBPlayerCardZoneState* PlayerZones =
+				WBCardZoneState::FindPlayerZones(
+					State.GetCardZoneState(), PlayerId);
+			if (PlayerZones != nullptr)
+			{
+				TArray<FWBZoneCardEntry> Hand = PlayerZones->Hand;
+				Hand.Sort(ZoneEntryLess);
+				for (const FWBZoneCardEntry& Entry : Hand)
+				{
+					const FWBCardDefinitionRepositoryLookupResult Lookup =
+						WBCardDefinitionRepository::FindCardById(
+							Repository, Entry.Card.CardId);
+					if (!Lookup.bFound
+						|| ReplacementPayload->RequiredReplacementKind
+							!= EWBEffectReplacementCardKind::Character
+						|| Lookup.Definition.Kind
+							!= EWBCardDefinitionKind::Character
+						|| (!ReplacementPayload->RequiredReplacementFaction.IsEmpty()
+							&& !Lookup.Definition.PublicFactions.Contains(
+								ReplacementPayload->RequiredReplacementFaction)))
+					{
+						continue;
+					}
+					FWBEffectAuxiliaryCardSelection Selection;
+					Selection.Zone = EWBEffectAuxiliaryCardZone::Hand;
+					Selection.CardInstanceId = Entry.Card.InstanceId;
+					Selection.CardId = Entry.Card.CardId;
+					Selections.Add(MoveTemp(Selection));
+				}
+			}
+		}
 	}
 	Source.SourceGateContext = Source.EffectIdToSourceGateContext.FindRef(
 		EligibleDefinition.ActivatedEffects[0].EffectId);
@@ -599,6 +675,7 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				AddActivationSource(
 					ActivationSources,
 					State,
+					Repository,
 					ZoneContext,
 					Lookup.Definition,
 					PlayerId,
@@ -620,6 +697,7 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 			AddActivationSource(
 				ActivationSources,
 				State,
+				Repository,
 				ZoneContext,
 				Lookup.Definition,
 				PlayerId,
@@ -658,6 +736,7 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 			AddActivationSource(
 				ActivationSources,
 				State,
+				Repository,
 				ZoneContext,
 				Lookup.Definition,
 				PlayerId,
@@ -728,7 +807,9 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 						|| Payload.Operation
 							== EWBGenericEffectOp::RedirectPendingAttack
 						|| Payload.Operation
-							== EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution;
+							== EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution
+						|| Payload.Operation
+							== EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand;
 				});
 		if (bControlsPendingAttack
 			&& (PendingAttackContinuationId.IsEmpty()
@@ -761,7 +842,9 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				if (Payload.Operation == EWBGenericEffectOp::PreventPendingAttack
 					|| Payload.Operation == EWBGenericEffectOp::RedirectPendingAttack
 					|| Payload.Operation
-						== EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution)
+						== EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution
+					|| Payload.Operation
+						== EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand)
 				{
 					Payload.PendingAttackContinuationId =
 						PendingAttackContinuationId;
@@ -2479,7 +2562,7 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 		{
 			const FWBCardActivationCommandResult ApplyResult =
 				WBEffectRunner::ApplyCardActivationCommand(
-					WorkingState, Frame.Command);
+					WorkingState, Frame.Command, Repository);
 			bResolutionSucceeded = ApplyResult.bOk;
 			ResolutionFailure = ApplyResult.Reason;
 			OutTraceEvents.Append(ApplyResult.TraceEvents);

@@ -8,6 +8,8 @@
 #include "WBGameStateData.h"
 #include "WBReplayTrace.h"
 
+struct FWBCardDefinitionRepository;
+
 class WANDBOUNDCORE_API WBEffectRunner
 {
 public:
@@ -45,5 +47,13 @@ public:
 	static FWBApplyActionResult ApplyDamageEffect(FWBGameStateData& State, const FWBDamageEffectRequest& Request);
 	static FWBApplyActionResult ApplyHealEffect(FWBGameStateData& State, const FWBHealEffectRequest& Request);
 	static FWBEffectRequestResult ApplyEffectRequest(FWBGameStateData& State, const FWBEffectRequest& Request);
+	static FWBEffectRequestResult ApplyEffectRequest(
+		FWBGameStateData& State,
+		const FWBEffectRequest& Request,
+		const FWBCardDefinitionRepository& Repository);
 	static FWBCardActivationCommandResult ApplyCardActivationCommand(FWBGameStateData& State, const FWBCardActivationCommand& Command);
+	static FWBCardActivationCommandResult ApplyCardActivationCommand(
+		FWBGameStateData& State,
+		const FWBCardActivationCommand& Command,
+		const FWBCardDefinitionRepository& Repository);
 };

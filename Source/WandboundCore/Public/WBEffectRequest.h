@@ -18,7 +18,33 @@ enum class EWBGenericEffectOp : uint8
 	NegatePendingEffect,
 	PreventPendingAttack,
 	RedirectPendingAttack,
-	RegisterPendingAttackHPDamageSubstitution
+	RegisterPendingAttackHPDamageSubstitution,
+	ReplacePendingAttackDefenderFromHand
+};
+
+enum class EWBEffectAuxiliaryCardZone : uint8
+{
+	None,
+	Hand
+};
+
+enum class EWBEffectReplacementCardKind : uint8
+{
+	Unknown,
+	Character
+};
+
+enum class EWBEffectInheritancePolicy : uint8
+{
+	None,
+	TransferEquippedWandsAndAddSourceCurrentRL
+};
+
+struct WANDBOUNDCORE_API FWBEffectAuxiliaryCardSelection
+{
+	EWBEffectAuxiliaryCardZone Zone = EWBEffectAuxiliaryCardZone::None;
+	FString CardInstanceId;
+	FString CardId;
 };
 
 struct WANDBOUNDCORE_API FWBEffectSourceRef
@@ -45,12 +71,19 @@ struct WANDBOUNDCORE_API FWBGenericEffectPayload
 	FWBHealEffectRequest HealEffect;
 	FString PendingEffectFrameId;
 	FString PendingAttackContinuationId;
+	FString RequiredSourceFaction;
+	FString RequiredReplacementFaction;
+	EWBEffectReplacementCardKind RequiredReplacementKind =
+		EWBEffectReplacementCardKind::Unknown;
+	EWBEffectInheritancePolicy InheritancePolicy =
+		EWBEffectInheritancePolicy::None;
 };
 
 struct WANDBOUNDCORE_API FWBEffectRequest
 {
 	FWBEffectSourceRef Source;
 	FWBEffectTargetRef Target;
+	FWBEffectAuxiliaryCardSelection AuxiliaryCardSelection;
 	TArray<FWBGenericEffectPayload> Payloads;
 };
 
