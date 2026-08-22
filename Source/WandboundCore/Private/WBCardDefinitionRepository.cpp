@@ -127,6 +127,23 @@ bool HasDuplicateAfterDamageTriggerIds(
 	return false;
 }
 
+bool HasDuplicateAfterCSNInheritanceTriggerIds(
+	const FWBCardDefinition& Definition)
+{
+	TSet<FString> SeenTriggerIds;
+	for (const FWBAfterCSNInheritanceTriggerDefinition& Trigger :
+		Definition.AfterCSNInheritanceTriggers)
+	{
+		if (!Trigger.TriggerId.IsEmpty()
+			&& SeenTriggerIds.Contains(Trigger.TriggerId))
+		{
+			return true;
+		}
+		SeenTriggerIds.Add(Trigger.TriggerId);
+	}
+	return false;
+}
+
 bool IsSupportedAfterDamageSourceRole(
 	const EWBAfterDamageParticipantRole Role)
 {
@@ -375,6 +392,35 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 			return MakeValidationFailure(
 				Repository,
 				TEXT("duplicate_after_damage_trigger_id"));
+		}
+
+		for (const FWBAfterCSNInheritanceTriggerDefinition& Trigger :
+			Definition.AfterCSNInheritanceTriggers)
+		{
+			if (Trigger.TriggerId.IsEmpty())
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("csn_inheritance_trigger_id_missing"));
+			}
+			if (!Trigger.bMandatory)
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("optional_csn_inheritance_trigger_unsupported"));
+			}
+			if (Trigger.DrawCount <= 0)
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("csn_inheritance_trigger_effect_missing"));
+			}
+		}
+		if (HasDuplicateAfterCSNInheritanceTriggerIds(Definition))
+		{
+			return MakeValidationFailure(
+				Repository,
+				TEXT("duplicate_csn_inheritance_trigger_id"));
 		}
 	}
 

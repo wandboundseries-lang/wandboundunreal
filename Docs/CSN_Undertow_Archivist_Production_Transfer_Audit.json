@@ -1,0 +1,196 @@
+{
+  "audit_id": "csn_undertow_archivist_production_transfer",
+  "result": "ready",
+  "baseline": {
+    "commit": "0e01cb19905cd1241c7e32611b152faa3dcdfa95",
+    "subject": "Add production CSN Crash-In and inheritance",
+    "head_matches_origin_main": true,
+    "automation_succeeded": 2305,
+    "replay_schema": 1,
+    "tracked_dirty_paths": [],
+    "staged_paths": [],
+    "unrelated_untracked_paths": [
+      "Content/Maps/NewProjectTest.umap",
+      "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset"
+    ]
+  },
+  "canonical_card": {
+    "card_id": "char_csn_undertow_archivist",
+    "public_name": "CSN Undertow Archivist",
+    "category": "character",
+    "faction": "csn",
+    "stats": {
+      "hp": 11,
+      "atk": 2,
+      "ar": 3,
+      "rl": 2
+    },
+    "passive": {
+      "timing": "after_csn_inheritance",
+      "mandatory": true,
+      "draw_count": 1
+    },
+    "godot_sources": [
+      "Reference/GodotProject/godotcanon/scripts/data/CardDB/characters.json",
+      "Reference/GodotProject/godotcanon/scripts/sim/rules.gd"
+    ],
+    "godot_modified": false
+  },
+  "architecture": {
+    "definition_driven": true,
+    "card_id_authority_branch": false,
+    "replacement_executor_reused": "WBUnitReplacementEffect",
+    "draw_service_reused": "WBCardLifecycle::DrawCards",
+    "working_copy_atomic": true,
+    "normal_summon_draws": false,
+    "zero_rl_zero_wands_draws": true,
+    "one_draw_per_inheritance_event": true,
+    "suppression_statuses": [
+      "Stunned",
+      "Frozen",
+      "Negated"
+    ],
+    "inheritance_survives_personal_passive_suppression": true,
+    "terminal_draw_suppressed": true,
+    "new_player_action": false,
+    "new_reaction_window": false
+  },
+  "production_carddb": {
+    "manifest": "Data/CardDB/Production/CSNCrashIn/root_manifest.json",
+    "cards": "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "integration_reason": "Preserves the existing CSN Crash-In production manifest provenance boundary without duplicating definitions or broadening loader trust.",
+    "content_digest": "e6592207e841eec56063020bf9d67b1c5f57e5bcd4f90c732921dc0449d24e4e"
+  },
+  "trace": {
+    "events": [
+      "csn_inheritance_triggered",
+      "csn_inheritance_card_drawn",
+      "csn_inheritance_trigger_resolved"
+    ],
+    "drawn_identity_exposed": false
+  },
+  "automation": {
+    "focused_prefix": "Wandbound.CSNUndertowArchivist",
+    "focused_succeeded": 16,
+    "focused_failed": 0,
+    "focused_warnings": 0,
+    "crash_in_regression_succeeded": 8,
+    "full_report": "Saved/AutomationReports/WandboundUndertowFullFinal2/index.json",
+    "full_succeeded": 2321,
+    "full_failed": 0,
+    "full_warnings": 0,
+    "full_not_run": 0
+  },
+  "build_matrix": [
+    {
+      "target": "WandboundUEEditor Win64 Development",
+      "mode": "non_unity",
+      "result": "succeeded",
+      "elapsed_seconds": 60.76,
+      "cold_validation_seconds": 184.28
+    },
+    {
+      "target": "WandboundUE Win64 Development",
+      "mode": "non_unity",
+      "result": "succeeded",
+      "elapsed_seconds": 112.04,
+      "cold_validation_seconds": 3354.19
+    },
+    {
+      "target": "WandboundUEEditor Win64 Development",
+      "mode": "default",
+      "result": "succeeded",
+      "elapsed_seconds": 9.03
+    },
+    {
+      "target": "WandboundUE Win64 Development",
+      "mode": "default",
+      "result": "succeeded",
+      "elapsed_seconds": 39.99
+    },
+    {
+      "target": "WandboundUEEditor Win64 Development",
+      "mode": "forced_unity_adaptive_disabled",
+      "result": "succeeded",
+      "elapsed_seconds": 19.14
+    },
+    {
+      "target": "WandboundUE Win64 Development",
+      "mode": "forced_unity_adaptive_disabled",
+      "result": "succeeded",
+      "elapsed_seconds": 43.71
+    }
+  ],
+  "build_cook_run": {
+    "clean": true,
+    "result": "succeeded",
+    "exit_code": 0,
+    "actions": 371,
+    "cooked_packages": 532,
+    "errors": 0,
+    "warnings": 0,
+    "automation_tool_seconds": 512.54,
+    "wrapper_wall_time": "8m33s"
+  },
+  "packaged_smoke": {
+    "flag": "WandboundProductionCSNUndertowArchivistSmoke",
+    "runs": 2,
+    "exit_codes": [
+      0,
+      0
+    ],
+    "byte_identical": true,
+    "archive_sha256": "78fbe8258a8a066051542205d94be36948ef00efb4e0c294816e7e2eb666105d",
+    "receipt_sha256": "eb807958e77d9f93c9244fc439cb8dd5adab1d0b05d111a14ac46d7e5fddb3f0",
+    "startup_result_sha256": "0c82352c86f6b30b51ed882546e7017a9dac752242a6e03bd2ea6c0738afda5b",
+    "replay_digest": "b5281cda833277c187c42e71021dd535127e6315cdec6e265aff7e7a44097eaf",
+    "state_digest": "83ea25c25e9d0b6379da3b7f057e7896a2a9f076d174e7768e6c120130b1262a",
+    "trace_digest": "d4c0ef61318d3b01eef6cf3a78c3c5552baeb24f727c34892cb04b2bbd921c83",
+    "generation": 1,
+    "revision": 11,
+    "record_count": 10,
+    "fresh_replay_verified": true,
+    "receipt_field_count": 8,
+    "archive_private_draw_identity_occurrences": 0,
+    "receipt_private_draw_identity_occurrences": 0
+  },
+  "wb_action_codec": {
+    "changed": false,
+    "header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "changed_paths": [
+    "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "Data/CardDB/ProductionCardDB.schema.json",
+    "Data/Replay/CSNCrashInFixture/match_spec.json",
+    "Data/Replay/CSNUndertowArchivistFixture/definitions.json",
+    "Data/Replay/CSNUndertowArchivistFixture/match_spec.json",
+    "Docs/CSN_Undertow_Archivist_Production_Transfer_Audit.json",
+    "Docs/CSN_Undertow_Archivist_Production_Transfer_Audit.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBCSNInheritanceTrigger.cpp",
+    "Source/WandboundCore/Private/WBUnitReplacementEffect.cpp",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBCSNInheritanceTrigger.h",
+    "Source/WandboundRuntime/Private/WBProductionCSNCrashInSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionCSNCrashInSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBCSNUndertowArchivistTests.cpp"
+  ],
+  "excluded_unchanged_areas": [
+    "Config",
+    "Content/Maps",
+    "Content/MeshyImports",
+    "Plugins/meshy/Content",
+    "Reference/GodotProject",
+    "Reference/GodotCanon",
+    "WBActionCodec",
+    "replay schema",
+    "Blueprints",
+    "uasset",
+    "umap"
+  ]
+}

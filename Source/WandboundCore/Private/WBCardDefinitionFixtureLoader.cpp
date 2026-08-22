@@ -1321,6 +1321,84 @@ void ParseAfterDamageTrigger(
 	}
 }
 
+void ParseAfterCSNInheritanceTrigger(
+	const TSharedPtr<FJsonObject>& Object,
+	FWBAfterCSNInheritanceTriggerDefinition& OutTrigger,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const FString& CardId,
+	const FString& Path)
+{
+	if (!Object.IsValid())
+	{
+		AddDiagnostic(Result, TEXT("csn_inheritance_trigger_malformed"),
+			CardId, TEXT(""), Path);
+		return;
+	}
+	ValidateKnownFields(
+		Object,
+		{ TEXT("trigger_id"), TEXT("draw_count"), TEXT("mandatory") },
+		Result, CardId, TEXT(""), Path);
+
+	TryReadRequiredString(
+		Object,
+		TEXT("trigger_id"),
+		Result,
+		TEXT("csn_inheritance_trigger_id_missing"),
+		CardId,
+		TEXT(""),
+		Path,
+		OutTrigger.TriggerId);
+	if (!TryReadRequiredInteger(
+		Object,
+		TEXT("draw_count"),
+		Result,
+		TEXT("csn_inheritance_trigger_draw_count_invalid"),
+		CardId,
+		OutTrigger.TriggerId,
+		Path,
+		OutTrigger.DrawCount)
+		|| OutTrigger.DrawCount <= 0)
+	{
+		AddDiagnostic(
+			Result,
+			TEXT("csn_inheritance_trigger_draw_count_invalid"),
+			CardId,
+			OutTrigger.TriggerId,
+			JoinPath(Path, TEXT("draw_count")));
+	}
+
+	if (!Object->Values.Contains(TEXT("mandatory")))
+	{
+		AddDiagnostic(
+			Result,
+			TEXT("csn_inheritance_mandatory_missing"),
+			CardId,
+			OutTrigger.TriggerId,
+			JoinPath(Path, TEXT("mandatory")));
+	}
+	else
+	{
+		TryReadOptionalBool(
+			Object,
+			TEXT("mandatory"),
+			Result,
+			TEXT("csn_inheritance_mandatory_malformed"),
+			CardId,
+			OutTrigger.TriggerId,
+			Path,
+			OutTrigger.bMandatory);
+		if (!OutTrigger.bMandatory)
+		{
+			AddDiagnostic(
+				Result,
+				TEXT("optional_csn_inheritance_trigger_unsupported"),
+				CardId,
+				OutTrigger.TriggerId,
+				JoinPath(Path, TEXT("mandatory")));
+		}
+	}
+}
+
 void ParseCard(
 	const TSharedPtr<FJsonObject>& Object,
 	FWBCardDefinition& OutDefinition,
@@ -1346,7 +1424,8 @@ void ParseCard(
 			TEXT("character_stats"),
 			TEXT("wand_stats"),
 			TEXT("activated_effects"),
-			TEXT("after_damage_triggers")
+			TEXT("after_damage_triggers"),
+			TEXT("after_csn_inheritance_triggers")
 		},
 		Result,
 		CardId,
@@ -1425,28 +1504,69 @@ void ParseCard(
 
 	const TSharedPtr<FJsonValue>* TriggerValue =
 		Object->Values.Find(TEXT("after_damage_triggers"));
-	if (TriggerValue == nullptr)
+	if (TriggerValue != nullptr)
 	{
-		return;
+		const TArray<TSharedPtr<FJsonValue>>* TriggerValues = nullptr;
+		if (!TryGetArrayField(Object, TEXT("after_damage_triggers"), TriggerValues))
+		{
+			AddDiagnostic(Result, TEXT("after_damage_triggers_malformed"),
+				CardId, TEXT(""), JoinPath(Path, TEXT("after_damage_triggers")));
+		}
+		else
+		{
+			for (int32 TriggerIndex = 0;
+				TriggerIndex < TriggerValues->Num();
+				++TriggerIndex)
+			{
+				const FString TriggerPath = JoinPath(
+					JoinPath(Path, TEXT("after_damage_triggers")),
+					FString::Printf(TEXT("[%d]"), TriggerIndex));
+				FWBAfterDamageTriggerDefinition Trigger;
+				ParseAfterDamageTrigger(
+					(*TriggerValues)[TriggerIndex].IsValid()
+						? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
+					Trigger, Result, CardId, TriggerPath);
+				OutDefinition.AfterDamageTriggers.Add(MoveTemp(Trigger));
+			}
+		}
 	}
-	const TArray<TSharedPtr<FJsonValue>>* TriggerValues = nullptr;
-	if (!TryGetArrayField(Object, TEXT("after_damage_triggers"), TriggerValues))
+
+	const TSharedPtr<FJsonValue>* InheritanceTriggerValue =
+		Object->Values.Find(TEXT("after_csn_inheritance_triggers"));
+	if (InheritanceTriggerValue != nullptr)
 	{
-		AddDiagnostic(Result, TEXT("after_damage_triggers_malformed"),
-			CardId, TEXT(""), JoinPath(Path, TEXT("after_damage_triggers")));
-		return;
-	}
-	for (int32 TriggerIndex = 0; TriggerIndex < TriggerValues->Num(); ++TriggerIndex)
-	{
-		const FString TriggerPath = JoinPath(
-			JoinPath(Path, TEXT("after_damage_triggers")),
-			FString::Printf(TEXT("[%d]"), TriggerIndex));
-		FWBAfterDamageTriggerDefinition Trigger;
-		ParseAfterDamageTrigger(
-			(*TriggerValues)[TriggerIndex].IsValid()
-				? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
-			Trigger, Result, CardId, TriggerPath);
-		OutDefinition.AfterDamageTriggers.Add(MoveTemp(Trigger));
+		const TArray<TSharedPtr<FJsonValue>>* TriggerValues = nullptr;
+		if (!TryGetArrayField(
+			Object, TEXT("after_csn_inheritance_triggers"), TriggerValues))
+		{
+			AddDiagnostic(
+				Result,
+				TEXT("csn_inheritance_triggers_malformed"),
+				CardId,
+				TEXT(""),
+				JoinPath(Path, TEXT("after_csn_inheritance_triggers")));
+		}
+		else
+		{
+			for (int32 TriggerIndex = 0;
+				TriggerIndex < TriggerValues->Num();
+				++TriggerIndex)
+			{
+				const FString TriggerPath = JoinPath(
+					JoinPath(Path, TEXT("after_csn_inheritance_triggers")),
+					FString::Printf(TEXT("[%d]"), TriggerIndex));
+				FWBAfterCSNInheritanceTriggerDefinition Trigger;
+				ParseAfterCSNInheritanceTrigger(
+					(*TriggerValues)[TriggerIndex].IsValid()
+						? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
+					Trigger,
+					Result,
+					CardId,
+					TriggerPath);
+				OutDefinition.AfterCSNInheritanceTriggers.Add(
+					MoveTemp(Trigger));
+			}
+		}
 	}
 }
 

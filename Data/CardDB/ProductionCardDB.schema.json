@@ -192,6 +192,12 @@
           "items": {
             "$ref": "#/$defs/after_damage_trigger"
           }
+        },
+        "after_csn_inheritance_triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/after_csn_inheritance_trigger"
+          }
         }
       },
       "allOf": [
@@ -256,6 +262,29 @@
         },
         "once_per_turn_per_opposing_unit": {
           "type": "boolean"
+        }
+      }
+    },
+    "after_csn_inheritance_trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trigger_id",
+        "draw_count",
+        "mandatory"
+      ],
+      "properties": {
+        "trigger_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "draw_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
+        "mandatory": {
+          "const": true
         }
       }
     }

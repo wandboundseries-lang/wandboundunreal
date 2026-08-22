@@ -177,7 +177,25 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionCSNCrashInSmoke::IsRequested())
+		if (WBProductionCSNCrashInSmoke::IsUndertowRequested())
+		{
+			const FWBProductionCSNCrashInSmokeResult UndertowSmoke =
+				WBProductionCSNCrashInSmoke::RunUndertow(
+					PendingBootstrapRequest);
+			if (!UndertowSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound CSN Undertow Archivist smoke failed: %s"),
+					*UndertowSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				UndertowSmoke.bOk ? 0 : 33,
+				TEXT("WandboundProductionCSNUndertowArchivistSmoke"));
+		}
+		else if (WBProductionCSNCrashInSmoke::IsRequested())
 		{
 			const FWBProductionCSNCrashInSmokeResult CrashInSmoke =
 				WBProductionCSNCrashInSmoke::Run(PendingBootstrapRequest);

@@ -41,6 +41,27 @@
     },
     {
       "schema_version": 1,
+      "card_id": "char_csn_undertow_archivist",
+      "public_name": "CSN Undertow Archivist",
+      "kind": "character",
+      "public_text": "CSN Inheritance: If this unit is summoned by a CSN unit's effect, transfer that unit's equipped Wands to this unit. Increase this unit's Base RL by that unit's Current RL. When this unit uses CSN Inheritance, draw 1 card.",
+      "public_category": "Character",
+      "factions": ["csn"],
+      "tags": ["csn_inheritance"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 11, "atk": 2, "ar": 3, "rl": 2 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 3 },
+      "after_csn_inheritance_triggers": [
+        {
+          "trigger_id": "draw_after_csn_inheritance",
+          "draw_count": 1,
+          "mandatory": true
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
       "card_id": "char_csn_rook",
       "public_name": "CSN Rook",
       "kind": "character",
@@ -185,6 +206,18 @@
           ]
         }
       ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "undertow_smoke_private_draw",
+      "public_name": "Undertow Smoke Private Draw",
+      "kind": "action",
+      "public_text": "Production smoke deck card.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {}
     },
     {
       "schema_version": 1,

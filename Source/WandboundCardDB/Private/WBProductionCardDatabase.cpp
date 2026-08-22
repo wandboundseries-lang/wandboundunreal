@@ -533,6 +533,16 @@ FString AfterDamageTriggerDigest(
 	return Digest;
 }
 
+FString AfterCSNInheritanceTriggerDigest(
+	const FWBAfterCSNInheritanceTriggerDefinition& Trigger)
+{
+	return FString::Printf(
+		TEXT("after_csn_inheritance=%s|draw=%d|mandatory=%d"),
+		*Trigger.TriggerId,
+		Trigger.DrawCount,
+		Trigger.bMandatory ? 1 : 0);
+}
+
 FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 {
 	FString Source = FString::Printf(
@@ -609,6 +619,19 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 			AfterDamageTriggers)
 		{
 			Source += TEXT("|") + AfterDamageTriggerDigest(Trigger);
+		}
+		TArray<FWBAfterCSNInheritanceTriggerDefinition> InheritanceTriggers =
+			Definition.AfterCSNInheritanceTriggers;
+		InheritanceTriggers.Sort([](
+			const FWBAfterCSNInheritanceTriggerDefinition& A,
+			const FWBAfterCSNInheritanceTriggerDefinition& B)
+		{
+			return A.TriggerId < B.TriggerId;
+		});
+		for (const FWBAfterCSNInheritanceTriggerDefinition& Trigger :
+			InheritanceTriggers)
+		{
+			Source += TEXT("|") + AfterCSNInheritanceTriggerDigest(Trigger);
 		}
 		TArray<EWBCombatCapability> CombatCapabilities =
 			Definition.GrantedCombatCapabilitiesWhileEquipped.Array();
@@ -1539,7 +1562,8 @@ private:
 				TEXT("trap"),
 				TEXT("equip"),
 				TEXT("activated_effects"),
-				TEXT("after_damage_triggers")
+				TEXT("after_damage_triggers"),
+				TEXT("after_csn_inheritance_triggers")
 			},
 			Reference.OwnerManifestPath,
 			CardId,
@@ -1721,6 +1745,7 @@ private:
 		ParseEquip(Card, CardPath, Record);
 		ParseEffects(Card, CardPath, Record);
 		ParseAfterDamageTriggers(Card, CardPath, Record);
+		ParseAfterCSNInheritanceTriggers(Card, CardPath, Record);
 
 		ParsedRecords.Add(MoveTemp(Record));
 	}
@@ -2462,6 +2487,126 @@ private:
 		Record.CoreDefinition.AfterDamageTriggers.Sort([](
 			const FWBAfterDamageTriggerDefinition& A,
 			const FWBAfterDamageTriggerDefinition& B)
+		{
+			return A.TriggerId < B.TriggerId;
+		});
+	}
+
+	void ParseAfterCSNInheritanceTriggers(
+		const TSharedPtr<FJsonObject>& Card,
+		const FString& CardPath,
+		FWBProductionCardRecord& Record)
+	{
+		if (!HasField(Card, TEXT("after_csn_inheritance_triggers")))
+		{
+			return;
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* Triggers = nullptr;
+		if (!TryReadArray(
+			Card, TEXT("after_csn_inheritance_triggers"), Triggers))
+		{
+			AddError(
+				TEXT("csn_inheritance_triggers_malformed"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				CardPath + TEXT(".after_csn_inheritance_triggers"),
+				TEXT("After-CSN-Inheritance triggers must be an array."));
+			return;
+		}
+
+		TSet<FString> TriggerIds;
+		for (int32 Index = 0; Index < Triggers->Num(); ++Index)
+		{
+			const FString TriggerPath = FString::Printf(
+				TEXT("%s.after_csn_inheritance_triggers[%d]"),
+				*CardPath,
+				Index);
+			const TSharedPtr<FJsonValue>& Value = (*Triggers)[Index];
+			if (!Value.IsValid() || Value->Type != EJson::Object)
+			{
+				AddError(
+					TEXT("csn_inheritance_trigger_malformed"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					TriggerPath,
+					TEXT("After-CSN-Inheritance trigger entries must be objects."));
+				continue;
+			}
+
+			const TSharedPtr<FJsonObject> TriggerObject = Value->AsObject();
+			ValidateKnownFields(
+				TriggerObject,
+				{ TEXT("trigger_id"), TEXT("draw_count"), TEXT("mandatory") },
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				TriggerPath);
+
+			FWBAfterCSNInheritanceTriggerDefinition Trigger;
+			if (!TryReadString(
+				TriggerObject, TEXT("trigger_id"), Trigger.TriggerId)
+				|| !WBProductionCardDatabase::IsSafeDefinitionId(
+					Trigger.TriggerId))
+			{
+				AddError(
+					TEXT("csn_inheritance_trigger_id_invalid"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".trigger_id"),
+					TEXT("After-CSN-Inheritance trigger ids must be canonical lowercase identifiers."));
+			}
+			else if (TriggerIds.Contains(Trigger.TriggerId))
+			{
+				AddError(
+					TEXT("csn_inheritance_trigger_id_duplicate"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".trigger_id"),
+					TEXT("After-CSN-Inheritance trigger ids must be unique within a definition."));
+			}
+			else
+			{
+				TriggerIds.Add(Trigger.TriggerId);
+			}
+
+			if (!TryReadInteger(
+				TriggerObject, TEXT("draw_count"), Trigger.DrawCount)
+				|| Trigger.DrawCount <= 0)
+			{
+				AddError(
+					TEXT("csn_inheritance_trigger_draw_count_invalid"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".draw_count"),
+					TEXT("After-CSN-Inheritance draw count must be a positive integer."));
+			}
+			if (!TryReadBool(
+				TriggerObject, TEXT("mandatory"), Trigger.bMandatory))
+			{
+				AddError(
+					TEXT("csn_inheritance_mandatory_missing"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".mandatory"),
+					TEXT("After-CSN-Inheritance triggers must explicitly declare mandatory behavior."));
+			}
+			else if (!Trigger.bMandatory)
+			{
+				AddError(
+					TEXT("optional_csn_inheritance_trigger_unsupported"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".mandatory"),
+					TEXT("Optional After-CSN-Inheritance choices are unsupported."));
+			}
+
+			Record.CoreDefinition.AfterCSNInheritanceTriggers.Add(
+				MoveTemp(Trigger));
+		}
+
+		Record.CoreDefinition.AfterCSNInheritanceTriggers.Sort([](
+			const FWBAfterCSNInheritanceTriggerDefinition& A,
+			const FWBAfterCSNInheritanceTriggerDefinition& B)
 		{
 			return A.TriggerId < B.TriggerId;
 		});

@@ -144,6 +144,13 @@ struct WANDBOUNDCORE_API FWBAfterDamageTriggerDefinition
 	bool bOncePerTurnPerOpposingUnit = false;
 };
 
+struct WANDBOUNDCORE_API FWBAfterCSNInheritanceTriggerDefinition
+{
+	FString TriggerId;
+	int32 DrawCount = 0;
+	bool bMandatory = true;
+};
+
 struct WANDBOUNDCORE_API FWBCardCharacterStatsDefinition
 {
 	int32 HP = 0;
@@ -185,4 +192,6 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	TArray<FWBSetupSummonTriggerDefinition> SetupSummonTriggers;
 	TArray<FWBTurnStartTriggerDefinition> TurnStartTriggers;
 	TArray<FWBAfterDamageTriggerDefinition> AfterDamageTriggers;
+	TArray<FWBAfterCSNInheritanceTriggerDefinition>
+		AfterCSNInheritanceTriggers;
 };

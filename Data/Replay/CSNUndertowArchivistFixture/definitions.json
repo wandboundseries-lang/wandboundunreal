@@ -1,0 +1,35 @@
+{
+  "repository_id": "csn_undertow_archivist_trigger_fixture",
+  "source_version": "fixture_v1",
+  "cards": [
+    {
+      "card_id": "fixture_inheritance_draw_character",
+      "public_name": "Fixture Inheritance Draw Character",
+      "kind": "character",
+      "character_stats": {
+        "hp": 11,
+        "atk": 2,
+        "ar": 3,
+        "rl": 2
+      },
+      "after_csn_inheritance_triggers": [
+        {
+          "trigger_id": "fixture_draw_after_inheritance",
+          "draw_count": 1,
+          "mandatory": true
+        }
+      ]
+    },
+    {
+      "card_id": "char_csn_undertow_archivist_name_only",
+      "public_name": "CSN Undertow Archivist Name Only",
+      "kind": "character",
+      "character_stats": {
+        "hp": 11,
+        "atk": 2,
+        "ar": 3,
+        "rl": 2
+      }
+    }
+  ]
+}

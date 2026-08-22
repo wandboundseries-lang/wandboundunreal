@@ -1,6 +1,7 @@
 #include "WBUnitReplacementEffect.h"
 
 #include "WBCardZoneState.h"
+#include "WBCSNInheritanceTrigger.h"
 #include "WBDeathResolution.h"
 #include "WBEffectRunner.h"
 #include "WBResonanceOverflow.h"
@@ -320,6 +321,23 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 		WorkingState.TerminalOutcome.Source = EWBTerminalSource::Effect;
 		WorkingState.TerminalOutcome.TurnNumber = WorkingState.TurnNumber;
 	}
+
+	FWBCSNInheritanceEventContext InheritanceContext;
+	InheritanceContext.InheritingUnitId = NewUnitId;
+	InheritanceContext.InheritingPlayerId = Request.Source.PlayerId;
+	InheritanceContext.SourceUnitId = SourceUnit->UnitId;
+	InheritanceContext.SourceCurrentRL = SourceCurrentRL;
+	InheritanceContext.InheritedWandCount = InheritedWands.Num();
+	InheritanceContext.TransactionId = Payload.PendingAttackContinuationId;
+	const FWBCSNInheritanceTriggerResult InheritanceTriggers =
+		WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
+			WorkingState,
+			Repository,
+			InheritanceContext);
+	if (!InheritanceTriggers.bOk)
+	{
+		return Fail(InheritanceTriggers.Reason);
+	}
 	if (!WBCardZoneState::ValidateZoneStateForTest(
 		WorkingState.GetCardZoneState(), ZoneReason))
 	{
@@ -398,6 +416,7 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 		: -1;
 	Inheritance.bOk = true;
 	Result.TraceEvents.Add(MoveTemp(Inheritance));
+	Result.TraceEvents.Append(InheritanceTriggers.TraceEvents);
 	Result.TraceEvents.Append(RedirectResult.TraceEvents);
 
 	if (bSourceWasHero)

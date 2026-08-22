@@ -259,6 +259,14 @@ bool WBProductionCSNCrashInSmoke::IsRequested(const TCHAR* CommandLine)
 		TEXT("WandboundProductionCSNCrashInSmoke"));
 }
 
+bool WBProductionCSNCrashInSmoke::IsUndertowRequested(
+	const TCHAR* CommandLine)
+{
+	return FParse::Param(
+		CommandLine != nullptr ? CommandLine : FCommandLine::Get(),
+		TEXT("WandboundProductionCSNUndertowArchivistSmoke"));
+}
+
 FString WBProductionCSNCrashInSmoke::GetReceiptPath()
 {
 	return FPaths::Combine(
@@ -266,10 +274,22 @@ FString WBProductionCSNCrashInSmoke::GetReceiptPath()
 		TEXT("SmokeTest/WandboundProductionCSNCrashInReceipt.json"));
 }
 
-FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
-	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+FString WBProductionCSNCrashInSmoke::GetUndertowReceiptPath()
+{
+	return FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SmokeTest/WandboundProductionCSNUndertowArchivistReceipt.json"));
+}
+
+FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunScenario(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest,
+	const bool bUndertow,
+	const bool bNegateCrashIn)
 {
 	FWBProductionCSNCrashInSmokeResult Result;
+	const FString ReplacementCardId = bUndertow
+		? FString(TEXT("char_csn_undertow_archivist"))
+		: FString(TEXT("char_csn_echo"));
 	const FWBProductionRuntimeBootstrapResult Bootstrap =
 		WBProductionRuntimeBootstrap::Build(BootstrapRequest);
 	if (!Bootstrap.bOk)
@@ -358,6 +378,11 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 	}
 	const int32 AttackerUnitId = Attacker->UnitId;
 	const int32 AttacksLeftBefore = Attacker->AttacksLeft;
+	const FWBUnitState* DefenderBeforeAttack =
+		Coordinator.GetState().GetUnitById(SourceUnitId);
+	const int32 DefenderHPBefore = DefenderBeforeAttack != nullptr
+		? DefenderBeforeAttack->HP
+		: -1;
 	const FWBMatchLegalActionGenerationResult AttackLegal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Attack = AttackLegal.bOk
@@ -386,7 +411,7 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 	const FWBMatchLegalAction* CrashIn = FindCrashInActivation(
 		DefenderResponse.LegalActions,
 		SourceUnitId,
-		TEXT("char_csn_echo"));
+		ReplacementCardId);
 	if (CrashIn == nullptr || CrashInCandidateCount != 1)
 	{
 		Result.Reason = TEXT("csn_crash_in_activation_missing");
@@ -394,6 +419,17 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 	}
 	const FString ReplacementInstanceId = CrashIn->ActivationCommand
 		.EffectRequest.AuxiliaryCardSelection.CardInstanceId;
+	const FWBPlayerCardZoneState* DefenderZonesBefore =
+		Coordinator.GetState().GetCardZoneState().PlayerZones.FindByPredicate(
+			[](const FWBPlayerCardZoneState& Candidate)
+			{
+				return Candidate.PlayerId == 1;
+			});
+	const FString DrawnInstanceId = bUndertow
+		&& DefenderZonesBefore != nullptr
+		&& !DefenderZonesBefore->Deck.IsEmpty()
+		? DefenderZonesBefore->Deck[0].Card.InstanceId
+		: FString();
 	if (ReplacementInstanceId.IsEmpty()
 		|| !CrashIn->ActionId.Contains(ReplacementInstanceId))
 	{
@@ -403,7 +439,7 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 	const FWBMatchObservation AttackerBefore = Coordinator.BuildObservation(0);
 	if (!OpponentHandIsHidden(AttackerBefore, 1)
 		|| ObservationContainsPrivateChoice(
-			AttackerBefore, TEXT("char_csn_echo"), ReplacementInstanceId))
+			AttackerBefore, ReplacementCardId, ReplacementInstanceId))
 	{
 		Result.Reason = TEXT("csn_crash_in_pre_reveal_privacy_mismatch");
 		return Result;
@@ -416,7 +452,7 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 	const FWBMatchObservation NestedOpponent = Coordinator.BuildObservation(0);
 	if (!OpponentHandIsHidden(NestedOpponent, 1)
 		|| ObservationContainsPrivateChoice(
-			NestedOpponent, TEXT("char_csn_echo"), ReplacementInstanceId))
+			NestedOpponent, ReplacementCardId, ReplacementInstanceId))
 	{
 		Result.Reason = TEXT("csn_crash_in_pending_choice_privacy_mismatch");
 		return Result;
@@ -430,6 +466,81 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 		{
 			Result.Reason = TEXT("csn_crash_in_nested_response_b_missing");
 		}
+		return Result;
+	}
+	if (bNegateCrashIn)
+	{
+		if (!PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+		{
+			return Result;
+		}
+		const FWBUnitState* NegatedSource =
+			Coordinator.GetState().GetUnitById(SourceUnitId);
+		const FWBUnitState* UnexpectedReplacement =
+			Coordinator.GetState().Units.FindByPredicate(
+				[&ReplacementCardId](const FWBUnitState& Unit)
+				{
+					return Unit.CardId == ReplacementCardId
+						&& Unit.IsUnitOnBoard();
+				});
+		const FWBPlayerCardZoneState* NegatedZones =
+			Coordinator.GetState().GetCardZoneState().PlayerZones.FindByPredicate(
+				[](const FWBPlayerCardZoneState& Candidate)
+				{
+					return Candidate.PlayerId == 1;
+				});
+		const bool bReplacementStillInHand = NegatedZones != nullptr
+			&& NegatedZones->Hand.ContainsByPredicate(
+				[&ReplacementInstanceId](const FWBZoneCardEntry& Entry)
+				{
+					return Entry.Card.InstanceId == ReplacementInstanceId;
+				});
+		const bool bPrivateDrawStillInDeck = NegatedZones != nullptr
+			&& !DrawnInstanceId.IsEmpty()
+			&& NegatedZones->Deck.ContainsByPredicate(
+				[&DrawnInstanceId](const FWBZoneCardEntry& Entry)
+				{
+					return Entry.Card.InstanceId == DrawnInstanceId;
+				});
+		const TArray<FWBTraceEvent>& NegatedTrace = Coordinator.GetTraceLog();
+		if (Coordinator.GetMatchPhase() != EWBMatchLoopPhase::Action
+			|| Coordinator.GetState().HasPendingAttack()
+			|| Coordinator.GetState().HasOpenReactionWindow()
+			|| !Coordinator.GetPendingEffectActivationStack().IsEmpty()
+			|| NegatedSource == nullptr
+			|| !NegatedSource->IsUnitOnBoard()
+			|| NegatedSource->HP >= DefenderHPBefore
+			|| UnexpectedReplacement != nullptr
+			|| !bReplacementStillInHand
+			|| !bPrivateDrawStillInDeck
+			|| CountTrace(NegatedTrace,
+				FName(TEXT("effect_replacement_summon"))) != 0
+			|| CountTrace(NegatedTrace,
+				FName(TEXT("csn_inheritance"))) != 0
+			|| CountTrace(NegatedTrace,
+				FName(TEXT("csn_inheritance_triggered"))) != 0
+			|| CountTrace(NegatedTrace,
+				FName(TEXT("csn_inheritance_card_drawn"))) != 0
+			|| CountTrace(NegatedTrace,
+				FName(TEXT("pending_attack_redirected"))) != 0
+			|| CountTrace(NegatedTrace,
+				FName(TEXT("attack_damage_resolved"))) != 1
+			|| CountTrace(NegatedTrace,
+				FName(TEXT("pending_effect_activation_negated"))) != 1
+			|| CountAcceptedPrefix(Coordinator, TEXT("attack:")) != 1
+			|| CountAcceptedPrefix(Coordinator, TEXT("summon:")) != 1
+			|| CountAcceptedFamily(Coordinator, TEXT("activate")) != 2)
+		{
+			Result.Reason = TEXT("csn_undertow_negated_crash_in_mismatch");
+			return Result;
+		}
+		Result.bOk = true;
+		Result.Reason =
+			TEXT("production_csn_undertow_archivist_negated_verified");
+		Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
+		Result.FinalRevision = Coordinator.GetCoordinatorRevision();
+		Result.FinalStateDigest = Coordinator.GetCurrentStateDigest();
+		Result.FinalTraceDigest = Coordinator.GetCurrentTraceDigest();
 		return Result;
 	}
 	const FWBMatchObservation NestedOwner = Coordinator.BuildObservation(1);
@@ -451,9 +562,9 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 
 	Source = Coordinator.GetState().GetUnitById(SourceUnitId);
 	const FWBUnitState* Replacement = Coordinator.GetState().Units.FindByPredicate(
-		[](const FWBUnitState& Unit)
+		[&ReplacementCardId](const FWBUnitState& Unit)
 		{
-			return Unit.CardId == TEXT("char_csn_echo")
+			return Unit.CardId == ReplacementCardId
 				&& Unit.IsUnitOnBoard();
 		});
 	Attacker = Coordinator.GetState().GetUnitById(AttackerUnitId);
@@ -481,6 +592,13 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 			{
 				return Entry.Card.InstanceId == WandInstanceId;
 			});
+	const bool bExactDrawInHand = DefenderZones != nullptr
+		&& !DrawnInstanceId.IsEmpty()
+		&& DefenderZones->Hand.ContainsByPredicate(
+			[&DrawnInstanceId](const FWBZoneCardEntry& Entry)
+			{
+				return Entry.Card.InstanceId == DrawnInstanceId;
+			});
 	const TArray<FWBTraceEvent>& Trace = Coordinator.GetTraceLog();
 	if (Coordinator.GetMatchPhase() != EWBMatchLoopPhase::Action
 		|| Coordinator.GetState().HasPendingAttack()
@@ -492,9 +610,9 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 		|| Replacement == nullptr
 		|| Replacement->X != SourceTile.X
 		|| Replacement->Y != SourceTile.Y
-		|| Replacement->HP != 9
+		|| Replacement->HP != (bUndertow ? 7 : 9)
 		|| Replacement->ATK != 2
-		|| Replacement->AR != 2
+		|| Replacement->AR != (bUndertow ? 3 : 2)
 		|| Replacement->BaseRL != 2 + SourceCurrentRL
 		|| Replacement->CurrentRL != 2 + SourceCurrentRL
 		|| Replacement->RLUsed != 1
@@ -509,6 +627,13 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 		|| CountTrace(Trace, FName(TEXT("effect_replacement_summon"))) != 1
 		|| CountTrace(Trace, FName(TEXT("inherited_wand_transferred"))) != 1
 		|| CountTrace(Trace, FName(TEXT("csn_inheritance"))) != 1
+		|| CountTrace(
+			Trace, FName(TEXT("csn_inheritance_triggered")))
+			!= (bUndertow ? 1 : 0)
+		|| CountTrace(
+			Trace, FName(TEXT("csn_inheritance_card_drawn")))
+			!= (bUndertow ? 1 : 0)
+		|| (bUndertow && !bExactDrawInHand)
 		|| CountTrace(Trace, FName(TEXT("pending_attack_redirected"))) != 1
 		|| CountTrace(Trace, FName(TEXT("attack_damage_resolved"))) != 1
 		|| CountTrace(
@@ -600,13 +725,28 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 		|| ReceiptJson.Contains(TEXT("state_digest"))
 		|| ReceiptJson.Contains(TEXT("trace_digest"))
 		|| ReceiptJson.Contains(TEXT("continuation_id"))
-		|| ReceiptJson.Contains(TEXT("char_csn_echo"))
+		|| ReceiptJson.Contains(ReplacementCardId)
 		|| ReceiptJson.Contains(ReplacementInstanceId))
 	{
 		Result.Reason = TEXT("csn_crash_in_receipt_privacy_mismatch");
 		return Result;
 	}
-	const FString ReceiptPath = GetReceiptPath();
+	const FWBMatchObservation FinalOpponentObservation =
+		Coordinator.BuildObservation(0);
+	if (!OpponentHandIsHidden(FinalOpponentObservation, 1)
+		|| (bUndertow
+			&& (!DrawnInstanceId.IsEmpty()
+				&& ObservationContainsPrivateChoice(
+					FinalOpponentObservation,
+					TEXT("undertow_smoke_private_draw"),
+					DrawnInstanceId))))
+	{
+		Result.Reason = TEXT("csn_undertow_final_privacy_mismatch");
+		return Result;
+	}
+	const FString ReceiptPath = bUndertow
+		? GetUndertowReceiptPath()
+		: GetReceiptPath();
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(ReceiptPath), true);
 	if (!FFileHelper::SaveStringToFile(
 		ReceiptJson,
@@ -618,7 +758,9 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 	}
 
 	Result.bOk = true;
-	Result.Reason = TEXT("production_csn_crash_in_verified");
+	Result.Reason = bUndertow
+		? TEXT("production_csn_undertow_archivist_verified")
+		: TEXT("production_csn_crash_in_verified");
 	Result.RecordsVerified = Replay.RecordsVerified;
 	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
 	Result.FinalRevision = Coordinator.GetCoordinatorRevision();
@@ -627,4 +769,23 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
 	Result.SerializedArchive = ArchiveBytes;
 	Result.SerializedReceipt = ReceiptJson;
 	return Result;
+}
+
+FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::Run(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+{
+	return RunScenario(BootstrapRequest, false, false);
+}
+
+FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunUndertow(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+{
+	return RunScenario(BootstrapRequest, true, false);
+}
+
+FWBProductionCSNCrashInSmokeResult
+WBProductionCSNCrashInSmoke::RunUndertowNegatedForTest(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+{
+	return RunScenario(BootstrapRequest, true, true);
 }
