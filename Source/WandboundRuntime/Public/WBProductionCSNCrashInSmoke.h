@@ -21,11 +21,15 @@ class WANDBOUNDRUNTIME_API WBProductionCSNCrashInSmoke
 public:
 	static bool IsRequested(const TCHAR* CommandLine = nullptr);
 	static bool IsUndertowRequested(const TCHAR* CommandLine = nullptr);
+	static bool IsRookRequested(const TCHAR* CommandLine = nullptr);
 	static FString GetReceiptPath();
 	static FString GetUndertowReceiptPath();
+	static FString GetRookReceiptPath();
 	static FWBProductionCSNCrashInSmokeResult Run(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunUndertow(
+		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
+	static FWBProductionCSNCrashInSmokeResult RunRook(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunUndertowNegatedForTest(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);

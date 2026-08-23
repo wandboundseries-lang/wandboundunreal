@@ -65,14 +65,26 @@
       "card_id": "char_csn_rook",
       "public_name": "CSN Rook",
       "kind": "character",
-      "public_text": "CSN Inheritance applies when summoned by a CSN effect.",
+      "public_text": "CSN Inheritance: If this unit is summoned by a CSN unit's effect, transfer that unit's equipped Wands to this unit. Increase this unit's Base RL by that unit's Current RL. When this unit is destroyed, summon 1 CSN Character from your deck to that tile, ignoring summoning conditions. CSN Inheritance applies.",
       "public_category": "Character",
       "factions": ["csn"],
       "tags": ["csn_inheritance"],
       "source_manifest": "bundle_manifest.json",
-      "stats": { "hp": 16, "atk": 3, "ar": 2, "rl": 3 },
+      "stats": { "hp": 16, "atk": 3, "ar": 2, "rl": 2 },
       "movement": { "pattern": "orthogonal_adjacent" },
-      "attack": { "pattern": "orthogonal_line", "range": 2 }
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "after_unit_destroyed_triggers": [
+        {
+          "trigger_id": "summon_csn_character_from_deck",
+          "source_scope": "destroyed_self",
+          "operation": "summon_character_from_deck_to_destroyed_tile",
+          "required_faction": "csn",
+          "summon_count": 1,
+          "mandatory": true,
+          "ignore_summoning_conditions": true,
+          "apply_csn_inheritance": true
+        }
+      ]
     },
     {
       "schema_version": 1,

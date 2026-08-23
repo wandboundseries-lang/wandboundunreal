@@ -144,6 +144,23 @@ bool HasDuplicateAfterCSNInheritanceTriggerIds(
 	return false;
 }
 
+bool HasDuplicateAfterUnitDestroyedTriggerIds(
+	const FWBCardDefinition& Definition)
+{
+	TSet<FString> SeenTriggerIds;
+	for (const FWBAfterUnitDestroyedTriggerDefinition& Trigger :
+		Definition.AfterUnitDestroyedTriggers)
+	{
+		if (!Trigger.TriggerId.IsEmpty()
+			&& SeenTriggerIds.Contains(Trigger.TriggerId))
+		{
+			return true;
+		}
+		SeenTriggerIds.Add(Trigger.TriggerId);
+	}
+	return false;
+}
+
 bool IsSupportedAfterDamageSourceRole(
 	const EWBAfterDamageParticipantRole Role)
 {
@@ -421,6 +438,39 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 			return MakeValidationFailure(
 				Repository,
 				TEXT("duplicate_csn_inheritance_trigger_id"));
+		}
+
+		for (const FWBAfterUnitDestroyedTriggerDefinition& Trigger :
+			Definition.AfterUnitDestroyedTriggers)
+		{
+			if (Trigger.TriggerId.IsEmpty())
+			{
+				return MakeValidationFailure(
+					Repository, TEXT("after_unit_destroyed_trigger_id_missing"));
+			}
+			if (!Trigger.bMandatory)
+			{
+				return MakeValidationFailure(
+					Repository, TEXT("optional_after_unit_destroyed_trigger_unsupported"));
+			}
+			if (Trigger.SourceScope
+					!= EWBAfterUnitDestroyedSourceScope::DestroyedSelf
+				|| Trigger.Operation
+					!= EWBPostDestructionEffectOperation::
+						SummonCharacterFromDeckToDestroyedTile
+				|| Trigger.RequiredFaction.IsEmpty()
+				|| Trigger.SummonCount != 1
+				|| !Trigger.bIgnoreSummoningConditions
+				|| !Trigger.bApplyCSNInheritance)
+			{
+				return MakeValidationFailure(
+					Repository, TEXT("after_unit_destroyed_trigger_invalid"));
+			}
+		}
+		if (HasDuplicateAfterUnitDestroyedTriggerIds(Definition))
+		{
+			return MakeValidationFailure(
+				Repository, TEXT("duplicate_after_unit_destroyed_trigger_id"));
 		}
 	}
 

@@ -308,6 +308,78 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendInt(Out, TEXT("spawn.retry"), Spawn.RetryCount);
 	}
 
+	AppendInt(
+		Out,
+		TEXT("destruction_event_count"),
+		State.PendingUnitDestructionEvents.Num());
+	for (const FWBUnitDestructionSnapshot& Event :
+		State.PendingUnitDestructionEvents)
+	{
+		AppendString(Out, TEXT("destruction.id"), Event.EventId);
+		AppendInt(Out, TEXT("destruction.unit"), Event.DestroyedUnitId);
+		AppendString(Out, TEXT("destruction.card"), Event.DestroyedCardId);
+		AppendInt(Out, TEXT("destruction.controller"), Event.ControllerPlayerId);
+		AppendTile(Out, TEXT("destruction.tile"), Event.LastTile);
+		AppendBool(Out, TEXT("destruction.hero"), Event.bWasHero);
+		AppendInt(Out, TEXT("destruction.cause"), static_cast<int32>(Event.Cause));
+		AppendInt(Out, TEXT("destruction.base_rl"), Event.BaseRLSnapshot);
+		AppendInt(Out, TEXT("destruction.current_rl"), Event.CurrentRLSnapshot);
+		AppendInt(Out, TEXT("destruction.rl_used"), Event.RLUsedSnapshot);
+		AppendBool(
+			Out,
+			TEXT("destruction.passive_eligible"),
+			Event.bCharacterPassiveEligible);
+		AppendInt(Out, TEXT("destruction.order"), Event.ResolutionOrder);
+		AppendInt(Out, TEXT("destruction.next_trigger"), Event.NextTriggerIndex);
+		AppendInt(Out, TEXT("destruction.wand_count"), Event.EquippedWands.Num());
+		for (const FWBEquippedCardEntry& Wand : Event.EquippedWands)
+		{
+			AppendString(Out, TEXT("destruction.wand.instance"), Wand.Card.InstanceId);
+			AppendString(Out, TEXT("destruction.wand.card"), Wand.Card.CardId);
+			AppendInt(Out, TEXT("destruction.wand.owner"), Wand.Card.OwnerPlayerId);
+			AppendString(Out, TEXT("destruction.wand.slot"), Wand.SlotId);
+			AppendInt(Out, TEXT("destruction.wand.order"), Wand.EquipOrder);
+		}
+	}
+	AppendBool(
+		Out,
+		TEXT("mandatory_choice.active"),
+		State.PendingMandatoryDeckChoice.bActive);
+	if (State.PendingMandatoryDeckChoice.bActive)
+	{
+		const FWBPendingMandatoryDeckChoiceState& Choice =
+			State.PendingMandatoryDeckChoice;
+		AppendString(Out, TEXT("mandatory_choice.id"), Choice.ChoiceId);
+		AppendString(
+			Out,
+			TEXT("mandatory_choice.event"),
+			Choice.DestructionEventId);
+		AppendString(Out, TEXT("mandatory_choice.trigger"), Choice.TriggerId);
+		AppendInt(
+			Out,
+			TEXT("mandatory_choice.controller"),
+			Choice.ControllerPlayerId);
+		AppendInt(
+			Out,
+			TEXT("mandatory_choice.resume_priority"),
+			Choice.ResumePriorityPlayerId);
+		AppendInt(
+			Out,
+			TEXT("mandatory_choice.resume_phase"),
+			Choice.ResumeMatchPhase);
+		AppendInt(
+			Out,
+			TEXT("mandatory_choice.option_count"),
+			Choice.EligibleCardInstanceIds.Num());
+		for (const FString& InstanceId : Choice.EligibleCardInstanceIds)
+		{
+			AppendString(
+				Out,
+				TEXT("mandatory_choice.option"),
+				InstanceId);
+		}
+	}
+
 	TArray<int32> UsagePlayers;
 	State.ActivationUsageKeysThisTurn.GetKeys(UsagePlayers);
 	UsagePlayers.Sort();

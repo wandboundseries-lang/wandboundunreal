@@ -539,7 +539,10 @@ FWBMarkerResolutionResult WBMarkerResolution::ResolveMarkerAtUnitTile(
 		const FWBActionQueryResult DeathQuery = WBRules::CanApplyZeroHPDeathRemoval(WorkingState);
 		if (DeathQuery.bOk)
 		{
-			const FWBApplyActionResult DeathResult = WBDeathResolution::ApplyZeroHPDeathResolution(WorkingState);
+			const FWBApplyActionResult DeathResult =
+				WBDeathResolution::ApplyZeroHPDeathResolution(
+					WorkingState,
+					EWBUnitDestructionCause::EffectDamage);
 			if (!DeathResult.bOk)
 			{
 				return MakeMarkerFailure(DeathResult.Reason);

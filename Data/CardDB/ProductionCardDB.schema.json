@@ -198,6 +198,12 @@
           "items": {
             "$ref": "#/$defs/after_csn_inheritance_trigger"
           }
+        },
+        "after_unit_destroyed_triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/after_unit_destroyed_trigger"
+          }
         }
       },
       "allOf": [
@@ -284,6 +290,47 @@
           "maximum": 99
         },
         "mandatory": {
+          "const": true
+        }
+      }
+    },
+    "after_unit_destroyed_trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trigger_id",
+        "source_scope",
+        "operation",
+        "required_faction",
+        "summon_count",
+        "mandatory",
+        "ignore_summoning_conditions",
+        "apply_csn_inheritance"
+      ],
+      "properties": {
+        "trigger_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "source_scope": {
+          "const": "destroyed_self"
+        },
+        "operation": {
+          "const": "summon_character_from_deck_to_destroyed_tile"
+        },
+        "required_faction": {
+          "enum": ["csn", "wandwright", "officer", "marrow_syndicate"]
+        },
+        "summon_count": {
+          "const": 1
+        },
+        "mandatory": {
+          "const": true
+        },
+        "ignore_summoning_conditions": {
+          "const": true
+        },
+        "apply_csn_inheritance": {
           "const": true
         }
       }

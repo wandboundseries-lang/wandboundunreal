@@ -25,6 +25,7 @@ enum class EWBMatchLoopPhase : uint8
 	Response,
 	TurnEnd,
 	NPCPhase,
+	MandatoryChoice,
 	GameOver
 };
 
@@ -36,6 +37,7 @@ enum class EWBMatchActionFamily : uint8
 	Activation,
 	Discard,
 	TurnStartTrigger,
+	MandatoryDeckChoice,
 	Count
 };
 
@@ -74,6 +76,7 @@ struct WANDBOUNDCORE_API FWBMatchLegalAction
 	FWBEquipExecutionRequest EquipRequest;
 	FWBCardActivationCommand ActivationCommand;
 	FString DiscardCardInstanceId;
+	FString MandatoryChoiceCardInstanceId;
 };
 
 struct WANDBOUNDCORE_API FWBMatchLegalActionGenerationResult

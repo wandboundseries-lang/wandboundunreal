@@ -494,7 +494,9 @@ bool TestFamilyClassifier(
 			Names.Add(Family);
 		}
 	}
-	return Test.TestEqual(TEXT("All supported action names unique"), Names.Num(), 10);
+	Test.TestTrue(TEXT("Mandatory Deck choices have a durable generic family"),
+		Names.Contains(TEXT("mandatory_deck_choice")));
+	return Test.TestEqual(TEXT("All supported action names unique"), Names.Num(), 11);
 }
 
 bool RunNamedReplayTest(

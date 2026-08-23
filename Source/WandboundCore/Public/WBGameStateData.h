@@ -214,6 +214,51 @@ struct WANDBOUNDCORE_API FWBPendingNPCSpawnState
 	int32 RetryCount = 0;
 };
 
+enum class EWBUnitDestructionCause : uint8
+{
+	Unknown,
+	BattleDamage,
+	EffectDamage,
+	StatusDamage,
+	ExplicitDestroy,
+	ReplacementEffect
+};
+
+struct WANDBOUNDCORE_API FWBUnitDestructionSnapshot
+{
+	FString EventId;
+	int32 DestroyedUnitId = INDEX_NONE;
+	FString DestroyedCardId;
+	int32 ControllerPlayerId = INDEX_NONE;
+	FWBTile LastTile;
+	bool bWasHero = false;
+	EWBUnitDestructionCause Cause = EWBUnitDestructionCause::Unknown;
+	int32 BaseRLSnapshot = 0;
+	int32 CurrentRLSnapshot = 0;
+	int32 RLUsedSnapshot = 0;
+	TArray<FWBEquippedCardEntry> EquippedWands;
+	bool bCharacterPassiveEligible = false;
+	int32 ResolutionOrder = INDEX_NONE;
+	int32 NextTriggerIndex = 0;
+};
+
+struct WANDBOUNDCORE_API FWBPendingMandatoryDeckChoiceState
+{
+	bool bActive = false;
+	FString ChoiceId;
+	FString DestructionEventId;
+	FString TriggerId;
+	int32 ControllerPlayerId = INDEX_NONE;
+	TArray<FString> EligibleCardInstanceIds;
+	int32 ResumePriorityPlayerId = INDEX_NONE;
+	int32 ResumeMatchPhase = INDEX_NONE;
+
+	void Reset()
+	{
+		*this = FWBPendingMandatoryDeckChoiceState();
+	}
+};
+
 struct WANDBOUNDCORE_API FWBGameStateData
 {
 	int32 CurrentPlayer = 0;
@@ -235,6 +280,8 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	FWBPendingAttackState PendingAttack;
 	FWBNPCPhaseContinuationState NPCPhaseContinuation;
 	TArray<FWBPendingNPCSpawnState> PendingNPCSpawns;
+	TArray<FWBUnitDestructionSnapshot> PendingUnitDestructionEvents;
+	FWBPendingMandatoryDeckChoiceState PendingMandatoryDeckChoice;
 	TMap<int32, TSet<FString>> ActivationUsageKeysThisTurn;
 	FWBCardZoneState CardZoneState;
 
@@ -265,6 +312,8 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void ClearActivationUsageKeysForPlayer(int32 PlayerId);
 	bool HasPendingAttack() const;
 	void ClearPendingAttack();
+	bool HasPendingMandatoryDeckChoice() const;
+	void ClearPendingMandatoryDeckChoice();
 	void SetPendingAttackForTest(const FWBPendingAttackState& InPendingAttack);
 	const FWBUnitState* GetUnitById(int32 UnitId) const;
 	FWBUnitState* GetMutableUnitById(int32 UnitId);

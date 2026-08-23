@@ -913,7 +913,9 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 	if (Applied.NewHP <= 0 && !Calculation.bPrevented
 		&& !Calculation.bFrozenBreak)
 	{
-		FWBApplyActionResult Cleanup = ApplyZeroHPDeathRemoval(State);
+		FWBApplyActionResult Cleanup = ApplyZeroHPDeathRemoval(
+			State,
+			EWBUnitDestructionCause::BattleDamage);
 		Result.TraceEvents.Append(Cleanup.TraceEvents);
 		if (!Cleanup.bOk && Cleanup.Reason != TEXT("no_zero_hp_units"))
 		{
@@ -1069,9 +1071,11 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackDamageSubstitutionRegistr
 	return Result;
 }
 
-FWBApplyActionResult WBEffectRunner::ApplyZeroHPDeathRemoval(FWBGameStateData& State)
+FWBApplyActionResult WBEffectRunner::ApplyZeroHPDeathRemoval(
+	FWBGameStateData& State,
+	const EWBUnitDestructionCause Cause)
 {
-	return WBDeathResolution::ApplyZeroHPDeathResolution(State);
+	return WBDeathResolution::ApplyZeroHPDeathResolution(State, Cause);
 }
 
 FWBApplyActionResult WBEffectRunner::ApplyArmorEffect(
@@ -1132,7 +1136,9 @@ FWBApplyActionResult WBEffectRunner::ApplyDamageEffect(
 	AppendDamageEffectResolvedTrace(Result.TraceEvents, DamageResult, State.GetUnitById(Request.TargetUnitId));
 	if (DamageResult.NewHP <= 0)
 	{
-		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
+		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(
+			State,
+			EWBUnitDestructionCause::EffectDamage);
 		Result.TraceEvents.Append(CleanupResult.TraceEvents);
 		if (!CleanupResult.bOk && CleanupResult.Reason != TEXT("no_zero_hp_units"))
 		{
@@ -1584,7 +1590,9 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 	const FWBActionQueryResult CleanupQuery = WBRules::CanApplyZeroHPDeathRemoval(State);
 	if (CleanupQuery.bOk)
 	{
-		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
+		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(
+			State,
+			EWBUnitDestructionCause::StatusDamage);
 		Result.TraceEvents.Append(CleanupResult.TraceEvents);
 		if (!CleanupResult.bOk)
 		{
@@ -1681,7 +1689,9 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 	const FWBActionQueryResult CleanupQuery = WBRules::CanApplyZeroHPDeathRemoval(State);
 	if (CleanupQuery.bOk)
 	{
-		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(State);
+		FWBApplyActionResult CleanupResult = ApplyZeroHPDeathRemoval(
+			State,
+			EWBUnitDestructionCause::StatusDamage);
 		Result.TraceEvents.Append(CleanupResult.TraceEvents);
 		if (!CleanupResult.bOk)
 		{

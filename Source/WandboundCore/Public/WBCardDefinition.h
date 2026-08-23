@@ -151,6 +151,32 @@ struct WANDBOUNDCORE_API FWBAfterCSNInheritanceTriggerDefinition
 	bool bMandatory = true;
 };
 
+enum class EWBAfterUnitDestroyedSourceScope : uint8
+{
+	Unknown,
+	DestroyedSelf
+};
+
+enum class EWBPostDestructionEffectOperation : uint8
+{
+	Unknown,
+	SummonCharacterFromDeckToDestroyedTile
+};
+
+struct WANDBOUNDCORE_API FWBAfterUnitDestroyedTriggerDefinition
+{
+	FString TriggerId;
+	EWBAfterUnitDestroyedSourceScope SourceScope =
+		EWBAfterUnitDestroyedSourceScope::Unknown;
+	EWBPostDestructionEffectOperation Operation =
+		EWBPostDestructionEffectOperation::Unknown;
+	FString RequiredFaction;
+	int32 SummonCount = 0;
+	bool bMandatory = true;
+	bool bIgnoreSummoningConditions = false;
+	bool bApplyCSNInheritance = false;
+};
+
 struct WANDBOUNDCORE_API FWBCardCharacterStatsDefinition
 {
 	int32 HP = 0;
@@ -194,4 +220,6 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	TArray<FWBAfterDamageTriggerDefinition> AfterDamageTriggers;
 	TArray<FWBAfterCSNInheritanceTriggerDefinition>
 		AfterCSNInheritanceTriggers;
+	TArray<FWBAfterUnitDestroyedTriggerDefinition>
+		AfterUnitDestroyedTriggers;
 };

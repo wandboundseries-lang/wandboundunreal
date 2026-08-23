@@ -267,6 +267,13 @@ bool WBProductionCSNCrashInSmoke::IsUndertowRequested(
 		TEXT("WandboundProductionCSNUndertowArchivistSmoke"));
 }
 
+bool WBProductionCSNCrashInSmoke::IsRookRequested(const TCHAR* CommandLine)
+{
+	return FParse::Param(
+		CommandLine != nullptr ? CommandLine : FCommandLine::Get(),
+		TEXT("WandboundProductionCSNRookSmoke"));
+}
+
 FString WBProductionCSNCrashInSmoke::GetReceiptPath()
 {
 	return FPaths::Combine(
@@ -279,6 +286,13 @@ FString WBProductionCSNCrashInSmoke::GetUndertowReceiptPath()
 	return FPaths::Combine(
 		FPaths::ProjectSavedDir(),
 		TEXT("SmokeTest/WandboundProductionCSNUndertowArchivistReceipt.json"));
+}
+
+FString WBProductionCSNCrashInSmoke::GetRookReceiptPath()
+{
+	return FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SmokeTest/WandboundProductionCSNRookReceipt.json"));
 }
 
 FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunScenario(
@@ -781,6 +795,243 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunUndertow(
 	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
 {
 	return RunScenario(BootstrapRequest, true, false);
+}
+
+FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunRook(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+{
+	FWBProductionCSNCrashInSmokeResult Result;
+	const FWBProductionRuntimeBootstrapResult Bootstrap =
+		WBProductionRuntimeBootstrap::Build(BootstrapRequest);
+	if (!Bootstrap.bOk)
+	{
+		Result.Reason = Bootstrap.Reason;
+		return Result;
+	}
+
+	WBMatchCoordinator Coordinator;
+	const FWBMatchOperationResult Started = Coordinator.InitializeMatch(
+		Bootstrap.InitializationRequest);
+	if (!Started.bOk)
+	{
+		Result.Reason = Started.Reason;
+		return Result;
+	}
+	FWBProductionMatchReplayRecorder Recorder;
+	if (!Recorder.Begin(
+		WBProductionMatchReplayRuntime::BuildMetadata(Bootstrap), Coordinator))
+	{
+		Result.Reason = Recorder.GetReceipt().FailureCode;
+		return Result;
+	}
+
+	if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+	{
+		return Result;
+	}
+	const FWBMatchLegalActionGenerationResult DefenderLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Summon = DefenderLegal.bOk
+		? FindCrashInSummon(
+			DefenderLegal.Actions, TEXT("char_csn_rook"), FWBTile(4, 1))
+		: nullptr;
+	if (Summon == nullptr
+		|| !SubmitCrashIn(Coordinator, Recorder, *Summon, Result.Reason)
+		|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+	{
+		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_rook_summon_missing");
+		return Result;
+	}
+	const FWBUnitState* Rook = Coordinator.GetState().Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_rook") && Unit.IsUnitOnBoard();
+		});
+	if (Rook == nullptr)
+	{
+		Result.Reason = TEXT("csn_rook_unit_missing");
+		return Result;
+	}
+	const int32 RookUnitId = Rook->UnitId;
+	const FWBTile RookTile(Rook->X, Rook->Y);
+	const FWBMatchLegalActionGenerationResult EquipLegal = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Equip = EquipLegal.bOk
+		? FindCrashInEquip(EquipLegal.Actions, RookUnitId) : nullptr;
+	if (Equip == nullptr)
+	{
+		Result.Reason = TEXT("csn_rook_wand_equip_missing");
+		return Result;
+	}
+	const FString WandInstanceId = Equip->EquipRequest.SourceInstanceId;
+	if (!SubmitCrashIn(Coordinator, Recorder, *Equip, Result.Reason)
+		|| !EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+	{
+		return Result;
+	}
+
+	const FWBPlayerStateData* AttackerPlayer = Coordinator.GetState().GetPlayerById(0);
+	const int32 AttackerUnitId = AttackerPlayer != nullptr
+		? AttackerPlayer->HeroUnitId : INDEX_NONE;
+	for (int32 AttackIndex = 0; AttackIndex < 4; ++AttackIndex)
+	{
+		const FWBMatchLegalActionGenerationResult AttackLegal =
+			Coordinator.EnumerateLegalActions();
+		const FWBMatchLegalAction* Attack = AttackLegal.bOk
+			? FindCrashInAttack(AttackLegal.Actions, AttackerUnitId, RookUnitId)
+			: nullptr;
+		if (Attack == nullptr
+			|| !SubmitCrashIn(Coordinator, Recorder, *Attack, Result.Reason)
+			|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+		{
+			if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_rook_attack_missing");
+			return Result;
+		}
+		if (AttackIndex < 3
+			&& (!EndCrashInTurn(Coordinator, Recorder, Result.Reason)
+				|| !EndCrashInTurn(Coordinator, Recorder, Result.Reason)))
+		{
+			return Result;
+		}
+	}
+
+	if (Coordinator.GetMatchPhase() != EWBMatchLoopPhase::MandatoryChoice)
+	{
+		Rook = Coordinator.GetState().GetUnitById(RookUnitId);
+		Result.Reason = FString::Printf(
+			TEXT("csn_rook_mandatory_choice_missing:phase=%d:hp=%d:on_board=%d:events=%d:pending=%d:game_over=%d"),
+			static_cast<int32>(Coordinator.GetMatchPhase()),
+			Rook != nullptr ? Rook->HP : -999,
+			Rook != nullptr && Rook->IsUnitOnBoard() ? 1 : 0,
+			Coordinator.GetState().PendingUnitDestructionEvents.Num(),
+			Coordinator.GetState().HasPendingMandatoryDeckChoice() ? 1 : 0,
+			Coordinator.GetState().bGameOver ? 1 : 0);
+		return Result;
+	}
+	const FWBMatchObservation OpponentObservation = Coordinator.BuildObservation(0);
+	const FWBMatchObservation OwnerObservation = Coordinator.BuildObservation(1);
+	const FWBMatchLegalAction* Choice = OwnerObservation.LegalActions.FindByPredicate(
+		[](const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::MandatoryDeckChoice
+				&& Action.MandatoryChoiceCardInstanceId.Contains(TEXT("undertow"));
+		});
+	if (!OpponentHandIsHidden(OpponentObservation, 1)
+		|| !OpponentObservation.LegalActions.IsEmpty()
+		|| Choice == nullptr)
+	{
+		Result.Reason = TEXT("csn_rook_private_choice_mismatch");
+		return Result;
+	}
+	const FString UndertowInstanceId = Choice->MandatoryChoiceCardInstanceId;
+	const FWBPlayerCardZoneState* ZonesBefore =
+		Coordinator.GetState().GetCardZoneState().PlayerZones.FindByPredicate(
+			[](const FWBPlayerCardZoneState& Candidate)
+			{
+				return Candidate.PlayerId == 1;
+			});
+	const FString DrawnInstanceId = ZonesBefore != nullptr
+		&& ZonesBefore->Deck.Num() > 1
+		? ZonesBefore->Deck[1].Card.InstanceId : FString();
+	if (!SubmitCrashIn(Coordinator, Recorder, *Choice, Result.Reason))
+	{
+		return Result;
+	}
+
+	Rook = Coordinator.GetState().GetUnitById(RookUnitId);
+	const FWBUnitState* Undertow = Coordinator.GetState().Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_undertow_archivist")
+				&& Unit.IsUnitOnBoard();
+		});
+	const FWBEquippedCardEntry* Wand =
+		Coordinator.GetState().GetCardZoneState().EquippedCards.FindByPredicate(
+			[&WandInstanceId](const FWBEquippedCardEntry& Entry)
+			{
+				return Entry.Card.InstanceId == WandInstanceId;
+			});
+	const FWBPlayerCardZoneState* ZonesAfter =
+		Coordinator.GetState().GetCardZoneState().PlayerZones.FindByPredicate(
+			[](const FWBPlayerCardZoneState& Candidate)
+			{
+				return Candidate.PlayerId == 1;
+			});
+	const bool bDrawInHand = ZonesAfter != nullptr
+		&& ZonesAfter->Hand.ContainsByPredicate(
+			[&DrawnInstanceId](const FWBZoneCardEntry& Entry)
+			{
+				return Entry.Card.InstanceId == DrawnInstanceId;
+			});
+	const TArray<FWBTraceEvent>& Trace = Coordinator.GetTraceLog();
+	if (Rook == nullptr || !Rook->bDefeated || !Rook->bRemovedFromBoard
+		|| Undertow == nullptr || Undertow->X != RookTile.X || Undertow->Y != RookTile.Y
+		|| Undertow->BaseRL != 4 || Undertow->CurrentRL != 4 || Undertow->RLUsed != 1
+		|| Wand == nullptr || Wand->EquippedToUnitId != Undertow->UnitId
+		|| !bDrawInHand
+		|| CountTrace(Trace, FName(TEXT("post_destruction_deck_summon"))) != 1
+		|| CountTrace(Trace, FName(TEXT("csn_inheritance"))) != 1
+		|| CountTrace(Trace, FName(TEXT("csn_inheritance_card_drawn"))) != 1
+		|| CountAcceptedFamily(Coordinator, TEXT("mandatory_deck_choice")) != 1)
+	{
+		Result.Reason = TEXT("csn_rook_resolution_mismatch");
+		return Result;
+	}
+
+	const FString ArchiveBytes = WBProductionMatchReplay::Serialize(Recorder.GetArchive());
+	FString PersistedBytes;
+	const FWBProductionMatchReplayPersistenceResult Loaded =
+		WBProductionMatchReplayPersistence::Load(
+			Recorder.GetArchivePathForServer(), PersistedBytes);
+	if (!Loaded.bOk || PersistedBytes != ArchiveBytes)
+	{
+		Result.Reason = Loaded.bOk ? TEXT("csn_rook_archive_mismatch") : Loaded.FailureCode;
+		return Result;
+	}
+	FWBProductionMatchReplayRunRequest ReplayRequest;
+	ReplayRequest.SerializedArchive = PersistedBytes;
+	ReplayRequest.BootstrapRequest = BootstrapRequest;
+	const FWBProductionMatchReplayRunResult Replay =
+		FWBProductionMatchReplayRunner::Run(ReplayRequest);
+	if (!Replay.bValid
+		|| Replay.FinalStateDigest != Coordinator.GetCurrentStateDigest()
+		|| Replay.FinalTraceDigest != Coordinator.GetCurrentTraceDigest())
+	{
+		Result.Reason = Replay.FailureCode.IsEmpty()
+			? TEXT("csn_rook_fresh_replay_mismatch") : Replay.FailureCode;
+		return Result;
+	}
+
+	const FString ReceiptJson = WBProductionMatchReplay::SerializeReceipt(Recorder.GetReceipt());
+	TSharedPtr<FJsonObject> ReceiptObject;
+	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ReceiptJson), ReceiptObject)
+		|| !ReceiptObject.IsValid() || ReceiptObject->Values.Num() != 8
+		|| ReceiptJson.Contains(UndertowInstanceId)
+		|| ReceiptJson.Contains(DrawnInstanceId)
+		|| ReceiptJson.Contains(TEXT("state_digest"))
+		|| ReceiptJson.Contains(TEXT("trace_digest")))
+	{
+		Result.Reason = TEXT("csn_rook_receipt_privacy_mismatch");
+		return Result;
+	}
+	const FString ReceiptPath = GetRookReceiptPath();
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(ReceiptPath), true);
+	if (!FFileHelper::SaveStringToFile(ReceiptJson, *ReceiptPath,
+		FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		Result.Reason = TEXT("replay_write_failed");
+		return Result;
+	}
+
+	Result.bOk = true;
+	Result.Reason = TEXT("production_csn_rook_verified");
+	Result.RecordsVerified = Replay.RecordsVerified;
+	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
+	Result.FinalRevision = Coordinator.GetCoordinatorRevision();
+	Result.FinalStateDigest = Coordinator.GetCurrentStateDigest();
+	Result.FinalTraceDigest = Coordinator.GetCurrentTraceDigest();
+	Result.SerializedArchive = ArchiveBytes;
+	Result.SerializedReceipt = ReceiptJson;
+	return Result;
 }
 
 FWBProductionCSNCrashInSmokeResult

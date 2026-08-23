@@ -1217,6 +1217,30 @@ bool ParseAfterDamageTargetRole(
 	return true;
 }
 
+bool ParseAfterUnitDestroyedSourceScope(
+	const FString& Value,
+	EWBAfterUnitDestroyedSourceScope& OutScope)
+{
+	if (Value == TEXT("destroyed_self"))
+	{
+		OutScope = EWBAfterUnitDestroyedSourceScope::DestroyedSelf;
+		return true;
+	}
+	return false;
+}
+
+bool ParsePostDestructionOperation(
+	const FString& Value,
+	EWBPostDestructionEffectOperation& OutOperation)
+{
+	if (Value == TEXT("summon_character_from_deck_to_destroyed_tile"))
+	{
+		OutOperation = EWBPostDestructionEffectOperation::SummonCharacterFromDeckToDestroyedTile;
+		return true;
+	}
+	return false;
+}
+
 void ParseAfterDamageTrigger(
 	const TSharedPtr<FJsonObject>& Object,
 	FWBAfterDamageTriggerDefinition& OutTrigger,
@@ -1399,6 +1423,78 @@ void ParseAfterCSNInheritanceTrigger(
 	}
 }
 
+void ParseAfterUnitDestroyedTrigger(
+	const TSharedPtr<FJsonObject>& Object,
+	FWBAfterUnitDestroyedTriggerDefinition& OutTrigger,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const FString& CardId,
+	const FString& Path)
+{
+	if (!Object.IsValid())
+	{
+		AddDiagnostic(Result, TEXT("after_unit_destroyed_trigger_malformed"), CardId, TEXT(""), Path);
+		return;
+	}
+	ValidateKnownFields(Object,
+		{ TEXT("trigger_id"), TEXT("source_scope"), TEXT("operation"),
+			TEXT("required_faction"), TEXT("summon_count"), TEXT("mandatory"),
+			TEXT("ignore_summoning_conditions"), TEXT("apply_csn_inheritance") },
+		Result, CardId, TEXT(""), Path);
+
+	TryReadRequiredString(Object, TEXT("trigger_id"), Result,
+		TEXT("after_unit_destroyed_trigger_id_invalid"), CardId, TEXT(""), Path,
+		OutTrigger.TriggerId);
+	FString Value;
+	if (TryReadRequiredString(Object, TEXT("source_scope"), Result,
+		TEXT("after_unit_destroyed_source_scope_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, Value)
+		&& !ParseAfterUnitDestroyedSourceScope(Value, OutTrigger.SourceScope))
+	{
+		AddDiagnostic(Result, TEXT("after_unit_destroyed_source_scope_unsupported"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("source_scope")));
+	}
+	if (TryReadRequiredString(Object, TEXT("operation"), Result,
+		TEXT("after_unit_destroyed_operation_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, Value)
+		&& !ParsePostDestructionOperation(Value, OutTrigger.Operation))
+	{
+		AddDiagnostic(Result, TEXT("after_unit_destroyed_operation_unsupported"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("operation")));
+	}
+	TryReadRequiredString(Object, TEXT("required_faction"), Result,
+		TEXT("after_unit_destroyed_required_faction_invalid"), CardId,
+		OutTrigger.TriggerId, Path, OutTrigger.RequiredFaction);
+	if (!TryReadRequiredInteger(Object, TEXT("summon_count"), Result,
+		TEXT("after_unit_destroyed_summon_count_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, OutTrigger.SummonCount)
+		|| OutTrigger.SummonCount != 1)
+	{
+		AddDiagnostic(Result, TEXT("after_unit_destroyed_summon_count_unsupported"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("summon_count")));
+	}
+
+	auto ReadRequiredTrue = [&](const TCHAR* Field, bool& OutValue, const TCHAR* Diagnostic)
+	{
+		if (!Object->Values.Contains(Field))
+		{
+			AddDiagnostic(Result, Diagnostic, CardId, OutTrigger.TriggerId, JoinPath(Path, Field));
+			return;
+		}
+		TryReadOptionalBool(Object, Field, Result, Diagnostic, CardId,
+			OutTrigger.TriggerId, Path, OutValue);
+		if (!OutValue)
+		{
+			AddDiagnostic(Result, Diagnostic, CardId, OutTrigger.TriggerId, JoinPath(Path, Field));
+		}
+	};
+	ReadRequiredTrue(TEXT("mandatory"), OutTrigger.bMandatory,
+		TEXT("after_unit_destroyed_mandatory_unsupported"));
+	ReadRequiredTrue(TEXT("ignore_summoning_conditions"), OutTrigger.bIgnoreSummoningConditions,
+		TEXT("after_unit_destroyed_summoning_policy_unsupported"));
+	ReadRequiredTrue(TEXT("apply_csn_inheritance"), OutTrigger.bApplyCSNInheritance,
+		TEXT("after_unit_destroyed_inheritance_policy_unsupported"));
+}
+
 void ParseCard(
 	const TSharedPtr<FJsonObject>& Object,
 	FWBCardDefinition& OutDefinition,
@@ -1425,7 +1521,8 @@ void ParseCard(
 			TEXT("wand_stats"),
 			TEXT("activated_effects"),
 			TEXT("after_damage_triggers"),
-			TEXT("after_csn_inheritance_triggers")
+			TEXT("after_csn_inheritance_triggers"),
+			TEXT("after_unit_destroyed_triggers")
 		},
 		Result,
 		CardId,
@@ -1565,6 +1662,33 @@ void ParseCard(
 					TriggerPath);
 				OutDefinition.AfterCSNInheritanceTriggers.Add(
 					MoveTemp(Trigger));
+			}
+		}
+	}
+
+	const TSharedPtr<FJsonValue>* DestructionTriggerValue =
+		Object->Values.Find(TEXT("after_unit_destroyed_triggers"));
+	if (DestructionTriggerValue != nullptr)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* TriggerValues = nullptr;
+		if (!TryGetArrayField(Object, TEXT("after_unit_destroyed_triggers"), TriggerValues))
+		{
+			AddDiagnostic(Result, TEXT("after_unit_destroyed_triggers_malformed"),
+				CardId, TEXT(""), JoinPath(Path, TEXT("after_unit_destroyed_triggers")));
+		}
+		else
+		{
+			for (int32 TriggerIndex = 0; TriggerIndex < TriggerValues->Num(); ++TriggerIndex)
+			{
+				const FString TriggerPath = JoinPath(
+					JoinPath(Path, TEXT("after_unit_destroyed_triggers")),
+					FString::Printf(TEXT("[%d]"), TriggerIndex));
+				FWBAfterUnitDestroyedTriggerDefinition Trigger;
+				ParseAfterUnitDestroyedTrigger(
+					(*TriggerValues)[TriggerIndex].IsValid()
+						? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
+					Trigger, Result, CardId, TriggerPath);
+				OutDefinition.AfterUnitDestroyedTriggers.Add(MoveTemp(Trigger));
 			}
 		}
 	}

@@ -1,22 +1,10 @@
 #include "WBCSNInheritanceTrigger.h"
 
 #include "WBCardLifecycle.h"
+#include "WBCharacterPassiveEligibility.h"
 
 namespace
 {
-const FName InheritanceFrozenStatusId(TEXT("Frozen"));
-const FName InheritanceNegatedStatusId(TEXT("Negated"));
-const FName InheritanceStunnedStatusId(TEXT("Stunned"));
-
-bool CanUseCharacterPassive(const FWBUnitState& Unit)
-{
-	return Unit.IsUnitOnBoard()
-		&& !Unit.bDefeated
-		&& !Unit.HasStatus(InheritanceStunnedStatusId)
-		&& !Unit.HasStatus(InheritanceFrozenStatusId)
-		&& !Unit.HasStatus(InheritanceNegatedStatusId);
-}
-
 FString BuildStableTriggerId(
 	const FWBAfterCSNInheritanceTriggerDefinition& Trigger,
 	const FWBCSNInheritanceEventContext& Context)
@@ -76,7 +64,8 @@ WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
 		return Result;
 	}
 
-	if (State.bGameOver || !CanUseCharacterPassive(*Unit))
+	if (State.bGameOver
+		|| !WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(*Unit))
 	{
 		Result.bOk = true;
 		return Result;

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "match_id": "csn_undertow_archivist_production_smoke_match",
-  "seed": 42042,
+  "match_id": "csn_rook_production_smoke_match",
+  "seed": 42043,
   "first_player": 0,
   "initial_draw_count": 6,
   "definition_bundle_digest": "49278d2c07ead256bf7e01e1e3b59fb52dc8c43087bccb894d97398a89fe8486",
@@ -10,7 +10,7 @@
       "player_id": 0,
       "hero_definition_id": "crash_in_smoke_hero_attacker",
       "ordered_deck": [
-        "crash_in_smoke_negate_b", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
         "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
         "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
         "crash_in_smoke_filler"
@@ -20,10 +20,12 @@
       "player_id": 1,
       "hero_definition_id": "crash_in_smoke_hero_csn",
       "ordered_deck": [
-        "char_csn_rook", "char_csn_undertow_archivist", "wand_equip_switch",
-        "effect_react_csn_crash_in", "crash_in_smoke_negate_c", "crash_in_smoke_filler",
-        "undertow_smoke_private_draw", "crash_in_smoke_filler", "crash_in_smoke_filler",
-        "crash_in_smoke_filler"
+        "char_csn_rook", "wand_equip_switch", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "char_csn_undertow_archivist", "undertow_smoke_private_draw",
+        "crash_in_smoke_filler", "crash_in_smoke_filler"
       ]
     }
   ],

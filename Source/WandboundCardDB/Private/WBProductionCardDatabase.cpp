@@ -392,6 +392,31 @@ bool ParseAfterDamageTargetRole(
 	return true;
 }
 
+bool ParseAfterUnitDestroyedSourceScope(
+	const FString& Value,
+	EWBAfterUnitDestroyedSourceScope& OutScope)
+{
+	if (Value == TEXT("destroyed_self"))
+	{
+		OutScope = EWBAfterUnitDestroyedSourceScope::DestroyedSelf;
+		return true;
+	}
+	return false;
+}
+
+bool ParsePostDestructionOperation(
+	const FString& Value,
+	EWBPostDestructionEffectOperation& OutOperation)
+{
+	if (Value == TEXT("summon_character_from_deck_to_destroyed_tile"))
+	{
+		OutOperation = EWBPostDestructionEffectOperation::
+			SummonCharacterFromDeckToDestroyedTile;
+		return true;
+	}
+	return false;
+}
+
 EWBCardActivationSourceZone ParseSourceZone(const FString& Value)
 {
 	if (Value == TEXT("board"))
@@ -543,6 +568,21 @@ FString AfterCSNInheritanceTriggerDigest(
 		Trigger.bMandatory ? 1 : 0);
 }
 
+FString AfterUnitDestroyedTriggerDigest(
+	const FWBAfterUnitDestroyedTriggerDefinition& Trigger)
+{
+	return FString::Printf(
+		TEXT("after_unit_destroyed=%s|scope=%d|operation=%d|faction=%s|count=%d|mandatory=%d|ignore=%d|inherit=%d"),
+		*Trigger.TriggerId,
+		static_cast<int32>(Trigger.SourceScope),
+		static_cast<int32>(Trigger.Operation),
+		*Trigger.RequiredFaction,
+		Trigger.SummonCount,
+		Trigger.bMandatory ? 1 : 0,
+		Trigger.bIgnoreSummoningConditions ? 1 : 0,
+		Trigger.bApplyCSNInheritance ? 1 : 0);
+}
+
 FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 {
 	FString Source = FString::Printf(
@@ -632,6 +672,19 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 			InheritanceTriggers)
 		{
 			Source += TEXT("|") + AfterCSNInheritanceTriggerDigest(Trigger);
+		}
+		TArray<FWBAfterUnitDestroyedTriggerDefinition> DestructionTriggers =
+			Definition.AfterUnitDestroyedTriggers;
+		DestructionTriggers.Sort([](
+			const FWBAfterUnitDestroyedTriggerDefinition& A,
+			const FWBAfterUnitDestroyedTriggerDefinition& B)
+		{
+			return A.TriggerId < B.TriggerId;
+		});
+		for (const FWBAfterUnitDestroyedTriggerDefinition& Trigger :
+			DestructionTriggers)
+		{
+			Source += TEXT("|") + AfterUnitDestroyedTriggerDigest(Trigger);
 		}
 		TArray<EWBCombatCapability> CombatCapabilities =
 			Definition.GrantedCombatCapabilitiesWhileEquipped.Array();
@@ -1563,7 +1616,8 @@ private:
 				TEXT("equip"),
 				TEXT("activated_effects"),
 				TEXT("after_damage_triggers"),
-				TEXT("after_csn_inheritance_triggers")
+				TEXT("after_csn_inheritance_triggers"),
+				TEXT("after_unit_destroyed_triggers")
 			},
 			Reference.OwnerManifestPath,
 			CardId,
@@ -1746,6 +1800,7 @@ private:
 		ParseEffects(Card, CardPath, Record);
 		ParseAfterDamageTriggers(Card, CardPath, Record);
 		ParseAfterCSNInheritanceTriggers(Card, CardPath, Record);
+		ParseAfterUnitDestroyedTriggers(Card, CardPath, Record);
 
 		ParsedRecords.Add(MoveTemp(Record));
 	}
@@ -2607,6 +2662,145 @@ private:
 		Record.CoreDefinition.AfterCSNInheritanceTriggers.Sort([](
 			const FWBAfterCSNInheritanceTriggerDefinition& A,
 			const FWBAfterCSNInheritanceTriggerDefinition& B)
+		{
+			return A.TriggerId < B.TriggerId;
+		});
+	}
+
+	void ParseAfterUnitDestroyedTriggers(
+		const TSharedPtr<FJsonObject>& Card,
+		const FString& CardPath,
+		FWBProductionCardRecord& Record)
+	{
+		if (!HasField(Card, TEXT("after_unit_destroyed_triggers")))
+		{
+			return;
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* Triggers = nullptr;
+		if (!TryReadArray(Card, TEXT("after_unit_destroyed_triggers"), Triggers))
+		{
+			AddError(
+				TEXT("after_unit_destroyed_triggers_malformed"),
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				CardPath + TEXT(".after_unit_destroyed_triggers"),
+				TEXT("After-unit-destroyed triggers must be an array."));
+			return;
+		}
+
+		TSet<FString> TriggerIds;
+		for (int32 Index = 0; Index < Triggers->Num(); ++Index)
+		{
+			const FString TriggerPath = FString::Printf(
+				TEXT("%s.after_unit_destroyed_triggers[%d]"), *CardPath, Index);
+			const TSharedPtr<FJsonValue>& Value = (*Triggers)[Index];
+			if (!Value.IsValid() || Value->Type != EJson::Object)
+			{
+				AddError(TEXT("after_unit_destroyed_trigger_malformed"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath, TEXT("After-unit-destroyed trigger entries must be objects."));
+				continue;
+			}
+
+			const TSharedPtr<FJsonObject> TriggerObject = Value->AsObject();
+			ValidateKnownFields(
+				TriggerObject,
+				{
+					TEXT("trigger_id"), TEXT("source_scope"), TEXT("operation"),
+					TEXT("required_faction"), TEXT("summon_count"),
+					TEXT("mandatory"), TEXT("ignore_summoning_conditions"),
+					TEXT("apply_csn_inheritance")
+				},
+				Record.SourceManifestPath,
+				Record.CoreDefinition.CardId,
+				TriggerPath);
+
+			FWBAfterUnitDestroyedTriggerDefinition Trigger;
+			if (!TryReadString(TriggerObject, TEXT("trigger_id"), Trigger.TriggerId)
+				|| !WBProductionCardDatabase::IsSafeDefinitionId(Trigger.TriggerId))
+			{
+				AddError(TEXT("after_unit_destroyed_trigger_id_invalid"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".trigger_id"),
+					TEXT("After-unit-destroyed trigger ids must be canonical lowercase identifiers."));
+			}
+			else if (TriggerIds.Contains(Trigger.TriggerId))
+			{
+				AddError(TEXT("after_unit_destroyed_trigger_id_duplicate"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".trigger_id"),
+					TEXT("After-unit-destroyed trigger ids must be unique within a definition."));
+			}
+			else
+			{
+				TriggerIds.Add(Trigger.TriggerId);
+			}
+
+			FString Text;
+			if (!TryReadString(TriggerObject, TEXT("source_scope"), Text)
+				|| !ParseAfterUnitDestroyedSourceScope(Text, Trigger.SourceScope))
+			{
+				AddError(TEXT("after_unit_destroyed_source_scope_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".source_scope"),
+					TEXT("The after-unit-destroyed source scope is unsupported."));
+			}
+			if (!TryReadString(TriggerObject, TEXT("operation"), Text)
+				|| !ParsePostDestructionOperation(Text, Trigger.Operation))
+			{
+				AddError(TEXT("after_unit_destroyed_operation_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".operation"),
+					TEXT("The after-unit-destroyed operation is unsupported."));
+			}
+			if (!TryReadString(TriggerObject, TEXT("required_faction"), Trigger.RequiredFaction)
+				|| !IsCanonicalFaction(Trigger.RequiredFaction))
+			{
+				AddError(TEXT("after_unit_destroyed_required_faction_invalid"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".required_faction"),
+					TEXT("The required faction must be canonical."));
+			}
+			if (!TryReadInteger(TriggerObject, TEXT("summon_count"), Trigger.SummonCount)
+				|| Trigger.SummonCount != 1)
+			{
+				AddError(TEXT("after_unit_destroyed_summon_count_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".summon_count"),
+					TEXT("This runtime supports exactly one post-destruction summon."));
+			}
+			if (!TryReadBool(TriggerObject, TEXT("mandatory"), Trigger.bMandatory)
+				|| !Trigger.bMandatory)
+			{
+				AddError(TEXT("after_unit_destroyed_mandatory_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".mandatory"),
+					TEXT("Post-destruction Deck summon choices must be mandatory."));
+			}
+			if (!TryReadBool(TriggerObject, TEXT("ignore_summoning_conditions"), Trigger.bIgnoreSummoningConditions)
+				|| !Trigger.bIgnoreSummoningConditions)
+			{
+				AddError(TEXT("after_unit_destroyed_summoning_policy_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".ignore_summoning_conditions"),
+					TEXT("This operation must explicitly ignore ordinary summoning conditions."));
+			}
+			if (!TryReadBool(TriggerObject, TEXT("apply_csn_inheritance"), Trigger.bApplyCSNInheritance)
+				|| !Trigger.bApplyCSNInheritance)
+			{
+				AddError(TEXT("after_unit_destroyed_inheritance_policy_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					TriggerPath + TEXT(".apply_csn_inheritance"),
+					TEXT("This operation must explicitly apply CSN Inheritance."));
+			}
+
+			Record.CoreDefinition.AfterUnitDestroyedTriggers.Add(MoveTemp(Trigger));
+		}
+
+		Record.CoreDefinition.AfterUnitDestroyedTriggers.Sort([](
+			const FWBAfterUnitDestroyedTriggerDefinition& A,
+			const FWBAfterUnitDestroyedTriggerDefinition& B)
 		{
 			return A.TriggerId < B.TriggerId;
 		});

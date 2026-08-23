@@ -24,5 +24,23 @@ public:
 		const FWBGameStateData& State,
 		const FWBDeathResolutionCandidate& Candidate);
 
-	static FWBApplyActionResult ApplyZeroHPDeathResolution(FWBGameStateData& State);
+	static bool BuildSuccessfulDestructionSnapshot(
+		const FWBGameStateData& State,
+		int32 UnitId,
+		EWBUnitDestructionCause Cause,
+		int32 ResolutionOrder,
+		FWBUnitDestructionSnapshot& OutSnapshot,
+		FString& OutReason);
+
+	static void QueueSuccessfulDestructionEvent(
+		FWBGameStateData& State,
+		FWBUnitDestructionSnapshot Snapshot);
+
+	static FWBApplyActionResult ApplyZeroHPDeathResolution(
+		FWBGameStateData& State,
+		EWBUnitDestructionCause Cause = EWBUnitDestructionCause::Unknown);
+
+	static FWBApplyActionResult ApplyExplicitUnitDestruction(
+		FWBGameStateData& State,
+		int32 UnitId);
 };

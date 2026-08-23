@@ -333,6 +333,58 @@ FWBCardLifecycleResult WBCardLifecycle::MoveEquippedCardToDiscard(
 		DestinationCountAfter);
 }
 
+FWBCardLifecycleResult WBCardLifecycle::RemoveExactCardFromDeck(
+	FWBGameStateData& State,
+	const int32 PlayerId,
+	const FString& CardInstanceId)
+{
+	FWBCardZoneState* ZoneState = nullptr;
+	FWBPlayerCardZoneState* PlayerZones = nullptr;
+	FWBCardLifecycleResult ValidationResult = ValidatePlayerAndZones(
+		State, PlayerId, ZoneState, PlayerZones);
+	if (!ValidationResult.bOk)
+	{
+		return ValidationResult;
+	}
+	if (CardInstanceId.IsEmpty())
+	{
+		return MakeResult(EWBCardLifecycleResultCode::CardInstanceMissing, PlayerId);
+	}
+
+	const int32 DeckIndex = PlayerZones->Deck.IndexOfByPredicate(
+		[&CardInstanceId](const FWBZoneCardEntry& Entry)
+		{
+			return Entry.Card.InstanceId == CardInstanceId;
+		});
+	if (DeckIndex == INDEX_NONE)
+	{
+		FWBZoneCardEntry ExistingEntry;
+		const bool bKnown = WBCardZoneState::FindCardByInstanceId(
+			*ZoneState, CardInstanceId, ExistingEntry);
+		FWBCardLifecycleResult Result = MakeResult(
+			bKnown
+				? EWBCardLifecycleResultCode::CardNotInExpectedZone
+				: EWBCardLifecycleResultCode::CardInstanceMissing,
+			PlayerId);
+		Result.CardInstanceId = CardInstanceId;
+		Result.CardId = bKnown ? ExistingEntry.Card.CardId : FString();
+		Result.SourceZoneCountAfter = PlayerZones->Deck.Num();
+		return Result;
+	}
+
+	const FWBZoneCardEntry Removed = PlayerZones->Deck[DeckIndex];
+	PlayerZones->Deck.RemoveAt(DeckIndex, 1, EAllowShrinking::No);
+	NormalizeZoneIndexes(PlayerZones->Deck);
+	SortOrderedZones(*ZoneState);
+
+	FWBCardLifecycleResult Result = MakeResult(
+		EWBCardLifecycleResultCode::Success, PlayerId);
+	Result.CardInstanceId = Removed.Card.InstanceId;
+	Result.CardId = Removed.Card.CardId;
+	Result.SourceZoneCountAfter = PlayerZones->Deck.Num();
+	return Result;
+}
+
 FWBCardLifecycleResult WBCardLifecycle::ApplySetupDraw(
 	FWBGameStateData& State,
 	const int32 PlayerId,

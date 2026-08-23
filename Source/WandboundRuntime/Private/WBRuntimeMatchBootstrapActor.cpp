@@ -177,7 +177,19 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionCSNCrashInSmoke::IsUndertowRequested())
+		if (WBProductionCSNCrashInSmoke::IsRookRequested())
+		{
+			const FWBProductionCSNCrashInSmokeResult RookSmoke =
+				WBProductionCSNCrashInSmoke::RunRook(PendingBootstrapRequest);
+			if (!RookSmoke.bOk)
+			{
+				UE_LOG(LogWBRuntimeLocalPlay, Error,
+					TEXT("Wandbound CSN Rook smoke failed: %s"), *RookSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false, RookSmoke.bOk ? 0 : 34, TEXT("WandboundProductionCSNRookSmoke"));
+		}
+		else if (WBProductionCSNCrashInSmoke::IsUndertowRequested())
 		{
 			const FWBProductionCSNCrashInSmokeResult UndertowSmoke =
 				WBProductionCSNCrashInSmoke::RunUndertow(

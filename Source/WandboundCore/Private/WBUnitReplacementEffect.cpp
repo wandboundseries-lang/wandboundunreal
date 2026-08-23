@@ -1,11 +1,9 @@
 #include "WBUnitReplacementEffect.h"
 
 #include "WBCardZoneState.h"
-#include "WBCSNInheritanceTrigger.h"
+#include "WBCSNInheritance.h"
 #include "WBDeathResolution.h"
 #include "WBEffectRunner.h"
-#include "WBResonanceOverflow.h"
-#include "WBResonanceRecalculation.h"
 
 namespace
 {
@@ -220,6 +218,17 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 		InheritedWands.Add(Entry);
 	}
 	InheritedWands.Sort(CrashInEquippedEntryLess);
+	FWBUnitDestructionSnapshot DestructionSnapshot;
+	if (!WBDeathResolution::BuildSuccessfulDestructionSnapshot(
+		State,
+		SourceUnit->UnitId,
+		EWBUnitDestructionCause::ReplacementEffect,
+		0,
+		DestructionSnapshot,
+		ZoneReason))
+	{
+		return Fail(ZoneReason);
+	}
 
 	FWBGameStateData WorkingState = State;
 	FWBPlayerCardZoneState* MutableZones = WBCardZoneState::FindMutablePlayerZones(
@@ -263,8 +272,7 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 	Replacement.MaxHP = ReplacementDefinition.Definition.CharacterStats.HP;
 	Replacement.ATK = ReplacementDefinition.Definition.CharacterStats.ATK;
 	Replacement.AR = ReplacementDefinition.Definition.CharacterStats.AR;
-	Replacement.BaseRL = ReplacementDefinition.Definition.CharacterStats.RL
-		+ SourceCurrentRL;
+	Replacement.BaseRL = ReplacementDefinition.Definition.CharacterStats.RL;
 	Replacement.CurrentRL = Replacement.BaseRL;
 	Replacement.RLTotal = Replacement.BaseRL;
 	Replacement.RLUsed = 0;
@@ -273,31 +281,6 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 	Replacement.MPRemaining = 0;
 	WorkingState.Units.Add(Replacement);
 
-	for (FWBEquippedCardEntry& Entry :
-		WorkingState.GetMutableCardZoneStateForTest().EquippedCards)
-	{
-		if (Entry.EquippedToUnitId == SourceUnit->UnitId)
-		{
-			Entry.EquippedToUnitId = NewUnitId;
-		}
-	}
-	WBCardZoneState::SortOrderedZonesDeterministically(
-		WorkingState.GetMutableCardZoneStateForTest());
-
-	const FWBResonanceRecalculationResult RLResult =
-		WBResonanceRecalculation::RecalculateUnit(
-			WorkingState, NewUnitId, Repository);
-	if (!RLResult.bSucceeded)
-	{
-		return Fail(RLResult.FailureReason);
-	}
-	const FWBResonanceOverflowResult OverflowResult =
-		WBResonanceOverflow::ResolveOverflowForUnit(
-			WorkingState, Repository, NewUnitId);
-	if (!OverflowResult.bOk)
-	{
-		return Fail(OverflowResult.Reason);
-	}
 	const FWBApplyActionResult RedirectResult =
 		WBEffectRunner::ApplyPendingAttackRedirect(
 			WorkingState,
@@ -322,22 +305,25 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 		WorkingState.TerminalOutcome.TurnNumber = WorkingState.TurnNumber;
 	}
 
-	FWBCSNInheritanceEventContext InheritanceContext;
-	InheritanceContext.InheritingUnitId = NewUnitId;
-	InheritanceContext.InheritingPlayerId = Request.Source.PlayerId;
-	InheritanceContext.SourceUnitId = SourceUnit->UnitId;
-	InheritanceContext.SourceCurrentRL = SourceCurrentRL;
-	InheritanceContext.InheritedWandCount = InheritedWands.Num();
-	InheritanceContext.TransactionId = Payload.PendingAttackContinuationId;
-	const FWBCSNInheritanceTriggerResult InheritanceTriggers =
-		WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
-			WorkingState,
-			Repository,
-			InheritanceContext);
-	if (!InheritanceTriggers.bOk)
+	FWBCSNInheritanceMutationRequest InheritanceRequest;
+	InheritanceRequest.ControllerPlayerId = Request.Source.PlayerId;
+	InheritanceRequest.SourceUnitId = SourceUnit->UnitId;
+	InheritanceRequest.TargetUnitId = NewUnitId;
+	InheritanceRequest.SourceCurrentRL = SourceCurrentRL;
+	InheritanceRequest.EquippedWandSnapshot = InheritedWands;
+	InheritanceRequest.ExpectedWandLocation =
+		EWBCSNInheritanceWandLocation::EquippedToSource;
+	InheritanceRequest.TransactionId = Payload.PendingAttackContinuationId;
+	const FWBCSNInheritanceMutationResult InheritanceResult =
+		WBCSNInheritance::Apply(
+			WorkingState, Repository, InheritanceRequest);
+	if (!InheritanceResult.bOk)
 	{
-		return Fail(InheritanceTriggers.Reason);
+		return Fail(InheritanceResult.Reason);
 	}
+	WBDeathResolution::QueueSuccessfulDestructionEvent(
+		WorkingState,
+		MoveTemp(DestructionSnapshot));
 	if (!WBCardZoneState::ValidateZoneStateForTest(
 		WorkingState.GetCardZoneState(), ZoneReason))
 	{
@@ -379,44 +365,7 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 	Summoned.bOk = true;
 	Result.TraceEvents.Add(MoveTemp(Summoned));
 
-	for (const FWBEquippedCardEntry& Entry : InheritedWands)
-	{
-		FWBTraceEvent Transferred;
-		Transferred.Kind = FName(TEXT("inherited_wand_transferred"));
-		Transferred.PlayerId = Entry.Card.OwnerPlayerId;
-		Transferred.SourceUnitId = SourceUnit->UnitId;
-		Transferred.TargetUnitId = NewUnitId;
-		Transferred.CardInstanceId = Entry.Card.InstanceId;
-		Transferred.CardId = Entry.Card.CardId;
-		Transferred.SlotId = Entry.SlotId;
-		Transferred.EquipOrder = Entry.EquipOrder;
-		Transferred.bOk = true;
-		Result.TraceEvents.Add(MoveTemp(Transferred));
-	}
-
-	const FWBUnitState* FinalReplacement = WorkingState.GetUnitById(NewUnitId);
-	FWBTraceEvent Inheritance;
-	Inheritance.Kind = FName(TEXT("csn_inheritance"));
-	Inheritance.PlayerId = Request.Source.PlayerId;
-	Inheritance.SourceUnitId = SourceUnit->UnitId;
-	Inheritance.TargetUnitId = NewUnitId;
-	Inheritance.CardCount = InheritedWands.Num();
-	Inheritance.PreviousBaseRL =
-		ReplacementDefinition.Definition.CharacterStats.RL;
-	Inheritance.NewBaseRL = FinalReplacement != nullptr
-		? FinalReplacement->GetBaseRLForRules()
-		: -1;
-	Inheritance.PreviousCurrentRL = SourceCurrentRL;
-	Inheritance.NewCurrentRL = FinalReplacement != nullptr
-		? FinalReplacement->GetCurrentRLForRules()
-		: -1;
-	Inheritance.InheritedRL = SourceCurrentRL;
-	Inheritance.NewRLUsed = FinalReplacement != nullptr
-		? FinalReplacement->RLUsed
-		: -1;
-	Inheritance.bOk = true;
-	Result.TraceEvents.Add(MoveTemp(Inheritance));
-	Result.TraceEvents.Append(InheritanceTriggers.TraceEvents);
+	Result.TraceEvents.Append(InheritanceResult.TraceEvents);
 	Result.TraceEvents.Append(RedirectResult.TraceEvents);
 
 	if (bSourceWasHero)

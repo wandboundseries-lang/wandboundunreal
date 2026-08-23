@@ -516,6 +516,16 @@ void FWBGameStateData::ClearPendingAttack()
 	PendingAttack = FWBPendingAttackState();
 }
 
+bool FWBGameStateData::HasPendingMandatoryDeckChoice() const
+{
+	return PendingMandatoryDeckChoice.bActive;
+}
+
+void FWBGameStateData::ClearPendingMandatoryDeckChoice()
+{
+	PendingMandatoryDeckChoice.Reset();
+}
+
 void FWBGameStateData::SetPendingAttackForTest(const FWBPendingAttackState& InPendingAttack)
 {
 	PendingAttack = InPendingAttack;

@@ -2,6 +2,7 @@
 
 #include "WBCardLifecycle.h"
 #include "WBCardZoneState.h"
+#include "WBCharacterPassiveEligibility.h"
 #include "WBRules.h"
 
 namespace
@@ -252,7 +253,69 @@ FWBDeathPreventionResult WBDeathResolution::EvaluateDeathPrevention(
 	return Result;
 }
 
-FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(FWBGameStateData& State)
+bool WBDeathResolution::BuildSuccessfulDestructionSnapshot(
+	const FWBGameStateData& State,
+	const int32 UnitId,
+	const EWBUnitDestructionCause Cause,
+	const int32 ResolutionOrder,
+	FWBUnitDestructionSnapshot& OutSnapshot,
+	FString& OutReason)
+{
+	OutSnapshot = FWBUnitDestructionSnapshot();
+	const FWBUnitState* Unit = State.GetUnitById(UnitId);
+	if (Unit == nullptr || !Unit->IsUnitOnBoard() || Unit->bDefeated)
+	{
+		OutReason = TEXT("destruction_snapshot_unit_unavailable");
+		return false;
+	}
+
+	OutSnapshot.EventId = FString::Printf(
+		TEXT("destroyed:t%d:q%d:o%d:u%d"),
+		State.TurnNumber,
+		State.PendingUnitDestructionEvents.Num(),
+		ResolutionOrder,
+		UnitId);
+	OutSnapshot.DestroyedUnitId = UnitId;
+	OutSnapshot.DestroyedCardId = Unit->CardId;
+	OutSnapshot.ControllerPlayerId = Unit->OwnerId;
+	OutSnapshot.LastTile = FWBTile(Unit->X, Unit->Y);
+	OutSnapshot.bWasHero = IsHeroUnitForOwner(State, *Unit);
+	OutSnapshot.Cause = Cause;
+	OutSnapshot.BaseRLSnapshot = Unit->GetBaseRLForRules();
+	OutSnapshot.CurrentRLSnapshot = Unit->GetCurrentRLForRules();
+	OutSnapshot.RLUsedSnapshot = Unit->RLUsed;
+	OutSnapshot.EquippedWands = CollectEquippedCardsForUnit(State, UnitId);
+	OutSnapshot.bCharacterPassiveEligible =
+		WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(*Unit);
+	OutSnapshot.ResolutionOrder = ResolutionOrder;
+	OutReason.Reset();
+	return true;
+}
+
+void WBDeathResolution::QueueSuccessfulDestructionEvent(
+	FWBGameStateData& State,
+	FWBUnitDestructionSnapshot Snapshot)
+{
+	State.PendingUnitDestructionEvents.Add(MoveTemp(Snapshot));
+	State.PendingUnitDestructionEvents.StableSort([](
+		const FWBUnitDestructionSnapshot& A,
+		const FWBUnitDestructionSnapshot& B)
+	{
+		if (A.ResolutionOrder != B.ResolutionOrder)
+		{
+			return A.ResolutionOrder < B.ResolutionOrder;
+		}
+		if (A.DestroyedUnitId != B.DestroyedUnitId)
+		{
+			return A.DestroyedUnitId < B.DestroyedUnitId;
+		}
+		return A.EventId < B.EventId;
+	});
+}
+
+FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(
+	FWBGameStateData& State,
+	const EWBUnitDestructionCause Cause)
 {
 	const FWBActionQueryResult CleanupQuery = WBRules::CanApplyZeroHPDeathRemoval(State);
 	if (!CleanupQuery.bOk)
@@ -309,6 +372,17 @@ FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(FWBGameStateD
 		const bool bHeroUnit = IsHeroUnitForOwner(WorkingState, *Unit);
 		const int32 PreviousHP = Unit->HP;
 		const FWBTile PreviousTile(Unit->X, Unit->Y);
+		FWBUnitDestructionSnapshot DestructionSnapshot;
+		if (!BuildSuccessfulDestructionSnapshot(
+			WorkingState,
+			Plan.UnitId,
+			Cause,
+			ResolutionOrder,
+			DestructionSnapshot,
+			ValidationReason))
+		{
+			return MakeDeathResolutionFailure(ValidationReason);
+		}
 		const FWBDeathPreventionResult DeathPrevention = EvaluateDeathPrevention(
 			WorkingState,
 			MakeDeathResolutionCandidate(WorkingState, *Unit));
@@ -361,6 +435,9 @@ FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(FWBGameStateD
 
 		TraceEvents.Add(MakeUnitDefeatedTrace(*Unit, PreviousHP, bHeroUnit, ResolutionOrder));
 		TraceEvents.Add(MakeUnitRemovedFromBoardTrace(*Unit, PreviousTile, bHeroUnit, ResolutionOrder));
+		QueueSuccessfulDestructionEvent(
+			WorkingState,
+			MoveTemp(DestructionSnapshot));
 
 		if (bHeroUnit)
 		{
@@ -390,5 +467,26 @@ FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(FWBGameStateD
 	FWBApplyActionResult Result;
 	Result.bOk = true;
 	Result.TraceEvents = MoveTemp(TraceEvents);
+	return Result;
+}
+
+FWBApplyActionResult WBDeathResolution::ApplyExplicitUnitDestruction(
+	FWBGameStateData& State,
+	const int32 UnitId)
+{
+	FWBGameStateData WorkingState = State;
+	FWBUnitState* Unit = WorkingState.GetMutableUnitById(UnitId);
+	if (Unit == nullptr || !Unit->IsUnitOnBoard() || Unit->bDefeated)
+	{
+		return MakeDeathResolutionFailure(TEXT("destroy_target_unavailable"));
+	}
+	Unit->HP = 0;
+	FWBApplyActionResult Result = ApplyZeroHPDeathResolution(
+		WorkingState,
+		EWBUnitDestructionCause::ExplicitDestroy);
+	if (Result.bOk)
+	{
+		State = MoveTemp(WorkingState);
+	}
 	return Result;
 }

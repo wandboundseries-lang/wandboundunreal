@@ -11,6 +11,7 @@
 #include "WBHybridSummon.h"
 #include "WBMarkerResolution.h"
 #include "WBNPCPhaseResolution.h"
+#include "WBPostDestructionTrigger.h"
 #include "WBResonanceOverflow.h"
 #include "WBRules.h"
 
@@ -1266,7 +1267,8 @@ FWBMatchOperationResult WBMatchCoordinator::InitializeMatch(const FWBMatchInitia
 		(MatchPhase == EWBMatchLoopPhase::TurnStart
 			&& !TurnStartSequence.bCompleted)
 		|| (MatchPhase == EWBMatchLoopPhase::Response
-			&& State.HasOpenReactionWindow());
+			&& State.HasOpenReactionWindow())
+		|| State.HasPendingMandatoryDeckChoice();
 	Result.bCompleted = !Result.bPendingDecision;
 	Result.bTerminal = State.bGameOver;
 	Result.PendingPlayerId =
@@ -1312,6 +1314,37 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 	FWBMatchLegalActionGenerationResult Result;
 	if (InState.bGameOver || InPhase == EWBMatchLoopPhase::GameOver)
 	{
+		Result.bOk = true;
+		return Result;
+	}
+
+	if (InState.HasPendingMandatoryDeckChoice())
+	{
+		for (const FString& ActionId :
+			WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(
+				InState, Repository))
+		{
+			FWBMatchLegalAction Action;
+			Action.Family = EWBMatchActionFamily::MandatoryDeckChoice;
+			Action.ActionId = ActionId;
+			Action.PlayerId =
+				InState.PendingMandatoryDeckChoice.ControllerPlayerId;
+			const int32 InstanceAt = ActionId.Find(
+				TEXT(":i"),
+				ESearchCase::CaseSensitive,
+				ESearchDir::FromEnd);
+			if (InstanceAt != INDEX_NONE)
+			{
+				Action.MandatoryChoiceCardInstanceId =
+					ActionId.Mid(InstanceAt + 2);
+			}
+			Result.Actions.Add(MoveTemp(Action));
+		}
+		if (Result.Actions.IsEmpty())
+		{
+			return MakeMatchGenerationFailure(
+				TEXT("mandatory_deck_choice_has_no_legal_actions"));
+		}
 		Result.bOk = true;
 		return Result;
 	}
@@ -1556,7 +1589,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			Result.bPendingDecision =
 				IsTurnTransitionInProgress()
 				|| (MatchPhase == EWBMatchLoopPhase::Response
-					&& State.HasOpenReactionWindow());
+					&& State.HasOpenReactionWindow())
+				|| State.HasPendingMandatoryDeckChoice();
 			Result.PendingPlayerId =
 				IsTurnTransitionInProgress()
 					? GetPendingTurnStartDecisionPlayerId()
@@ -1901,6 +1935,34 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			}
 			break;
 		}
+		case EWBMatchActionFamily::MandatoryDeckChoice:
+		{
+			const int32 ResumePriority =
+				WorkingState.PendingMandatoryDeckChoice.ResumePriorityPlayerId;
+			const int32 ResumePhase =
+				WorkingState.PendingMandatoryDeckChoice.ResumeMatchPhase;
+			const FWBPostDestructionTriggerResult ChoiceResult =
+				WBPostDestructionTrigger::SubmitChoice(
+					WorkingState, Repository, ActionId);
+			bActionApplied = ChoiceResult.bOk;
+			FailureReason = ChoiceResult.Reason;
+			WorkingTraceEvents.Append(ChoiceResult.TraceEvents);
+			if (bActionApplied)
+			{
+				if (WorkingState.HasPendingMandatoryDeckChoice())
+				{
+					WorkingState.PriorityPlayer =
+						WorkingState.PendingMandatoryDeckChoice.ControllerPlayerId;
+					WorkingPhase = EWBMatchLoopPhase::MandatoryChoice;
+				}
+				else
+				{
+					WorkingState.PriorityPlayer = ResumePriority;
+					WorkingPhase = static_cast<EWBMatchLoopPhase>(ResumePhase);
+				}
+			}
+			break;
+		}
 		default:
 			FailureReason = TEXT("unsupported_match_action_family");
 			break;
@@ -1955,10 +2017,38 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 	}
 
+	if (bActionApplied)
+	{
+		const bool bAlreadyPendingChoice =
+			WorkingState.HasPendingMandatoryDeckChoice();
+		const int32 ResumePriority = bAlreadyPendingChoice
+			? WorkingState.PendingMandatoryDeckChoice.ResumePriorityPlayerId
+			: WorkingState.PriorityPlayer;
+		const int32 ResumePhase = bAlreadyPendingChoice
+			? WorkingState.PendingMandatoryDeckChoice.ResumeMatchPhase
+			: static_cast<int32>(WorkingPhase);
+		const FWBPostDestructionTriggerResult TriggerResult =
+			WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
+				WorkingState,
+				Repository,
+				ResumePriority,
+				ResumePhase);
+		bActionApplied = TriggerResult.bOk;
+		FailureReason = TriggerResult.Reason;
+		WorkingTraceEvents.Append(TriggerResult.TraceEvents);
+		if (bActionApplied && WorkingState.HasPendingMandatoryDeckChoice())
+		{
+			WorkingState.PriorityPlayer =
+				WorkingState.PendingMandatoryDeckChoice.ControllerPlayerId;
+			WorkingPhase = EWBMatchLoopPhase::MandatoryChoice;
+		}
+	}
+
 	if (bActionApplied
 		&& WorkingState.NPCPhaseContinuation.bActive
 		&& !WorkingState.HasPendingAttack()
 		&& !WorkingState.HasOpenReactionWindow()
+		&& !WorkingState.HasPendingMandatoryDeckChoice()
 		&& !WorkingState.bGameOver)
 	{
 		bActionApplied = ResumeNPCPhaseAndTurnTransition(
@@ -1985,7 +2075,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		TraceBeginIndex,
 		WorkingTraceEvents);
 
-	if (WorkingPhase != EWBMatchLoopPhase::TurnStart)
+	if (WorkingPhase != EWBMatchLoopPhase::TurnStart
+		&& WorkingPhase != EWBMatchLoopPhase::MandatoryChoice)
 	{
 		WorkingPhase = WorkingState.bGameOver
 			? EWBMatchLoopPhase::GameOver
@@ -2040,7 +2131,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		!((MatchPhase == EWBMatchLoopPhase::TurnStart
 				&& !TurnStartSequence.bCompleted)
 			|| (MatchPhase == EWBMatchLoopPhase::Response
-				&& State.HasOpenReactionWindow()));
+				&& State.HasOpenReactionWindow())
+			|| State.HasPendingMandatoryDeckChoice());
 	CommittedRecord.bPendingDecision =
 		!CommittedRecord.bCompleted;
 	CommittedRecord.PendingPlayer =
@@ -2075,7 +2167,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		(MatchPhase == EWBMatchLoopPhase::TurnStart
 			&& !TurnStartSequence.bCompleted)
 		|| (MatchPhase == EWBMatchLoopPhase::Response
-			&& State.HasOpenReactionWindow());
+			&& State.HasOpenReactionWindow())
+		|| State.HasPendingMandatoryDeckChoice();
 	Result.bCompleted = !Result.bPendingDecision;
 	Result.bTerminal = State.bGameOver;
 	Result.PendingPlayerId =
@@ -3667,6 +3760,9 @@ bool WBMatchCoordinator::ClassifyReplayActionFamily(
 	case EWBMatchActionFamily::TurnStartTrigger:
 		OutFamily = TEXT("turn_start_trigger_order");
 		return true;
+	case EWBMatchActionFamily::MandatoryDeckChoice:
+		OutFamily = TEXT("mandatory_deck_choice");
+		return true;
 	case EWBMatchActionFamily::Count:
 	default:
 		return false;
@@ -3781,6 +3877,8 @@ FName WBMatchCoordinator::PhaseToName(const EWBMatchLoopPhase Phase)
 		return FName(TEXT("turn_end"));
 	case EWBMatchLoopPhase::NPCPhase:
 		return FName(TEXT("npc_phase"));
+	case EWBMatchLoopPhase::MandatoryChoice:
+		return FName(TEXT("mandatory_choice"));
 	case EWBMatchLoopPhase::GameOver:
 		return FName(TEXT("game_over"));
 	case EWBMatchLoopPhase::Uninitialized:

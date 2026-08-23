@@ -49,6 +49,11 @@ public:
 		int32 PlayerId,
 		const FString& CardInstanceId);
 
+	static FWBCardLifecycleResult RemoveExactCardFromDeck(
+		FWBGameStateData& State,
+		int32 PlayerId,
+		const FString& CardInstanceId);
+
 	static FWBCardLifecycleResult ApplySetupDraw(FWBGameStateData& State, int32 PlayerId, int32 Count);
 
 	static FWBCardLifecycleResult ApplyTurnStartDraw(

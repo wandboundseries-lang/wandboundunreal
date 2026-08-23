@@ -1,0 +1,218 @@
+{
+  "result": "ready",
+  "baseline": {
+    "head": "62a57c809001723b834b6ad0f958a85788720a6d",
+    "origin_main": "62a57c809001723b834b6ad0f958a85788720a6d",
+    "commit": "Add production CSN Undertow Archivist trigger",
+    "automation": { "succeeded": 2321, "failed": 0, "warnings": 0, "not_run": 0 },
+    "replay_schema": 1,
+    "staged_files": [],
+    "dirty_untracked": [
+      "Content/Maps/NewProjectTest.umap",
+      "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset"
+    ]
+  },
+  "card": {
+    "card_id": "char_csn_rook",
+    "public_name": "CSN Rook",
+    "kind": "character",
+    "faction": "csn",
+    "stats": { "hp": 16, "atk": 3, "ar": 2, "rl": 2 },
+    "old_godot_rl": 3,
+    "old_unreal_placeholder_rl": 3,
+    "rl_authority": "later owner-issued balance correction",
+    "trigger": {
+      "family": "after_unit_destroyed",
+      "source_scope": "destroyed_self",
+      "operation": "summon_character_from_deck_to_destroyed_tile",
+      "required_faction": "csn",
+      "summon_count": 1,
+      "mandatory": true,
+      "ignore_summoning_conditions": true,
+      "apply_csn_inheritance": true
+    }
+  },
+  "godot_audit": {
+    "read_only": true,
+    "self_only": true,
+    "captures_previous_tile": true,
+    "searches_controller_deck": true,
+    "character_only": true,
+    "hybrid_excluded": true,
+    "unit_cap_enforced": true,
+    "normal_summon_action_bypassed": true,
+    "hero_adjacency_bypassed": true,
+    "csn_inheritance_applied": true,
+    "explicit_shuffle_found": false
+  },
+  "destruction_event": {
+    "capture_before_cleanup": true,
+    "publish_after_commit": true,
+    "fields": [
+      "event_id", "destroyed_unit_id", "destroyed_card_id",
+      "controller_player_id", "last_tile", "was_hero", "cause",
+      "base_rl", "current_rl", "rl_used", "equipped_wands",
+      "character_passive_eligible", "resolution_order", "next_trigger_index"
+    ],
+    "causes": [
+      "battle_damage", "effect_damage", "status_damage",
+      "explicit_destroy", "replacement_effect"
+    ],
+    "not_destruction": ["sacrifice", "non_destruction_removal"],
+    "prevention_before_publication": true,
+    "stable_order": ["resolution_order", "destroyed_unit_id", "event_id"]
+  },
+  "choice": {
+    "state": "FWBPendingMandatoryDeckChoiceState",
+    "coordinator_owned": true,
+    "action_family": "mandatory_deck_choice",
+    "exact_instance": true,
+    "ordering": ["deck_zone_index", "instance_id"],
+    "revalidated_on_submit": true,
+    "opponent_candidates_hidden": true,
+    "zero_candidates_resolve_without_summon_or_choice": true,
+    "single_candidate_requires_explicit_choice": true,
+    "multiple_candidates_require_explicit_exact_choice": true,
+    "duplicate_copies_remain_distinct_exact_instances": true
+  },
+  "deck_summon": {
+    "working_copy_transaction": true,
+    "exact_lifecycle_removal": true,
+    "printed_stats": true,
+    "normal_summon_action_consumed": false,
+    "hero_adjacency_required": false,
+    "promotes_to_hero": false,
+    "hybrid_allowed": false,
+    "valid_tile_required": true,
+    "empty_tile_required": true,
+    "unit_cap_enforced": true,
+    "shuffle": false,
+    "relative_deck_order_preserved": true
+  },
+  "inheritance": {
+    "shared_by": ["Crash-In", "post-destruction Deck summon"],
+    "exact_wands_recovered_from_discard": true,
+    "wand_recreation_allowed": false,
+    "base_rl_formula": "printed_base_rl + source_current_rl_snapshot",
+    "canonical_recalculation": true,
+    "canonical_overflow": true,
+    "after_csn_inheritance_once": true,
+    "failure_scope": "trigger transaction only; original destruction remains committed"
+  },
+  "composition": {
+    "undertow_draw_count": 1,
+    "crash_in_parent_completes_before_rook_trigger": true,
+    "occupied_replacement_tile_fails_closed": true,
+    "retroactive_combat": false,
+    "hero_rook_terminal": true
+  },
+  "privacy": {
+    "receipt_fields": [
+      "available", "schema_version", "opaque_match_id", "entry_count",
+      "complete", "terminal", "final_replay_digest", "failure_code"
+    ],
+    "receipt_field_count": 8,
+    "receipt_instance_leak": false,
+    "receipt_state_digest_leak": false,
+    "receipt_trace_digest_leak": false,
+    "private_replay_records_exact_choice": true
+  },
+  "tests": {
+    "focused": { "tests": 11, "assertions": 154, "failed": 0, "warnings": 0, "not_run": 0 },
+    "full": { "succeeded": 2332, "failed": 0, "warnings": 0, "not_run": 0 }
+  },
+  "builds": [
+    { "target": "WandboundUEEditor", "mode": "non-unity", "result": "succeeded", "seconds": 229.96 },
+    { "target": "WandboundUE", "mode": "non-unity", "result": "succeeded", "seconds": 116.77 },
+    { "target": "WandboundUEEditor", "mode": "default", "result": "succeeded", "seconds": 38.15 },
+    { "target": "WandboundUE", "mode": "default", "result": "succeeded", "seconds": 65.25 },
+    { "target": "WandboundUEEditor", "mode": "forced-unity", "result": "succeeded", "seconds": 55.30 },
+    { "target": "WandboundUE", "mode": "forced-unity", "result": "succeeded", "seconds": 88.24 }
+  ],
+  "clean_build_cook_run": {
+    "result": "succeeded",
+    "seconds": 717.55,
+    "automation_tool_elapsed": "00:12:03"
+  },
+  "packaged_smoke": {
+    "runs": 2,
+    "exit_codes": [0, 0],
+    "byte_identical": true,
+    "records": 15,
+    "archive_sha256": "bbc8ae9b83875831ce5c2ede0a39c0fac9089d29dd444ddf4e7e6eee1f55c43e",
+    "receipt_sha256": "30162dedc3b2345bd89d6558c5e9827944215c1d42bce010334b0931b7b37566",
+    "startup_sha256": "765b5ff3ea6a74f83c1365407dd910d9550f60d61f309fbd3d5568d3b1ea3dc2",
+    "final_state_digest": "f0c029604f5a656b4a58c1effdb03023167bc3366caebb26a09b93d668210c97",
+    "final_trace_digest": "feaf192fb00ffa999ae556890d7202dd00a107e13383f3abba6d4c26d479d376",
+    "bundle_digest": "49278d2c07ead256bf7e01e1e3b59fb52dc8c43087bccb894d97398a89fe8486",
+    "remaining_processes": 0
+  },
+  "action_codec": {
+    "changed": false,
+    "header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "replay_schema": 1
+  },
+  "no_card_id_authority": {
+    "core_matches": 0,
+    "carddb_matches": 0,
+    "allowed_runtime_smoke_only": true,
+    "alternate_id_test": true,
+    "rook_like_without_definition_test": true
+  },
+  "changed_files": [
+    "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "Data/CardDB/ProductionCardDB.schema.json",
+    "Data/Replay/CSNCrashInFixture/match_spec.json",
+    "Data/Replay/CSNRookFixture/match_spec.json",
+    "Data/Replay/CSNUndertowArchivistFixture/match_spec.json",
+    "Docs/CSN_Rook_Production_Transfer_Audit.json",
+    "Docs/CSN_Rook_Production_Transfer_Audit.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCSNInheritance.cpp",
+    "Source/WandboundCore/Private/WBCSNInheritanceTrigger.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBCardLifecycle.cpp",
+    "Source/WandboundCore/Private/WBCharacterPassiveEligibility.cpp",
+    "Source/WandboundCore/Private/WBDeathResolution.cpp",
+    "Source/WandboundCore/Private/WBDeckSummon.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBGameStateData.cpp",
+    "Source/WandboundCore/Private/WBMarkerResolution.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBPostDestructionTrigger.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Private/WBUnitReplacementEffect.cpp",
+    "Source/WandboundCore/Public/WBCSNInheritance.h",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBCardLifecycle.h",
+    "Source/WandboundCore/Public/WBCharacterPassiveEligibility.h",
+    "Source/WandboundCore/Public/WBDeathResolution.h",
+    "Source/WandboundCore/Public/WBDeckSummon.h",
+    "Source/WandboundCore/Public/WBEffectRunner.h",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBMatchCoordinator.h",
+    "Source/WandboundCore/Public/WBPostDestructionTrigger.h",
+    "Source/WandboundRuntime/Private/WBProductionCSNCrashInSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionCSNCrashInSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBCSNRookTests.cpp",
+    "Source/WandboundTests/Private/WBProductionMatchReplayTests.cpp"
+  ],
+  "preserved_unrelated_files": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset"
+  ],
+  "source_control": {
+    "staged": false,
+    "committed": false,
+    "pushed": false
+  },
+  "remaining_limitations": [
+    "Only DestroyedSelf mandatory one-Character Deck summon is production-supported.",
+    "Juno destruction prevention remains a future pre-destruction pass.",
+    "No UI was added for mandatory Deck choice."
+  ]
+}
