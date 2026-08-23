@@ -177,7 +177,19 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionCSNCrashInSmoke::IsRookRequested())
+		if (WBProductionCSNCrashInSmoke::IsSableRequested())
+		{
+			const FWBProductionCSNCrashInSmokeResult SableSmoke =
+				WBProductionCSNCrashInSmoke::RunSable(PendingBootstrapRequest);
+			if (!SableSmoke.bOk)
+			{
+				UE_LOG(LogWBRuntimeLocalPlay, Error,
+					TEXT("Wandbound CSN Sable smoke failed: %s"), *SableSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false, SableSmoke.bOk ? 0 : 35, TEXT("WandboundProductionCSNSableSmoke"));
+		}
+		else if (WBProductionCSNCrashInSmoke::IsRookRequested())
 		{
 			const FWBProductionCSNCrashInSmokeResult RookSmoke =
 				WBProductionCSNCrashInSmoke::RunRook(PendingBootstrapRequest);

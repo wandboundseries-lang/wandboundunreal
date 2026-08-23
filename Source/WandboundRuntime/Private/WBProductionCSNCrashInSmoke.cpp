@@ -274,6 +274,13 @@ bool WBProductionCSNCrashInSmoke::IsRookRequested(const TCHAR* CommandLine)
 		TEXT("WandboundProductionCSNRookSmoke"));
 }
 
+bool WBProductionCSNCrashInSmoke::IsSableRequested(const TCHAR* CommandLine)
+{
+	return FParse::Param(
+		CommandLine != nullptr ? CommandLine : FCommandLine::Get(),
+		TEXT("WandboundProductionCSNSableSmoke"));
+}
+
 FString WBProductionCSNCrashInSmoke::GetReceiptPath()
 {
 	return FPaths::Combine(
@@ -293,6 +300,13 @@ FString WBProductionCSNCrashInSmoke::GetRookReceiptPath()
 	return FPaths::Combine(
 		FPaths::ProjectSavedDir(),
 		TEXT("SmokeTest/WandboundProductionCSNRookReceipt.json"));
+}
+
+FString WBProductionCSNCrashInSmoke::GetSableReceiptPath()
+{
+	return FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SmokeTest/WandboundProductionCSNSableReceipt.json"));
 }
 
 FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunScenario(
@@ -1024,6 +1038,232 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunRook(
 
 	Result.bOk = true;
 	Result.Reason = TEXT("production_csn_rook_verified");
+	Result.RecordsVerified = Replay.RecordsVerified;
+	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
+	Result.FinalRevision = Coordinator.GetCoordinatorRevision();
+	Result.FinalStateDigest = Coordinator.GetCurrentStateDigest();
+	Result.FinalTraceDigest = Coordinator.GetCurrentTraceDigest();
+	Result.SerializedArchive = ArchiveBytes;
+	Result.SerializedReceipt = ReceiptJson;
+	return Result;
+}
+
+FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunSable(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+{
+	FWBProductionCSNCrashInSmokeResult Result;
+	const FWBProductionRuntimeBootstrapResult Bootstrap =
+		WBProductionRuntimeBootstrap::Build(BootstrapRequest);
+	if (!Bootstrap.bOk)
+	{
+		Result.Reason = Bootstrap.Reason;
+		return Result;
+	}
+
+	WBMatchCoordinator Coordinator;
+	const FWBMatchOperationResult Started = Coordinator.InitializeMatch(
+		Bootstrap.InitializationRequest);
+	if (!Started.bOk)
+	{
+		Result.Reason = Started.Reason;
+		return Result;
+	}
+	FWBProductionMatchReplayRecorder Recorder;
+	if (!Recorder.Begin(
+		WBProductionMatchReplayRuntime::BuildMetadata(Bootstrap), Coordinator))
+	{
+		Result.Reason = Recorder.GetReceipt().FailureCode;
+		return Result;
+	}
+
+	if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+	{
+		return Result;
+	}
+	const auto SubmitSummon = [&](const FString& CardId, const FWBTile Tile) -> bool
+	{
+		const FWBMatchLegalActionGenerationResult Legal = Coordinator.EnumerateLegalActions();
+		const FWBMatchLegalAction* Summon = Legal.bOk
+			? FindCrashInSummon(Legal.Actions, CardId, Tile) : nullptr;
+		if (Summon == nullptr)
+		{
+			Result.Reason = TEXT("csn_sable_summon_missing:") + CardId;
+			return false;
+		}
+		return SubmitCrashIn(Coordinator, Recorder, *Summon, Result.Reason)
+			&& PassCrashInResponse(Coordinator, Recorder, Result.Reason);
+	};
+	if (!SubmitSummon(TEXT("char_csn_sable"), FWBTile(3, 0))
+		|| !SubmitSummon(TEXT("char_csn_echo"), FWBTile(4, 1)))
+	{
+		return Result;
+	}
+
+	const FWBUnitState* Sable = Coordinator.GetState().Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_sable") && Unit.IsUnitOnBoard();
+		});
+	const FWBUnitState* Echo = Coordinator.GetState().Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_echo") && Unit.IsUnitOnBoard();
+		});
+	if (Sable == nullptr || Echo == nullptr)
+	{
+		Result.Reason = TEXT("csn_sable_initial_units_missing");
+		return Result;
+	}
+	const int32 SableUnitId = Sable->UnitId;
+	const int32 EchoUnitId = Echo->UnitId;
+	if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+	{
+		return Result;
+	}
+	const FWBPlayerStateData* AttackerPlayer = Coordinator.GetState().GetPlayerById(0);
+	const int32 AttackerUnitId = AttackerPlayer != nullptr
+		? AttackerPlayer->HeroUnitId : INDEX_NONE;
+	for (int32 AttackIndex = 0; AttackIndex < 4; ++AttackIndex)
+	{
+		const FWBMatchLegalActionGenerationResult Legal = Coordinator.EnumerateLegalActions();
+		const FWBMatchLegalAction* Attack = Legal.bOk
+			? FindCrashInAttack(Legal.Actions, AttackerUnitId, EchoUnitId) : nullptr;
+		if (Attack == nullptr
+			|| !SubmitCrashIn(Coordinator, Recorder, *Attack, Result.Reason)
+			|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+		{
+			if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_sable_echo_attack_missing");
+			return Result;
+		}
+		if (AttackIndex < 3
+			&& (!EndCrashInTurn(Coordinator, Recorder, Result.Reason)
+				|| !EndCrashInTurn(Coordinator, Recorder, Result.Reason)))
+		{
+			return Result;
+		}
+	}
+
+	Sable = Coordinator.GetState().GetUnitById(SableUnitId);
+	if (Sable == nullptr || Sable->ATK != 2 || Sable->HP != 11 || Sable->MaxHP != 11
+		|| CountTrace(Coordinator.GetTraceLog(), FName(TEXT("unit_stat_delta_applied"))) != 1)
+	{
+		Result.Reason = TEXT("csn_sable_first_growth_mismatch");
+		return Result;
+	}
+	if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason)
+		|| !SubmitSummon(TEXT("char_csn_rook"), FWBTile(4, 1))
+		|| !EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+	{
+		return Result;
+	}
+	const FWBUnitState* Rook = Coordinator.GetState().Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_rook") && Unit.IsUnitOnBoard();
+		});
+	if (Rook == nullptr)
+	{
+		Result.Reason = TEXT("csn_sable_rook_missing");
+		return Result;
+	}
+	const int32 RookUnitId = Rook->UnitId;
+	for (int32 AttackIndex = 0; AttackIndex < 4; ++AttackIndex)
+	{
+		const FWBMatchLegalActionGenerationResult Legal = Coordinator.EnumerateLegalActions();
+		const FWBMatchLegalAction* Attack = Legal.bOk
+			? FindCrashInAttack(Legal.Actions, AttackerUnitId, RookUnitId) : nullptr;
+		if (Attack == nullptr
+			|| !SubmitCrashIn(Coordinator, Recorder, *Attack, Result.Reason)
+			|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+		{
+			if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_sable_rook_attack_missing");
+			return Result;
+		}
+		if (AttackIndex < 3
+			&& (!EndCrashInTurn(Coordinator, Recorder, Result.Reason)
+				|| !EndCrashInTurn(Coordinator, Recorder, Result.Reason)))
+		{
+			return Result;
+		}
+	}
+
+	if (Coordinator.GetMatchPhase() != EWBMatchLoopPhase::MandatoryChoice)
+	{
+		Result.Reason = TEXT("csn_sable_rook_choice_missing");
+		return Result;
+	}
+	const FWBMatchObservation OwnerObservation = Coordinator.BuildObservation(1);
+	const FWBMatchObservation OpponentObservation = Coordinator.BuildObservation(0);
+	const FWBMatchLegalAction* Choice = OwnerObservation.LegalActions.FindByPredicate(
+		[](const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::MandatoryDeckChoice;
+		});
+	if (Choice == nullptr || !OpponentObservation.LegalActions.IsEmpty()
+		|| !OpponentHandIsHidden(OpponentObservation, 1)
+		|| !SubmitCrashIn(Coordinator, Recorder, *Choice, Result.Reason))
+	{
+		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_sable_rook_choice_privacy_mismatch");
+		return Result;
+	}
+
+	Sable = Coordinator.GetState().GetUnitById(SableUnitId);
+	const TArray<FWBTraceEvent>& Trace = Coordinator.GetTraceLog();
+	if (Sable == nullptr || Sable->ATK != 3 || Sable->HP != 12 || Sable->MaxHP != 12
+		|| CountTrace(Trace, FName(TEXT("unit_stat_delta_applied"))) != 2
+		|| CountTrace(Trace, FName(TEXT("post_destruction_observer_resolved"))) != 2
+		|| CountAcceptedFamily(Coordinator, TEXT("mandatory_deck_choice")) != 1)
+	{
+		Result.Reason = TEXT("csn_sable_final_growth_mismatch");
+		return Result;
+	}
+
+	const FString ArchiveBytes = WBProductionMatchReplay::Serialize(Recorder.GetArchive());
+	FString PersistedBytes;
+	const FWBProductionMatchReplayPersistenceResult Loaded =
+		WBProductionMatchReplayPersistence::Load(
+			Recorder.GetArchivePathForServer(), PersistedBytes);
+	if (!Loaded.bOk || PersistedBytes != ArchiveBytes)
+	{
+		Result.Reason = Loaded.bOk ? TEXT("csn_sable_archive_mismatch") : Loaded.FailureCode;
+		return Result;
+	}
+	FWBProductionMatchReplayRunRequest ReplayRequest;
+	ReplayRequest.SerializedArchive = PersistedBytes;
+	ReplayRequest.BootstrapRequest = BootstrapRequest;
+	const FWBProductionMatchReplayRunResult Replay =
+		FWBProductionMatchReplayRunner::Run(ReplayRequest);
+	if (!Replay.bValid
+		|| Replay.FinalStateDigest != Coordinator.GetCurrentStateDigest()
+		|| Replay.FinalTraceDigest != Coordinator.GetCurrentTraceDigest())
+	{
+		Result.Reason = Replay.FailureCode.IsEmpty()
+			? TEXT("csn_sable_fresh_replay_mismatch") : Replay.FailureCode;
+		return Result;
+	}
+
+	const FString ReceiptJson = WBProductionMatchReplay::SerializeReceipt(Recorder.GetReceipt());
+	TSharedPtr<FJsonObject> ReceiptObject;
+	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ReceiptJson), ReceiptObject)
+		|| !ReceiptObject.IsValid() || ReceiptObject->Values.Num() != 8
+		|| ReceiptJson.Contains(TEXT("char_csn_sable"))
+		|| ReceiptJson.Contains(TEXT("state_digest"))
+		|| ReceiptJson.Contains(TEXT("trace_digest")))
+	{
+		Result.Reason = TEXT("csn_sable_receipt_privacy_mismatch");
+		return Result;
+	}
+	const FString ReceiptPath = GetSableReceiptPath();
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(ReceiptPath), true);
+	if (!FFileHelper::SaveStringToFile(ReceiptJson, *ReceiptPath,
+		FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		Result.Reason = TEXT("replay_write_failed");
+		return Result;
+	}
+
+	Result.bOk = true;
+	Result.Reason = TEXT("production_csn_sable_verified");
 	Result.RecordsVerified = Replay.RecordsVerified;
 	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
 	Result.FinalRevision = Coordinator.GetCoordinatorRevision();

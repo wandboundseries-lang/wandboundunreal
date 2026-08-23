@@ -1,0 +1,172 @@
+{
+  "audit": "csn_sable_production_transfer",
+  "result": "ready",
+  "baseline": {
+    "commit": "ca5954b441c5e06ec6113420f3d172af86e7531d",
+    "subject": "Add production CSN Rook destruction trigger",
+    "head_matches_origin_main": true,
+    "automation_succeeded": 2332,
+    "automation_failed": 0,
+    "automation_warnings": 0,
+    "automation_not_run": 0
+  },
+  "card": {
+    "card_id": "char_csn_sable",
+    "public_name": "CSN Sable",
+    "kind": "character",
+    "faction": "csn",
+    "stats": {
+      "hp": 10,
+      "atk": 1,
+      "ar": 3,
+      "rl": 2
+    },
+    "movement": "orthogonal_adjacent",
+    "attack": "orthogonal_line",
+    "attack_range": 3,
+    "rules_text": "CSN Inheritance: If this unit is summoned by a CSN unit's effect, transfer that unit's equipped Wands to this unit. Increase this unit's Base RL by that unit's Current RL.\n\nWhenever a CSN unit you control is destroyed, this unit gets +1 ATK, +1 HP, and +1 Max HP."
+  },
+  "observer_architecture": {
+    "authority": "WBPostDestructionTrigger",
+    "source_scope": "ControlledFactionUnitDestroyed",
+    "operation": "ApplyPersistentStatDeltaToTriggerSource",
+    "target": "TriggerSource",
+    "required_destroyed_faction": "csn",
+    "capture_boundary": "committed_destruction_event",
+    "captured_fields": [
+      "source_unit_id",
+      "source_card_id",
+      "controller_player_id",
+      "source_order"
+    ],
+    "capture_order": [
+      "controller_player_id",
+      "source_unit_id",
+      "source_card_id"
+    ],
+    "resolution_order": [
+      "destroyed_self_triggers",
+      "observer_controller",
+      "observer_source_unit_id",
+      "observer_trigger_id"
+    ],
+    "passive_eligibility_captured_at_event": true,
+    "exact_source_identity_revalidated": true,
+    "missing_source_policy": "skip_without_rollback",
+    "retroactive_observers_allowed": false,
+    "card_id_authority": false
+  },
+  "stat_mutation": {
+    "authority": "WBUnitStatDelta",
+    "transactional_working_copy": true,
+    "atk_delta": 1,
+    "max_hp_delta": 1,
+    "current_hp_delta": 1,
+    "max_hp_before_current_hp": true,
+    "current_hp_clamped": true,
+    "healing_semantics": false,
+    "trace": "unit_stat_delta_applied"
+  },
+  "composition": {
+    "rook_self_trigger_before_observer": true,
+    "rook_mandatory_choice_pauses_observer": true,
+    "observer_resumes_after_choice": true,
+    "single_rook_candidate_still_requires_choice": true,
+    "crash_in_new_sable_not_retroactive": true,
+    "crash_in_existing_sable_grows_once": true,
+    "csn_inheritance_reused": true,
+    "terminal_hero_clears_pending_observers": true
+  },
+  "replay_privacy": {
+    "replay_schema": 1,
+    "automatic_growth_adds_player_action": false,
+    "fresh_replay_verified": true,
+    "receipt_fields": 8,
+    "opponent_candidates_hidden": true,
+    "protected_digests_absent_from_receipt": true,
+    "wb_action_codec_unchanged": true,
+    "wb_action_codec_header_git_blob_hash": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "wb_action_codec_source_git_blob_hash": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "validation": {
+    "focused_sable": "passed",
+    "csn_regression_succeeded": 58,
+    "csn_regression_failed": 0,
+    "full_automation_succeeded": 2342,
+    "full_automation_failed": 0,
+    "full_automation_warnings": 0,
+    "full_automation_not_run": 0,
+    "editor_non_unity": "succeeded",
+    "game_non_unity": "succeeded",
+    "editor_default": "succeeded",
+    "game_default": "succeeded",
+    "editor_forced_unity": "succeeded",
+    "game_forced_unity": "succeeded",
+    "clean_build_cook_run": "succeeded",
+    "clean_build_cook_run_seconds": 558.93,
+    "cooked_packages": 459,
+    "packaged_smoke_runs": 2,
+    "packaged_smoke_exit_codes": [0, 0],
+    "packaged_artifacts_byte_identical": true
+  },
+  "packaged_smoke": {
+    "production_bundle_digest": "0d7ffbe33ae79ee590e0b0eb66d37a02482906f6b6c5b7218b067e293a14d2e5",
+    "archive_sha256": "e4d84770703583a3a657aea10ad21d77f3a6a1164e837d3a245ee52cb8938eb1",
+    "receipt_sha256": "05643ef48cdfc06300e6065978595c57040f543c7f6d21168bd09fdf724283eb",
+    "startup_sha256": "5cf4785ef4896bc953e91d045591e2956e485a0b960ab09023f6865ec68a006f",
+    "replay_digest": "ab0ecb95caf30effcc8e31471e8f071bd4aab986a4558cebe5c24dc712056e8f",
+    "final_state_digest": "64e55c1bce7e969938bc4f3e64561604b7d54a38f4cad55bf810b2a8ca4d0b39",
+    "final_trace_digest": "b7014259e39ca1e3b561f3a04c2c64ea78d12d6d9887caa9a624010eff0b3a6b",
+    "final_generation": 1,
+    "final_revision": 29,
+    "record_count": 28,
+    "final_sable": {
+      "atk": 3,
+      "hp": 12,
+      "max_hp": 12
+    }
+  },
+  "changed_paths": [
+    "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "Data/CardDB/ProductionCardDB.schema.json",
+    "Data/Replay/CSNCrashInFixture/match_spec.json",
+    "Data/Replay/CSNRookFixture/match_spec.json",
+    "Data/Replay/CSNSableFixture/match_spec.json",
+    "Data/Replay/CSNUndertowArchivistFixture/match_spec.json",
+    "Docs/CSN_Sable_Production_Transfer_Audit.json",
+    "Docs/CSN_Sable_Production_Transfer_Audit.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBDeathResolution.cpp",
+    "Source/WandboundCore/Private/WBPostDestructionTrigger.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Private/WBReplayTrace.cpp",
+    "Source/WandboundCore/Private/WBUnitStatDelta.cpp",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBReplayTrace.h",
+    "Source/WandboundCore/Public/WBUnitStatDelta.h",
+    "Source/WandboundRuntime/Private/WBProductionCSNCrashInSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionCSNCrashInSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBCSNCrashInTests.cpp",
+    "Source/WandboundTests/Private/WBCSNSableTests.cpp"
+  ],
+  "preserved_unrelated_paths": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+    "h origin main",
+    "Content/MeshyImports/**",
+    ".gitattributes",
+    "Config/DefaultEngine.ini",
+    "Config/DefaultEditor.ini",
+    "Reference/GodotProject/**"
+  ],
+  "limitations": [
+    "Juno destruction prevention is not implemented; Sable remains correctly bound to committed destruction events.",
+    "No Sable-specific UI, presentation, networking, save/load, or additional CSN card was added.",
+    "Persistent deltas apply only to the current board lifetime and skip a source removed before queued resolution."
+  ]
+}

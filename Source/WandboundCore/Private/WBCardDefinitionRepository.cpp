@@ -453,15 +453,24 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 				return MakeValidationFailure(
 					Repository, TEXT("optional_after_unit_destroyed_trigger_unsupported"));
 			}
-			if (Trigger.SourceScope
-					!= EWBAfterUnitDestroyedSourceScope::DestroyedSelf
-				|| Trigger.Operation
-					!= EWBPostDestructionEffectOperation::
-						SummonCharacterFromDeckToDestroyedTile
-				|| Trigger.RequiredFaction.IsEmpty()
-				|| Trigger.SummonCount != 1
-				|| !Trigger.bIgnoreSummoningConditions
-				|| !Trigger.bApplyCSNInheritance)
+			const bool bValidDeckSummon =
+				Trigger.SourceScope == EWBAfterUnitDestroyedSourceScope::DestroyedSelf
+				&& Trigger.Operation == EWBPostDestructionEffectOperation::
+					SummonCharacterFromDeckToDestroyedTile
+				&& Trigger.SummonCount == 1
+				&& Trigger.bIgnoreSummoningConditions
+				&& Trigger.bApplyCSNInheritance;
+			const bool bValidObserverStatDelta =
+				Trigger.SourceScope == EWBAfterUnitDestroyedSourceScope::
+					ControlledFactionUnitDestroyed
+				&& Trigger.Operation == EWBPostDestructionEffectOperation::
+					ApplyPersistentStatDeltaToTriggerSource
+				&& Trigger.Target == EWBPostDestructionTarget::TriggerSource
+				&& (Trigger.StatDelta.ATKDelta != 0
+					|| Trigger.StatDelta.MaxHPDelta != 0
+					|| Trigger.StatDelta.CurrentHPDelta != 0);
+			if (Trigger.RequiredFaction.IsEmpty()
+				|| (!bValidDeckSummon && !bValidObserverStatDelta))
 			{
 				return MakeValidationFailure(
 					Repository, TEXT("after_unit_destroyed_trigger_invalid"));

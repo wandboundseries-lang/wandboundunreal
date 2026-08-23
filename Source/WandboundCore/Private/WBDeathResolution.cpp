@@ -287,6 +287,38 @@ bool WBDeathResolution::BuildSuccessfulDestructionSnapshot(
 	OutSnapshot.EquippedWands = CollectEquippedCardsForUnit(State, UnitId);
 	OutSnapshot.bCharacterPassiveEligible =
 		WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(*Unit);
+	for (const FWBUnitState& Candidate : State.Units)
+	{
+		if (Candidate.UnitId == UnitId
+			|| !WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(
+				Candidate))
+		{
+			continue;
+		}
+		FWBPostDestructionObserverSourceSnapshot Observer;
+		Observer.SourceUnitId = Candidate.UnitId;
+		Observer.SourceCardId = Candidate.CardId;
+		Observer.ControllerPlayerId = Candidate.OwnerId;
+		OutSnapshot.ObserverSources.Add(MoveTemp(Observer));
+	}
+	OutSnapshot.ObserverSources.Sort([](
+		const FWBPostDestructionObserverSourceSnapshot& A,
+		const FWBPostDestructionObserverSourceSnapshot& B)
+	{
+		if (A.ControllerPlayerId != B.ControllerPlayerId)
+		{
+			return A.ControllerPlayerId < B.ControllerPlayerId;
+		}
+		if (A.SourceUnitId != B.SourceUnitId)
+		{
+			return A.SourceUnitId < B.SourceUnitId;
+		}
+		return A.SourceCardId < B.SourceCardId;
+	});
+	for (int32 Index = 0; Index < OutSnapshot.ObserverSources.Num(); ++Index)
+	{
+		OutSnapshot.ObserverSources[Index].SourceOrder = Index;
+	}
 	OutSnapshot.ResolutionOrder = ResolutionOrder;
 	OutReason.Reset();
 	return true;

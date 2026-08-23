@@ -2,6 +2,7 @@
 
 #include "WBCardZoneState.h"
 #include "WBDeckSummon.h"
+#include "WBUnitStatDelta.h"
 
 namespace
 {
@@ -35,11 +36,19 @@ FWBTraceEvent MakeTriggerTrace(
 	return Trace;
 }
 
-TArray<FWBAfterUnitDestroyedTriggerDefinition> SortedTriggers(
+TArray<FWBAfterUnitDestroyedTriggerDefinition> SortedSelfTriggers(
 	const FWBCardDefinition& Definition)
 {
-	TArray<FWBAfterUnitDestroyedTriggerDefinition> Triggers =
-		Definition.AfterUnitDestroyedTriggers;
+	TArray<FWBAfterUnitDestroyedTriggerDefinition> Triggers;
+	for (const FWBAfterUnitDestroyedTriggerDefinition& Trigger :
+		Definition.AfterUnitDestroyedTriggers)
+	{
+		if (Trigger.SourceScope
+			== EWBAfterUnitDestroyedSourceScope::DestroyedSelf)
+		{
+			Triggers.Add(Trigger);
+		}
+	}
 	Triggers.Sort([](
 		const FWBAfterUnitDestroyedTriggerDefinition& A,
 		const FWBAfterUnitDestroyedTriggerDefinition& B)
@@ -47,6 +56,85 @@ TArray<FWBAfterUnitDestroyedTriggerDefinition> SortedTriggers(
 		return A.TriggerId < B.TriggerId;
 	});
 	return Triggers;
+}
+
+struct FResolvedObserverTrigger
+{
+	FWBPostDestructionObserverSourceSnapshot Source;
+	FWBAfterUnitDestroyedTriggerDefinition Trigger;
+};
+
+TArray<FResolvedObserverTrigger> BuildObserverTriggers(
+	const FWBUnitDestructionSnapshot& Event,
+	const FWBCardDefinitionRepository& Repository)
+{
+	TArray<FResolvedObserverTrigger> Resolved;
+	for (const FWBPostDestructionObserverSourceSnapshot& Source :
+		Event.ObserverSources)
+	{
+		const FWBCardDefinitionRepositoryLookupResult Lookup =
+			WBCardDefinitionRepository::FindCardById(
+				Repository, Source.SourceCardId);
+		if (!Lookup.bFound)
+		{
+			continue;
+		}
+		for (const FWBAfterUnitDestroyedTriggerDefinition& Trigger :
+			Lookup.Definition.AfterUnitDestroyedTriggers)
+		{
+			if (Trigger.SourceScope
+				!= EWBAfterUnitDestroyedSourceScope::
+					ControlledFactionUnitDestroyed)
+			{
+				continue;
+			}
+			FResolvedObserverTrigger Entry;
+			Entry.Source = Source;
+			Entry.Trigger = Trigger;
+			Resolved.Add(MoveTemp(Entry));
+		}
+	}
+	Resolved.Sort([](
+		const FResolvedObserverTrigger& A,
+		const FResolvedObserverTrigger& B)
+	{
+		if (A.Source.ControllerPlayerId != B.Source.ControllerPlayerId)
+		{
+			return A.Source.ControllerPlayerId < B.Source.ControllerPlayerId;
+		}
+		if (A.Source.SourceUnitId != B.Source.SourceUnitId)
+		{
+			return A.Source.SourceUnitId < B.Source.SourceUnitId;
+		}
+		return A.Trigger.TriggerId < B.Trigger.TriggerId;
+	});
+	return Resolved;
+}
+
+FWBTraceEvent MakeObserverTrace(
+	const FName Kind,
+	const FWBUnitDestructionSnapshot& Event,
+	const FResolvedObserverTrigger& Observer,
+	const FString& Reason = FString())
+{
+	FWBTraceEvent Trace;
+	Trace.Kind = Kind;
+	Trace.ActionId = FString::Printf(
+		TEXT("%s:observer:u%d:%s"),
+		*Event.EventId,
+		Observer.Source.SourceUnitId,
+		*Observer.Trigger.TriggerId);
+	Trace.PlayerId = Observer.Source.ControllerPlayerId;
+	Trace.SourceUnitId = Observer.Source.SourceUnitId;
+	Trace.TargetUnitId = Observer.Source.SourceUnitId;
+	Trace.PreviousTargetUnitId = Event.DestroyedUnitId;
+	Trace.FromTile = Event.LastTile;
+	Trace.ResolutionOrder = Event.ResolutionOrder;
+	Trace.DamageCause = FName(*FString::FromInt(
+		static_cast<int32>(Event.Cause)));
+	Trace.Reason = Reason;
+	Trace.bOk = true;
+	return Trace;
 }
 
 TArray<FWBZoneCardEntry> EligibleDeckEntries(
@@ -157,11 +245,84 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 			return MakePostDestructionFailure(TEXT("destroyed_unit_definition_missing"));
 		}
 		const TArray<FWBAfterUnitDestroyedTriggerDefinition> Triggers =
-			SortedTriggers(Lookup.Definition);
+			SortedSelfTriggers(Lookup.Definition);
 		if (Event.NextTriggerIndex >= Triggers.Num())
 		{
-			State.PendingUnitDestructionEvents.RemoveAt(
-				0, 1, EAllowShrinking::No);
+			const TArray<FResolvedObserverTrigger> Observers =
+				BuildObserverTriggers(Event, Repository);
+			if (Event.NextObserverTriggerIndex >= Observers.Num())
+			{
+				State.PendingUnitDestructionEvents.RemoveAt(
+					0, 1, EAllowShrinking::No);
+				continue;
+			}
+
+			const FResolvedObserverTrigger Observer =
+				Observers[Event.NextObserverTriggerIndex++];
+			const FWBUnitDestructionSnapshot EventSnapshot = Event;
+			if (Observer.Source.ControllerPlayerId
+				!= EventSnapshot.ControllerPlayerId
+				|| Observer.Trigger.RequiredFaction.IsEmpty()
+				|| !Lookup.Definition.PublicFactions.Contains(
+					Observer.Trigger.RequiredFaction))
+			{
+				continue;
+			}
+			if (!Observer.Trigger.bMandatory
+				|| Observer.Trigger.Operation
+					!= EWBPostDestructionEffectOperation::
+						ApplyPersistentStatDeltaToTriggerSource
+				|| Observer.Trigger.Target
+					!= EWBPostDestructionTarget::TriggerSource)
+			{
+				return MakePostDestructionFailure(
+					TEXT("unsupported_post_destruction_observer_trigger"));
+			}
+
+			Result.TraceEvents.Add(MakeObserverTrace(
+				FName(TEXT("post_destruction_observer_triggered")),
+				EventSnapshot,
+				Observer));
+			const FWBUnitState* LiveSource = State.GetUnitById(
+				Observer.Source.SourceUnitId);
+			if (LiveSource == nullptr
+				|| !LiveSource->IsUnitOnBoard()
+				|| LiveSource->bDefeated
+				|| LiveSource->OwnerId != Observer.Source.ControllerPlayerId
+				|| LiveSource->CardId != Observer.Source.SourceCardId)
+			{
+				Result.TraceEvents.Add(MakeObserverTrace(
+					FName(TEXT("post_destruction_observer_skipped")),
+					EventSnapshot,
+					Observer,
+					TEXT("observer_source_unavailable")));
+				continue;
+			}
+
+			FWBUnitStatDeltaRequest Delta;
+			Delta.SourceUnitId = Observer.Source.SourceUnitId;
+			Delta.TargetUnitId = Observer.Source.SourceUnitId;
+			Delta.ATKDelta = Observer.Trigger.StatDelta.ATKDelta;
+			Delta.MaxHPDelta = Observer.Trigger.StatDelta.MaxHPDelta;
+			Delta.CurrentHPDelta = Observer.Trigger.StatDelta.CurrentHPDelta;
+			Delta.TransactionId = MakeObserverTrace(
+				NAME_None, EventSnapshot, Observer).ActionId;
+			const FWBUnitStatDeltaResult Applied =
+				WBUnitStatDelta::ApplyPersistentDelta(State, Delta);
+			if (!Applied.bOk)
+			{
+				Result.TraceEvents.Add(MakeObserverTrace(
+					FName(TEXT("post_destruction_observer_failed")),
+					EventSnapshot,
+					Observer,
+					Applied.Reason));
+				continue;
+			}
+			Result.TraceEvents.Append(Applied.TraceEvents);
+			Result.TraceEvents.Add(MakeObserverTrace(
+				FName(TEXT("post_destruction_observer_resolved")),
+				EventSnapshot,
+				Observer));
 			continue;
 		}
 
@@ -303,7 +464,7 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 		return MakePostDestructionFailure(TEXT("destroyed_unit_definition_missing"));
 	}
 	const TArray<FWBAfterUnitDestroyedTriggerDefinition> Triggers =
-		SortedTriggers(SourceLookup.Definition);
+		SortedSelfTriggers(SourceLookup.Definition);
 	const FWBAfterUnitDestroyedTriggerDefinition* Trigger =
 		Triggers.FindByPredicate(
 			[&Choice](const FWBAfterUnitDestroyedTriggerDefinition& Candidate)

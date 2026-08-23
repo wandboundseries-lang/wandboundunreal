@@ -331,6 +331,25 @@ FString CanonicalGameState(const FWBGameStateData& State)
 			Event.bCharacterPassiveEligible);
 		AppendInt(Out, TEXT("destruction.order"), Event.ResolutionOrder);
 		AppendInt(Out, TEXT("destruction.next_trigger"), Event.NextTriggerIndex);
+		AppendInt(
+			Out,
+			TEXT("destruction.next_observer_trigger"),
+			Event.NextObserverTriggerIndex);
+		AppendInt(
+			Out,
+			TEXT("destruction.observer_source_count"),
+			Event.ObserverSources.Num());
+		for (const FWBPostDestructionObserverSourceSnapshot& Observer :
+			Event.ObserverSources)
+		{
+			AppendInt(Out, TEXT("destruction.observer.unit"), Observer.SourceUnitId);
+			AppendString(Out, TEXT("destruction.observer.card"), Observer.SourceCardId);
+			AppendInt(
+				Out,
+				TEXT("destruction.observer.controller"),
+				Observer.ControllerPlayerId);
+			AppendInt(Out, TEXT("destruction.observer.order"), Observer.SourceOrder);
+		}
 		AppendInt(Out, TEXT("destruction.wand_count"), Event.EquippedWands.Num());
 		for (const FWBEquippedCardEntry& Wand : Event.EquippedWands)
 		{

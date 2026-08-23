@@ -9,6 +9,7 @@
 #include "WBProductionCardDatabase.h"
 #include "WBProductionCSNCrashInSmoke.h"
 #include "WBProductionMatchReplay.h"
+#include "WBPostDestructionTrigger.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -89,6 +90,24 @@ FWBCardDefinition MakeCrashInDefinition(const FString& CardId, const bool bSeman
 	return Definition;
 }
 
+FWBCardDefinition MakeDestructionObserverDefinition()
+{
+	FWBCardDefinition Definition = MakeCharacter(
+		TEXT("sable_observer"), TEXT("csn"), 10, 1, 3, 2);
+	FWBAfterUnitDestroyedTriggerDefinition Trigger;
+	Trigger.TriggerId = TEXT("grow_after_controlled_csn_destroyed");
+	Trigger.SourceScope = EWBAfterUnitDestroyedSourceScope::ControlledFactionUnitDestroyed;
+	Trigger.Operation = EWBPostDestructionEffectOperation::ApplyPersistentStatDeltaToTriggerSource;
+	Trigger.RequiredFaction = TEXT("csn");
+	Trigger.bMandatory = true;
+	Trigger.Target = EWBPostDestructionTarget::TriggerSource;
+	Trigger.StatDelta.ATKDelta = 1;
+	Trigger.StatDelta.MaxHPDelta = 1;
+	Trigger.StatDelta.CurrentHPDelta = 1;
+	Definition.AfterUnitDestroyedTriggers.Add(Trigger);
+	return Definition;
+}
+
 FWBCardDefinitionRepository MakeRepository(
 	const FString& CrashCardId = TEXT("effect_react_csn_crash_in"),
 	const bool bCrashSemantic = true)
@@ -99,6 +118,7 @@ FWBCardDefinitionRepository MakeRepository(
 	Definitions.Add(MakeCharacter(TEXT("source_csn"), TEXT("csn"), 16, 3, 2, 3));
 	Definitions.Add(MakeCharacter(TEXT("replacement_csn"), TEXT("csn"), 13, 2, 2, 2));
 	Definitions.Add(MakeCharacter(TEXT("wrong_faction"), TEXT("officer"), 12, 2, 2, 2));
+	Definitions.Add(MakeDestructionObserverDefinition());
 
 	FWBCardDefinition Wand;
 	Wand.CardId = TEXT("wand_instance_definition");
@@ -634,6 +654,79 @@ bool FWBCSNCrashInFailureAtomicityTest::RunTest(const FString&)
 	TestFalse(TEXT("Wrong faction fails"), WrongResult.bOk);
 	TestEqual(TEXT("Wrong faction leaves state unchanged"),
 		WBProductionMatchReplay::BuildGameStateDigest(WrongDefinition), WrongBefore);
+	return true;
+}
+
+WB_CRASH_IN_TEST(FWBCSNCrashInSableObserverBoundaryTest,
+	"Wandbound.CSNCrashIn.Regression.SableObserverUsesDestructionBoundary")
+bool FWBCSNCrashInSableObserverBoundaryTest::RunTest(const FString&)
+{
+	const FWBCardDefinitionRepository Repository = MakeRepository();
+	FWBGameStateData NewlySummoned = MakeState();
+	FWBPlayerCardZoneState* NewZones = WBCardZoneState::FindMutablePlayerZones(
+		NewlySummoned.GetMutableCardZoneStateForTest(), 1);
+	check(NewZones != nullptr);
+	NewZones->Hand[1].Card.CardId = TEXT("sable_observer");
+	const FWBEffectRequestResult NewResult = WBEffectRunner::ApplyEffectRequest(
+		NewlySummoned,
+		MakeRequest(TEXT("replacement_instance_a"), TEXT("sable_observer")),
+		Repository);
+	TestTrue(TEXT("Crash-In can summon observer definition"), NewResult.bOk);
+	const FWBUnitState* NewSable = NewlySummoned.Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("sable_observer") && Unit.IsUnitOnBoard();
+		});
+	TestNotNull(TEXT("Replacement Sable exists"), NewSable);
+	TestTrue(TEXT("Historical destruction remains queued"),
+		!NewlySummoned.PendingUnitDestructionEvents.IsEmpty());
+	if (NewSable == nullptr || NewlySummoned.PendingUnitDestructionEvents.IsEmpty()) return false;
+	TestFalse(TEXT("New Sable was not captured retroactively"),
+		NewlySummoned.PendingUnitDestructionEvents[0].ObserverSources.ContainsByPredicate(
+			[NewSable](const FWBPostDestructionObserverSourceSnapshot& Source)
+			{
+				return Source.SourceUnitId == NewSable->UnitId;
+			}));
+	const FWBPostDestructionTriggerResult NewTriggers =
+		WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
+			NewlySummoned, Repository, 1, 0);
+	TestTrue(TEXT("Historical event completes"), NewTriggers.bOk);
+	TestEqual(TEXT("New Sable does not grow from historical death"),
+		NewlySummoned.GetUnitById(NewSable->UnitId)->ATK, 1);
+
+	FWBGameStateData ExistingObserver = MakeState();
+	ExistingObserver.AddUnitForTest(MakeUnit(
+		40, 1, TEXT("sable_observer"), FWBTile(6, 0), 10, 1, 3, 2, 2, 0));
+	const FWBEffectRequestResult ExistingResult = WBEffectRunner::ApplyEffectRequest(
+		ExistingObserver, MakeRequest(), Repository);
+	TestTrue(TEXT("Crash-In with existing observer resolves"), ExistingResult.bOk);
+	TestTrue(TEXT("Existing Sable captured at destruction"),
+		ExistingObserver.PendingUnitDestructionEvents[0].ObserverSources.ContainsByPredicate(
+			[](const FWBPostDestructionObserverSourceSnapshot& Source)
+			{
+				return Source.SourceUnitId == 40;
+			}));
+	const int32 AttackDefenderAfterReplacement =
+		ExistingObserver.PendingAttack.DefenderUnitId;
+	const int32 AttacksLeftAfterReplacement =
+		ExistingObserver.GetUnitById(AttackerId)->AttacksLeft;
+	const FWBPostDestructionTriggerResult ExistingTriggers =
+		WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
+			ExistingObserver, Repository, 1, 0);
+	TestTrue(TEXT("Existing observer trigger resolves"), ExistingTriggers.bOk);
+	TestEqual(TEXT("Existing Sable ATK grows once"), ExistingObserver.GetUnitById(40)->ATK, 2);
+	TestEqual(TEXT("Existing Sable HP grows once"), ExistingObserver.GetUnitById(40)->HP, 11);
+	TestEqual(TEXT("Existing Sable MaxHP grows once"), ExistingObserver.GetUnitById(40)->MaxHP, 11);
+	TestEqual(TEXT("Attack remains redirected"),
+		ExistingObserver.PendingAttack.DefenderUnitId, AttackDefenderAfterReplacement);
+	TestEqual(TEXT("No second attack declaration"),
+		ExistingObserver.GetUnitById(AttackerId)->AttacksLeft,
+		AttacksLeftAfterReplacement);
+	TestEqual(TEXT("Exactly one observer application"),
+		ExistingTriggers.TraceEvents.FilterByPredicate([](const FWBTraceEvent& Event)
+		{
+			return Event.Kind == FName(TEXT("unit_stat_delta_applied"));
+		}).Num(), 1);
 	return true;
 }
 

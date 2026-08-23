@@ -39,6 +39,8 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FName PreventionReason;
 	int32 PreviousHP = -1;
 	int32 NewHP = -1;
+	int32 PreviousATK = -1;
+	int32 NewATK = -1;
 	int32 PreviousArmor = -1;
 	int32 NewArmor = -1;
 	int32 ArmorAbsorbedAmount = -1;

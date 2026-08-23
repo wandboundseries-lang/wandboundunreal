@@ -1226,6 +1226,11 @@ bool ParseAfterUnitDestroyedSourceScope(
 		OutScope = EWBAfterUnitDestroyedSourceScope::DestroyedSelf;
 		return true;
 	}
+	if (Value == TEXT("controlled_faction_unit_destroyed"))
+	{
+		OutScope = EWBAfterUnitDestroyedSourceScope::ControlledFactionUnitDestroyed;
+		return true;
+	}
 	return false;
 }
 
@@ -1236,6 +1241,23 @@ bool ParsePostDestructionOperation(
 	if (Value == TEXT("summon_character_from_deck_to_destroyed_tile"))
 	{
 		OutOperation = EWBPostDestructionEffectOperation::SummonCharacterFromDeckToDestroyedTile;
+		return true;
+	}
+	if (Value == TEXT("apply_persistent_stat_delta_to_trigger_source"))
+	{
+		OutOperation = EWBPostDestructionEffectOperation::ApplyPersistentStatDeltaToTriggerSource;
+		return true;
+	}
+	return false;
+}
+
+bool ParsePostDestructionTarget(
+	const FString& Value,
+	EWBPostDestructionTarget& OutTarget)
+{
+	if (Value == TEXT("trigger_source"))
+	{
+		OutTarget = EWBPostDestructionTarget::TriggerSource;
 		return true;
 	}
 	return false;
@@ -1438,7 +1460,8 @@ void ParseAfterUnitDestroyedTrigger(
 	ValidateKnownFields(Object,
 		{ TEXT("trigger_id"), TEXT("source_scope"), TEXT("operation"),
 			TEXT("required_faction"), TEXT("summon_count"), TEXT("mandatory"),
-			TEXT("ignore_summoning_conditions"), TEXT("apply_csn_inheritance") },
+			TEXT("ignore_summoning_conditions"), TEXT("apply_csn_inheritance"),
+			TEXT("target"), TEXT("stat_delta") },
 		Result, CardId, TEXT(""), Path);
 
 	TryReadRequiredString(Object, TEXT("trigger_id"), Result,
@@ -1464,15 +1487,6 @@ void ParseAfterUnitDestroyedTrigger(
 	TryReadRequiredString(Object, TEXT("required_faction"), Result,
 		TEXT("after_unit_destroyed_required_faction_invalid"), CardId,
 		OutTrigger.TriggerId, Path, OutTrigger.RequiredFaction);
-	if (!TryReadRequiredInteger(Object, TEXT("summon_count"), Result,
-		TEXT("after_unit_destroyed_summon_count_unsupported"), CardId,
-		OutTrigger.TriggerId, Path, OutTrigger.SummonCount)
-		|| OutTrigger.SummonCount != 1)
-	{
-		AddDiagnostic(Result, TEXT("after_unit_destroyed_summon_count_unsupported"),
-			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("summon_count")));
-	}
-
 	auto ReadRequiredTrue = [&](const TCHAR* Field, bool& OutValue, const TCHAR* Diagnostic)
 	{
 		if (!Object->Values.Contains(Field))
@@ -1489,10 +1503,58 @@ void ParseAfterUnitDestroyedTrigger(
 	};
 	ReadRequiredTrue(TEXT("mandatory"), OutTrigger.bMandatory,
 		TEXT("after_unit_destroyed_mandatory_unsupported"));
-	ReadRequiredTrue(TEXT("ignore_summoning_conditions"), OutTrigger.bIgnoreSummoningConditions,
-		TEXT("after_unit_destroyed_summoning_policy_unsupported"));
-	ReadRequiredTrue(TEXT("apply_csn_inheritance"), OutTrigger.bApplyCSNInheritance,
-		TEXT("after_unit_destroyed_inheritance_policy_unsupported"));
+	if (OutTrigger.Operation == EWBPostDestructionEffectOperation::SummonCharacterFromDeckToDestroyedTile)
+	{
+		if (!TryReadRequiredInteger(Object, TEXT("summon_count"), Result,
+			TEXT("after_unit_destroyed_summon_count_unsupported"), CardId,
+			OutTrigger.TriggerId, Path, OutTrigger.SummonCount)
+			|| OutTrigger.SummonCount != 1)
+		{
+			AddDiagnostic(Result, TEXT("after_unit_destroyed_summon_count_unsupported"),
+				CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("summon_count")));
+		}
+		ReadRequiredTrue(TEXT("ignore_summoning_conditions"), OutTrigger.bIgnoreSummoningConditions,
+			TEXT("after_unit_destroyed_summoning_policy_unsupported"));
+		ReadRequiredTrue(TEXT("apply_csn_inheritance"), OutTrigger.bApplyCSNInheritance,
+			TEXT("after_unit_destroyed_inheritance_policy_unsupported"));
+	}
+	else if (OutTrigger.Operation == EWBPostDestructionEffectOperation::ApplyPersistentStatDeltaToTriggerSource)
+	{
+		if (TryReadRequiredString(Object, TEXT("target"), Result,
+			TEXT("after_unit_destroyed_target_unsupported"), CardId,
+			OutTrigger.TriggerId, Path, Value)
+			&& !ParsePostDestructionTarget(Value, OutTrigger.Target))
+		{
+			AddDiagnostic(Result, TEXT("after_unit_destroyed_target_unsupported"),
+				CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("target")));
+		}
+		const TSharedPtr<FJsonValue>* StatDeltaValue =
+			Object->Values.Find(TEXT("stat_delta"));
+		const TSharedPtr<FJsonObject> StatDelta =
+			StatDeltaValue != nullptr && StatDeltaValue->IsValid()
+				&& (*StatDeltaValue)->Type == EJson::Object
+			? (*StatDeltaValue)->AsObject() : nullptr;
+		if (!StatDelta.IsValid())
+		{
+			AddDiagnostic(Result, TEXT("after_unit_destroyed_stat_delta_malformed"),
+				CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("stat_delta")));
+		}
+		else
+		{
+			ValidateKnownFields(StatDelta,
+				{ TEXT("atk_delta"), TEXT("max_hp_delta"), TEXT("current_hp_delta") },
+				Result, CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("stat_delta")));
+			TryReadRequiredInteger(StatDelta, TEXT("atk_delta"), Result,
+				TEXT("after_unit_destroyed_stat_delta_malformed"), CardId,
+				OutTrigger.TriggerId, JoinPath(Path, TEXT("stat_delta")), OutTrigger.StatDelta.ATKDelta);
+			TryReadRequiredInteger(StatDelta, TEXT("max_hp_delta"), Result,
+				TEXT("after_unit_destroyed_stat_delta_malformed"), CardId,
+				OutTrigger.TriggerId, JoinPath(Path, TEXT("stat_delta")), OutTrigger.StatDelta.MaxHPDelta);
+			TryReadRequiredInteger(StatDelta, TEXT("current_hp_delta"), Result,
+				TEXT("after_unit_destroyed_stat_delta_malformed"), CardId,
+				OutTrigger.TriggerId, JoinPath(Path, TEXT("stat_delta")), OutTrigger.StatDelta.CurrentHPDelta);
+		}
+	}
 }
 
 void ParseCard(

@@ -302,10 +302,7 @@
         "source_scope",
         "operation",
         "required_faction",
-        "summon_count",
-        "mandatory",
-        "ignore_summoning_conditions",
-        "apply_csn_inheritance"
+        "mandatory"
       ],
       "properties": {
         "trigger_id": {
@@ -313,10 +310,13 @@
           "pattern": "^[a-z][a-z0-9_]{2,63}$"
         },
         "source_scope": {
-          "const": "destroyed_self"
+          "enum": ["destroyed_self", "controlled_faction_unit_destroyed"]
         },
         "operation": {
-          "const": "summon_character_from_deck_to_destroyed_tile"
+          "enum": [
+            "summon_character_from_deck_to_destroyed_tile",
+            "apply_persistent_stat_delta_to_trigger_source"
+          ]
         },
         "required_faction": {
           "enum": ["csn", "wandwright", "officer", "marrow_syndicate"]
@@ -332,8 +332,45 @@
         },
         "apply_csn_inheritance": {
           "const": true
+        },
+        "target": {
+          "const": "trigger_source"
+        },
+        "stat_delta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["atk_delta", "max_hp_delta", "current_hp_delta"],
+          "properties": {
+            "atk_delta": { "type": "integer" },
+            "max_hp_delta": { "type": "integer" },
+            "current_hp_delta": { "type": "integer" }
+          }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": { "const": "summon_character_from_deck_to_destroyed_tile" }
+            }
+          },
+          "then": {
+            "properties": { "source_scope": { "const": "destroyed_self" } },
+            "required": ["summon_count", "ignore_summoning_conditions", "apply_csn_inheritance"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": { "const": "apply_persistent_stat_delta_to_trigger_source" }
+            }
+          },
+          "then": {
+            "properties": { "source_scope": { "const": "controlled_faction_unit_destroyed" } },
+            "required": ["target", "stat_delta"]
+          }
+        }
+      ]
     }
   }
 }

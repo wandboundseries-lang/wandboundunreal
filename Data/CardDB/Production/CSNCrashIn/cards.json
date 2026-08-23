@@ -26,6 +26,35 @@
     },
     {
       "schema_version": 1,
+      "card_id": "char_csn_sable",
+      "public_name": "CSN Sable",
+      "kind": "character",
+      "public_text": "CSN Inheritance: If this unit is summoned by a CSN unit's effect, transfer that unit's equipped Wands to this unit. Increase this unit's Base RL by that unit's Current RL.\n\nWhenever a CSN unit you control is destroyed, this unit gets +1 ATK, +1 HP, and +1 Max HP.",
+      "public_category": "Character",
+      "factions": ["csn"],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 10, "atk": 1, "ar": 3, "rl": 2 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 3 },
+      "after_unit_destroyed_triggers": [
+        {
+          "trigger_id": "grow_after_controlled_csn_destroyed",
+          "source_scope": "controlled_faction_unit_destroyed",
+          "operation": "apply_persistent_stat_delta_to_trigger_source",
+          "required_faction": "csn",
+          "mandatory": true,
+          "target": "trigger_source",
+          "stat_delta": {
+            "atk_delta": 1,
+            "max_hp_delta": 1,
+            "current_hp_delta": 1
+          }
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
       "card_id": "crash_in_smoke_hero_csn",
       "public_name": "Crash-In Smoke CSN Hero",
       "kind": "hero",

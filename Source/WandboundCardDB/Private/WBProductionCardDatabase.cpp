@@ -401,6 +401,11 @@ bool ParseAfterUnitDestroyedSourceScope(
 		OutScope = EWBAfterUnitDestroyedSourceScope::DestroyedSelf;
 		return true;
 	}
+	if (Value == TEXT("controlled_faction_unit_destroyed"))
+	{
+		OutScope = EWBAfterUnitDestroyedSourceScope::ControlledFactionUnitDestroyed;
+		return true;
+	}
 	return false;
 }
 
@@ -412,6 +417,24 @@ bool ParsePostDestructionOperation(
 	{
 		OutOperation = EWBPostDestructionEffectOperation::
 			SummonCharacterFromDeckToDestroyedTile;
+		return true;
+	}
+	if (Value == TEXT("apply_persistent_stat_delta_to_trigger_source"))
+	{
+		OutOperation = EWBPostDestructionEffectOperation::
+			ApplyPersistentStatDeltaToTriggerSource;
+		return true;
+	}
+	return false;
+}
+
+bool ParsePostDestructionTarget(
+	const FString& Value,
+	EWBPostDestructionTarget& OutTarget)
+{
+	if (Value == TEXT("trigger_source"))
+	{
+		OutTarget = EWBPostDestructionTarget::TriggerSource;
 		return true;
 	}
 	return false;
@@ -572,7 +595,7 @@ FString AfterUnitDestroyedTriggerDigest(
 	const FWBAfterUnitDestroyedTriggerDefinition& Trigger)
 {
 	return FString::Printf(
-		TEXT("after_unit_destroyed=%s|scope=%d|operation=%d|faction=%s|count=%d|mandatory=%d|ignore=%d|inherit=%d"),
+		TEXT("after_unit_destroyed=%s|scope=%d|operation=%d|faction=%s|count=%d|mandatory=%d|ignore=%d|inherit=%d|target=%d|atk=%d|max_hp=%d|hp=%d"),
 		*Trigger.TriggerId,
 		static_cast<int32>(Trigger.SourceScope),
 		static_cast<int32>(Trigger.Operation),
@@ -580,7 +603,11 @@ FString AfterUnitDestroyedTriggerDigest(
 		Trigger.SummonCount,
 		Trigger.bMandatory ? 1 : 0,
 		Trigger.bIgnoreSummoningConditions ? 1 : 0,
-		Trigger.bApplyCSNInheritance ? 1 : 0);
+		Trigger.bApplyCSNInheritance ? 1 : 0,
+		static_cast<int32>(Trigger.Target),
+		Trigger.StatDelta.ATKDelta,
+		Trigger.StatDelta.MaxHPDelta,
+		Trigger.StatDelta.CurrentHPDelta);
 }
 
 FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
@@ -2710,7 +2737,8 @@ private:
 					TEXT("trigger_id"), TEXT("source_scope"), TEXT("operation"),
 					TEXT("required_faction"), TEXT("summon_count"),
 					TEXT("mandatory"), TEXT("ignore_summoning_conditions"),
-					TEXT("apply_csn_inheritance")
+					TEXT("apply_csn_inheritance"), TEXT("target"),
+					TEXT("stat_delta")
 				},
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
@@ -2762,37 +2790,74 @@ private:
 					TriggerPath + TEXT(".required_faction"),
 					TEXT("The required faction must be canonical."));
 			}
-			if (!TryReadInteger(TriggerObject, TEXT("summon_count"), Trigger.SummonCount)
-				|| Trigger.SummonCount != 1)
-			{
-				AddError(TEXT("after_unit_destroyed_summon_count_unsupported"),
-					Record.SourceManifestPath, Record.CoreDefinition.CardId,
-					TriggerPath + TEXT(".summon_count"),
-					TEXT("This runtime supports exactly one post-destruction summon."));
-			}
 			if (!TryReadBool(TriggerObject, TEXT("mandatory"), Trigger.bMandatory)
 				|| !Trigger.bMandatory)
 			{
 				AddError(TEXT("after_unit_destroyed_mandatory_unsupported"),
 					Record.SourceManifestPath, Record.CoreDefinition.CardId,
 					TriggerPath + TEXT(".mandatory"),
-					TEXT("Post-destruction Deck summon choices must be mandatory."));
+					TEXT("Post-destruction triggers must be mandatory."));
 			}
-			if (!TryReadBool(TriggerObject, TEXT("ignore_summoning_conditions"), Trigger.bIgnoreSummoningConditions)
-				|| !Trigger.bIgnoreSummoningConditions)
+
+			if (Trigger.Operation == EWBPostDestructionEffectOperation::
+				SummonCharacterFromDeckToDestroyedTile)
 			{
-				AddError(TEXT("after_unit_destroyed_summoning_policy_unsupported"),
-					Record.SourceManifestPath, Record.CoreDefinition.CardId,
-					TriggerPath + TEXT(".ignore_summoning_conditions"),
-					TEXT("This operation must explicitly ignore ordinary summoning conditions."));
+				if (!TryReadInteger(TriggerObject, TEXT("summon_count"), Trigger.SummonCount)
+					|| Trigger.SummonCount != 1)
+				{
+					AddError(TEXT("after_unit_destroyed_summon_count_unsupported"),
+						Record.SourceManifestPath, Record.CoreDefinition.CardId,
+						TriggerPath + TEXT(".summon_count"),
+						TEXT("This runtime supports exactly one post-destruction summon."));
+				}
+				if (!TryReadBool(TriggerObject, TEXT("ignore_summoning_conditions"), Trigger.bIgnoreSummoningConditions)
+					|| !Trigger.bIgnoreSummoningConditions)
+				{
+					AddError(TEXT("after_unit_destroyed_summoning_policy_unsupported"),
+						Record.SourceManifestPath, Record.CoreDefinition.CardId,
+						TriggerPath + TEXT(".ignore_summoning_conditions"),
+						TEXT("This operation must explicitly ignore ordinary summoning conditions."));
+				}
+				if (!TryReadBool(TriggerObject, TEXT("apply_csn_inheritance"), Trigger.bApplyCSNInheritance)
+					|| !Trigger.bApplyCSNInheritance)
+				{
+					AddError(TEXT("after_unit_destroyed_inheritance_policy_unsupported"),
+						Record.SourceManifestPath, Record.CoreDefinition.CardId,
+						TriggerPath + TEXT(".apply_csn_inheritance"),
+						TEXT("This operation must explicitly apply CSN Inheritance."));
+				}
 			}
-			if (!TryReadBool(TriggerObject, TEXT("apply_csn_inheritance"), Trigger.bApplyCSNInheritance)
-				|| !Trigger.bApplyCSNInheritance)
+			else if (Trigger.Operation == EWBPostDestructionEffectOperation::
+				ApplyPersistentStatDeltaToTriggerSource)
 			{
-				AddError(TEXT("after_unit_destroyed_inheritance_policy_unsupported"),
-					Record.SourceManifestPath, Record.CoreDefinition.CardId,
-					TriggerPath + TEXT(".apply_csn_inheritance"),
-					TEXT("This operation must explicitly apply CSN Inheritance."));
+				if (!TryReadString(TriggerObject, TEXT("target"), Text)
+					|| !ParsePostDestructionTarget(Text, Trigger.Target))
+				{
+					AddError(TEXT("after_unit_destroyed_target_unsupported"),
+						Record.SourceManifestPath, Record.CoreDefinition.CardId,
+						TriggerPath + TEXT(".target"),
+						TEXT("The post-destruction target is unsupported."));
+				}
+				TSharedPtr<FJsonObject> StatDelta;
+				if (!TryReadObject(TriggerObject, TEXT("stat_delta"), StatDelta)
+					|| !TryReadInteger(StatDelta, TEXT("atk_delta"), Trigger.StatDelta.ATKDelta)
+					|| !TryReadInteger(StatDelta, TEXT("max_hp_delta"), Trigger.StatDelta.MaxHPDelta)
+					|| !TryReadInteger(StatDelta, TEXT("current_hp_delta"), Trigger.StatDelta.CurrentHPDelta))
+				{
+					AddError(TEXT("after_unit_destroyed_stat_delta_malformed"),
+						Record.SourceManifestPath, Record.CoreDefinition.CardId,
+						TriggerPath + TEXT(".stat_delta"),
+						TEXT("The post-destruction stat delta must define integer ATK, MaxHP, and current HP deltas."));
+				}
+				else
+				{
+					ValidateKnownFields(
+						StatDelta,
+						{ TEXT("atk_delta"), TEXT("max_hp_delta"), TEXT("current_hp_delta") },
+						Record.SourceManifestPath,
+						Record.CoreDefinition.CardId,
+						TriggerPath + TEXT(".stat_delta"));
+				}
 			}
 
 			Record.CoreDefinition.AfterUnitDestroyedTriggers.Add(MoveTemp(Trigger));

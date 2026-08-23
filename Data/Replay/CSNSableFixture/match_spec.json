@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "match_id": "csn_crash_in_production_smoke_match",
-  "seed": 42041,
+  "match_id": "csn_sable_production_smoke_match",
+  "seed": 42044,
   "first_player": 0,
   "initial_draw_count": 6,
   "definition_bundle_digest": "0d7ffbe33ae79ee590e0b0eb66d37a02482906f6b6c5b7218b067e293a14d2e5",
@@ -10,20 +10,31 @@
       "player_id": 0,
       "hero_definition_id": "crash_in_smoke_hero_attacker",
       "ordered_deck": [
-        "crash_in_smoke_negate_b", "crash_in_smoke_filler", "crash_in_smoke_filler",
         "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
         "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
-        "crash_in_smoke_filler"
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler"
       ]
     },
     {
       "player_id": 1,
       "hero_definition_id": "crash_in_smoke_hero_csn",
       "ordered_deck": [
-        "char_csn_rook", "char_csn_echo", "wand_equip_switch",
-        "effect_react_csn_crash_in", "crash_in_smoke_negate_c", "crash_in_smoke_filler",
+        "char_csn_sable", "char_csn_echo", "char_csn_rook",
         "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
-        "crash_in_smoke_filler"
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "char_csn_undertow_archivist",
+        "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
+        "crash_in_smoke_filler", "crash_in_smoke_filler"
       ]
     }
   ],

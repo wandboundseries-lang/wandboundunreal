@@ -22,14 +22,18 @@ public:
 	static bool IsRequested(const TCHAR* CommandLine = nullptr);
 	static bool IsUndertowRequested(const TCHAR* CommandLine = nullptr);
 	static bool IsRookRequested(const TCHAR* CommandLine = nullptr);
+	static bool IsSableRequested(const TCHAR* CommandLine = nullptr);
 	static FString GetReceiptPath();
 	static FString GetUndertowReceiptPath();
 	static FString GetRookReceiptPath();
+	static FString GetSableReceiptPath();
 	static FWBProductionCSNCrashInSmokeResult Run(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunUndertow(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunRook(
+		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
+	static FWBProductionCSNCrashInSmokeResult RunSable(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunUndertowNegatedForTest(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);

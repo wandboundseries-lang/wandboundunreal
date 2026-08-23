@@ -224,6 +224,14 @@ enum class EWBUnitDestructionCause : uint8
 	ReplacementEffect
 };
 
+struct WANDBOUNDCORE_API FWBPostDestructionObserverSourceSnapshot
+{
+	int32 SourceUnitId = INDEX_NONE;
+	FString SourceCardId;
+	int32 ControllerPlayerId = INDEX_NONE;
+	int32 SourceOrder = INDEX_NONE;
+};
+
 struct WANDBOUNDCORE_API FWBUnitDestructionSnapshot
 {
 	FString EventId;
@@ -238,8 +246,10 @@ struct WANDBOUNDCORE_API FWBUnitDestructionSnapshot
 	int32 RLUsedSnapshot = 0;
 	TArray<FWBEquippedCardEntry> EquippedWands;
 	bool bCharacterPassiveEligible = false;
+	TArray<FWBPostDestructionObserverSourceSnapshot> ObserverSources;
 	int32 ResolutionOrder = INDEX_NONE;
 	int32 NextTriggerIndex = 0;
+	int32 NextObserverTriggerIndex = 0;
 };
 
 struct WANDBOUNDCORE_API FWBPendingMandatoryDeckChoiceState
