@@ -55,6 +55,34 @@
     },
     {
       "schema_version": 1,
+      "card_id": "char_csn_vex",
+      "public_name": "CSN Vex",
+      "kind": "character",
+      "public_text": "CSN Inheritance: If this unit is summoned by a CSN unit's effect, transfer that unit's equipped Wands to this unit. Increase this unit's Base RL by that unit's Current RL.\n\nEnemy units within this unit's AR get -1 AR.",
+      "public_category": "Character",
+      "factions": ["csn"],
+      "tags": ["csn_inheritance"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 13, "atk": 3, "ar": 4, "rl": 2 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 4 },
+      "continuous_stat_auras": [
+        {
+          "aura_id": "enemy_ar_penalty_in_source_ar",
+          "target_relation": "enemy",
+          "target_stat": "ar",
+          "operation": "add",
+          "amount": -1,
+          "range_stat": "ar",
+          "geometry": "attack_line",
+          "blocked_by_walls": true,
+          "blocked_by_units": true,
+          "minimum_result": 0
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
       "card_id": "crash_in_smoke_hero_csn",
       "public_name": "Crash-In Smoke CSN Hero",
       "kind": "hero",

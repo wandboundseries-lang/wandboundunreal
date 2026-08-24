@@ -10,6 +10,7 @@
 #include "WBProductionCSNCrashInSmoke.h"
 #include "WBProductionMatchReplay.h"
 #include "WBPostDestructionTrigger.h"
+#include "WBUnitStatQuery.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -117,6 +118,21 @@ FWBCardDefinitionRepository MakeRepository(
 	Definitions.Add(MakeCharacter(TEXT("hero_csn"), TEXT("csn"), 14, 1, 2, 4));
 	Definitions.Add(MakeCharacter(TEXT("source_csn"), TEXT("csn"), 16, 3, 2, 3));
 	Definitions.Add(MakeCharacter(TEXT("replacement_csn"), TEXT("csn"), 13, 2, 2, 2));
+	FWBCardDefinition Vex = MakeCharacter(
+		TEXT("char_csn_vex"), TEXT("csn"), 13, 3, 4, 2);
+	FWBContinuousStatAuraDefinition VexAura;
+	VexAura.AuraId = TEXT("enemy_ar_penalty_in_source_ar");
+	VexAura.TargetRelation = EWBContinuousAuraTargetRelation::Enemy;
+	VexAura.TargetStat = EWBContinuousStat::AR;
+	VexAura.Operation = EWBContinuousStatOperation::Add;
+	VexAura.Amount = -1;
+	VexAura.RangeStat = EWBContinuousAuraRangeStat::AR;
+	VexAura.Geometry = EWBContinuousAuraGeometry::AttackLine;
+	VexAura.bBlockedByWalls = true;
+	VexAura.bBlockedByUnits = true;
+	VexAura.MinimumResult = 0;
+	Vex.ContinuousStatAuras.Add(VexAura);
+	Definitions.Add(MoveTemp(Vex));
 	Definitions.Add(MakeCharacter(TEXT("wrong_faction"), TEXT("officer"), 12, 2, 2, 2));
 	Definitions.Add(MakeDestructionObserverDefinition());
 
@@ -615,6 +631,35 @@ bool FWBCSNCrashInSuccessfulResolutionTest::RunTest(const FString&)
 		Result.TraceEvents, FName(TEXT("pending_attack_redirected"))));
 	TestNotNull(TEXT("Replacement summon trace"), FindTrace(
 		Result.TraceEvents, FName(TEXT("effect_replacement_summon"))));
+	return true;
+}
+
+WB_CRASH_IN_TEST(FWBCSNCrashInVexCompositionTest,
+	"Wandbound.CSNVex.Composition.CrashInInheritanceRedirectAndAura")
+bool FWBCSNCrashInVexCompositionTest::RunTest(const FString&)
+{
+	FWBGameStateData State = MakeState();
+	FWBPlayerCardZoneState* Zones = WBCardZoneState::FindMutablePlayerZones(
+		State.GetMutableCardZoneStateForTest(), 1);
+	if (Zones == nullptr || Zones->Hand.Num() < 2) return false;
+	Zones->Hand[1].Card.CardId = TEXT("char_csn_vex");
+	const FWBCardDefinitionRepository Repository = MakeRepository();
+	const FWBEffectRequestResult Result = WBEffectRunner::ApplyEffectRequest(
+		State, MakeRequest(TEXT("replacement_instance_a"), TEXT("char_csn_vex")), Repository);
+	TestTrue(TEXT("Crash-In summons Vex"), Result.bOk);
+	const FWBUnitState* Vex = State.Units.FindByPredicate([](const FWBUnitState& Unit)
+	{
+		return Unit.CardId == TEXT("char_csn_vex") && Unit.IsUnitOnBoard();
+	});
+	TestNotNull(TEXT("Vex is installed as redirected defender"), Vex);
+	if (Vex == nullptr) return false;
+	TestEqual(TEXT("Crash-In inheritance raises Vex Base RL"),
+		Vex->GetBaseRLForRules(), 7);
+	TestEqual(TEXT("Pending attack redirects to Vex"),
+		State.PendingAttack.DefenderUnitId, Vex->UnitId);
+	TestEqual(TEXT("Vex aura affects the pending attacker after installation"),
+		WBUnitStatQuery::GetEffectiveAR(State, Repository, AttackerId).EffectiveValue,
+		State.GetUnitById(AttackerId)->AR - 1);
 	return true;
 }
 

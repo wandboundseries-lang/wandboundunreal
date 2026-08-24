@@ -6,6 +6,7 @@
 #include "WBCardActivationCostPayment.h"
 #include "WBEffectRequest.h"
 #include "WBStatusEffect.h"
+#include "WBUnitStatQuery.h"
 
 namespace
 {
@@ -52,7 +53,10 @@ bool UnitTileLess(const FWBUnitState& A, const FWBUnitState& B)
 	return A.UnitId < B.UnitId;
 }
 
-TArray<FWBAction> GenerateLegalAttackActions(const FWBGameStateData& State, const int32 PlayerId)
+TArray<FWBAction> GenerateLegalAttackActions(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository* Repository,
+	const int32 PlayerId)
 {
 	TArray<const FWBUnitState*> Attackers;
 	for (const FWBUnitState& Unit : State.Units)
@@ -97,7 +101,10 @@ TArray<FWBAction> GenerateLegalAttackActions(const FWBGameStateData& State, cons
 			Candidate.FromTile = FWBTile(Attacker->X, Attacker->Y);
 			Candidate.ToTile = FWBTile(Target->X, Target->Y);
 
-			if (WBRules::CanDeclareAttack(State, Candidate).bOk)
+			const FWBActionQueryResult Query = Repository != nullptr
+				? WBRules::CanDeclareAttack(State, *Repository, Candidate)
+				: WBRules::CanDeclareAttack(State, Candidate);
+			if (Query.bOk)
 			{
 				LegalAttacks.Add(Candidate);
 			}
@@ -370,7 +377,8 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 FWBActionQueryResult CanDeclareAttackWithAuthority(
 	const FWBGameStateData& State,
 	const FWBAction& Action,
-	const bool bNPCAuthority)
+	const bool bNPCAuthority,
+	const FWBCardDefinitionRepository* Repository)
 {
 	if (Action.Type != EWBActionType::Attack)
 	{
@@ -493,7 +501,10 @@ FWBActionQueryResult CanDeclareAttackWithAuthority(
 		return FWBActionQueryResult::Deny(TEXT("not_in_line"));
 	}
 
-	if (WBRules::OrthogonalDistance(AttackerTile, DefenderTile) > Attacker->AR)
+	const int32 AttackRange = Repository != nullptr
+		? WBUnitStatQuery::GetEffectiveAR(State, *Repository, Attacker->UnitId).EffectiveValue
+		: Attacker->AR;
+	if (WBRules::OrthogonalDistance(AttackerTile, DefenderTile) > AttackRange)
 	{
 		return FWBActionQueryResult::Deny(TEXT("out_of_range"));
 	}
@@ -523,12 +534,28 @@ FWBMoveQueryResult WBRules::QueryNPCMove(
 
 FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action)
 {
-	return CanDeclareAttackWithAuthority(State, Action, false);
+	return CanDeclareAttackWithAuthority(State, Action, false, nullptr);
+}
+
+FWBActionQueryResult WBRules::CanDeclareAttack(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
+	return CanDeclareAttackWithAuthority(State, Action, false, &Repository);
 }
 
 FWBActionQueryResult WBRules::CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action)
 {
-	return CanDeclareAttackWithAuthority(State, Action, true);
+	return CanDeclareAttackWithAuthority(State, Action, true, nullptr);
+}
+
+FWBActionQueryResult WBRules::CanDeclareNPCAttack(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
+	return CanDeclareAttackWithAuthority(State, Action, true, &Repository);
 }
 
 FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateData& State)
@@ -581,6 +608,17 @@ FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateDa
 
 FWBActionQueryResult WBRules::CanRedirectPendingAttack(
 	const FWBGameStateData& State,
+	const FString& PendingAttackContinuationId,
+	const int32 NewTargetUnitId)
+{
+	return CanRedirectPendingAttack(
+		State, FWBCardDefinitionRepository(),
+		PendingAttackContinuationId, NewTargetUnitId);
+}
+
+FWBActionQueryResult WBRules::CanRedirectPendingAttack(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	const FString& PendingAttackContinuationId,
 	const int32 NewTargetUnitId)
 {
@@ -637,7 +675,11 @@ FWBActionQueryResult WBRules::CanRedirectPendingAttack(
 	{
 		return FWBActionQueryResult::Deny(TEXT("not_in_line"));
 	}
-	if (OrthogonalDistance(AttackerTile, NewTargetTile) > Attacker->AR)
+	const int32 AttackRange = Repository.RepositoryId.IsEmpty()
+		? Attacker->AR
+		: WBUnitStatQuery::GetEffectiveAR(
+			State, Repository, Attacker->UnitId).EffectiveValue;
+	if (OrthogonalDistance(AttackerTile, NewTargetTile) > AttackRange)
 	{
 		return FWBActionQueryResult::Deny(TEXT("out_of_range"));
 	}
@@ -778,7 +820,11 @@ FWBActionQueryResult WBRules::CanResolveCounterattack(
 	{
 		return FWBActionQueryResult::Deny(TEXT("counter_not_in_line"));
 	}
-	if (OrthogonalDistance(From, To) > OriginalDefender->AR)
+	const int32 CounterRange = Repository.RepositoryId.IsEmpty()
+		? OriginalDefender->AR
+		: WBUnitStatQuery::GetEffectiveAR(
+			State, Repository, OriginalDefender->UnitId).EffectiveValue;
+	if (OrthogonalDistance(From, To) > CounterRange)
 	{
 		return FWBActionQueryResult::Deny(TEXT("counter_out_of_range"));
 	}
@@ -923,6 +969,14 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 
 FWBActionQueryResult WBRules::CanApplyEffectRequest(
 	const FWBGameStateData& State,
+	const FWBEffectRequest& Request)
+{
+	return CanApplyEffectRequest(State, FWBCardDefinitionRepository(), Request);
+}
+
+FWBActionQueryResult WBRules::CanApplyEffectRequest(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	const FWBEffectRequest& Request)
 {
 	if (State.bGameOver)
@@ -1124,6 +1178,7 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 		{
 			const FWBActionQueryResult RedirectQuery = CanRedirectPendingAttack(
 				State,
+				Repository,
 				Payload.PendingAttackContinuationId,
 				Request.Target.TargetUnitId);
 			if (!RedirectQuery.bOk)
@@ -1532,7 +1587,7 @@ TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(const FWBGameStateData&
 			LegalActions.Append(GenerateLegalMoveActions(State, PlayerId, Unit.UnitId));
 		}
 
-		LegalActions.Append(GenerateLegalAttackActions(State, PlayerId));
+		LegalActions.Append(GenerateLegalAttackActions(State, nullptr, PlayerId));
 
 		FWBAction EndTurnAction;
 		EndTurnAction.Type = EWBActionType::EndTurn;
@@ -1554,6 +1609,38 @@ TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(const FWBGameStateData&
 		LegalActions.Add(PassAction);
 	}
 
+	return LegalActions;
+}
+
+TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const int32 PlayerId)
+{
+	TArray<FWBAction> LegalActions = GenerateLegalActionsForPlayer(State, PlayerId);
+	if (!State.IsNormalTurnPhase() || State.PriorityPlayer != PlayerId
+		|| State.CurrentPlayer != PlayerId)
+	{
+		return LegalActions;
+	}
+	LegalActions.RemoveAll([](const FWBAction& Action)
+	{
+		return Action.Type == EWBActionType::Attack;
+	});
+	const int32 EndTurnIndex = LegalActions.IndexOfByPredicate([](const FWBAction& Action)
+	{
+		return Action.Type == EWBActionType::EndTurn;
+	});
+	const TArray<FWBAction> Attacks = GenerateLegalAttackActions(
+		State, &Repository, PlayerId);
+	if (EndTurnIndex == INDEX_NONE)
+	{
+		LegalActions.Append(Attacks);
+	}
+	else
+	{
+		LegalActions.Insert(Attacks, EndTurnIndex);
+	}
 	return LegalActions;
 }
 

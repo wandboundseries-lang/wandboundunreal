@@ -9,6 +9,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "WBProductionMatchReplayRuntime.h"
+#include "WBUnitStatQuery.h"
 
 namespace
 {
@@ -281,6 +282,13 @@ bool WBProductionCSNCrashInSmoke::IsSableRequested(const TCHAR* CommandLine)
 		TEXT("WandboundProductionCSNSableSmoke"));
 }
 
+bool WBProductionCSNCrashInSmoke::IsVexRequested(const TCHAR* CommandLine)
+{
+	return FParse::Param(
+		CommandLine != nullptr ? CommandLine : FCommandLine::Get(),
+		TEXT("WandboundProductionCSNVexSmoke"));
+}
+
 FString WBProductionCSNCrashInSmoke::GetReceiptPath()
 {
 	return FPaths::Combine(
@@ -307,6 +315,13 @@ FString WBProductionCSNCrashInSmoke::GetSableReceiptPath()
 	return FPaths::Combine(
 		FPaths::ProjectSavedDir(),
 		TEXT("SmokeTest/WandboundProductionCSNSableReceipt.json"));
+}
+
+FString WBProductionCSNCrashInSmoke::GetVexReceiptPath()
+{
+	return FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SmokeTest/WandboundProductionCSNVexReceipt.json"));
 }
 
 FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunScenario(
@@ -1270,6 +1285,256 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunSable(
 	Result.FinalStateDigest = Coordinator.GetCurrentStateDigest();
 	Result.FinalTraceDigest = Coordinator.GetCurrentTraceDigest();
 	Result.SerializedArchive = ArchiveBytes;
+	Result.SerializedReceipt = ReceiptJson;
+	return Result;
+}
+
+FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunVex(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+{
+	FWBProductionCSNCrashInSmokeResult Result;
+	const FWBProductionRuntimeBootstrapResult Bootstrap =
+		WBProductionRuntimeBootstrap::Build(BootstrapRequest);
+	if (!Bootstrap.bOk || !Bootstrap.Database.IsValid())
+	{
+		Result.Reason = Bootstrap.Reason;
+		return Result;
+	}
+
+	WBMatchCoordinator Coordinator;
+	const FWBMatchOperationResult Started = Coordinator.InitializeMatch(
+		Bootstrap.InitializationRequest);
+	if (!Started.bOk)
+	{
+		Result.Reason = Started.Reason;
+		return Result;
+	}
+	FWBProductionMatchReplayRecorder Recorder;
+	if (!Recorder.Begin(
+		WBProductionMatchReplayRuntime::BuildMetadata(Bootstrap), Coordinator))
+	{
+		Result.Reason = Recorder.GetReceipt().FailureCode;
+		return Result;
+	}
+	if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+	{
+		return Result;
+	}
+	const FWBMatchLegalActionGenerationResult Legal = Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Summon = Legal.bOk
+		? Legal.Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::Summon
+				&& !Action.bHybridSummon
+				&& Action.SummonRequest.SourceCardId == TEXT("char_csn_vex");
+		})
+		: nullptr;
+	if (Summon == nullptr
+		|| !SubmitCrashIn(Coordinator, Recorder, *Summon, Result.Reason)
+		|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+	{
+		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_vex_summon_missing");
+		return Result;
+	}
+
+	const FWBUnitState* Vex = Coordinator.GetState().Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_vex") && Unit.IsUnitOnBoard();
+		});
+	const FWBPlayerStateData* EnemyPlayer = Coordinator.GetState().GetPlayerById(0);
+	const FWBUnitState* Enemy = EnemyPlayer != nullptr
+		? Coordinator.GetState().GetUnitById(EnemyPlayer->HeroUnitId) : nullptr;
+	if (Vex == nullptr || Enemy == nullptr)
+	{
+		Result.Reason = TEXT("csn_vex_smoke_units_missing");
+		return Result;
+	}
+	FWBGameStateData Probe = Coordinator.GetState();
+	FWBUnitState* ProbeEnemy = Probe.GetMutableUnitById(Enemy->UnitId);
+	FWBUnitState* ProbeVex = Probe.GetMutableUnitById(Vex->UnitId);
+	if (ProbeEnemy == nullptr || ProbeVex == nullptr)
+	{
+		Result.Reason = TEXT("csn_vex_probe_units_missing");
+		return Result;
+	}
+	const int32 StoredAR = ProbeEnemy->AR;
+	const int32 OutsideAR = WBUnitStatQuery::GetEffectiveAR(
+		Probe, Bootstrap.Database->CoreRepository, ProbeEnemy->UnitId).EffectiveValue;
+	ProbeEnemy->X = ProbeVex->X;
+	ProbeEnemy->Y = ProbeVex->Y + (ProbeVex->Y <= 4 ? 3 : -3);
+	const int32 InsideAR = WBUnitStatQuery::GetEffectiveAR(
+		Probe, Bootstrap.Database->CoreRepository, ProbeEnemy->UnitId).EffectiveValue;
+	const FWBTile VexTile(ProbeVex->X, ProbeVex->Y);
+	const FWBTile EnemyTile(ProbeEnemy->X, ProbeEnemy->Y);
+	const int32 StepY = EnemyTile.Y > VexTile.Y ? 1 : -1;
+	Probe.Walls.Add(FWBWallEdge(
+		FWBTile(VexTile.X, VexTile.Y + StepY),
+		FWBTile(VexTile.X, VexTile.Y + 2 * StepY)));
+	const int32 WallBlockedAR = WBUnitStatQuery::GetEffectiveAR(
+		Probe, Bootstrap.Database->CoreRepository, ProbeEnemy->UnitId).EffectiveValue;
+	Probe.Walls.Reset();
+	const int32 WallRemovedAR = WBUnitStatQuery::GetEffectiveAR(
+		Probe, Bootstrap.Database->CoreRepository, ProbeEnemy->UnitId).EffectiveValue;
+	ProbeVex->AddStatus(FName(TEXT("Negated")), 1);
+	const int32 SuppressedAR = WBUnitStatQuery::GetEffectiveAR(
+		Probe, Bootstrap.Database->CoreRepository, ProbeEnemy->UnitId).EffectiveValue;
+	ProbeVex->RemoveStatus(FName(TEXT("Negated")));
+	const int32 RestoredAR = WBUnitStatQuery::GetEffectiveAR(
+		Probe, Bootstrap.Database->CoreRepository, ProbeEnemy->UnitId).EffectiveValue;
+
+	ProbeVex->MarkUnitDefeated();
+	const int32 DestroyedAR = WBUnitStatQuery::GetEffectiveAR(
+		Probe, Bootstrap.Database->CoreRepository, ProbeEnemy->UnitId).EffectiveValue;
+	if (OutsideAR != StoredAR || InsideAR != StoredAR - 1
+		|| WallBlockedAR != StoredAR || WallRemovedAR != StoredAR - 1
+		|| SuppressedAR != StoredAR || RestoredAR != StoredAR - 1
+		|| DestroyedAR != StoredAR || ProbeEnemy->AR != StoredAR)
+	{
+		Result.Reason = FString::Printf(
+			TEXT("csn_vex_effective_ar_probe_mismatch:stored=%d:outside=%d:inside=%d:wall=%d:wall_removed=%d:suppressed=%d:restored=%d:destroyed=%d:raw=%d"),
+			StoredAR, OutsideAR, InsideAR, WallBlockedAR, WallRemovedAR,
+			SuppressedAR, RestoredAR, DestroyedAR, ProbeEnemy->AR);
+		return Result;
+	}
+
+	const int32 VexUnitId = Vex->UnitId;
+	const int32 VexOwnerId = Vex->OwnerId;
+	const int32 EnemyUnitId = Enemy->UnitId;
+	const int32 EnemyOwnerId = Enemy->OwnerId;
+	const FWBPlayerStateData* VexPlayer = Coordinator.GetState().GetPlayerById(VexOwnerId);
+	const int32 AttackTargetUnitId = VexPlayer != nullptr
+		? VexPlayer->HeroUnitId : INDEX_NONE;
+	bool bVexPositionedForRangeProbe = false;
+	for (int32 Guard = 0; Guard < 32; ++Guard)
+	{
+		const FWBUnitState* CurrentVex = Coordinator.GetState().GetUnitById(VexUnitId);
+		const FWBUnitState* CurrentEnemy = Coordinator.GetState().GetUnitById(EnemyUnitId);
+		if (CurrentVex == nullptr || CurrentEnemy == nullptr)
+		{
+			break;
+		}
+		const FWBTile Goal(CurrentEnemy->X - 1, CurrentEnemy->Y);
+		if (CurrentVex->X == Goal.X && CurrentVex->Y == Goal.Y)
+		{
+			bVexPositionedForRangeProbe = true;
+			break;
+		}
+		if (Coordinator.GetState().GetCurrentPlayerId() != VexOwnerId)
+		{
+			if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason)) return Result;
+			continue;
+		}
+		const FWBMatchLegalActionGenerationResult MoveLegal =
+			Coordinator.EnumerateLegalActions();
+		const FWBMatchLegalAction* Move = MoveLegal.bOk
+			? MoveLegal.Actions.FindByPredicate([VexUnitId, Goal](
+				const FWBMatchLegalAction& Action)
+			{
+				return Action.Family == EWBMatchActionFamily::CoreAction
+					&& Action.CoreAction.Type == EWBActionType::Move
+					&& Action.CoreAction.SourceUnitId == VexUnitId
+					&& Action.CoreAction.ToTile.X == Goal.X
+					&& Action.CoreAction.ToTile.Y
+						== FMath::Min(Action.CoreAction.FromTile.Y + 1, Goal.Y);
+			}) : nullptr;
+		if (Move != nullptr)
+		{
+			if (!SubmitCrashIn(Coordinator, Recorder, *Move, Result.Reason)
+				|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+			{
+				return Result;
+			}
+		}
+		else if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+		{
+			return Result;
+		}
+	}
+	while (bVexPositionedForRangeProbe
+		&& Coordinator.GetState().GetCurrentPlayerId() != EnemyOwnerId)
+	{
+		if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason)) return Result;
+	}
+	const FWBUnitState* RangeAttacker = Coordinator.GetState().GetUnitById(EnemyUnitId);
+	const FWBUnitState* RangeTarget = Coordinator.GetState().GetUnitById(AttackTargetUnitId);
+	const FWBEffectiveUnitStatResult EffectiveRange = WBUnitStatQuery::GetEffectiveAR(
+		Coordinator.GetState(), Bootstrap.Database->CoreRepository, EnemyUnitId);
+	const FWBMatchLegalActionGenerationResult RangeLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* RawOnlyAttack = RangeLegal.bOk
+		? RangeLegal.Actions.FindByPredicate([EnemyUnitId, AttackTargetUnitId](
+			const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::CoreAction
+				&& Action.CoreAction.Type == EWBActionType::Attack
+				&& Action.CoreAction.SourceUnitId == EnemyUnitId
+				&& Action.CoreAction.TargetUnitId == AttackTargetUnitId;
+		}) : nullptr;
+	if (!bVexPositionedForRangeProbe || RangeAttacker == nullptr || RangeTarget == nullptr
+		|| !EffectiveRange.bOk || EffectiveRange.EffectiveValue != RangeAttacker->AR - 1
+		|| RangeAttacker->X != RangeTarget->X
+		|| FMath::Abs(RangeAttacker->Y - RangeTarget->Y) != RangeAttacker->AR
+		|| !RangeLegal.bOk || RawOnlyAttack != nullptr)
+	{
+		Result.Reason = TEXT("csn_vex_coordinator_attack_range_probe_mismatch");
+		return Result;
+	}
+
+	const FString ArchiveBytes = WBProductionMatchReplay::Serialize(Recorder.GetArchive());
+	FString PersistedBytes;
+	const FWBProductionMatchReplayPersistenceResult Loaded =
+		WBProductionMatchReplayPersistence::Load(
+			Recorder.GetArchivePathForServer(), PersistedBytes);
+	if (!Loaded.bOk || PersistedBytes != ArchiveBytes)
+	{
+		Result.Reason = Loaded.bOk
+			? TEXT("csn_vex_archive_mismatch") : Loaded.FailureCode;
+		return Result;
+	}
+	FWBProductionMatchReplayRunRequest ReplayRequest;
+	ReplayRequest.SerializedArchive = PersistedBytes;
+	ReplayRequest.BootstrapRequest = BootstrapRequest;
+	const FWBProductionMatchReplayRunResult Replay =
+		FWBProductionMatchReplayRunner::Run(ReplayRequest);
+	if (!Replay.bValid
+		|| Replay.FinalStateDigest != Coordinator.GetCurrentStateDigest()
+		|| Replay.FinalTraceDigest != Coordinator.GetCurrentTraceDigest())
+	{
+		Result.Reason = Replay.FailureCode.IsEmpty()
+			? TEXT("csn_vex_fresh_replay_mismatch") : Replay.FailureCode;
+		return Result;
+	}
+	const FString ReceiptJson = WBProductionMatchReplay::SerializeReceipt(
+		Recorder.GetReceipt());
+	TSharedPtr<FJsonObject> ReceiptObject;
+	if (!FJsonSerializer::Deserialize(
+		TJsonReaderFactory<>::Create(ReceiptJson), ReceiptObject)
+		|| !ReceiptObject.IsValid() || ReceiptObject->Values.Num() != 8
+		|| ReceiptJson.Contains(TEXT("char_csn_vex"))
+		|| ReceiptJson.Contains(TEXT("state_digest"))
+		|| ReceiptJson.Contains(TEXT("trace_digest")))
+	{
+		Result.Reason = TEXT("csn_vex_receipt_privacy_mismatch");
+		return Result;
+	}
+	const FString ReceiptPath = GetVexReceiptPath();
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(ReceiptPath), true);
+	if (!FFileHelper::SaveStringToFile(ReceiptJson, *ReceiptPath,
+		FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		Result.Reason = TEXT("replay_write_failed");
+		return Result;
+	}
+
+	Result.bOk = true;
+	Result.Reason = TEXT("production_csn_vex_verified");
+	Result.RecordsVerified = Replay.RecordsVerified;
+	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
+	Result.FinalRevision = Coordinator.GetCoordinatorRevision();
+	Result.FinalStateDigest = Coordinator.GetCurrentStateDigest();
+	Result.FinalTraceDigest = Coordinator.GetCurrentTraceDigest();
+	Result.SerializedArchive = PersistedBytes;
 	Result.SerializedReceipt = ReceiptJson;
 	return Result;
 }

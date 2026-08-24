@@ -1,6 +1,7 @@
 #include "WBPublicBoardSummary.h"
 
 #include "WBRules.h"
+#include "WBUnitStatQuery.h"
 
 namespace
 {
@@ -93,7 +94,8 @@ TArray<FWBPublicUnitStatusSummary> BuildPublicStatusSummaries(const FWBUnitState
 
 FWBPublicUnitBoardSummary BuildPublicUnitSummary(
 	const FWBGameStateData& State,
-	const FWBUnitState& Unit)
+	const FWBUnitState& Unit,
+	const FWBCardDefinitionRepository* Repository)
 {
 	FWBPublicUnitBoardSummary Summary;
 	Summary.UnitId = Unit.UnitId;
@@ -108,7 +110,10 @@ FWBPublicUnitBoardSummary BuildPublicUnitSummary(
 	Summary.CurrentArmor = Unit.GetCurrentArmor();
 	Summary.MaxArmor = Unit.GetMaxArmor();
 	Summary.ATK = Unit.ATK;
-	Summary.AR = Unit.AR;
+	Summary.AR = Repository != nullptr
+		? WBUnitStatQuery::GetEffectiveAR(
+			State, *Repository, Unit.UnitId).EffectiveValue
+		: Unit.AR;
 	Summary.BaseRL = Unit.GetBaseRLForRules();
 	Summary.CurrentRL = Unit.GetCurrentRLForRules();
 	Summary.RLTotal = Summary.CurrentRL;
@@ -274,6 +279,13 @@ TArray<FWBPublicTerrainTileSummary> BuildPublicTerrainSummaries(const FWBGameSta
 
 FWBPublicBoardSummary WBPublicBoardSummary::Build(const FWBGameStateData& State)
 {
+	return Build(State, FWBCardDefinitionRepository());
+}
+
+FWBPublicBoardSummary WBPublicBoardSummary::Build(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository)
+{
 	FWBPublicBoardSummary Summary;
 	Summary.BoardWidth = PublicBoardWidth;
 	Summary.BoardHeight = PublicBoardHeight;
@@ -286,7 +298,10 @@ FWBPublicBoardSummary WBPublicBoardSummary::Build(const FWBGameStateData& State)
 			continue;
 		}
 
-		Summary.Units.Add(BuildPublicUnitSummary(State, Unit));
+		Summary.Units.Add(BuildPublicUnitSummary(
+			State,
+			Unit,
+			Repository.RepositoryId.IsEmpty() ? nullptr : &Repository));
 	}
 
 	Summary.Units.Sort([](const FWBPublicUnitBoardSummary& A, const FWBPublicUnitBoardSummary& B)

@@ -610,6 +610,23 @@ FString AfterUnitDestroyedTriggerDigest(
 		Trigger.StatDelta.CurrentHPDelta);
 }
 
+FString ContinuousStatAuraDigest(
+	const FWBContinuousStatAuraDefinition& Aura)
+{
+	return FString::Printf(
+		TEXT("continuous_aura=%s|relation=%d|stat=%d|operation=%d|amount=%d|range=%d|geometry=%d|walls=%d|units=%d|minimum=%d"),
+		*Aura.AuraId,
+		static_cast<int32>(Aura.TargetRelation),
+		static_cast<int32>(Aura.TargetStat),
+		static_cast<int32>(Aura.Operation),
+		Aura.Amount,
+		static_cast<int32>(Aura.RangeStat),
+		static_cast<int32>(Aura.Geometry),
+		Aura.bBlockedByWalls ? 1 : 0,
+		Aura.bBlockedByUnits ? 1 : 0,
+		Aura.MinimumResult);
+}
+
 FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 {
 	FString Source = FString::Printf(
@@ -712,6 +729,17 @@ FString SnapshotDigestSource(const FWBProductionCardDatabase& Database)
 			DestructionTriggers)
 		{
 			Source += TEXT("|") + AfterUnitDestroyedTriggerDigest(Trigger);
+		}
+		TArray<FWBContinuousStatAuraDefinition> ContinuousAuras =
+			Definition.ContinuousStatAuras;
+		ContinuousAuras.Sort([](const FWBContinuousStatAuraDefinition& A,
+			const FWBContinuousStatAuraDefinition& B)
+		{
+			return A.AuraId < B.AuraId;
+		});
+		for (const FWBContinuousStatAuraDefinition& Aura : ContinuousAuras)
+		{
+			Source += TEXT("|") + ContinuousStatAuraDigest(Aura);
 		}
 		TArray<EWBCombatCapability> CombatCapabilities =
 			Definition.GrantedCombatCapabilitiesWhileEquipped.Array();
@@ -1644,7 +1672,8 @@ private:
 				TEXT("activated_effects"),
 				TEXT("after_damage_triggers"),
 				TEXT("after_csn_inheritance_triggers"),
-				TEXT("after_unit_destroyed_triggers")
+				TEXT("after_unit_destroyed_triggers"),
+				TEXT("continuous_stat_auras")
 			},
 			Reference.OwnerManifestPath,
 			CardId,
@@ -1828,6 +1857,7 @@ private:
 		ParseAfterDamageTriggers(Card, CardPath, Record);
 		ParseAfterCSNInheritanceTriggers(Card, CardPath, Record);
 		ParseAfterUnitDestroyedTriggers(Card, CardPath, Record);
+		ParseContinuousStatAuras(Card, CardPath, Record);
 
 		ParsedRecords.Add(MoveTemp(Record));
 	}
@@ -2432,6 +2462,94 @@ private:
 			{
 				return A.EffectId < B.EffectId;
 			});
+	}
+
+	void ParseContinuousStatAuras(
+		const TSharedPtr<FJsonObject>& Card,
+		const FString& CardPath,
+		FWBProductionCardRecord& Record)
+	{
+		if (!HasField(Card, TEXT("continuous_stat_auras")))
+		{
+			return;
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Auras = nullptr;
+		if (!TryReadArray(Card, TEXT("continuous_stat_auras"), Auras))
+		{
+			AddError(TEXT("continuous_stat_auras_malformed"),
+				Record.SourceManifestPath, Record.CoreDefinition.CardId,
+				CardPath + TEXT(".continuous_stat_auras"),
+				TEXT("Continuous stat auras must be an array."));
+			return;
+		}
+		TSet<FString> AuraIds;
+		for (int32 Index = 0; Index < Auras->Num(); ++Index)
+		{
+			const FString AuraPath = FString::Printf(
+				TEXT("%s.continuous_stat_auras[%d]"), *CardPath, Index);
+			const TSharedPtr<FJsonValue>& Value = (*Auras)[Index];
+			if (!Value.IsValid() || Value->Type != EJson::Object)
+			{
+				AddError(TEXT("continuous_stat_aura_malformed"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					AuraPath, TEXT("Continuous stat aura entries must be objects."));
+				continue;
+			}
+			const TSharedPtr<FJsonObject> Object = Value->AsObject();
+			ValidateKnownFields(Object,
+				{ TEXT("aura_id"), TEXT("target_relation"), TEXT("target_stat"),
+				  TEXT("operation"), TEXT("amount"), TEXT("range_stat"),
+				  TEXT("geometry"), TEXT("blocked_by_walls"),
+				  TEXT("blocked_by_units"), TEXT("minimum_result") },
+				Record.SourceManifestPath, Record.CoreDefinition.CardId, AuraPath);
+
+			FWBContinuousStatAuraDefinition Aura;
+			FString Relation;
+			FString TargetStat;
+			FString Operation;
+			FString RangeStat;
+			FString Geometry;
+			const bool bValid =
+				TryReadString(Object, TEXT("aura_id"), Aura.AuraId)
+				&& WBProductionCardDatabase::IsSafeDefinitionId(Aura.AuraId)
+				&& !AuraIds.Contains(Aura.AuraId)
+				&& TryReadString(Object, TEXT("target_relation"), Relation)
+				&& Relation == TEXT("enemy")
+				&& TryReadString(Object, TEXT("target_stat"), TargetStat)
+				&& TargetStat == TEXT("ar")
+				&& TryReadString(Object, TEXT("operation"), Operation)
+				&& Operation == TEXT("add")
+				&& TryReadInteger(Object, TEXT("amount"), Aura.Amount)
+				&& Aura.Amount != 0
+				&& TryReadString(Object, TEXT("range_stat"), RangeStat)
+				&& RangeStat == TEXT("ar")
+				&& TryReadString(Object, TEXT("geometry"), Geometry)
+				&& Geometry == TEXT("attack_line")
+				&& TryReadBool(Object, TEXT("blocked_by_walls"), Aura.bBlockedByWalls)
+				&& TryReadBool(Object, TEXT("blocked_by_units"), Aura.bBlockedByUnits)
+				&& TryReadInteger(Object, TEXT("minimum_result"), Aura.MinimumResult)
+				&& Aura.MinimumResult >= 0;
+			if (!bValid)
+			{
+				AddError(TEXT("continuous_stat_aura_unsupported"),
+					Record.SourceManifestPath, Record.CoreDefinition.CardId,
+					AuraPath, TEXT("The continuous stat aura is missing or unsupported."));
+				continue;
+			}
+			Aura.TargetRelation = EWBContinuousAuraTargetRelation::Enemy;
+			Aura.TargetStat = EWBContinuousStat::AR;
+			Aura.Operation = EWBContinuousStatOperation::Add;
+			Aura.RangeStat = EWBContinuousAuraRangeStat::AR;
+			Aura.Geometry = EWBContinuousAuraGeometry::AttackLine;
+			AuraIds.Add(Aura.AuraId);
+			Record.CoreDefinition.ContinuousStatAuras.Add(MoveTemp(Aura));
+		}
+		Record.CoreDefinition.ContinuousStatAuras.Sort([](
+			const FWBContinuousStatAuraDefinition& A,
+			const FWBContinuousStatAuraDefinition& B)
+		{
+			return A.AuraId < B.AuraId;
+		});
 	}
 
 	void ParseAfterDamageTriggers(
@@ -4321,6 +4439,27 @@ bool WBProductionCardDatabase::SnapshotToCanonicalJson(
 			Card->SetArrayField(
 				TEXT("equipped_combat_capabilities"),
 				StringArrayToJson(CapabilityNames));
+		}
+		if (!Definition.ContinuousStatAuras.IsEmpty())
+		{
+			TArray<TSharedPtr<FJsonValue>> AuraValues;
+			for (const FWBContinuousStatAuraDefinition& Aura :
+				Definition.ContinuousStatAuras)
+			{
+				TSharedRef<FJsonObject> AuraObject = MakeShared<FJsonObject>();
+				AuraObject->SetStringField(TEXT("aura_id"), Aura.AuraId);
+				AuraObject->SetStringField(TEXT("target_relation"), TEXT("enemy"));
+				AuraObject->SetStringField(TEXT("target_stat"), TEXT("ar"));
+				AuraObject->SetStringField(TEXT("operation"), TEXT("add"));
+				AuraObject->SetNumberField(TEXT("amount"), Aura.Amount);
+				AuraObject->SetStringField(TEXT("range_stat"), TEXT("ar"));
+				AuraObject->SetStringField(TEXT("geometry"), TEXT("attack_line"));
+				AuraObject->SetBoolField(TEXT("blocked_by_walls"), Aura.bBlockedByWalls);
+				AuraObject->SetBoolField(TEXT("blocked_by_units"), Aura.bBlockedByUnits);
+				AuraObject->SetNumberField(TEXT("minimum_result"), Aura.MinimumResult);
+				AuraValues.Add(MakeShared<FJsonValueObject>(AuraObject));
+			}
+			Card->SetArrayField(TEXT("continuous_stat_auras"), AuraValues);
 		}
 		if (Record.Type == EWBProductionCardType::Trap)
 		{

@@ -177,7 +177,19 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionCSNCrashInSmoke::IsSableRequested())
+		if (WBProductionCSNCrashInSmoke::IsVexRequested())
+		{
+			const FWBProductionCSNCrashInSmokeResult VexSmoke =
+				WBProductionCSNCrashInSmoke::RunVex(PendingBootstrapRequest);
+			if (!VexSmoke.bOk)
+			{
+				UE_LOG(LogWBRuntimeLocalPlay, Error,
+					TEXT("Wandbound CSN Vex smoke failed: %s"), *VexSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false, VexSmoke.bOk ? 0 : 36, TEXT("WandboundProductionCSNVexSmoke"));
+		}
+		else if (WBProductionCSNCrashInSmoke::IsSableRequested())
 		{
 			const FWBProductionCSNCrashInSmokeResult SableSmoke =
 				WBProductionCSNCrashInSmoke::RunSable(PendingBootstrapRequest);

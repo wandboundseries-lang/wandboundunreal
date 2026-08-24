@@ -4,7 +4,9 @@
 
 enum class EWBCombatCapability : uint8
 {
-	AttacksCannotBeCountered
+	AttacksCannotBeCountered,
+	AttacksDiagonally,
+	ImmuneToEnemyEffects
 };
 
 struct WANDBOUNDCORE_API FWBTile

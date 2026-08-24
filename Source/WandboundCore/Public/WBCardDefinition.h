@@ -178,6 +178,54 @@ struct WANDBOUNDCORE_API FWBUnitStatDeltaDefinition
 	int32 CurrentHPDelta = 0;
 };
 
+enum class EWBContinuousAuraTargetRelation : uint8
+{
+	Unknown,
+	Enemy
+};
+
+enum class EWBContinuousStat : uint8
+{
+	Unknown,
+	AR
+};
+
+enum class EWBContinuousStatOperation : uint8
+{
+	Unknown,
+	Add
+};
+
+enum class EWBContinuousAuraRangeStat : uint8
+{
+	Unknown,
+	AR
+};
+
+enum class EWBContinuousAuraGeometry : uint8
+{
+	Unknown,
+	AttackLine
+};
+
+struct WANDBOUNDCORE_API FWBContinuousStatAuraDefinition
+{
+	FString AuraId;
+	EWBContinuousAuraTargetRelation TargetRelation =
+		EWBContinuousAuraTargetRelation::Unknown;
+	EWBContinuousStat TargetStat = EWBContinuousStat::Unknown;
+	EWBContinuousStatOperation Operation =
+		EWBContinuousStatOperation::Unknown;
+	int32 Amount = 0;
+	EWBContinuousAuraRangeStat RangeStat =
+		EWBContinuousAuraRangeStat::Unknown;
+	EWBContinuousAuraGeometry Geometry =
+		EWBContinuousAuraGeometry::Unknown;
+	bool bBlockedByWalls = true;
+	bool bBlockedByUnits = true;
+	int32 MinimumResult = 0;
+};
+
 struct WANDBOUNDCORE_API FWBAfterUnitDestroyedTriggerDefinition
 {
 	FString TriggerId;
@@ -239,4 +287,5 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 		AfterCSNInheritanceTriggers;
 	TArray<FWBAfterUnitDestroyedTriggerDefinition>
 		AfterUnitDestroyedTriggers;
+	TArray<FWBContinuousStatAuraDefinition> ContinuousStatAuras;
 };

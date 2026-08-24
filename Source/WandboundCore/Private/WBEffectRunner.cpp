@@ -405,6 +405,18 @@ FWBApplyActionResult WBEffectRunner::ApplyAction(FWBGameStateData& State, const 
 	}
 }
 
+FWBApplyActionResult WBEffectRunner::ApplyAction(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
+	if (Action.Type == EWBActionType::Attack)
+	{
+		return ApplyAttackDeclare(State, Repository, Action);
+	}
+	return ApplyAction(State, Action);
+}
+
 FWBApplyActionResult WBEffectRunner::ApplyMove(FWBGameStateData& State, const FWBAction& Action)
 {
 	FWBApplyActionResult Result;
@@ -492,9 +504,19 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCMove(FWBGameStateData& State, const
 
 FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State, const FWBAction& Action)
 {
+	return ApplyAttackDeclare(State, FWBCardDefinitionRepository(), Action);
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
 	FWBApplyActionResult Result;
 
-	const FWBActionQueryResult AttackQuery = WBRules::CanDeclareAttack(State, Action);
+	const FWBActionQueryResult AttackQuery = Repository.RepositoryId.IsEmpty()
+		? WBRules::CanDeclareAttack(State, Action)
+		: WBRules::CanDeclareAttack(State, Repository, Action);
 	if (!AttackQuery.bOk)
 	{
 		Result.bOk = false;
@@ -549,8 +571,18 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(FWBGameStateData& State,
 
 FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(FWBGameStateData& State, const FWBAction& Action)
 {
+	return ApplyNPCAttackDeclare(State, FWBCardDefinitionRepository(), Action);
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
 	FWBApplyActionResult Result;
-	const FWBActionQueryResult AttackQuery = WBRules::CanDeclareNPCAttack(State, Action);
+	const FWBActionQueryResult AttackQuery = Repository.RepositoryId.IsEmpty()
+		? WBRules::CanDeclareNPCAttack(State, Action)
+		: WBRules::CanDeclareNPCAttack(State, Repository, Action);
 	if (!AttackQuery.bOk)
 	{
 		Result.Reason = AttackQuery.Reason;
@@ -989,9 +1021,20 @@ FWBApplyActionResult WBEffectRunner::ApplyPendingAttackRedirect(
 	const FString& PendingAttackContinuationId,
 	const int32 NewTargetUnitId)
 {
+	return ApplyPendingAttackRedirect(
+		State, FWBCardDefinitionRepository(),
+		PendingAttackContinuationId, NewTargetUnitId);
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyPendingAttackRedirect(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FString& PendingAttackContinuationId,
+	const int32 NewTargetUnitId)
+{
 	FWBApplyActionResult Result;
 	const FWBActionQueryResult Query = WBRules::CanRedirectPendingAttack(
-		State, PendingAttackContinuationId, NewTargetUnitId);
+		State, Repository, PendingAttackContinuationId, NewTargetUnitId);
 	if (!Query.bOk)
 	{
 		Result.Reason = Query.Reason;
@@ -1185,7 +1228,9 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 	FWBEffectRequestResult Result;
 	Result.Request = Request;
 
-	const FWBActionQueryResult Query = WBRules::CanApplyEffectRequest(State, Request);
+	const FWBActionQueryResult Query = Repository.RepositoryId.IsEmpty()
+		? WBRules::CanApplyEffectRequest(State, Request)
+		: WBRules::CanApplyEffectRequest(State, Repository, Request);
 	if (!Query.bOk)
 	{
 		Result.bOk = false;
@@ -1281,6 +1326,7 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 		{
 			PayloadResult = ApplyPendingAttackRedirect(
 				WorkingState,
+				Repository,
 				Payload.PendingAttackContinuationId,
 				Request.Target.TargetUnitId);
 			break;

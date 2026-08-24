@@ -196,6 +196,7 @@ bool FindPathToTarget(
 
 int32 SelectTarget(
 	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	const FWBUnitState& NPC,
 	const bool bRequireAttackable)
 {
@@ -209,7 +210,8 @@ int32 SelectTarget(
 			continue;
 		}
 		if (bRequireAttackable
-			&& !WBRules::CanDeclareNPCAttack(State, MakeNPCAttackAction(NPC, Candidate)).bOk)
+			&& !WBRules::CanDeclareNPCAttack(
+				State, Repository, MakeNPCAttackAction(NPC, Candidate)).bOk)
 		{
 			continue;
 		}
@@ -469,7 +471,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 			}
 			if (NPC->AttacksLeft > 0)
 			{
-				const int32 AttackTargetId = SelectTarget(State, *NPC, true);
+				const int32 AttackTargetId = SelectTarget(State, Repository, *NPC, true);
 				if (AttackTargetId != INDEX_NONE)
 				{
 					const FWBUnitState* Target = State.GetUnitById(AttackTargetId);
@@ -483,6 +485,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 					const FWBApplyActionResult DeclareResult =
 						WBEffectRunner::ApplyNPCAttackDeclare(
 							State,
+							Repository,
 							MakeNPCAttackAction(*NPC, *Target));
 					if (!DeclareResult.bOk)
 					{
@@ -506,7 +509,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 			{
 				break;
 			}
-			const int32 ChaseTargetId = SelectTarget(State, *NPC, false);
+			const int32 ChaseTargetId = SelectTarget(State, Repository, *NPC, false);
 			if (ChaseTargetId == INDEX_NONE)
 			{
 				FWBTraceEvent NoTarget = MakeNPCTrace(
@@ -754,7 +757,8 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 
 			if (NPC->AttacksLeft > 0)
 			{
-				const int32 AttackTargetId = SelectTarget(WorkingState, *NPC, true);
+				const int32 AttackTargetId = SelectTarget(
+					WorkingState, Repository, *NPC, true);
 				if (AttackTargetId != INDEX_NONE)
 				{
 					const FWBUnitState* Target = WorkingState.GetUnitById(AttackTargetId);
@@ -764,6 +768,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 					Result.TraceEvents.Add(Selected);
 					const FWBApplyActionResult DeclareResult = WBEffectRunner::ApplyNPCAttackDeclare(
 						WorkingState,
+						Repository,
 						MakeNPCAttackAction(*NPC, *Target));
 					if (!DeclareResult.bOk)
 					{
@@ -804,7 +809,8 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 			{
 				break;
 			}
-			const int32 ChaseTargetId = SelectTarget(WorkingState, *NPC, false);
+			const int32 ChaseTargetId = SelectTarget(
+				WorkingState, Repository, *NPC, false);
 			if (ChaseTargetId == INDEX_NONE)
 			{
 				FWBTraceEvent NoTarget = MakeNPCTrace(FName(TEXT("npc_no_target")), *NPC, ActionSequence);

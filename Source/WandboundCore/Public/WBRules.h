@@ -44,10 +44,17 @@ public:
 	static FWBMoveQueryResult QueryMove(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBMoveQueryResult QueryNPCMove(const FWBGameStateData& State, const FWBAction& Action, int32 AvailableMP);
 	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBAction& Action);
 	static FWBActionQueryResult CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBActionQueryResult CanDeclareNPCAttack(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBAction& Action);
 	static FWBActionQueryResult CanResolvePendingAttackDamage(const FWBGameStateData& State);
 	static FWBActionQueryResult CanRedirectPendingAttack(
 		const FWBGameStateData& State,
+		const FString& PendingAttackContinuationId,
+		int32 NewTargetUnitId);
+	static FWBActionQueryResult CanRedirectPendingAttack(
+		const FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository,
 		const FString& PendingAttackContinuationId,
 		int32 NewTargetUnitId);
 	static FWBActionQueryResult CanRegisterPendingAttackDamageSubstitution(
@@ -67,6 +74,7 @@ public:
 	static FWBActionQueryResult CanApplyZeroHPDeathRemoval(const FWBGameStateData& State);
 	static FWBActionQueryResult CanApplyCardActivationCommand(const FWBGameStateData& State, const FWBCardActivationCommand& Command);
 	static FWBActionQueryResult CanApplyEffectRequest(const FWBGameStateData& State, const FWBEffectRequest& Request);
+	static FWBActionQueryResult CanApplyEffectRequest(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBEffectRequest& Request);
 	static FWBActionQueryResult QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult QueryPass(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult QueryPassResponse(const FWBGameStateData& State, const FWBAction& Action);
@@ -80,5 +88,6 @@ public:
 	static void GenerateLegalActions(const FWBGameStateData& State, int32 PlayerId, TArray<FWBAction>& OutActions);
 	static TArray<FWBAction> GenerateLegalActions(const FWBGameStateData& State);
 	static TArray<FWBAction> GenerateLegalActionsForPlayer(const FWBGameStateData& State, int32 PlayerId);
+	static TArray<FWBAction> GenerateLegalActionsForPlayer(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, int32 PlayerId);
 	static bool CanMoveUnit(const FWBGameStateData& State, const FWBAction& Action, FString& OutReason);
 };

@@ -481,6 +481,31 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 			return MakeValidationFailure(
 				Repository, TEXT("duplicate_after_unit_destroyed_trigger_id"));
 		}
+
+		TSet<FString> ContinuousAuraIds;
+		for (const FWBContinuousStatAuraDefinition& Aura :
+			Definition.ContinuousStatAuras)
+		{
+			if (Aura.AuraId.IsEmpty()
+				|| ContinuousAuraIds.Contains(Aura.AuraId))
+			{
+				return MakeValidationFailure(
+					Repository, TEXT("continuous_stat_aura_id_invalid"));
+			}
+			if (Aura.TargetRelation
+					!= EWBContinuousAuraTargetRelation::Enemy
+				|| Aura.TargetStat != EWBContinuousStat::AR
+				|| Aura.Operation != EWBContinuousStatOperation::Add
+				|| Aura.Amount == 0
+				|| Aura.RangeStat != EWBContinuousAuraRangeStat::AR
+				|| Aura.Geometry != EWBContinuousAuraGeometry::AttackLine
+				|| Aura.MinimumResult < 0)
+			{
+				return MakeValidationFailure(
+					Repository, TEXT("continuous_stat_aura_unsupported"));
+			}
+			ContinuousAuraIds.Add(Aura.AuraId);
+		}
 	}
 
 	return MakeValidationSuccess(Repository);

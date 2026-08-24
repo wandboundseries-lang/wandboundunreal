@@ -11,6 +11,7 @@
 #include "WBProductionCardDatabase.h"
 #include "WBProductionCSNCrashInSmoke.h"
 #include "WBProductionMatchReplay.h"
+#include "WBUnitStatQuery.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -80,6 +81,21 @@ FWBCardDefinitionRepository MakeRepository(
 		bSourceHasTrigger));
 	Definitions.Add(MakeCharacter(TEXT("csn_candidate_a"), TEXT("csn"), 11, 4, 3, 2));
 	Definitions.Add(MakeCharacter(TEXT("csn_candidate_b"), TEXT("csn"), 12, 5, 4, 3));
+	FWBCardDefinition Vex = MakeCharacter(
+		TEXT("char_csn_vex"), TEXT("csn"), 13, 3, 4, 2);
+	FWBContinuousStatAuraDefinition VexAura;
+	VexAura.AuraId = TEXT("enemy_ar_penalty_in_source_ar");
+	VexAura.TargetRelation = EWBContinuousAuraTargetRelation::Enemy;
+	VexAura.TargetStat = EWBContinuousStat::AR;
+	VexAura.Operation = EWBContinuousStatOperation::Add;
+	VexAura.Amount = -1;
+	VexAura.RangeStat = EWBContinuousAuraRangeStat::AR;
+	VexAura.Geometry = EWBContinuousAuraGeometry::AttackLine;
+	VexAura.bBlockedByWalls = true;
+	VexAura.bBlockedByUnits = true;
+	VexAura.MinimumResult = 0;
+	Vex.ContinuousStatAuras.Add(VexAura);
+	Definitions.Add(MoveTemp(Vex));
 	Definitions.Add(MakeCharacter(TEXT("undertow_candidate"), TEXT("csn"), 11, 2, 3, 2,
 		false, true));
 	Definitions.Add(MakeCharacter(TEXT("officer_candidate"), TEXT("officer")));
@@ -552,6 +568,38 @@ bool FWBCSNRookUndertowCompositionTest::RunTest(const FString&)
 	TestNull(TEXT("86 no partial spawn"), FindBoardCard(MissingWand, TEXT("csn_candidate_a")));
 	TestNull(TEXT("87 Rook stays destroyed"), FindBoardCard(MissingWand, TEXT("fixture_rook")));
 	TestEqual(TEXT("88 no Wand fabricated"), MissingWand.GetCardZoneState().EquippedCards.Num(), 0);
+	return true;
+}
+
+WB_ROOK_TEST(FWBCSNRookVexCompositionTest,
+	"Wandbound.CSNVex.Composition.RookInheritanceActivatesAura")
+bool FWBCSNRookVexCompositionTest::RunTest(const FString&)
+{
+	const FWBCardDefinitionRepository Repository = MakeRepository();
+	FWBGameStateData State = MakeState();
+	FWBUnitState* EnemyHero = State.GetMutableUnitById(EnemyHeroId);
+	if (EnemyHero == nullptr) return false;
+	EnemyHero->X = 4;
+	EnemyHero->Y = 7;
+	AddDeckCard(State, TEXT("vex_instance"), TEXT("char_csn_vex"));
+	AddRookWand(State);
+	const FWBPostDestructionTriggerResult Pending = DestroyAndAdvance(State, Repository);
+	TestTrue(TEXT("Rook creates mandatory Vex choice"), Pending.bPendingChoice);
+	const TArray<FString> Actions =
+		WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository);
+	if (Actions.Num() != 1) return false;
+	const FWBPostDestructionTriggerResult Resolved =
+		WBPostDestructionTrigger::SubmitChoice(State, Repository, Actions[0]);
+	TestTrue(TEXT("Rook summons Vex"), Resolved.bSummoned);
+	const FWBUnitState* Vex = FindBoardCard(State, TEXT("char_csn_vex"));
+	TestNotNull(TEXT("Vex exists on Rook tile"), Vex);
+	if (Vex == nullptr) return false;
+	TestEqual(TEXT("Vex inherits Rook Current RL"), Vex->GetBaseRLForRules(), 7);
+	TestEqual(TEXT("Exact Rook Wand transfers"),
+		State.GetCardZoneState().EquippedCards[0].EquippedToUnitId, Vex->UnitId);
+	TestEqual(TEXT("Vex aura activates after summon"),
+		WBUnitStatQuery::GetEffectiveAR(State, Repository, EnemyHeroId).EffectiveValue,
+		State.GetUnitById(EnemyHeroId)->AR - 1);
 	return true;
 }
 

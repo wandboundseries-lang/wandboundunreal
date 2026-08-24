@@ -1388,7 +1388,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 
 	const int32 PlayerId = InState.PriorityPlayer;
 	TArray<FWBAction> EndTurnActions;
-	for (const FWBAction& CoreAction : WBRules::GenerateLegalActionsForPlayer(InState, PlayerId))
+	for (const FWBAction& CoreAction : WBRules::GenerateLegalActionsForPlayer(InState, Repository, PlayerId))
 	{
 		FWBMatchLegalAction MatchAction;
 		MatchAction.Family = EWBMatchActionFamily::CoreAction;
@@ -1788,6 +1788,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				const FWBApplyActionResult ApplyResult =
 					WBEffectRunner::ApplyAction(
 						WorkingState,
+						Repository,
 						SelectedAction->CoreAction);
 				bActionApplied = ApplyResult.bOk;
 				FailureReason = ApplyResult.Reason;
@@ -3576,7 +3577,7 @@ FWBMatchObservation WBMatchCoordinator::BuildObservation(const int32 ViewerPlaye
 	}
 
 	Observation.PublicTurn = WBPublicTurnSummary::Build(State);
-	Observation.PublicBoard = WBPublicBoardSummary::Build(State);
+	Observation.PublicBoard = WBPublicBoardSummary::Build(State, Repository);
 	Observation.CardZones = WBCardZoneObservation::BuildObservationForPlayer(State, ViewerPlayerId);
 	if (ViewerPlayerId == State.PriorityPlayer)
 	{

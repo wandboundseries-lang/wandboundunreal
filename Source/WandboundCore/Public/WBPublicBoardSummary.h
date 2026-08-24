@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "WBGameStateData.h"
 
+struct FWBCardDefinitionRepository;
+
 struct WANDBOUNDCORE_API FWBPublicUnitStatusSummary
 {
 	FName StatusId;
@@ -62,4 +64,7 @@ class WANDBOUNDCORE_API WBPublicBoardSummary
 {
 public:
 	static FWBPublicBoardSummary Build(const FWBGameStateData& State);
+	static FWBPublicBoardSummary Build(
+		const FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository);
 };

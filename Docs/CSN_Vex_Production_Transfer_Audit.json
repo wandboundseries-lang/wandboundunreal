@@ -1,0 +1,153 @@
+{
+  "audit": "csn_vex_production_transfer",
+  "baseline": {
+    "head": "29df1879233444fc68fad07b069af8235adbed94",
+    "origin_main": "29df1879233444fc68fad07b069af8235adbed94",
+    "tests": 2342,
+    "replay_schema": 1,
+    "bundle_digest": "0d7ffbe33ae79ee590e0b0eb66d37a02482906f6b6c5b7218b067e293a14d2e5"
+  },
+  "card": {
+    "card_id": "char_csn_vex",
+    "public_name": "CSN Vex",
+    "kind": "character",
+    "factions": ["csn"],
+    "stats": { "hp": 13, "atk": 3, "ar": 4, "rl": 2 },
+    "movement": "orthogonal_adjacent",
+    "attack": "orthogonal_line_effective_ar"
+  },
+  "godot_reference": {
+    "read_only": true,
+    "payload_type": "aura_enemy_stat_penalty_in_range",
+    "stat": "ar",
+    "amount": -1,
+    "range_stat": "ar",
+    "files_changed": false
+  },
+  "continuous_aura": {
+    "aura_id": "enemy_ar_penalty_in_source_ar",
+    "target_relation": "enemy",
+    "target_stat": "ar",
+    "operation": "add",
+    "amount": -1,
+    "range_stat": "ar",
+    "geometry": "attack_line",
+    "blocked_by_walls": true,
+    "blocked_by_units": true,
+    "minimum_result": 0,
+    "stored_ar_mutated": false,
+    "query": "WBUnitStatQuery::GetEffectiveAR",
+    "range_boundary": "WBUnitStatQuery::GetAuraRangeAR",
+    "source_eligibility": "WBCharacterPassiveEligibility",
+    "deterministic_source_order": "unit_id_then_aura_id",
+    "npc_enemy_relation": "owner_inequality",
+    "enemy_immunity": "ImmuneToEnemyEffects"
+  },
+  "ar_consumers": [
+    { "area": "production_carddb", "classification": "printed_data", "authority": "CharacterStats.AR" },
+    { "area": "summon_replacement_setup_npc", "classification": "stored_runtime_initialization", "authority": "Unit.AR" },
+    { "area": "replay_state_digest", "classification": "stored_runtime", "authority": "Unit.AR" },
+    { "area": "aura_radius", "classification": "non_recursive_range_layer", "authority": "GetAuraRangeAR" },
+    { "area": "attack_declaration", "classification": "effective_gameplay", "authority": "GetEffectiveAR" },
+    { "area": "legal_attack_generation", "classification": "effective_gameplay", "authority": "repository_aware_rules" },
+    { "area": "pending_redirect", "classification": "effective_gameplay", "authority": "repository_aware_rules" },
+    { "area": "counter", "classification": "effective_gameplay", "authority": "repository_aware_rules" },
+    { "area": "npc_attack", "classification": "effective_gameplay", "authority": "repository_aware_rules" },
+    { "area": "public_board_summary", "classification": "public_derived", "authority": "GetEffectiveAR" },
+    { "area": "legacy_no_repository_overloads", "classification": "compatibility", "authority": "stored_ar" },
+    { "area": "tests_and_fixtures", "classification": "test_setup", "authority": "explicit_stored_ar" }
+  ],
+  "composition": {
+    "rook_to_vex": "mandatory_exact_instance_choice_then_inheritance_then_aura",
+    "crash_in_to_vex": "atomic_replacement_inheritance_redirect_then_aura",
+    "sable": "existing_generic_destruction_observer_unchanged"
+  },
+  "production": {
+    "new_bundle_digest": "152a869dd25a7d1d7e839ff9e2aec47ebbca31d164f42bc567bd19f6324a7c73",
+    "fixture": "Data/Replay/CSNVexFixture/match_spec.json",
+    "card_id_gameplay_branch": false,
+    "replay_schema": 1,
+    "receipt_fields": 8
+  },
+  "validation": {
+    "focused": { "succeeded": 14, "failed": 0, "warnings": 0, "not_run": 0 },
+    "csn_regression": { "succeeded": 72, "failed": 0, "warnings": 0, "not_run": 0 },
+    "full": { "succeeded": 2356, "failed": 0, "warnings": 0, "not_run": 0, "baseline": 2342, "increase": 14 },
+    "builds": {
+      "editor_non_unity": "succeeded",
+      "game_non_unity": "succeeded",
+      "editor_default": "succeeded",
+      "game_default": "succeeded",
+      "editor_forced_unity": "succeeded",
+      "game_forced_unity": "succeeded"
+    },
+    "build_cook_run": { "result": "succeeded", "seconds": 629.06 },
+    "packaged_smoke": {
+      "run_1_exit": 0,
+      "run_2_exit": 0,
+      "records": 13,
+      "generation": 1,
+      "revision": 14,
+      "archive_sha256": "1a0c59f3956ae3b34174bca81e7dfd0f03a9dba864b396d30127bf0506580ee6",
+      "receipt_sha256": "26e91cc7444350aad67639bd357d003e52ca68aa75eb05c0d5716abc199c113a",
+      "replay_digest": "7632027d4da97cd5555e495287111989eaaf232dbd2bb3822acb3cdd2c7ce5d1",
+      "state_digest": "f78b95e4e2567aaaa2e3fcd5bc55d131f38f838a637753756103dcb56a5d0690",
+      "final_trace_digest": "69bb6305a2f70376d02ab34950760c531afa79f5ed564bb9ebfb39fdf5df0747",
+      "last_accepted_action_record_trace_interval_digest": "610713f1709e5e5b55bd4652bf4f0777ac6c43d8a731d534e1167dd6733a421a",
+      "startup_sha256": "9baa3b7da1cb6b46a066d45186eb21e0b8b0058224db71196a2f59cd840bba68",
+      "archives_byte_identical": true,
+      "receipts_byte_identical": true,
+      "stderr_empty": true,
+      "packaged_processes_remaining": 0,
+      "receipt_contains_card_id": false,
+      "receipt_contains_state_digest": false,
+      "receipt_contains_trace_digest": false
+    }
+  },
+  "action_codec": {
+    "changed": false,
+    "header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "changed_paths": [
+    "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "Data/Replay/CSNCrashInFixture/match_spec.json",
+    "Data/Replay/CSNRookFixture/match_spec.json",
+    "Data/Replay/CSNSableFixture/match_spec.json",
+    "Data/Replay/CSNUndertowArchivistFixture/match_spec.json",
+    "Data/Replay/CSNVexFixture/match_spec.json",
+    "Docs/CSN_Vex_Production_Transfer_Audit.md",
+    "Docs/CSN_Vex_Production_Transfer_Audit.json",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBNPCPhaseResolution.cpp",
+    "Source/WandboundCore/Private/WBPublicBoardSummary.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundCore/Private/WBUnitStatQuery.cpp",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBEffectRunner.h",
+    "Source/WandboundCore/Public/WBPublicBoardSummary.h",
+    "Source/WandboundCore/Public/WBRules.h",
+    "Source/WandboundCore/Public/WBTypes.h",
+    "Source/WandboundCore/Public/WBUnitStatQuery.h",
+    "Source/WandboundRuntime/Private/WBProductionCSNCrashInSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionCSNCrashInSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBCSNCrashInTests.cpp",
+    "Source/WandboundTests/Private/WBCSNRookTests.cpp",
+    "Source/WandboundTests/Private/WBCSNVexTests.cpp"
+  ],
+  "unrelated_preserved": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+    "h origin main"
+  ],
+  "source_control": {
+    "staged_files": 0,
+    "committed": false,
+    "pushed": false
+  }
+}
