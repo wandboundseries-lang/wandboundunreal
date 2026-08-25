@@ -289,6 +289,13 @@ bool WBProductionCSNCrashInSmoke::IsVexRequested(const TCHAR* CommandLine)
 		TEXT("WandboundProductionCSNVexSmoke"));
 }
 
+bool WBProductionCSNCrashInSmoke::IsPatchRequested(const TCHAR* CommandLine)
+{
+	return FParse::Param(
+		CommandLine != nullptr ? CommandLine : FCommandLine::Get(),
+		TEXT("WandboundProductionCSNPatchSmoke"));
+}
+
 FString WBProductionCSNCrashInSmoke::GetReceiptPath()
 {
 	return FPaths::Combine(
@@ -322,6 +329,13 @@ FString WBProductionCSNCrashInSmoke::GetVexReceiptPath()
 	return FPaths::Combine(
 		FPaths::ProjectSavedDir(),
 		TEXT("SmokeTest/WandboundProductionCSNVexReceipt.json"));
+}
+
+FString WBProductionCSNCrashInSmoke::GetPatchReceiptPath()
+{
+	return FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SmokeTest/WandboundProductionCSNPatchReceipt.json"));
 }
 
 FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunScenario(
@@ -1529,6 +1543,215 @@ FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunVex(
 
 	Result.bOk = true;
 	Result.Reason = TEXT("production_csn_vex_verified");
+	Result.RecordsVerified = Replay.RecordsVerified;
+	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
+	Result.FinalRevision = Coordinator.GetCoordinatorRevision();
+	Result.FinalStateDigest = Coordinator.GetCurrentStateDigest();
+	Result.FinalTraceDigest = Coordinator.GetCurrentTraceDigest();
+	Result.SerializedArchive = PersistedBytes;
+	Result.SerializedReceipt = ReceiptJson;
+	return Result;
+}
+
+FWBProductionCSNCrashInSmokeResult WBProductionCSNCrashInSmoke::RunPatch(
+	const FWBProductionRuntimeBootstrapRequest& BootstrapRequest)
+{
+	FWBProductionCSNCrashInSmokeResult Result;
+	const FWBProductionRuntimeBootstrapResult Bootstrap =
+		WBProductionRuntimeBootstrap::Build(BootstrapRequest);
+	if (!Bootstrap.bOk || !Bootstrap.Database.IsValid())
+	{
+		Result.Reason = Bootstrap.Reason;
+		return Result;
+	}
+
+	WBMatchCoordinator Coordinator;
+	const FWBMatchOperationResult Started = Coordinator.InitializeMatch(
+		Bootstrap.InitializationRequest);
+	if (!Started.bOk)
+	{
+		Result.Reason = Started.Reason;
+		return Result;
+	}
+	FWBProductionMatchReplayRecorder Recorder;
+	if (!Recorder.Begin(
+		WBProductionMatchReplayRuntime::BuildMetadata(Bootstrap), Coordinator))
+	{
+		Result.Reason = Recorder.GetReceipt().FailureCode;
+		return Result;
+	}
+
+	if (!EndCrashInTurn(Coordinator, Recorder, Result.Reason))
+	{
+		return Result;
+	}
+	const FWBMatchLegalActionGenerationResult SummonLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Summon = SummonLegal.bOk
+		? SummonLegal.Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::Summon
+				&& !Action.bHybridSummon
+				&& Action.SummonRequest.SourceCardId == TEXT("char_csn_patch");
+		}) : nullptr;
+	if (Summon == nullptr
+		|| !SubmitCrashIn(Coordinator, Recorder, *Summon, Result.Reason)
+		|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+	{
+		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_patch_summon_missing");
+		return Result;
+	}
+
+	const FWBUnitState* Patch = Coordinator.GetState().Units.FindByPredicate(
+		[](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_patch") && Unit.IsUnitOnBoard();
+		});
+	if (Patch == nullptr)
+	{
+		Result.Reason = TEXT("csn_patch_unit_missing");
+		return Result;
+	}
+	const int32 PatchUnitId = Patch->UnitId;
+	const FWBTile PatchTile(Patch->X, Patch->Y);
+	const int32 PatchCurrentRL = Patch->GetCurrentRLForRules();
+	const FWBMatchLegalActionGenerationResult EquipLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Equip = EquipLegal.bOk
+		? FindCrashInEquip(EquipLegal.Actions, PatchUnitId) : nullptr;
+	if (Equip == nullptr)
+	{
+		Result.Reason = TEXT("csn_patch_wand_equip_missing");
+		return Result;
+	}
+	const FString WandInstanceId = Equip->EquipRequest.SourceInstanceId;
+	if (!SubmitCrashIn(Coordinator, Recorder, *Equip, Result.Reason))
+	{
+		return Result;
+	}
+
+	const FWBMatchLegalActionGenerationResult ActivationLegal =
+		Coordinator.EnumerateLegalActions();
+	const FWBMatchLegalAction* Activation = ActivationLegal.bOk
+		? FindCrashInActivationByCard(
+			ActivationLegal.Actions, TEXT("char_csn_patch")) : nullptr;
+	if (Activation == nullptr
+		|| !SubmitCrashIn(Coordinator, Recorder, *Activation, Result.Reason)
+		|| !PassCrashInResponse(Coordinator, Recorder, Result.Reason))
+	{
+		if (Result.Reason.IsEmpty()) Result.Reason = TEXT("csn_patch_activation_missing");
+		return Result;
+	}
+
+	if (Coordinator.GetMatchPhase() != EWBMatchLoopPhase::MandatoryChoice)
+	{
+		Result.Reason = TEXT("csn_patch_mandatory_choice_missing");
+		return Result;
+	}
+	const FWBMatchObservation OpponentObservation = Coordinator.BuildObservation(0);
+	const FWBMatchObservation OwnerObservation = Coordinator.BuildObservation(1);
+	const FWBMatchLegalAction* Choice = OwnerObservation.LegalActions.FindByPredicate(
+		[](const FWBMatchLegalAction& Action)
+		{
+			return Action.Family == EWBMatchActionFamily::MandatoryDeckChoice
+				&& Action.MandatoryChoiceCardInstanceId.Contains(TEXT("undertow"));
+		});
+	if (!OpponentHandIsHidden(OpponentObservation, 1)
+		|| !OpponentObservation.LegalActions.IsEmpty()
+		|| Choice == nullptr)
+	{
+		Result.Reason = TEXT("csn_patch_private_choice_mismatch");
+		return Result;
+	}
+	const FString UndertowInstanceId = Choice->MandatoryChoiceCardInstanceId;
+	if (!SubmitCrashIn(Coordinator, Recorder, *Choice, Result.Reason))
+	{
+		return Result;
+	}
+
+	Patch = Coordinator.GetState().GetUnitById(PatchUnitId);
+	const FWBUnitState* Undertow = Coordinator.GetState().Units.FindByPredicate(
+		[PatchTile](const FWBUnitState& Unit)
+		{
+			return Unit.CardId == TEXT("char_csn_undertow_archivist")
+				&& Unit.IsUnitOnBoard()
+				&& Unit.X == PatchTile.X && Unit.Y == PatchTile.Y;
+		});
+	const FWBEquippedCardEntry* Wand =
+		Coordinator.GetState().GetCardZoneState().EquippedCards.FindByPredicate(
+			[&WandInstanceId](const FWBEquippedCardEntry& Entry)
+			{
+				return Entry.Card.InstanceId == WandInstanceId;
+			});
+	const TArray<FWBTraceEvent>& Trace = Coordinator.GetTraceLog();
+	if (Patch == nullptr || !Patch->bRemovedFromBoard || Patch->bDefeated
+		|| Undertow == nullptr
+		|| Undertow->GetBaseRLForRules() != 2 + PatchCurrentRL
+		|| Wand == nullptr || Wand->EquippedToUnitId != Undertow->UnitId
+		|| !Coordinator.GetState().PendingUnitDestructionEvents.IsEmpty()
+		|| CountTrace(Trace, FName(TEXT("unit_sacrificed"))) != 1
+		|| CountTrace(Trace, FName(TEXT("effect_summon_completed"))) != 1
+		|| CountTrace(Trace, FName(TEXT("csn_inheritance"))) != 1
+		|| CountTrace(Trace, FName(TEXT("csn_inheritance_card_drawn"))) != 1
+		|| CountTrace(Trace, FName(TEXT("post_destruction_trigger_resolved"))) != 0
+		|| CountAcceptedFamily(Coordinator, TEXT("activate")) != 1
+		|| CountAcceptedFamily(Coordinator, TEXT("mandatory_deck_choice")) != 1)
+	{
+		Result.Reason = TEXT("csn_patch_resolution_mismatch");
+		return Result;
+	}
+
+	const FString ArchiveBytes = WBProductionMatchReplay::Serialize(
+		Recorder.GetArchive());
+	FString PersistedBytes;
+	const FWBProductionMatchReplayPersistenceResult Loaded =
+		WBProductionMatchReplayPersistence::Load(
+			Recorder.GetArchivePathForServer(), PersistedBytes);
+	if (!Loaded.bOk || PersistedBytes != ArchiveBytes)
+	{
+		Result.Reason = Loaded.bOk
+			? TEXT("csn_patch_archive_mismatch") : Loaded.FailureCode;
+		return Result;
+	}
+	FWBProductionMatchReplayRunRequest ReplayRequest;
+	ReplayRequest.SerializedArchive = PersistedBytes;
+	ReplayRequest.BootstrapRequest = BootstrapRequest;
+	const FWBProductionMatchReplayRunResult Replay =
+		FWBProductionMatchReplayRunner::Run(ReplayRequest);
+	if (!Replay.bValid
+		|| Replay.FinalStateDigest != Coordinator.GetCurrentStateDigest()
+		|| Replay.FinalTraceDigest != Coordinator.GetCurrentTraceDigest())
+	{
+		Result.Reason = Replay.FailureCode.IsEmpty()
+			? TEXT("csn_patch_fresh_replay_mismatch") : Replay.FailureCode;
+		return Result;
+	}
+
+	const FString ReceiptJson = WBProductionMatchReplay::SerializeReceipt(
+		Recorder.GetReceipt());
+	TSharedPtr<FJsonObject> ReceiptObject;
+	if (!FJsonSerializer::Deserialize(
+		TJsonReaderFactory<>::Create(ReceiptJson), ReceiptObject)
+		|| !ReceiptObject.IsValid() || ReceiptObject->Values.Num() != 8
+		|| ReceiptJson.Contains(UndertowInstanceId)
+		|| ReceiptJson.Contains(WandInstanceId)
+		|| ReceiptJson.Contains(TEXT("state_digest"))
+		|| ReceiptJson.Contains(TEXT("trace_digest")))
+	{
+		Result.Reason = TEXT("csn_patch_receipt_privacy_mismatch");
+		return Result;
+	}
+	const FString ReceiptPath = GetPatchReceiptPath();
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(ReceiptPath), true);
+	if (!FFileHelper::SaveStringToFile(ReceiptJson, *ReceiptPath,
+		FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		Result.Reason = TEXT("replay_write_failed");
+		return Result;
+	}
+
+	Result.bOk = true;
+	Result.Reason = TEXT("production_csn_patch_verified");
 	Result.RecordsVerified = Replay.RecordsVerified;
 	Result.FinalGeneration = Coordinator.GetCoordinatorGeneration();
 	Result.FinalRevision = Coordinator.GetCoordinatorRevision();

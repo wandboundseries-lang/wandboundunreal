@@ -145,6 +145,44 @@
     },
     {
       "schema_version": 1,
+      "card_id": "char_csn_patch",
+      "public_name": "CSN Patch",
+      "kind": "character",
+      "public_text": "CSN Inheritance: If this unit is summoned by a CSN unit's effect, transfer that unit's equipped Wands to this unit. Increase this unit's Base RL by that unit's Current RL.\n\nActivate - Once per turn: Sacrifice this unit. Summon 1 CSN Character from your deck to this unit's tile. CSN Inheritance applies.",
+      "public_category": "Character",
+      "factions": ["csn"],
+      "tags": ["csn_inheritance"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 2, "ar": 2, "rl": 2 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "activated_effects": [
+        {
+          "effect_id": "sacrifice_to_summon_csn_character",
+          "public_label": "Sacrifice to summon",
+          "target_requirement": "none",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "sacrifice_to_summon_csn_character"
+          },
+          "payloads": [
+            {
+              "type": "sacrifice_source_then_summon_character_from_deck_to_source_tile",
+              "required_source_faction": "csn",
+              "required_summon_faction": "csn",
+              "summon_kind": "character",
+              "inheritance_policy": "transfer_wands_add_source_current_rl"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
       "card_id": "char_csn_echo",
       "public_name": "CSN Echo",
       "kind": "character",

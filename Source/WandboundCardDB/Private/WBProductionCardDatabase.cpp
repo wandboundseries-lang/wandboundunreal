@@ -555,6 +555,15 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 		case EWBGenericEffectOp::RedirectPendingAttack:
 		case EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution:
 			break;
+		case EWBGenericEffectOp::
+			SacrificeSourceThenSummonCharacterFromDeckToSourceTile:
+			Digest += FString::Printf(
+				TEXT(":%s:%s:%d:%d"),
+				*Payload.RequiredSourceFaction,
+				*Payload.RequiredReplacementFaction,
+				static_cast<int32>(Payload.RequiredReplacementKind),
+				static_cast<int32>(Payload.InheritancePolicy));
+			break;
 		default:
 			break;
 		}
@@ -3478,6 +3487,52 @@ private:
 						EWBEffectInheritancePolicy::TransferEquippedWandsAndAddSourceCurrentRL;
 				}
 			}
+			else if (Type == TEXT("sacrifice_source_then_summon_character_from_deck_to_source_tile"))
+			{
+				ValidateKnownFields(
+					PayloadObject,
+					{
+						TEXT("type"), TEXT("required_source_faction"),
+						TEXT("required_summon_faction"),
+						TEXT("summon_kind"), TEXT("inheritance_policy")
+					},
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					PayloadPath);
+				Payload.Operation = EWBGenericEffectOp::
+					SacrificeSourceThenSummonCharacterFromDeckToSourceTile;
+				FString ValueText;
+				if (!TryReadString(PayloadObject, TEXT("required_source_faction"), Payload.RequiredSourceFaction)
+					|| Payload.RequiredSourceFaction.IsEmpty())
+				{
+					AddError(TEXT("activated_deck_summon_metadata_invalid"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".required_source_faction"), TEXT("Activated Deck summons require source-faction metadata."));
+				}
+				if (!TryReadString(PayloadObject, TEXT("required_summon_faction"), Payload.RequiredReplacementFaction)
+					|| Payload.RequiredReplacementFaction.IsEmpty())
+				{
+					AddError(TEXT("activated_deck_summon_metadata_invalid"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".required_summon_faction"), TEXT("Activated Deck summons require destination-faction metadata."));
+				}
+				if (!TryReadString(PayloadObject, TEXT("summon_kind"), ValueText)
+					|| ValueText != TEXT("character"))
+				{
+					AddError(TEXT("activated_deck_summon_metadata_invalid"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".summon_kind"), TEXT("Activated Deck summons support Character definitions only."));
+				}
+				else
+				{
+					Payload.RequiredReplacementKind =
+						EWBEffectReplacementCardKind::Character;
+				}
+				if (!TryReadString(PayloadObject, TEXT("inheritance_policy"), ValueText)
+					|| ValueText != TEXT("transfer_wands_add_source_current_rl"))
+				{
+					AddError(TEXT("activated_deck_summon_metadata_invalid"), Record.SourceManifestPath, Record.CoreDefinition.CardId, PayloadPath + TEXT(".inheritance_policy"), TEXT("The activated Deck summon inheritance policy is unsupported."));
+				}
+				else
+				{
+					Payload.InheritancePolicy = EWBEffectInheritancePolicy::
+						TransferEquippedWandsAndAddSourceCurrentRL;
+				}
+			}
 			else
 			{
 				AddError(
@@ -3751,7 +3806,9 @@ private:
 						return Payload.Operation
 							!= EWBGenericEffectOp::NegatePendingEffect
 							&& Payload.Operation
-								!= EWBGenericEffectOp::PreventPendingAttack;
+								!= EWBGenericEffectOp::PreventPendingAttack
+							&& Payload.Operation != EWBGenericEffectOp::
+								SacrificeSourceThenSummonCharacterFromDeckToSourceTile;
 					});
 			if (!bOnlyPendingControl)
 			{

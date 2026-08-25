@@ -133,13 +133,12 @@ FWBDeckSummonResult WBDeckSummon::SummonExactCharacterToTile(
 
 	FWBCSNInheritanceMutationRequest Inheritance;
 	Inheritance.ControllerPlayerId = Request.PlayerId;
-	Inheritance.SourceUnitId = Request.InheritanceSource.DestroyedUnitId;
+	Inheritance.SourceUnitId = Request.InheritanceSource.SourceUnitId;
 	Inheritance.TargetUnitId = NewUnitId;
-	Inheritance.SourceCurrentRL = Request.InheritanceSource.CurrentRLSnapshot;
+	Inheritance.SourceCurrentRL = Request.InheritanceSource.SourceCurrentRL;
 	Inheritance.EquippedWandSnapshot =
 		Request.InheritanceSource.EquippedWands;
-	Inheritance.ExpectedWandLocation =
-		EWBCSNInheritanceWandLocation::ControllerDiscard;
+	Inheritance.ExpectedWandLocation = Request.InheritanceWandLocation;
 	Inheritance.TransactionId = Request.TransactionId;
 	const FWBCSNInheritanceMutationResult Inherited =
 		WBCSNInheritance::Apply(WorkingState, Repository, Inheritance);
@@ -161,9 +160,11 @@ FWBDeckSummonResult WBDeckSummon::SummonExactCharacterToTile(
 	Result.CreatedUnitId = NewUnitId;
 	Result.SummonedCardId = SelectedCardId;
 	FWBTraceEvent Summoned;
-	Summoned.Kind = FName(TEXT("post_destruction_deck_summon"));
+	Summoned.Kind = Request.SummonTraceKind.IsNone()
+		? FName(TEXT("effect_summon_completed"))
+		: Request.SummonTraceKind;
 	Summoned.PlayerId = Request.PlayerId;
-	Summoned.SourceUnitId = Request.InheritanceSource.DestroyedUnitId;
+	Summoned.SourceUnitId = Request.InheritanceSource.SourceUnitId;
 	Summoned.TargetUnitId = NewUnitId;
 	Summoned.CardId = SelectedCardId;
 	Summoned.ToTile = Request.TargetTile;

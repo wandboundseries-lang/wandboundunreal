@@ -24,11 +24,13 @@ public:
 	static bool IsRookRequested(const TCHAR* CommandLine = nullptr);
 	static bool IsSableRequested(const TCHAR* CommandLine = nullptr);
 	static bool IsVexRequested(const TCHAR* CommandLine = nullptr);
+	static bool IsPatchRequested(const TCHAR* CommandLine = nullptr);
 	static FString GetReceiptPath();
 	static FString GetUndertowReceiptPath();
 	static FString GetRookReceiptPath();
 	static FString GetSableReceiptPath();
 	static FString GetVexReceiptPath();
+	static FString GetPatchReceiptPath();
 	static FWBProductionCSNCrashInSmokeResult Run(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunUndertow(
@@ -38,6 +40,8 @@ public:
 	static FWBProductionCSNCrashInSmokeResult RunSable(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunVex(
+		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
+	static FWBProductionCSNCrashInSmokeResult RunPatch(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);
 	static FWBProductionCSNCrashInSmokeResult RunUndertowNegatedForTest(
 		const FWBProductionRuntimeBootstrapRequest& BootstrapRequest);

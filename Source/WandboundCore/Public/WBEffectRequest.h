@@ -19,7 +19,8 @@ enum class EWBGenericEffectOp : uint8
 	PreventPendingAttack,
 	RedirectPendingAttack,
 	RegisterPendingAttackHPDamageSubstitution,
-	ReplacePendingAttackDefenderFromHand
+	ReplacePendingAttackDefenderFromHand,
+	SacrificeSourceThenSummonCharacterFromDeckToSourceTile
 };
 
 enum class EWBEffectAuxiliaryCardZone : uint8

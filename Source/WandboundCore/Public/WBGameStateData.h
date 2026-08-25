@@ -252,13 +252,45 @@ struct WANDBOUNDCORE_API FWBUnitDestructionSnapshot
 	int32 NextObserverTriggerIndex = 0;
 };
 
+struct WANDBOUNDCORE_API FWBActivatedEffectSourceSnapshot
+{
+	int32 SourceUnitId = INDEX_NONE;
+	FString SourceCardId;
+	int32 ControllerPlayerId = INDEX_NONE;
+	FWBTile SourceTile = FWBTile(-1, -1);
+	bool bWasHero = false;
+	int32 BaseRLSnapshot = 0;
+	int32 CurrentRLSnapshot = 0;
+	int32 RLUsedSnapshot = 0;
+	TArray<FWBEquippedCardEntry> EquippedWands;
+};
+
+enum class EWBMandatoryDeckChoiceOrigin : uint8
+{
+	Unknown,
+	PostDestructionTrigger,
+	ActivatedEffectContinuation
+};
+
 struct WANDBOUNDCORE_API FWBPendingMandatoryDeckChoiceState
 {
 	bool bActive = false;
+	EWBMandatoryDeckChoiceOrigin Origin =
+		EWBMandatoryDeckChoiceOrigin::Unknown;
 	FString ChoiceId;
+	// Populated only for the legacy post-destruction origin.
 	FString DestructionEventId;
 	FString TriggerId;
+	FString SourceActionId;
+	FString SourceEffectFrameId;
 	int32 ControllerPlayerId = INDEX_NONE;
+	FString RequiredFaction;
+	FWBTile DestinationTile = FWBTile(-1, -1);
+	// Populated only for the post-destruction origin.
+	FWBUnitDestructionSnapshot SourceSnapshot;
+	// Populated only for the activated-effect continuation origin.
+	FWBActivatedEffectSourceSnapshot ActivatedEffectSourceSnapshot;
+	bool bApplyCSNInheritance = false;
 	TArray<FString> EligibleCardInstanceIds;
 	int32 ResumePriorityPlayerId = INDEX_NONE;
 	int32 ResumeMatchPhase = INDEX_NONE;

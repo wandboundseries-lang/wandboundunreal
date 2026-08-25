@@ -377,10 +377,15 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 
 		FWBPendingMandatoryDeckChoiceState Choice;
 		Choice.bActive = true;
+		Choice.Origin = EWBMandatoryDeckChoiceOrigin::PostDestructionTrigger;
 		Choice.ChoiceId = Event.EventId + TEXT(":") + Trigger.TriggerId;
 		Choice.DestructionEventId = Event.EventId;
 		Choice.TriggerId = Trigger.TriggerId;
 		Choice.ControllerPlayerId = Event.ControllerPlayerId;
+		Choice.RequiredFaction = Trigger.RequiredFaction;
+		Choice.DestinationTile = Event.LastTile;
+		Choice.SourceSnapshot = Event;
+		Choice.bApplyCSNInheritance = Trigger.bApplyCSNInheritance;
 		Choice.ResumePriorityPlayerId = ResumePriorityPlayerId;
 		Choice.ResumeMatchPhase = ResumeMatchPhase;
 		for (const FWBZoneCardEntry& Entry : Eligible)
@@ -481,7 +486,9 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 	Request.SelectedCardInstanceId = *SelectedInstance;
 	Request.RequiredFaction = Trigger->RequiredFaction;
 	Request.TargetTile = Event.LastTile;
-	Request.InheritanceSource = Event;
+	Request.InheritanceSource.SourceUnitId = Event.DestroyedUnitId;
+	Request.InheritanceSource.SourceCurrentRL = Event.CurrentRLSnapshot;
+	Request.InheritanceSource.EquippedWands = Event.EquippedWands;
 	Request.TransactionId = Choice.ChoiceId;
 	const FWBDeckSummonResult Summon = WBDeckSummon::SummonExactCharacterToTile(
 		State, Repository, Request);

@@ -322,6 +322,29 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 					return MakeValidationFailure(
 						Repository, TEXT("invalid_unit_replacement_definition"));
 				}
+				if (Payload.Operation == EWBGenericEffectOp::
+					SacrificeSourceThenSummonCharacterFromDeckToSourceTile
+					&& (Effect.TargetRequirement
+							!= EWBCardEffectTargetRequirement::None
+						|| Effect.SourceGate.RequiredZone
+							!= EWBCardActivationSourceZone::Board
+						|| Effect.SourceGate.Timing
+							!= EWBCardActivationTimingRequirement::NormalTurnPriority
+						|| !Effect.SourceGate.bRequiresSourceUnit
+						|| !Effect.SourceGate.bRequiresSourceUnitOwnership
+						|| !Effect.SourceGate.bOncePerTurn
+						|| Effect.SourceGate.OncePerTurnKey.IsEmpty()
+						|| Payload.RequiredSourceFaction.IsEmpty()
+						|| Payload.RequiredReplacementFaction.IsEmpty()
+						|| Payload.RequiredReplacementKind
+							!= EWBEffectReplacementCardKind::Character
+						|| Payload.InheritancePolicy != EWBEffectInheritancePolicy::
+							TransferEquippedWandsAndAddSourceCurrentRL))
+				{
+					return MakeValidationFailure(
+						Repository,
+						TEXT("invalid_activated_deck_summon_definition"));
+				}
 			}
 		}
 

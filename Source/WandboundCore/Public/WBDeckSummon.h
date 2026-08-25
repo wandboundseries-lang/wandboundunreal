@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBCardDefinitionRepository.h"
+#include "WBCSNInheritance.h"
 #include "WBGameStateData.h"
 #include "WBReplayTrace.h"
 
@@ -11,7 +12,10 @@ struct WANDBOUNDCORE_API FWBDeckSummonRequest
 	FString SelectedCardInstanceId;
 	FString RequiredFaction;
 	FWBTile TargetTile;
-	FWBUnitDestructionSnapshot InheritanceSource;
+	FWBCSNInheritanceSourceData InheritanceSource;
+	EWBCSNInheritanceWandLocation InheritanceWandLocation =
+		EWBCSNInheritanceWandLocation::ControllerDiscard;
+	FName SummonTraceKind = FName(TEXT("post_destruction_deck_summon"));
 	FString TransactionId;
 };
 

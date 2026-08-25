@@ -8,7 +8,15 @@
 enum class EWBCSNInheritanceWandLocation : uint8
 {
 	EquippedToSource,
-	ControllerDiscard
+	ControllerDiscard,
+	DetachedSourceSnapshot
+};
+
+struct WANDBOUNDCORE_API FWBCSNInheritanceSourceData
+{
+	int32 SourceUnitId = INDEX_NONE;
+	int32 SourceCurrentRL = 0;
+	TArray<FWBEquippedCardEntry> EquippedWands;
 };
 
 struct WANDBOUNDCORE_API FWBCSNInheritanceMutationRequest

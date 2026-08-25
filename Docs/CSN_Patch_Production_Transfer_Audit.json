@@ -1,0 +1,192 @@
+{
+  "audit": "CSN Patch production transfer",
+  "result": "ready",
+  "baseline": {
+    "head": "1784944335631db96c77aa32ddfbb6c3347ae55a",
+    "origin_main": "1784944335631db96c77aa32ddfbb6c3347ae55a",
+    "automation_tests": 2356,
+    "staged_files": 0
+  },
+  "card": {
+    "card_id": "char_csn_patch",
+    "public_name": "CSN Patch",
+    "kind": "character",
+    "factions": ["csn"],
+    "stats": { "hp": 12, "atk": 2, "ar": 2, "rl": 2 },
+    "movement": "orthogonal_adjacent",
+    "attack": "orthogonal_effective_ar",
+    "activation": {
+      "source_zone": "board",
+      "target_requirement": "none",
+      "timing": "normal_turn_priority",
+      "once_per_turn": true,
+      "reactable": true,
+      "operation": "sacrifice_source_then_summon_character_from_deck_to_source_tile"
+    },
+    "owner_balance_supersedes_godot_wand_tutor": true,
+    "wand_tutor_present": false
+  },
+  "authority": {
+    "definition_driven": true,
+    "core_card_id_branch": false,
+    "coordinator_owned": true,
+    "individual_coordinator_actions_atomic": true,
+    "workflow_atomic_across_choice": false,
+    "sacrifice_is_destruction": false,
+    "destruction_event_created": false,
+    "source_snapshot_before_mutation": true,
+    "activated_effect_snapshot_type": "FWBActivatedEffectSourceSnapshot",
+    "activated_effect_uses_destruction_snapshot": false,
+    "destruction_snapshot_reserved_for_genuine_destruction": true,
+    "unit_cap_checked_after_sacrifice": true,
+    "deck_shuffled": false,
+    "extra_post_summon_response": false
+  },
+  "mandatory_choice": {
+    "zero_candidates": "sacrifice_commits_without_choice_or_summon",
+    "one_candidate": "private_explicit_exact_instance_choice_required",
+    "multiple_candidates": "private_explicit_exact_instance_choice_required",
+    "stable_deck_order": true,
+    "submission_revalidated": true,
+    "sacrifice_committed_before_choice": true,
+    "stale_submission_mutates_state": false,
+    "stale_submission_keeps_valid_continuation": true,
+    "duplicate_card_ids_remain_distinct": true,
+    "opponent_candidate_visibility": false
+  },
+  "inheritance": {
+    "source": "FWBCSNInheritanceSourceData",
+    "sacrifice_conversion": "activated_effect_snapshot_to_neutral_inheritance_data",
+    "destruction_conversion": "genuine_destruction_snapshot_to_neutral_inheritance_data",
+    "exact_wand_instances_transferred": true,
+    "wand_owner_preserved": true,
+    "wand_order_deterministic": true,
+    "base_rl_adds_source_current_rl": true
+  },
+  "composition": {
+    "undertow": "inheritance_then_existing_draw",
+    "sable": "sacrifice_does_not_emit_destruction",
+    "vex": "definition_driven_aura_unchanged",
+    "rook": "shared_mandatory_choice_router_preserves_existing_semantics",
+    "hero": "terminal_cleanup_discards_exact_wands_without_choice_or_destruction",
+    "undertow_empty_deck": "submitted_summon_transaction_rolls_back_but_prior_sacrifice_remains_committed",
+    "occupied_tile": "choice_fails_closed_and_releases_exact_detached_wands_to_discard",
+    "stale_candidate": "rejected_without_mutation_then_remaining_exact_candidate_can_resolve"
+  },
+  "production": {
+    "bundle_digest": "2d5995fa766ef14396be7b06a6b00c0ce2ff3bf33326a4925e6169598baaa52e",
+    "fixture": "Data/Replay/CSNPatchFixture/match_spec.json",
+    "replay_schema": 1,
+    "receipt_fields": 8
+  },
+  "validation": {
+    "focused_patch": { "succeeded": 13, "failed": 0 },
+    "focused_assertions_minimum": 120,
+    "remediation_regressions": [
+      "Wandbound.CSNPatch.Boundaries.HeroSacrificeWandsTerminalDeterministic",
+      "Wandbound.CSNPatch.Destruction.TrueDeathGrowsSableSacrificeDoesNot",
+      "Wandbound.CSNPatch.Composition.UndertowEmptyDeckRollbackBoundary"
+    ],
+    "csn_regression": {
+      "succeeded": 85,
+      "failed": 0,
+      "breakdown": {
+        "body_double": 13,
+        "crash_in": 9,
+        "patch": 13,
+        "rook": 11,
+        "sable": 9,
+        "undertow_archivist": 16,
+        "vex": 14
+      }
+    },
+    "full_automation": {
+      "succeeded": 2369,
+      "failed": 0,
+      "warnings": 0,
+      "not_run": 0,
+      "baseline": 2356,
+      "increase": 13
+    },
+    "build_matrix": [
+      { "target": "Editor", "mode": "non_unity", "result": "succeeded", "seconds": 104.43, "actions": 137 },
+      { "target": "Game", "mode": "non_unity", "result": "succeeded", "seconds": 103.41, "actions": 126 },
+      { "target": "Editor", "mode": "default", "result": "succeeded", "seconds": 266.07, "actions": 211 },
+      { "target": "Game", "mode": "default", "result": "succeeded", "seconds": 272.68, "actions": 186 },
+      { "target": "Editor", "mode": "forced_unity", "result": "succeeded", "seconds": 336.86, "actions": 195, "adaptive_unity_disabled": true },
+      { "target": "Game", "mode": "forced_unity", "result": "succeeded", "seconds": 267.97, "actions": 170, "adaptive_unity_disabled": true }
+    ],
+    "clean_build_cook_run": {
+      "result": "succeeded",
+      "exit_code": 0,
+      "seconds": 667.79,
+      "build_actions": 397,
+      "cooked_packages_discovered": 532,
+      "packaged_runtime_packages": 459
+    },
+    "packaged_smoke": {
+      "runs": 2,
+      "exit_codes": [0, 0],
+      "fresh_replay_verified": true,
+      "generation": 1,
+      "revision": 6,
+      "accepted_records": 5,
+      "archive_sha256": "0202434248a6a54ad5395f3c58364f24cbad437c60221cbe4dea619b7e535773",
+      "receipt_sha256": "5b6f07006faf172c90b9d15dbf6ec14bbd6a688ef3cfbeb6daa5e25674083949",
+      "startup_sha256": "5aadc00dd0e67180c2d0e51374c63335b4e766a7922280d6b48b43b5de9ac047",
+      "replay_digest": "81bff6507026ce08b14301ec517e2589b4c9a91d2ea9e66c66e90d16934cfaa8",
+      "state_digest": "f8cc43a4083540a3b61b7b6482709bf67fd53f3574194c5e5845e0034281cb2f",
+      "trace_digest": "46e1d60ca1abb4251a8baa580e1078ae8c16cf8be3e6610ea77a98b282750f81",
+      "byte_identical": true,
+      "privacy_scan": "passed",
+      "processes_remaining": 0
+    }
+  },
+  "wb_action_codec": {
+    "changed": false,
+    "header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "changed_path_count": 33,
+  "changed_paths": [
+    "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "Data/Replay/CSNCrashInFixture/match_spec.json",
+    "Data/Replay/CSNRookFixture/match_spec.json",
+    "Data/Replay/CSNSableFixture/match_spec.json",
+    "Data/Replay/CSNUndertowArchivistFixture/match_spec.json",
+    "Data/Replay/CSNVexFixture/match_spec.json",
+    "Data/Replay/CSNPatchFixture/match_spec.json",
+    "Docs/CSN_Patch_Production_Transfer_Audit.md",
+    "Docs/CSN_Patch_Production_Transfer_Audit.json",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Public/WBEffectRequest.h",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBActivatedDeckSummonContinuation.h",
+    "Source/WandboundCore/Private/WBActivatedDeckSummonContinuation.cpp",
+    "Source/WandboundCore/Public/WBMandatoryDeckChoice.h",
+    "Source/WandboundCore/Private/WBMandatoryDeckChoice.cpp",
+    "Source/WandboundCore/Public/WBCSNInheritance.h",
+    "Source/WandboundCore/Private/WBCSNInheritance.cpp",
+    "Source/WandboundCore/Public/WBDeckSummon.h",
+    "Source/WandboundCore/Private/WBDeckSummon.cpp",
+    "Source/WandboundCore/Private/WBCardActivationExpansion.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBPostDestructionTrigger.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundRuntime/Public/WBProductionCSNCrashInSmoke.h",
+    "Source/WandboundRuntime/Private/WBProductionCSNCrashInSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBCSNPatchTests.cpp"
+  ],
+  "unrelated_untracked_preserved": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+    "h origin main"
+  ],
+  "staged_files": 0
+}

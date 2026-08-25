@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "match_id": "csn_rook_production_smoke_match",
-  "seed": 42043,
+  "match_id": "csn_patch_production_smoke_match",
+  "seed": 42046,
   "first_player": 0,
   "initial_draw_count": 6,
   "definition_bundle_digest": "2d5995fa766ef14396be7b06a6b00c0ce2ff3bf33326a4925e6169598baaa52e",
@@ -20,12 +20,10 @@
       "player_id": 1,
       "hero_definition_id": "crash_in_smoke_hero_csn",
       "ordered_deck": [
-        "char_csn_rook", "wand_equip_switch", "crash_in_smoke_filler",
+        "char_csn_patch", "wand_equip_switch", "crash_in_smoke_filler",
         "crash_in_smoke_filler", "crash_in_smoke_filler", "crash_in_smoke_filler",
-        "crash_in_smoke_filler", "crash_in_smoke_filler",
-        "crash_in_smoke_filler", "crash_in_smoke_filler",
-        "char_csn_undertow_archivist", "undertow_smoke_private_draw",
-        "crash_in_smoke_filler", "crash_in_smoke_filler"
+        "crash_in_smoke_filler", "char_csn_undertow_archivist",
+        "undertow_smoke_private_draw", "crash_in_smoke_filler"
       ]
     }
   ],

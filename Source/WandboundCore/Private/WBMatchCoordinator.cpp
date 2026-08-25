@@ -10,6 +10,8 @@
 #include "WBEffectRunner.h"
 #include "WBHybridSummon.h"
 #include "WBMarkerResolution.h"
+#include "WBActivatedDeckSummonContinuation.h"
+#include "WBMandatoryDeckChoice.h"
 #include "WBNPCPhaseResolution.h"
 #include "WBPostDestructionTrigger.h"
 #include "WBResonanceOverflow.h"
@@ -1321,7 +1323,7 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 	if (InState.HasPendingMandatoryDeckChoice())
 	{
 		for (const FString& ActionId :
-			WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(
+			WBMandatoryDeckChoice::EnumerateLegalActionIds(
 				InState, Repository))
 		{
 			FWBMatchLegalAction Action;
@@ -1942,8 +1944,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				WorkingState.PendingMandatoryDeckChoice.ResumePriorityPlayerId;
 			const int32 ResumePhase =
 				WorkingState.PendingMandatoryDeckChoice.ResumeMatchPhase;
-			const FWBPostDestructionTriggerResult ChoiceResult =
-				WBPostDestructionTrigger::SubmitChoice(
+			const FWBMandatoryDeckChoiceResult ChoiceResult =
+				WBMandatoryDeckChoice::Submit(
 					WorkingState, Repository, ActionId);
 			bActionApplied = ChoiceResult.bOk;
 			FailureReason = ChoiceResult.Reason;
@@ -2664,6 +2666,22 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 
 		if (bResolutionSucceeded)
 		{
+			const FWBActivatedDeckSummonContinuationResult Continuation =
+				WBActivatedDeckSummonContinuation::Resolve(
+					WorkingState,
+					Repository,
+					Frame.Command,
+					Frame.ActivationActionId,
+					Frame.FrameId,
+					WorkingState.CurrentPlayer,
+					static_cast<int32>(EWBMatchLoopPhase::Action));
+			bResolutionSucceeded = Continuation.bOk;
+			ResolutionFailure = Continuation.Reason;
+			OutTraceEvents.Append(Continuation.TraceEvents);
+		}
+
+		if (bResolutionSucceeded)
+		{
 			for (const FWBGenericEffectPayload& Payload :
 				Frame.Command.EffectRequest.Payloads)
 			{
@@ -2764,6 +2782,16 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 		WorkingState.ClearReactionWindow();
 		WorkingState.Phase = EWBGamePhase::NormalTurn;
 		WorkingPhase = EWBMatchLoopPhase::GameOver;
+		OutReason.Reset();
+		return true;
+	}
+	if (WorkingState.HasPendingMandatoryDeckChoice())
+	{
+		WorkingState.ClearReactionWindow();
+		WorkingState.PriorityPlayer =
+			WorkingState.PendingMandatoryDeckChoice.ControllerPlayerId;
+		WorkingState.Phase = EWBGamePhase::NormalTurn;
+		WorkingPhase = EWBMatchLoopPhase::MandatoryChoice;
 		OutReason.Reset();
 		return true;
 	}

@@ -1354,6 +1354,13 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 			}
 			break;
 		}
+		case EWBGenericEffectOp::SacrificeSourceThenSummonCharacterFromDeckToSourceTile:
+		{
+			// Coordinator resolution owns the multi-decision continuation after
+			// the generic pending-effect reaction window closes.
+			PayloadResult.bOk = true;
+			break;
+		}
 		default:
 			Result.bOk = false;
 			Result.Reason = TEXT("unknown_effect_payload_operation");

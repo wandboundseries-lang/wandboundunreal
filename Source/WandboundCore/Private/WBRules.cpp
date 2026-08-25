@@ -1253,6 +1253,49 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			}
 			break;
 		}
+		case EWBGenericEffectOp::SacrificeSourceThenSummonCharacterFromDeckToSourceTile:
+		{
+			if (Request.Target.TargetUnitId != -1
+				|| Request.Source.SourceUnitId < 0
+				|| Payload.RequiredSourceFaction.IsEmpty()
+				|| Payload.RequiredReplacementFaction.IsEmpty()
+				|| Payload.RequiredReplacementKind
+					!= EWBEffectReplacementCardKind::Character
+				|| Payload.InheritancePolicy != EWBEffectInheritancePolicy::
+					TransferEquippedWandsAndAddSourceCurrentRL)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("activated_deck_summon_metadata_invalid"));
+			}
+			const FWBUnitState* Source = State.GetUnitById(
+				Request.Source.SourceUnitId);
+			if (Source == nullptr || Source->bDefeated
+				|| !Source->IsUnitOnBoard())
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("activated_deck_summon_source_unavailable"));
+			}
+			if (Source->OwnerId != Request.Source.PlayerId
+				|| Source->CardId != Request.Source.SourceCardId)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("activated_deck_summon_source_mismatch"));
+			}
+			if (!Repository.RepositoryId.IsEmpty())
+			{
+				const FWBCardDefinitionRepositoryLookupResult SourceDefinition =
+					WBCardDefinitionRepository::FindCardById(
+						Repository, Source->CardId);
+				if (!SourceDefinition.bFound
+					|| !SourceDefinition.Definition.PublicFactions.Contains(
+						Payload.RequiredSourceFaction))
+				{
+					return FWBActionQueryResult::Deny(
+						TEXT("activated_deck_summon_source_faction_mismatch"));
+				}
+			}
+			break;
+		}
 		default:
 			return FWBActionQueryResult::Deny(TEXT("unknown_effect_payload_operation"));
 		}

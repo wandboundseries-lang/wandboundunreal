@@ -91,6 +91,27 @@ FWBCSNInheritanceMutationResult WBCSNInheritance::Apply(
 		}
 		else
 		{
+			if (Request.ExpectedWandLocation
+				== EWBCSNInheritanceWandLocation::DetachedSourceSnapshot)
+			{
+				FWBZoneCardEntry Existing;
+				if (WBCardZoneState::FindCardByInstanceId(
+					Zones, Snapshot.Card.InstanceId, Existing)
+					|| Zones.EquippedCards.ContainsByPredicate(
+						[&Snapshot](const FWBEquippedCardEntry& Entry)
+						{
+							return Entry.Card.InstanceId
+								== Snapshot.Card.InstanceId;
+						}))
+				{
+					return MakeCSNInheritanceFailure(
+						TEXT("inherited_wand_already_zoned"));
+				}
+				FWBEquippedCardEntry Equipped = Snapshot;
+				Equipped.EquippedToUnitId = Request.TargetUnitId;
+				Zones.EquippedCards.Add(MoveTemp(Equipped));
+				continue;
+			}
 			FWBPlayerCardZoneState* PlayerZones =
 				WBCardZoneState::FindMutablePlayerZones(
 					Zones, Request.ControllerPlayerId);

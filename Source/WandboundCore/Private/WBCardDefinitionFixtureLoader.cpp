@@ -1010,6 +1010,60 @@ void ParsePayload(
 			EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution;
 		return;
 	}
+	if (Type == TEXT("sacrifice_source_then_summon_character_from_deck_to_source_tile"))
+	{
+		ValidateKnownFields(
+			Object,
+			{
+				TEXT("type"), TEXT("required_source_faction"),
+				TEXT("required_summon_faction"), TEXT("summon_kind"),
+				TEXT("inheritance_policy")
+			},
+			Result, CardId, EffectId, Path);
+		OutPayload.Operation = EWBGenericEffectOp::
+			SacrificeSourceThenSummonCharacterFromDeckToSourceTile;
+		TryReadRequiredString(
+			Object, TEXT("required_source_faction"), Result,
+			TEXT("activated_deck_summon_metadata_invalid"), CardId,
+			EffectId, Path, OutPayload.RequiredSourceFaction);
+		TryReadRequiredString(
+			Object, TEXT("required_summon_faction"), Result,
+			TEXT("activated_deck_summon_metadata_invalid"), CardId,
+			EffectId, Path, OutPayload.RequiredReplacementFaction);
+		FString Value;
+		if (TryReadRequiredString(
+			Object, TEXT("summon_kind"), Result,
+			TEXT("activated_deck_summon_metadata_invalid"), CardId,
+			EffectId, Path, Value)
+			&& Value == TEXT("character"))
+		{
+			OutPayload.RequiredReplacementKind =
+				EWBEffectReplacementCardKind::Character;
+		}
+		else if (!Value.IsEmpty())
+		{
+			AddDiagnostic(Result,
+				TEXT("activated_deck_summon_metadata_invalid"), CardId,
+				EffectId, JoinPath(Path, TEXT("summon_kind")));
+		}
+		Value.Reset();
+		if (TryReadRequiredString(
+			Object, TEXT("inheritance_policy"), Result,
+			TEXT("activated_deck_summon_metadata_invalid"), CardId,
+			EffectId, Path, Value)
+			&& Value == TEXT("transfer_wands_add_source_current_rl"))
+		{
+			OutPayload.InheritancePolicy = EWBEffectInheritancePolicy::
+				TransferEquippedWandsAndAddSourceCurrentRL;
+		}
+		else if (!Value.IsEmpty())
+		{
+			AddDiagnostic(Result,
+				TEXT("activated_deck_summon_metadata_invalid"), CardId,
+				EffectId, JoinPath(Path, TEXT("inheritance_policy")));
+		}
+		return;
+	}
 
 	AddDiagnostic(Result, TEXT("unsupported_payload_type"), CardId, EffectId, Path);
 }

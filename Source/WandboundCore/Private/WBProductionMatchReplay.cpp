@@ -368,12 +368,22 @@ FString CanonicalGameState(const FWBGameStateData& State)
 	{
 		const FWBPendingMandatoryDeckChoiceState& Choice =
 			State.PendingMandatoryDeckChoice;
+		AppendInt(
+			Out,
+			TEXT("mandatory_choice.origin"),
+			static_cast<int32>(Choice.Origin));
 		AppendString(Out, TEXT("mandatory_choice.id"), Choice.ChoiceId);
 		AppendString(
 			Out,
 			TEXT("mandatory_choice.event"),
 			Choice.DestructionEventId);
 		AppendString(Out, TEXT("mandatory_choice.trigger"), Choice.TriggerId);
+		AppendString(
+			Out, TEXT("mandatory_choice.source_action"),
+			Choice.SourceActionId);
+		AppendString(
+			Out, TEXT("mandatory_choice.source_frame"),
+			Choice.SourceEffectFrameId);
 		AppendInt(
 			Out,
 			TEXT("mandatory_choice.controller"),
@@ -386,6 +396,84 @@ FString CanonicalGameState(const FWBGameStateData& State)
 			Out,
 			TEXT("mandatory_choice.resume_phase"),
 			Choice.ResumeMatchPhase);
+		AppendString(
+			Out, TEXT("mandatory_choice.required_faction"),
+			Choice.RequiredFaction);
+		AppendTile(
+			Out, TEXT("mandatory_choice.destination"),
+			Choice.DestinationTile);
+		AppendBool(
+			Out, TEXT("mandatory_choice.inheritance"),
+			Choice.bApplyCSNInheritance);
+		const bool bActivatedEffectContinuation = Choice.Origin
+			== EWBMandatoryDeckChoiceOrigin::ActivatedEffectContinuation;
+		const int32 SourceUnitId = bActivatedEffectContinuation
+			? Choice.ActivatedEffectSourceSnapshot.SourceUnitId
+			: Choice.SourceSnapshot.DestroyedUnitId;
+		const FString& SourceCardId = bActivatedEffectContinuation
+			? Choice.ActivatedEffectSourceSnapshot.SourceCardId
+			: Choice.SourceSnapshot.DestroyedCardId;
+		const int32 SourceControllerPlayerId = bActivatedEffectContinuation
+			? Choice.ActivatedEffectSourceSnapshot.ControllerPlayerId
+			: Choice.SourceSnapshot.ControllerPlayerId;
+		const FWBTile& SourceTile = bActivatedEffectContinuation
+			? Choice.ActivatedEffectSourceSnapshot.SourceTile
+			: Choice.SourceSnapshot.LastTile;
+		const int32 SourceBaseRL = bActivatedEffectContinuation
+			? Choice.ActivatedEffectSourceSnapshot.BaseRLSnapshot
+			: Choice.SourceSnapshot.BaseRLSnapshot;
+		const int32 SourceCurrentRL = bActivatedEffectContinuation
+			? Choice.ActivatedEffectSourceSnapshot.CurrentRLSnapshot
+			: Choice.SourceSnapshot.CurrentRLSnapshot;
+		const int32 SourceRLUsed = bActivatedEffectContinuation
+			? Choice.ActivatedEffectSourceSnapshot.RLUsedSnapshot
+			: Choice.SourceSnapshot.RLUsedSnapshot;
+		const TArray<FWBEquippedCardEntry>& SourceWands =
+			bActivatedEffectContinuation
+				? Choice.ActivatedEffectSourceSnapshot.EquippedWands
+				: Choice.SourceSnapshot.EquippedWands;
+		AppendInt(
+			Out, TEXT("mandatory_choice.source_unit"),
+			SourceUnitId);
+		AppendString(
+			Out, TEXT("mandatory_choice.source_card"),
+			SourceCardId);
+		AppendInt(
+			Out, TEXT("mandatory_choice.source_controller"),
+			SourceControllerPlayerId);
+		AppendTile(
+			Out, TEXT("mandatory_choice.source_tile"),
+			SourceTile);
+		AppendInt(
+			Out, TEXT("mandatory_choice.source_base_rl"),
+			SourceBaseRL);
+		AppendInt(
+			Out, TEXT("mandatory_choice.source_current_rl"),
+			SourceCurrentRL);
+		AppendInt(
+			Out, TEXT("mandatory_choice.source_rl_used"),
+			SourceRLUsed);
+		AppendInt(
+			Out, TEXT("mandatory_choice.source_wand_count"),
+			SourceWands.Num());
+		for (const FWBEquippedCardEntry& Wand : SourceWands)
+		{
+			AppendString(
+				Out, TEXT("mandatory_choice.source_wand.instance"),
+				Wand.Card.InstanceId);
+			AppendString(
+				Out, TEXT("mandatory_choice.source_wand.card"),
+				Wand.Card.CardId);
+			AppendInt(
+				Out, TEXT("mandatory_choice.source_wand.owner"),
+				Wand.Card.OwnerPlayerId);
+			AppendString(
+				Out, TEXT("mandatory_choice.source_wand.slot"),
+				Wand.SlotId);
+			AppendInt(
+				Out, TEXT("mandatory_choice.source_wand.order"),
+				Wand.EquipOrder);
+		}
 		AppendInt(
 			Out,
 			TEXT("mandatory_choice.option_count"),
