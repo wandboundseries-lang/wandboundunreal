@@ -26,6 +26,20 @@
     },
     {
       "schema_version": 1,
+      "card_id": "blackcoin_smoke_attacker",
+      "public_name": "Blackcoin Smoke Attacker",
+      "kind": "character",
+      "public_text": "Production smoke participant.",
+      "public_category": "Character",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 10, "atk": 4, "ar": 8, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 }
+    },
+    {
+      "schema_version": 1,
       "card_id": "char_csn_sable",
       "public_name": "CSN Sable",
       "kind": "character",
@@ -194,6 +208,39 @@
       "stats": { "hp": 13, "atk": 2, "ar": 2, "rl": 2 },
       "movement": { "pattern": "orthogonal_adjacent" },
       "attack": { "pattern": "orthogonal_line", "range": 2 }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_marrow_blackcoin_bouncer",
+      "public_name": "Marrow Blackcoin Bouncer",
+      "kind": "character",
+      "public_text": "Once per turn, when this unit is attacked, flip a coin. If heads, the attacker takes the damage instead. If tails, this unit takes that damage +3.",
+      "public_category": "Character",
+      "factions": ["marrow_syndicate"],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 15, "atk": 2, "ar": 2, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 2 },
+      "pre_damage_attack_triggers": [
+        {
+          "trigger_id": "when_attacked_coin_reflect_or_bonus",
+          "source_role": "current_defender",
+          "timing": "after_pre_hit_before_calculate_damage",
+          "mandatory": true,
+          "once_per_turn": true,
+          "random_branch": {
+            "kind": "coin_flip",
+            "heads": {
+              "operation": "reflect_pending_battle_hit_to_attacker"
+            },
+            "tails": {
+              "operation": "add_pending_attack_damage",
+              "amount": 3
+            }
+          }
+        }
+      ]
     },
     {
       "schema_version": 1,

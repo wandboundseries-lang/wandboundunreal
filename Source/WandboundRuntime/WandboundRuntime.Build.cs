@@ -196,5 +196,8 @@ public class WandboundRuntime : ModuleRules
 		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/Replay/CSNPatchFixture/match_spec.json",
 			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/MarrowBlackcoinBouncerFixture/match_spec.json",
+			StagedFileType.NonUFS);
 	}
 }

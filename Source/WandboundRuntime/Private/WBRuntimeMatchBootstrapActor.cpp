@@ -19,6 +19,7 @@
 #include "WBProductionHybridReplacementSmoke.h"
 #include "WBProductionMatchReplayRuntime.h"
 #include "WBProductionMatchReplaySmoke.h"
+#include "WBProductionMarrowBlackcoinBouncerSmoke.h"
 #include "WBProductionNPCReactionCombatSmoke.h"
 #include "WBProductionPendingAttackRedirectSmoke.h"
 #include "WBProductionCSNBodyDoubleSmoke.h"
@@ -177,7 +178,25 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionCSNCrashInSmoke::IsPatchRequested())
+		if (WBProductionMarrowBlackcoinBouncerSmoke::IsRequested())
+		{
+			const FWBProductionMarrowBlackcoinBouncerSmokeResult BlackcoinSmoke =
+				WBProductionMarrowBlackcoinBouncerSmoke::Run(
+					PendingBootstrapRequest);
+			if (!BlackcoinSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound Marrow Blackcoin Bouncer smoke failed: %s"),
+					*BlackcoinSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				BlackcoinSmoke.bOk ? 0 : 38,
+				TEXT("WandboundProductionMarrowBlackcoinBouncerSmoke"));
+		}
+		else if (WBProductionCSNCrashInSmoke::IsPatchRequested())
 		{
 			const FWBProductionCSNCrashInSmokeResult PatchSmoke =
 				WBProductionCSNCrashInSmoke::RunPatch(PendingBootstrapRequest);

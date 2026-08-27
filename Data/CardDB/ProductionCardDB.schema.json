@@ -193,6 +193,12 @@
             "$ref": "#/$defs/after_damage_trigger"
           }
         },
+        "pre_damage_attack_triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pre_damage_attack_trigger"
+          }
+        },
         "after_csn_inheritance_triggers": {
           "type": "array",
           "items": {
@@ -268,6 +274,53 @@
         },
         "once_per_turn_per_opposing_unit": {
           "type": "boolean"
+        }
+      }
+    },
+    "pre_damage_attack_trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trigger_id",
+        "source_role",
+        "timing",
+        "mandatory",
+        "once_per_turn",
+        "random_branch"
+      ],
+      "properties": {
+        "trigger_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "source_role": { "const": "current_defender" },
+        "timing": { "const": "after_pre_hit_before_calculate_damage" },
+        "mandatory": { "const": true },
+        "once_per_turn": { "const": true },
+        "random_branch": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "heads", "tails"],
+          "properties": {
+            "kind": { "const": "coin_flip" },
+            "heads": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["operation"],
+              "properties": {
+                "operation": { "const": "reflect_pending_battle_hit_to_attacker" }
+              }
+            },
+            "tails": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["operation", "amount"],
+              "properties": {
+                "operation": { "const": "add_pending_attack_damage" },
+                "amount": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
         }
       }
     },

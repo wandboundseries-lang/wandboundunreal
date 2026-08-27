@@ -196,6 +196,7 @@ private:
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		EWBReactionWindowKind Kind,
 		int32 OriginatingPlayerId,
 		const FString& SourceActionId,
@@ -208,6 +209,7 @@ private:
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		int32 PassingPlayerId,
 		bool bAutomatic,
 		TArray<FWBTraceEvent>& OutTraceEvents,
@@ -217,6 +219,7 @@ private:
 		EWBMatchLoopPhase& WorkingPhase,
 		const FWBMatchLegalAction& Action,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		int32& WorkingNextPendingEffectSequence,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
@@ -224,12 +227,14 @@ private:
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 	bool AdvanceReactionAfterReact(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		int32 ReactingPlayerId,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
@@ -237,6 +242,7 @@ private:
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 	bool HasLegalReactForPriority(
@@ -247,12 +253,14 @@ private:
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 	bool AdvanceAttackContinuation(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,
 		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
 

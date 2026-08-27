@@ -91,6 +91,7 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 RetryCount = -1;
 	bool bHeroUnit = false;
 	int32 RandomSeed = -1;
+	FName RandomOutcome;
 	int32 CardCount = -1;
 	FName MatchPhase;
 	FName ReactionWindowKind;

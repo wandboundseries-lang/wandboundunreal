@@ -7,6 +7,7 @@
 #include "WBCardLifecycle.h"
 #include "WBCardZoneState.h"
 #include "WBDeathResolution.h"
+#include "WBDeterministicRandom.h"
 #include "WBEffectRunner.h"
 #include "WBHybridSummon.h"
 #include "WBMarkerResolution.h"
@@ -14,6 +15,7 @@
 #include "WBMandatoryDeckChoice.h"
 #include "WBNPCPhaseResolution.h"
 #include "WBPostDestructionTrigger.h"
+#include "WBPreDamageAttackTrigger.h"
 #include "WBResonanceOverflow.h"
 #include "WBRules.h"
 
@@ -171,9 +173,7 @@ bool ZoneEntryLess(const FWBZoneCardEntry& A, const FWBZoneCardEntry& B)
 
 uint32 NextMatchRandom(uint32& InOutRandomState)
 {
-	InOutRandomState =
-		InOutRandomState * 1664525u + 1013904223u;
-	return InOutRandomState;
+	return WBDeterministicRandom::NextUInt(InOutRandomState);
 }
 
 void ShuffleDeckDeterministically(
@@ -1780,6 +1780,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 					WorkingState,
 					WorkingPhase,
 					WorkingPendingEffects,
+					WorkingRandomState,
 					PlayerId,
 					false,
 					WorkingTraceEvents,
@@ -1911,6 +1912,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				WorkingPhase,
 				*SelectedAction,
 				WorkingPendingEffects,
+				WorkingRandomState,
 				WorkingNextPendingEffectSequence,
 				WorkingTraceEvents,
 				FailureReason);
@@ -1988,6 +1990,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 					WorkingState,
 					WorkingPhase,
 					WorkingPendingEffects,
+					WorkingRandomState,
 					WorkingTraceEvents,
 					FailureReason);
 			}
@@ -1998,6 +2001,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 					WorkingState,
 					WorkingPhase,
 					WorkingPendingEffects,
+					WorkingRandomState,
 					PendingReactionKind,
 					PlayerId,
 					ActionId,
@@ -2013,6 +2017,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 						WorkingState,
 						WorkingPhase,
 						WorkingPendingEffects,
+						WorkingRandomState,
 						WorkingTraceEvents,
 						FailureReason);
 				}
@@ -2292,6 +2297,7 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 	FWBGameStateData& WorkingState,
 	EWBMatchLoopPhase& WorkingPhase,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	const EWBReactionWindowKind Kind,
 	const int32 OriginatingPlayerId,
 	const FString& SourceActionId,
@@ -2379,6 +2385,7 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 		WorkingState,
 		WorkingPhase,
 		WorkingPendingEffects,
+		WorkingRandomState,
 		OutTraceEvents,
 		OutReason);
 }
@@ -2387,6 +2394,7 @@ bool WBMatchCoordinator::ApplyReactionPass(
 	FWBGameStateData& WorkingState,
 	EWBMatchLoopPhase& WorkingPhase,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	const int32 PassingPlayerId,
 	const bool bAutomatic,
 	TArray<FWBTraceEvent>& OutTraceEvents,
@@ -2428,6 +2436,7 @@ bool WBMatchCoordinator::ApplyReactionPass(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,
+			WorkingRandomState,
 			OutTraceEvents,
 			OutReason);
 	}
@@ -2444,6 +2453,7 @@ bool WBMatchCoordinator::BeginPendingEffectActivation(
 	EWBMatchLoopPhase& WorkingPhase,
 	const FWBMatchLegalAction& Action,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	int32& WorkingNextPendingEffectSequence,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
@@ -2599,6 +2609,7 @@ bool WBMatchCoordinator::BeginPendingEffectActivation(
 		WorkingState,
 		WorkingPhase,
 		WorkingPendingEffects,
+		WorkingRandomState,
 		OutTraceEvents,
 		OutReason);
 }
@@ -2607,6 +2618,7 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 	FWBGameStateData& WorkingState,
 	EWBMatchLoopPhase& WorkingPhase,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
@@ -2829,6 +2841,7 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,
+			WorkingRandomState,
 			OutTraceEvents,
 			OutReason);
 	}
@@ -2844,6 +2857,7 @@ bool WBMatchCoordinator::AdvanceReactionAfterReact(
 	FWBGameStateData& WorkingState,
 	EWBMatchLoopPhase& WorkingPhase,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	const int32 ReactingPlayerId,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
@@ -2873,6 +2887,7 @@ bool WBMatchCoordinator::AdvanceReactionAfterReact(
 		WorkingState,
 		WorkingPhase,
 		WorkingPendingEffects,
+		WorkingRandomState,
 		OutTraceEvents,
 		OutReason);
 }
@@ -2881,6 +2896,7 @@ bool WBMatchCoordinator::ApplyForcedReactionPasses(
 	FWBGameStateData& WorkingState,
 	EWBMatchLoopPhase& WorkingPhase,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
@@ -2908,6 +2924,7 @@ bool WBMatchCoordinator::ApplyForcedReactionPasses(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,
+			WorkingRandomState,
 			WorkingState.PriorityPlayer,
 			true,
 			OutTraceEvents,
@@ -2924,6 +2941,7 @@ bool WBMatchCoordinator::CloseReactionWindow(
 	FWBGameStateData& WorkingState,
 	EWBMatchLoopPhase& WorkingPhase,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
@@ -2953,6 +2971,7 @@ bool WBMatchCoordinator::CloseReactionWindow(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,
+			WorkingRandomState,
 			OutTraceEvents,
 			OutReason);
 	}
@@ -2962,6 +2981,7 @@ bool WBMatchCoordinator::CloseReactionWindow(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,
+			WorkingRandomState,
 			OutTraceEvents,
 			OutReason);
 	}
@@ -2976,6 +2996,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 	FWBGameStateData& WorkingState,
 	EWBMatchLoopPhase& WorkingPhase,
 	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
@@ -3046,6 +3067,8 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 			{
 			case EWBAttackContinuationStage::CalculateDamage:
 				return FName(TEXT("calculate_damage"));
+			case EWBAttackContinuationStage::AutomaticPreDamageModifiers:
+				return FName(TEXT("automatic_pre_damage_modifiers"));
 			case EWBAttackContinuationStage::SubstituteDamage:
 				return FName(TEXT("substitute_damage"));
 			case EWBAttackContinuationStage::ApplyDamage:
@@ -3072,13 +3095,29 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				AddStageTrace(FName(TEXT("attack_continuation_cancelled")), FName(TEXT("pre_hit")));
 				return Complete();
 			}
-			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::CalculateDamage;
+			WorkingState.PendingAttack.Stage = bPreventedBeforeDamage
+				? EWBAttackContinuationStage::CalculateDamage
+				: EWBAttackContinuationStage::AutomaticPreDamageModifiers;
 			if (!bPreventedBeforeDamage)
 			{
 				AddStageTrace(
 					FName(TEXT("attack_damage_started")),
 					FName(TEXT("calculate_damage")));
 			}
+			break;
+		}
+
+		case EWBAttackContinuationStage::AutomaticPreDamageModifiers:
+		{
+			const FWBPreDamageAttackTriggerResult TriggerResult =
+				WBPreDamageAttackTrigger::Resolve(
+					WorkingState, Repository, WorkingRandomState);
+			if (!TriggerResult.bOk)
+			{
+				OutReason = TriggerResult.Reason;
+				return false;
+			}
+			OutTraceEvents.Append(TriggerResult.TraceEvents);
 			break;
 		}
 
@@ -3209,6 +3248,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				WorkingState,
 				WorkingPhase,
 				WorkingPendingEffects,
+				WorkingRandomState,
 				EWBReactionWindowKind::PostHit,
 				WorkingState.PendingAttack.AttackingPlayerId,
 				WorkingState.PendingAttack.DeclarationActionId,
@@ -3242,7 +3282,8 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				FName(TEXT("attack_counter_eligibility_evaluated")),
 				FName(TEXT("counter_eligibility")));
 			if (WorkingState.PendingAttack.bCounter
-				|| WorkingState.PendingAttack.bFrozenBroken)
+				|| WorkingState.PendingAttack.bFrozenBroken
+				|| WorkingState.PendingAttack.bCounterSuppressedByPendingHitTransform)
 			{
 				return Complete();
 			}
@@ -3273,6 +3314,11 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				WorkingState.PendingAttack.bDamageResolved = false;
 				WorkingState.PendingAttack.bPostHitCompleted = false;
 				WorkingState.PendingAttack.bFrozenBroken = false;
+				WorkingState.PendingAttack.bAutomaticPreDamageModifiersProcessed = false;
+				WorkingState.PendingAttack.bPendingBattleHitReflectedToAttacker = false;
+				WorkingState.PendingAttack.bCounterSuppressedByPendingHitTransform = false;
+				WorkingState.PendingAttack.PendingHitTransformSourceUnitId = INDEX_NONE;
+				WorkingState.PendingAttack.RawDamageModifier = 0;
 				WorkingState.PendingAttack.DamageCalculation = {};
 				WorkingState.PendingAttack.DamageSubstitution = {};
 				WorkingState.PendingAttack.FinalDamageRecipientUnitId = INDEX_NONE;
@@ -3291,6 +3337,7 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				WorkingState,
 				WorkingPhase,
 				WorkingPendingEffects,
+				WorkingRandomState,
 				EWBReactionWindowKind::PreHit,
 				WorkingState.PendingAttack.AttackingPlayerId,
 				WorkingState.PendingAttack.DeclarationActionId,
@@ -3535,6 +3582,7 @@ bool WBMatchCoordinator::ResumeNPCPhaseAndTurnTransition(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,
+			WorkingRandomState,
 			EWBReactionWindowKind::PreHit,
 			-1,
 			WorkingState.PendingAttack.DeclarationActionId,
@@ -3554,6 +3602,7 @@ bool WBMatchCoordinator::ResumeNPCPhaseAndTurnTransition(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,
+			WorkingRandomState,
 			OutTraceEvents,
 			OutReason))
 		{

@@ -1,0 +1,188 @@
+{
+  "audit_id": "marrow_blackcoin_bouncer_production_transfer",
+  "result": "ready",
+  "baseline": {
+    "commit": "13259e6dc484ada002e2c0c510aa50006e1211ec",
+    "head_matched_origin_main": true,
+    "automation_succeeded": 2369,
+    "automation_failed": 0
+  },
+  "card": {
+    "card_id": "char_marrow_blackcoin_bouncer",
+    "public_name": "Marrow Blackcoin Bouncer",
+    "faction": "marrow_syndicate",
+    "hp": 15,
+    "atk": 2,
+    "ar": 2,
+    "rl": 3,
+    "public_text": "Once per turn, when this unit is attacked, flip a coin. If heads, the attacker takes the damage instead. If tails, this unit takes that damage +3."
+  },
+  "godot_audit": {
+    "card_source": "Reference/GodotProject/godotcanon/scripts/data/CardDB/characters.json",
+    "rules_source": "Reference/GodotProject/godotcanon/scripts/sim/rules.gd",
+    "orchestration_source": "Reference/GodotProject/godotcanon/autoload/Game.gd",
+    "rules_symbols": [
+      "pending_attack_coin_redirect_passive",
+      "apply_pending_attack_damage_coin_redirect"
+    ],
+    "orchestration_symbols": [
+      "_pending_attack_coin_redirect_passive",
+      "_resolve_pending_attack_coin_redirect_result",
+      "_maybe_apply_pending_attack_damage_coin_redirect_with_visual",
+      "_advance_pending_attack"
+    ],
+    "files_modified": false
+  },
+  "owner_supersession": {
+    "once_per_turn": true,
+    "scope": "exact_source_unit_instance",
+    "consume_when": "eligible_mandatory_coin_outcome_generated"
+  },
+  "generic_authority": {
+    "definition_type": "FWBPreDamageAttackTriggerDefinition",
+    "continuation_stage": "AutomaticPreDamageModifiers",
+    "timing": "after_pre_hit_before_calculate_damage",
+    "source_role": "current_defender",
+    "passive_eligibility": "WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive",
+    "processed_once": true,
+    "card_id_branches": false
+  },
+  "randomness": {
+    "authority": "coordinator_private_match_state",
+    "implementation": "WBDeterministicRandom",
+    "deterministic_from_match_seed": true,
+    "public_outcome_only": true,
+    "public_seed": false,
+    "public_state": false,
+    "player_override": false
+  },
+  "heads": {
+    "operation": "reflect_pending_battle_hit_to_attacker",
+    "new_attack": false,
+    "additional_attack_spent": false,
+    "geometry_revalidation": false,
+    "second_pre_hit": false,
+    "recursive_trigger": false,
+    "blackcoin_counter": false,
+    "battle_damage": true,
+    "canonical_death": true
+  },
+  "tails": {
+    "operation": "add_pending_raw_attack_damage",
+    "amount": 3,
+    "separate_effect_damage": false,
+    "before_armor": true,
+    "battle_damage": true
+  },
+  "composition": {
+    "crash_in_current_defender_revalidated": true,
+    "body_double_revalidated_against_hit_unit": true,
+    "counter_shared_pipeline": true,
+    "npc_shared_pipeline": true,
+    "after_damage_roles": {
+      "heads_attacker": "original_attacker",
+      "heads_hit_unit": "original_attacker",
+      "heads_final_damage_recipient": "original_attacker",
+      "heads_original_defender": "blackcoin_source"
+    }
+  },
+  "production_data": {
+    "bundle_digest": "8ee7e358c940121a115629b59c4a185216b9a3595ff8ac4510599640c9f73558",
+    "fixture_match_spec_digest": "94d202391bd226bae5a655b53e0996767546b432d250e87cf74e7e5f8c40ebb3"
+  },
+  "replay": {
+    "schema_version": 1,
+    "receipt_fields": 8,
+    "accepted_records": 10,
+    "final_generation": 1,
+    "final_revision": 11,
+    "replay_digest": "81545ec7b4a890e4f9bd5d99ef74db5b2ae8c0a9ceed923d3dbb902a513006b2",
+    "final_state_digest": "bcb2212de6df7a04910163441bc72e87d21cbe4cd476645d0c8941eed7a9d1bb",
+    "final_trace_digest": "c12a4fe0dadb3c505ac766f165852ec770168e049529827c2d9c1e73380a48b7"
+  },
+  "packaged_smoke": {
+    "runs": 2,
+    "both_exit_zero": true,
+    "byte_identical": true,
+    "archive_sha256": "a82348c03ec96839dd3464cdaaf8dfafd650022f1c60dcb21fb7818299454873",
+    "receipt_sha256": "c116bc2f8fa3fcd26b4d983d2cf0458bc1ae3f07023f1be8d1903737ed93d514",
+    "startup_json_sha256": "6d59f8b2e7c3c15b6d911c1df557b59a78f5f7597872354082b66a9ce507d030",
+    "fresh_replay_verified": true,
+    "privacy_verified": true,
+    "remaining_processes": 0
+  },
+  "validation": {
+    "focused": { "succeeded": 13, "failed": 0 },
+    "csn_regressions": { "succeeded": 85, "failed": 0 },
+    "full_automation": {
+      "succeeded": 2382,
+      "failed": 0,
+      "warnings": 0,
+      "not_run": 0
+    },
+    "builds": [
+      { "target": "Editor", "mode": "non_unity", "compiled_actions": 121, "seconds": 157.98, "result": "succeeded" },
+      { "target": "Game", "mode": "non_unity", "compiled_actions": 279, "seconds": 498.58, "result": "succeeded" },
+      { "target": "Editor", "mode": "default", "compiled_actions": 5, "seconds": 33.42, "result": "succeeded" },
+      { "target": "Game", "mode": "default", "compiled_actions": 9, "seconds": 169.42, "result": "succeeded" },
+      { "target": "Editor", "mode": "forced_unity_rebuild", "compiled_actions": 211, "seconds": 627.58, "result": "succeeded" },
+      { "target": "Game", "mode": "forced_unity_rebuild", "compiled_actions": 186, "seconds": 466.09, "result": "succeeded" }
+    ],
+    "clean_build_cook_run": {
+      "result": "succeeded",
+      "total_seconds": 825.56,
+      "cook_errors": 0,
+      "cook_warnings": 0
+    },
+    "diff_check": "clean"
+  },
+  "action_codec": {
+    "changed": false,
+    "header_git_blob_sha1": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "source_git_blob_sha1": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "changed_paths": [
+    "Data/CardDB/Production/CSNCrashIn/cards.json",
+    "Data/CardDB/ProductionCardDB.schema.json",
+    "Data/Replay/CSNCrashInFixture/match_spec.json",
+    "Data/Replay/CSNPatchFixture/match_spec.json",
+    "Data/Replay/CSNRookFixture/match_spec.json",
+    "Data/Replay/CSNSableFixture/match_spec.json",
+    "Data/Replay/CSNUndertowArchivistFixture/match_spec.json",
+    "Data/Replay/CSNVexFixture/match_spec.json",
+    "Data/Replay/MarrowBlackcoinBouncerFixture/match_spec.json",
+    "Docs/Marrow_Blackcoin_Bouncer_Production_Transfer_Audit.json",
+    "Docs/Marrow_Blackcoin_Bouncer_Production_Transfer_Audit.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBDeterministicRandom.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBPreDamageAttackTrigger.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Private/WBReplayTrace.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBDeterministicRandom.h",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBMatchCoordinator.h",
+    "Source/WandboundCore/Public/WBPreDamageAttackTrigger.h",
+    "Source/WandboundCore/Public/WBReplayTrace.h",
+    "Source/WandboundRuntime/Private/WBProductionMarrowBlackcoinBouncerSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionMarrowBlackcoinBouncerSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBMarrowBlackcoinBouncerTests.cpp"
+  ],
+  "unrelated_paths_preserved": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+    "h origin main"
+  ],
+  "deferred": [
+    "legacy_godot_csn_backfill_active_branch",
+    "other_card_transfers",
+    "presentation_animation"
+  ]
+}

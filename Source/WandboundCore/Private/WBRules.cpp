@@ -576,7 +576,8 @@ FWBActionQueryResult WBRules::CanResolvePendingAttackDamage(const FWBGameStateDa
 		return FWBActionQueryResult::Deny(TEXT("bad_player"));
 	}
 
-	if (State.PendingAttack.AttackerUnitId == State.PendingAttack.DefenderUnitId)
+	if (State.PendingAttack.AttackerUnitId == State.PendingAttack.DefenderUnitId
+		&& !State.PendingAttack.bPendingBattleHitReflectedToAttacker)
 	{
 		return FWBActionQueryResult::Deny(TEXT("same_unit"));
 	}

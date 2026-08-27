@@ -1271,6 +1271,177 @@ bool ParseAfterDamageTargetRole(
 	return true;
 }
 
+bool ParsePreDamageAttackSourceRole(
+	const FString& Value,
+	EWBPreDamageAttackTriggerSourceRole& OutRole)
+{
+	if (Value == TEXT("current_defender"))
+	{
+		OutRole = EWBPreDamageAttackTriggerSourceRole::CurrentDefender;
+		return true;
+	}
+	return false;
+}
+
+bool ParseRandomBranchKind(
+	const FString& Value,
+	EWBDeterministicRandomBranchKind& OutKind)
+{
+	if (Value == TEXT("coin_flip"))
+	{
+		OutKind = EWBDeterministicRandomBranchKind::CoinFlip;
+		return true;
+	}
+	return false;
+}
+
+bool ParsePendingBattleHitModifierOperation(
+	const FString& Value,
+	EWBPendingBattleHitModifierOperation& OutOperation)
+{
+	if (Value == TEXT("reflect_pending_battle_hit_to_attacker"))
+	{
+		OutOperation = EWBPendingBattleHitModifierOperation::ReflectToAttacker;
+		return true;
+	}
+	if (Value == TEXT("add_pending_attack_damage"))
+	{
+		OutOperation = EWBPendingBattleHitModifierOperation::AddRawDamage;
+		return true;
+	}
+	return false;
+}
+
+void ParsePreDamageAttackTrigger(
+	const TSharedPtr<FJsonObject>& Object,
+	FWBPreDamageAttackTriggerDefinition& OutTrigger,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const FString& CardId,
+	const FString& Path)
+{
+	if (!Object.IsValid())
+	{
+		AddDiagnostic(Result, TEXT("pre_damage_attack_trigger_malformed"),
+			CardId, TEXT(""), Path);
+		return;
+	}
+	ValidateKnownFields(Object,
+		{ TEXT("trigger_id"), TEXT("source_role"), TEXT("timing"),
+			TEXT("mandatory"), TEXT("once_per_turn"), TEXT("random_branch") },
+		Result, CardId, TEXT(""), Path);
+
+	TryReadRequiredString(Object, TEXT("trigger_id"), Result,
+		TEXT("pre_damage_attack_trigger_id_invalid"), CardId, TEXT(""),
+		Path, OutTrigger.TriggerId);
+	FString Value;
+	if (TryReadRequiredString(Object, TEXT("source_role"), Result,
+		TEXT("pre_damage_attack_source_role_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, Value)
+		&& !ParsePreDamageAttackSourceRole(Value, OutTrigger.SourceRole))
+	{
+		AddDiagnostic(Result, TEXT("pre_damage_attack_source_role_unsupported"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("source_role")));
+	}
+	if (TryReadRequiredString(Object, TEXT("timing"), Result,
+		TEXT("pre_damage_attack_timing_unsupported"), CardId,
+		OutTrigger.TriggerId, Path, Value))
+	{
+		if (Value == TEXT("after_pre_hit_before_calculate_damage"))
+		{
+			OutTrigger.Timing =
+				EWBPreDamageAttackTriggerTiming::AfterPreHitBeforeCalculateDamage;
+		}
+		else
+		{
+			AddDiagnostic(Result, TEXT("pre_damage_attack_timing_unsupported"),
+				CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("timing")));
+		}
+	}
+	if (!Object->Values.Contains(TEXT("mandatory")))
+	{
+		AddDiagnostic(Result, TEXT("pre_damage_attack_mandatory_missing"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("mandatory")));
+	}
+	else
+	{
+		TryReadOptionalBool(Object, TEXT("mandatory"), Result,
+			TEXT("pre_damage_attack_mandatory_malformed"), CardId,
+			OutTrigger.TriggerId, Path, OutTrigger.bMandatory);
+	}
+	if (!Object->Values.Contains(TEXT("once_per_turn")))
+	{
+		AddDiagnostic(Result, TEXT("pre_damage_attack_usage_missing"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("once_per_turn")));
+	}
+	else
+	{
+		TryReadOptionalBool(Object, TEXT("once_per_turn"), Result,
+			TEXT("pre_damage_attack_usage_malformed"), CardId,
+			OutTrigger.TriggerId, Path, OutTrigger.bOncePerTurn);
+	}
+
+	TSharedPtr<FJsonObject> RandomObject;
+	if (!TryGetObjectField(Object, TEXT("random_branch"), RandomObject))
+	{
+		AddDiagnostic(Result, TEXT("pre_damage_attack_random_branch_malformed"),
+			CardId, OutTrigger.TriggerId, JoinPath(Path, TEXT("random_branch")));
+		return;
+	}
+	const FString RandomPath = JoinPath(Path, TEXT("random_branch"));
+	ValidateKnownFields(RandomObject,
+		{ TEXT("kind"), TEXT("heads"), TEXT("tails") },
+		Result, CardId, OutTrigger.TriggerId, RandomPath);
+	if (TryReadRequiredString(RandomObject, TEXT("kind"), Result,
+		TEXT("pre_damage_attack_random_kind_unsupported"), CardId,
+		OutTrigger.TriggerId, RandomPath, Value)
+		&& !ParseRandomBranchKind(Value, OutTrigger.RandomBranch))
+	{
+		AddDiagnostic(Result, TEXT("pre_damage_attack_random_kind_unsupported"),
+			CardId, OutTrigger.TriggerId, JoinPath(RandomPath, TEXT("kind")));
+	}
+
+	auto ParseModifier = [&](const TCHAR* Field,
+		FWBPendingBattleHitModifierDefinition& OutModifier)
+	{
+		TSharedPtr<FJsonObject> ModifierObject;
+		const FString ModifierPath = JoinPath(RandomPath, Field);
+		if (!TryGetObjectField(RandomObject, Field, ModifierObject))
+		{
+			AddDiagnostic(Result, TEXT("pre_damage_attack_modifier_malformed"),
+				CardId, OutTrigger.TriggerId, ModifierPath);
+			return;
+		}
+		ValidateKnownFields(ModifierObject,
+			{ TEXT("operation"), TEXT("amount") }, Result, CardId,
+			OutTrigger.TriggerId, ModifierPath);
+		if (TryReadRequiredString(ModifierObject, TEXT("operation"), Result,
+			TEXT("pre_damage_attack_modifier_unsupported"), CardId,
+			OutTrigger.TriggerId, ModifierPath, Value)
+			&& !ParsePendingBattleHitModifierOperation(
+				Value, OutModifier.Operation))
+		{
+			AddDiagnostic(Result, TEXT("pre_damage_attack_modifier_unsupported"),
+				CardId, OutTrigger.TriggerId,
+				JoinPath(ModifierPath, TEXT("operation")));
+		}
+		if (OutModifier.Operation
+			== EWBPendingBattleHitModifierOperation::AddRawDamage)
+		{
+			if (!TryReadRequiredInteger(ModifierObject, TEXT("amount"), Result,
+				TEXT("pre_damage_attack_modifier_amount_invalid"), CardId,
+				OutTrigger.TriggerId, ModifierPath, OutModifier.Amount)
+				|| OutModifier.Amount <= 0)
+			{
+				AddDiagnostic(Result, TEXT("pre_damage_attack_modifier_amount_invalid"),
+					CardId, OutTrigger.TriggerId,
+					JoinPath(ModifierPath, TEXT("amount")));
+			}
+		}
+	};
+	ParseModifier(TEXT("heads"), OutTrigger.Heads);
+	ParseModifier(TEXT("tails"), OutTrigger.Tails);
+}
+
 bool ParseAfterUnitDestroyedSourceScope(
 	const FString& Value,
 	EWBAfterUnitDestroyedSourceScope& OutScope)
@@ -1637,6 +1808,7 @@ void ParseCard(
 			TEXT("wand_stats"),
 			TEXT("activated_effects"),
 			TEXT("after_damage_triggers"),
+			TEXT("pre_damage_attack_triggers"),
 			TEXT("after_csn_inheritance_triggers"),
 			TEXT("after_unit_destroyed_triggers")
 		},
@@ -1740,6 +1912,36 @@ void ParseCard(
 						? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
 					Trigger, Result, CardId, TriggerPath);
 				OutDefinition.AfterDamageTriggers.Add(MoveTemp(Trigger));
+			}
+		}
+	}
+
+	const TSharedPtr<FJsonValue>* PreDamageTriggerValue =
+		Object->Values.Find(TEXT("pre_damage_attack_triggers"));
+	if (PreDamageTriggerValue != nullptr)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* TriggerValues = nullptr;
+		if (!TryGetArrayField(
+			Object, TEXT("pre_damage_attack_triggers"), TriggerValues))
+		{
+			AddDiagnostic(Result, TEXT("pre_damage_attack_triggers_malformed"),
+				CardId, TEXT(""),
+				JoinPath(Path, TEXT("pre_damage_attack_triggers")));
+		}
+		else
+		{
+			for (int32 TriggerIndex = 0; TriggerIndex < TriggerValues->Num();
+				++TriggerIndex)
+			{
+				const FString TriggerPath = JoinPath(
+					JoinPath(Path, TEXT("pre_damage_attack_triggers")),
+					FString::Printf(TEXT("[%d]"), TriggerIndex));
+				FWBPreDamageAttackTriggerDefinition Trigger;
+				ParsePreDamageAttackTrigger(
+					(*TriggerValues)[TriggerIndex].IsValid()
+						? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
+					Trigger, Result, CardId, TriggerPath);
+				OutDefinition.PreDamageAttackTriggers.Add(MoveTemp(Trigger));
 			}
 		}
 	}

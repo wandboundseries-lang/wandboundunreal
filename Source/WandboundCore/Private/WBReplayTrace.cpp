@@ -430,6 +430,11 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetNumberField(TEXT("random_seed"), Event.RandomSeed);
 	}
+	if (!Event.RandomOutcome.IsNone())
+	{
+		Object->SetStringField(
+			TEXT("random_outcome"), Event.RandomOutcome.ToString());
+	}
 
 	if (Event.CardCount != -1)
 	{

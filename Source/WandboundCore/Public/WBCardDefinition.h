@@ -144,6 +144,53 @@ struct WANDBOUNDCORE_API FWBAfterDamageTriggerDefinition
 	bool bOncePerTurnPerOpposingUnit = false;
 };
 
+enum class EWBPreDamageAttackTriggerSourceRole : uint8
+{
+	Unknown,
+	CurrentDefender
+};
+
+enum class EWBPreDamageAttackTriggerTiming : uint8
+{
+	Unknown,
+	AfterPreHitBeforeCalculateDamage
+};
+
+enum class EWBDeterministicRandomBranchKind : uint8
+{
+	Unknown,
+	CoinFlip
+};
+
+enum class EWBPendingBattleHitModifierOperation : uint8
+{
+	Unknown,
+	ReflectToAttacker,
+	AddRawDamage
+};
+
+struct WANDBOUNDCORE_API FWBPendingBattleHitModifierDefinition
+{
+	EWBPendingBattleHitModifierOperation Operation =
+		EWBPendingBattleHitModifierOperation::Unknown;
+	int32 Amount = 0;
+};
+
+struct WANDBOUNDCORE_API FWBPreDamageAttackTriggerDefinition
+{
+	FString TriggerId;
+	EWBPreDamageAttackTriggerSourceRole SourceRole =
+		EWBPreDamageAttackTriggerSourceRole::Unknown;
+	EWBPreDamageAttackTriggerTiming Timing =
+		EWBPreDamageAttackTriggerTiming::Unknown;
+	EWBDeterministicRandomBranchKind RandomBranch =
+		EWBDeterministicRandomBranchKind::Unknown;
+	FWBPendingBattleHitModifierDefinition Heads;
+	FWBPendingBattleHitModifierDefinition Tails;
+	bool bMandatory = true;
+	bool bOncePerTurn = false;
+};
+
 struct WANDBOUNDCORE_API FWBAfterCSNInheritanceTriggerDefinition
 {
 	FString TriggerId;
@@ -283,6 +330,7 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	TArray<FWBSetupSummonTriggerDefinition> SetupSummonTriggers;
 	TArray<FWBTurnStartTriggerDefinition> TurnStartTriggers;
 	TArray<FWBAfterDamageTriggerDefinition> AfterDamageTriggers;
+	TArray<FWBPreDamageAttackTriggerDefinition> PreDamageAttackTriggers;
 	TArray<FWBAfterCSNInheritanceTriggerDefinition>
 		AfterCSNInheritanceTriggers;
 	TArray<FWBAfterUnitDestroyedTriggerDefinition>

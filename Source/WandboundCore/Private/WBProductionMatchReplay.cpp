@@ -268,6 +268,16 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendBool(Out, TEXT("attack.post_hit_completed"), State.PendingAttack.bPostHitCompleted);
 		AppendBool(Out, TEXT("attack.frozen_broken"), State.PendingAttack.bFrozenBroken);
 		AppendBool(Out, TEXT("attack.counter"), State.PendingAttack.bCounter);
+		AppendBool(Out, TEXT("attack.automatic_pre_damage_processed"),
+			State.PendingAttack.bAutomaticPreDamageModifiersProcessed);
+		AppendBool(Out, TEXT("attack.hit_reflected_to_attacker"),
+			State.PendingAttack.bPendingBattleHitReflectedToAttacker);
+		AppendBool(Out, TEXT("attack.counter_suppressed_by_hit_transform"),
+			State.PendingAttack.bCounterSuppressedByPendingHitTransform);
+		AppendInt(Out, TEXT("attack.hit_transform_source"),
+			State.PendingAttack.PendingHitTransformSourceUnitId);
+		AppendInt(Out, TEXT("attack.raw_damage_modifier"),
+			State.PendingAttack.RawDamageModifier);
 	}
 	if (State.NPCPhaseContinuation.bActive)
 	{

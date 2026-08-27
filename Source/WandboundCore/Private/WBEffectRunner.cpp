@@ -667,7 +667,8 @@ FWBApplyActionResult WBEffectRunner::CalculatePendingAttackDamage(
 	FWBPendingAttackState::FDamageCalculation Calculation;
 	Calculation.bValid = true;
 	Calculation.HitUnitId = HitUnit->UnitId;
-	Calculation.RawAttackDamage = FMath::Max(Attacker->ATK, 0);
+	Calculation.RawAttackDamage = FMath::Max(
+		Attacker->ATK + State.PendingAttack.RawDamageModifier, 0);
 	Calculation.PreviousHP = HitUnit->HP;
 	Calculation.PreviousArmor = HitUnit->GetCurrentArmor();
 	Calculation.CalculatedArmor = Calculation.PreviousArmor;

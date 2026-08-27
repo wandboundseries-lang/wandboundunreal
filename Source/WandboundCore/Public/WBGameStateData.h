@@ -127,7 +127,8 @@ enum class EWBAttackContinuationStage : uint8
 	SubstituteDamage,
 	ApplyDamage,
 	CounterEligibility,
-	AfterDamage
+	AfterDamage,
+	AutomaticPreDamageModifiers
 };
 
 enum class EWBAttackAuthorityKind : uint8
@@ -179,6 +180,11 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	bool bPostHitCompleted = false;
 	bool bFrozenBroken = false;
 	bool bCounter = false;
+	bool bAutomaticPreDamageModifiersProcessed = false;
+	bool bPendingBattleHitReflectedToAttacker = false;
+	bool bCounterSuppressedByPendingHitTransform = false;
+	int32 PendingHitTransformSourceUnitId = INDEX_NONE;
+	int32 RawDamageModifier = 0;
 };
 
 struct WANDBOUNDCORE_API FWBNPCPhaseContinuationState

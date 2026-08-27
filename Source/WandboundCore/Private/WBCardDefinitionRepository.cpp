@@ -127,6 +127,23 @@ bool HasDuplicateAfterDamageTriggerIds(
 	return false;
 }
 
+bool HasDuplicatePreDamageAttackTriggerIds(
+	const FWBCardDefinition& Definition)
+{
+	TSet<FString> SeenTriggerIds;
+	for (const FWBPreDamageAttackTriggerDefinition& Trigger :
+		Definition.PreDamageAttackTriggers)
+	{
+		if (!Trigger.TriggerId.IsEmpty()
+			&& SeenTriggerIds.Contains(Trigger.TriggerId))
+		{
+			return true;
+		}
+		SeenTriggerIds.Add(Trigger.TriggerId);
+	}
+	return false;
+}
+
 bool HasDuplicateAfterCSNInheritanceTriggerIds(
 	const FWBCardDefinition& Definition)
 {
@@ -432,6 +449,39 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 			return MakeValidationFailure(
 				Repository,
 				TEXT("duplicate_after_damage_trigger_id"));
+		}
+
+		for (const FWBPreDamageAttackTriggerDefinition& Trigger :
+			Definition.PreDamageAttackTriggers)
+		{
+			if (Trigger.TriggerId.IsEmpty())
+			{
+				return MakeValidationFailure(
+					Repository, TEXT("pre_damage_attack_trigger_id_missing"));
+			}
+			if (Trigger.SourceRole
+					!= EWBPreDamageAttackTriggerSourceRole::CurrentDefender
+				|| Trigger.Timing
+					!= EWBPreDamageAttackTriggerTiming::AfterPreHitBeforeCalculateDamage
+				|| Trigger.RandomBranch
+					!= EWBDeterministicRandomBranchKind::CoinFlip
+				|| !Trigger.bMandatory
+				|| !Trigger.bOncePerTurn
+				|| Trigger.Heads.Operation
+					!= EWBPendingBattleHitModifierOperation::ReflectToAttacker
+				|| Trigger.Heads.Amount != 0
+				|| Trigger.Tails.Operation
+					!= EWBPendingBattleHitModifierOperation::AddRawDamage
+				|| Trigger.Tails.Amount <= 0)
+			{
+				return MakeValidationFailure(
+					Repository, TEXT("pre_damage_attack_trigger_unsupported"));
+			}
+		}
+		if (HasDuplicatePreDamageAttackTriggerIds(Definition))
+		{
+			return MakeValidationFailure(
+				Repository, TEXT("duplicate_pre_damage_attack_trigger_id"));
 		}
 
 		for (const FWBAfterCSNInheritanceTriggerDefinition& Trigger :
