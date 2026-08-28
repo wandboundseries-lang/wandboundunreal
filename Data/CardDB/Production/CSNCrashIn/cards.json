@@ -197,6 +197,162 @@
     },
     {
       "schema_version": 1,
+      "card_id": "char_mire_cartographer",
+      "public_name": "Mire Cartographer",
+      "kind": "character",
+      "public_text": "Activate - Once per turn: Choose 1 tile within this unit's AR. Set that tile to mud.",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 15, "atk": 1, "ar": 3, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 3 },
+      "activated_effects": [
+        {
+          "effect_id": "mud_survey",
+          "public_label": "Mud Survey",
+          "target_requirement": "tile",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true
+          },
+          "payloads": [
+            {
+              "type": "set_terrain",
+              "target": "selected",
+              "terrain_id": "mud",
+              "range_metric": "manhattan",
+              "range_stat": "ar",
+              "allow_occupied": true,
+              "require_line_of_sight": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_emberfault_cartographer",
+      "public_name": "Emberfault Cartographer",
+      "kind": "character",
+      "public_text": "Activate - Once per turn: Choose 1 tile within this unit's AR. Set that tile to lava.",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 15, "atk": 1, "ar": 3, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 3 },
+      "activated_effects": [
+        {
+          "effect_id": "lava_survey",
+          "public_label": "Lava Survey",
+          "target_requirement": "tile",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true
+          },
+          "payloads": [
+            {
+              "type": "set_terrain",
+              "target": "selected",
+              "terrain_id": "lava",
+              "range_metric": "manhattan",
+              "range_stat": "ar",
+              "allow_occupied": true,
+              "require_line_of_sight": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_tidecall_cartographer",
+      "public_name": "Tidecall Cartographer",
+      "kind": "character",
+      "public_text": "Activate - Once per turn: Choose 1 tile within this unit's AR. Set that tile to water.",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 15, "atk": 1, "ar": 3, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 3 },
+      "activated_effects": [
+        {
+          "effect_id": "water_survey",
+          "public_label": "Water Survey",
+          "target_requirement": "tile",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true
+          },
+          "payloads": [
+            {
+              "type": "set_terrain",
+              "target": "selected",
+              "terrain_id": "water",
+              "range_metric": "manhattan",
+              "range_stat": "ar",
+              "allow_occupied": true,
+              "require_line_of_sight": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "char_rimecall_cartographer",
+      "public_name": "Rimecall Cartographer",
+      "kind": "character",
+      "public_text": "Activate - Once per turn: Choose 1 tile within this unit's AR. Set that tile to ice.",
+      "public_category": "Character",
+      "factions": [],
+      "tags": [],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 15, "atk": 1, "ar": 3, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 3 },
+      "activated_effects": [
+        {
+          "effect_id": "ice_survey",
+          "public_label": "Ice Survey",
+          "target_requirement": "tile",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true
+          },
+          "payloads": [
+            {
+              "type": "set_terrain",
+              "target": "selected",
+              "terrain_id": "ice",
+              "range_metric": "manhattan",
+              "range_stat": "ar",
+              "allow_occupied": true,
+              "require_line_of_sight": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
       "card_id": "char_csn_echo",
       "public_name": "CSN Echo",
       "kind": "character",

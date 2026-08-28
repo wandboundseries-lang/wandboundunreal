@@ -492,6 +492,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	const FString ProviderSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationDataProvider.cpp"));
 	const FString ExecutionHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionActivationExecutionHandoff.h"));
 	const FString ExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionActivationExecutionHandoff.cpp"));
+	const FString ActivationBridgeHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBRuntimeActivationExecutionBridge.h"));
+	const FString ActivationBridgeSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBRuntimeActivationExecutionBridge.cpp"));
 	const FString SummonEquipProviderHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionSummonEquipDataProvider.h"));
 	const FString SummonEquipProviderSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionSummonEquipDataProvider.cpp"));
 	const FString SummonExecutionHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionSummonExecutionHandoff.h"));
@@ -505,6 +507,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ExecutionHandoffHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ExecutionHandoffSource, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ActivationBridgeHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ActivationBridgeSource, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonEquipProviderSource, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*SummonExecutionHandoffHeader, TEXT(""));
@@ -518,6 +522,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	TestTrue(TEXT("Production provider consumes repository helper"), ProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
 	TestTrue(TEXT("Production execution handoff accepts repository input"), ExecutionHandoffHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Production execution handoff consumes repository helper"), ExecutionHandoffSource.Contains(TEXT("WBCardDefinitionRepository")));
+	TestTrue(TEXT("Activation execution bridge accepts repository input"), ActivationBridgeHeader.Contains(TEXT("FWBCardDefinitionRepository")));
+	TestTrue(TEXT("Activation execution bridge passes repository to core"), ActivationBridgeSource.Contains(TEXT("Repository")));
 	TestTrue(TEXT("Summon/equip provider accepts repository input"), SummonEquipProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Summon/equip provider consumes repository helper"), SummonEquipProviderSource.Contains(TEXT("WBCardDefinitionRepository")));
 	TestTrue(TEXT("Summon execution handoff accepts repository input"), SummonExecutionHandoffHeader.Contains(TEXT("FWBCardDefinitionRepository")));

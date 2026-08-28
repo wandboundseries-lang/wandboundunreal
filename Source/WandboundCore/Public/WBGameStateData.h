@@ -371,6 +371,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void AddWallForTest(const FWBWallEdge& Edge);
 	bool RemoveWallForTest(const FWBWallEdge& Edge);
 	FName GetTerrainAt(const FWBTile& Tile) const;
+	bool SetTerrainAt(const FWBTile& Tile, FName TerrainId);
 	void SetTerrainForTest(const FWBTile& Tile, FName TerrainId);
 	void ClearTerrainForTest(const FWBTile& Tile);
 };

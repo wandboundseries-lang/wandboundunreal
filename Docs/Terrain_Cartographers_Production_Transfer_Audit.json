@@ -1,0 +1,209 @@
+{
+  "audit_id": "terrain_cartographers_production_transfer",
+  "result": "ready",
+  "baseline": {
+    "commit": "0bbc8d25ed64b3586b1d47ca10c597a161d0a5d1",
+    "subject": "Add production Marrow Blackcoin Bouncer",
+    "automation": {
+      "succeeded": 2382,
+      "failed": 0,
+      "warnings": 0,
+      "not_run": 0
+    },
+    "replay_schema": 1
+  },
+  "godot_reference": {
+    "path": "Reference/GodotProject/godotcanon/scripts/data/CardDB/characters.json",
+    "read_only": true,
+    "old_common_stats": { "hp": 15, "atk": 2, "ar": 3, "rl": 1 },
+    "owner_supersession": { "atk": 1 }
+  },
+  "production_cards": [
+    { "card_id": "char_mire_cartographer", "name": "Mire Cartographer", "activation": "Mud Survey", "terrain_id": "mud", "hp": 15, "atk": 1, "ar": 3, "rl": 1 },
+    { "card_id": "char_emberfault_cartographer", "name": "Emberfault Cartographer", "activation": "Lava Survey", "terrain_id": "lava", "hp": 15, "atk": 1, "ar": 3, "rl": 1 },
+    { "card_id": "char_tidecall_cartographer", "name": "Tidecall Cartographer", "activation": "Water Survey", "terrain_id": "water", "hp": 15, "atk": 1, "ar": 3, "rl": 1 },
+    { "card_id": "char_rimecall_cartographer", "name": "Rimecall Cartographer", "activation": "Ice Survey", "terrain_id": "ice", "hp": 15, "atk": 1, "ar": 3, "rl": 1 }
+  ],
+  "activation": {
+    "source_zone": "board",
+    "timing": "normal_turn_priority",
+    "exact_owned_source": true,
+    "once_per_turn": true,
+    "target": "public_tile",
+    "target_fixed_before_response": true,
+    "range_metric": "manhattan",
+    "range_stat": "effective_ar",
+    "effective_ar_authority": "WBUnitStatQuery::GetEffectiveAR",
+    "minimum_range": 0,
+    "allow_occupied": true,
+    "require_line_of_sight": false,
+    "reactable": true,
+    "negate_consumes_usage": true
+  },
+  "terrain": {
+    "authority": "FWBGameStateData::TerrainByTileIndex",
+    "second_map_added": false,
+    "overwrite": true,
+    "same_terrain_target_legal": true,
+    "same_terrain_trace": "no terrain transition trace",
+    "persistent": true,
+    "owned": false,
+    "immediate_hazard": false,
+    "trace_event": "terrain_changed",
+    "public_summary": true
+  },
+  "production_bundle": {
+    "old_digest": "8ee7e358c940121a115629b59c4a185216b9a3595ff8ac4510599640c9f73558",
+    "new_digest": "39afb9fb4089e2c95565ad9d57fffc234443de72a0098228c91625550b4d4534"
+  },
+  "replay": {
+    "schema": 1,
+    "record_count": 22,
+    "final_generation": 1,
+    "final_revision": 23,
+    "final_state_digest": "dad14fc8bc0a0cf9c6fe3f9c63bdba52497a7e296502bf12ce3136e4eded03d9",
+    "final_trace_digest": "d50b600c3386108af47a40ff5bea71ca67cee2cabcb2c066f26580745525f8ae",
+    "final_replay_digest": "676009f0de6eb71dbc389c44a713c37c5c25d1c73e3390199c97f48cf185c366",
+    "archive_sha256": "d59cfcb8d61e5eab5047ca4904bca75b51486839cfc8ec24da9392301e73041b",
+    "receipt_sha256": "d63c73ce2b7a708ce05f011044b678c37a6578144cc661dc2a12a20cdff0424a",
+    "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c",
+    "two_run_archive_byte_identical": true,
+    "two_run_receipt_byte_identical": true,
+    "two_run_startup_byte_identical": true
+  },
+  "privacy": {
+    "receipt_fields": 8,
+    "protected_terms_present": [],
+    "chosen_tile_public": true
+  },
+  "wb_action_codec": {
+    "changed": false,
+    "header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783"
+  },
+  "tests": {
+    "focused_cartographers": 9,
+    "public_board_summary": 16,
+    "runtime_result_board_summary": 8,
+    "csn_aggregate": 85,
+    "csn_vex": 14,
+    "csn_patch": 13,
+    "core_movement": 17,
+    "marrow_blackcoin_bouncer": 13,
+    "full": { "succeeded": 2391, "failed": 0, "warnings": 0, "not_run": 0 },
+    "net_increase": 9
+  },
+  "build_matrix": [
+    { "target": "editor_non_unity", "result": "succeeded", "actions": 6, "seconds": 7.34 },
+    { "target": "game_non_unity", "result": "succeeded", "actions": 3, "seconds": 13.46 },
+    { "target": "editor_default", "result": "succeeded_fresh_compile", "compile_actions": 195, "total_actions": 214, "seconds": 309.44, "max_parallel_actions": 2 },
+    { "target": "game_default", "result": "succeeded_fresh_compile", "compile_actions": 186, "total_actions": 189, "seconds": 350.88, "max_parallel_actions": 2 },
+    { "target": "editor_forced_unity", "result": "succeeded_fresh_compile", "compile_actions": 195, "total_actions": 214, "seconds": 242.48, "max_parallel_actions": 2, "unity_translation_units_compiled": true, "adaptive_dirty_exclusions_compiled_separately": true },
+    { "target": "game_forced_unity", "result": "succeeded_fresh_compile", "compile_actions": 186, "total_actions": 189, "seconds": 303.45, "max_parallel_actions": 2, "unity_translation_units_compiled": true, "adaptive_dirty_exclusions_compiled_separately": true }
+  ],
+  "build_evidence_remediation": {
+    "validation_only": true,
+    "source_workaround_required": false,
+    "source_hashes_checked": 36,
+    "source_hash_mismatches": 0,
+    "source_timestamp_mismatches": 0,
+    "commands": [
+      {
+        "target": "editor_default",
+        "clean_arguments": "WandboundUEEditor Win64 Development -Project=<project> -Clean -NoHotReload -MaxParallelActions=2",
+        "build_arguments": "WandboundUEEditor Win64 Development -Project=<project> -WaitMutex -NoHotReload -MaxParallelActions=2",
+        "exit_code": 0
+      },
+      {
+        "target": "game_default",
+        "clean_arguments": "WandboundUE Win64 Development -Project=<project> -Clean -NoHotReload -MaxParallelActions=2",
+        "build_arguments": "WandboundUE Win64 Development -Project=<project> -WaitMutex -NoHotReload -MaxParallelActions=2",
+        "exit_code": 0
+      },
+      {
+        "target": "editor_forced_unity",
+        "clean_arguments": "WandboundUEEditor Win64 Development -Project=<project> -Clean -ForceUnity -NoHotReload -MaxParallelActions=2",
+        "build_arguments": "WandboundUEEditor Win64 Development -Project=<project> -WaitMutex -ForceUnity -NoHotReload -MaxParallelActions=2",
+        "exit_code": 0
+      },
+      {
+        "target": "game_forced_unity",
+        "clean_arguments": "WandboundUE Win64 Development -Project=<project> -Clean -ForceUnity -NoHotReload -MaxParallelActions=2",
+        "build_arguments": "WandboundUE Win64 Development -Project=<project> -WaitMutex -ForceUnity -NoHotReload -MaxParallelActions=2",
+        "exit_code": 0
+      }
+    ],
+    "attempted_environment_failure": {
+      "target": "editor_default_clean",
+      "exit_code": 6,
+      "stage": "before compilation",
+      "error": "UnauthorizedAccessException rotating the UnrealBuildTool user-profile log in the restricted sandbox",
+      "source_error": false,
+      "resolution": "rerun identical target clean/build with access to UnrealBuildTool's normal user-profile log location"
+    }
+  },
+  "build_cook_run": {
+    "result": "succeeded",
+    "clean": true,
+    "compile_actions": 403,
+    "discovered_cook_packages": 532,
+    "package_store_packages": 459,
+    "incrementally_skipped_packages": 0,
+    "max_parallel_actions": 2,
+    "build_seconds": 29761.16,
+    "build_cook_run_seconds": 29911.17,
+    "automation_tool_elapsed": "08:18:31",
+    "exit_code": 0
+  },
+  "recovered_validation_failure": {
+    "stage": "clean build",
+    "exit_code": 6,
+    "elapsed_seconds": 442.54,
+    "errors": ["C3859", "C1076", "Windows 1455 paging file too small"],
+    "source_error": false,
+    "resolution": "rerun clean BuildCookRun with MaxParallelActions=2"
+  },
+  "packaged_smoke": {
+    "runs": 2,
+    "exit_codes": [0, 0],
+    "stderr_empty": true,
+    "packaged_processes_remaining": 0,
+    "source_fixture_sha256": "5e0d495aac6e26765c0ead98048798e7b0bf8382374be2a0d205bd60cccd11de",
+    "packaged_fixture_sha256": "5e0d495aac6e26765c0ead98048798e7b0bf8382374be2a0d205bd60cccd11de",
+    "source_cards_sha256": "8270d15800a249c03f1c4a4097898ca71c790f0eada63a90f49dbc8255a2cb7f",
+    "packaged_cards_sha256": "8270d15800a249c03f1c4a4097898ca71c790f0eada63a90f49dbc8255a2cb7f",
+    "wall_boundary": "production match-spec has no initial-wall setup authority; packaged smoke uses a non-authoritative copied-state production-rules probe with an actual wall and intervening unit",
+    "wall_probe_review": {
+      "automation_direct_actual_wall": true,
+      "production_execution_authority": "WBRuntimeActivationExecutionBridge -> WBEffectRunner::ApplyCardActivationCommand -> WBRules::CanApplyCardActivationCommand",
+      "duplicate_cartographer_targeting_logic": false,
+      "normal_scenario_uses_production_definitions": true,
+      "commit_blocker": false
+    }
+  },
+  "validation_freshness_utc": {
+    "last_core_source_edit": "2026-08-27T16:17:38.0908385Z",
+    "last_carddb_edit": "2026-08-27T16:07:11.3287950Z",
+    "last_runtime_edit": "2026-08-28T03:09:06.8202888Z",
+    "last_test_edit": "2026-08-27T16:45:36.6628970Z",
+    "last_build_script_edit": "2026-08-27T17:39:03.5787017Z",
+    "focused_cartographer_report": "2026-08-28T03:11:42.5222484Z",
+    "full_automation_report": "2026-08-28T03:13:19.0471512Z",
+    "editor_default_fresh_compile_completed": "2026-08-28T12:19:10.6271880Z",
+    "game_default_fresh_compile_completed": "2026-08-28T12:25:25.6144423Z",
+    "editor_forced_unity_fresh_compile_completed": "2026-08-28T12:29:49.1311940Z",
+    "game_forced_unity_fresh_compile_completed": "2026-08-28T12:35:29.7101495Z",
+    "existing_build_cook_run_log_completed": "2026-08-28T11:40:50.4366422Z",
+    "existing_packaged_smoke_run_2_completed": "2026-08-28T11:41:54.0158265Z",
+    "audit_update_recorded": "2026-08-28T12:38:26.5804190Z",
+    "package_precedes_remediation_builds": true,
+    "same_byte_identical_source_tree": true,
+    "automation_rerun": false,
+    "package_rerun": false
+  },
+  "unrelated_paths_preserved": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+    "h origin main"
+  ]
+}

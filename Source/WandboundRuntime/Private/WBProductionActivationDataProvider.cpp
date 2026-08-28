@@ -223,6 +223,49 @@ TArray<FWBCardActivationTargetOption> BuildUnitTargetOptions(
 	return Options;
 }
 
+TArray<FWBCardActivationTargetOption> BuildTileTargetOptions(
+	const FWBCardEffectDefinition& Effect,
+	const FWBPublicBoardSummary& PublicBoardSummary,
+	const int32 SourceUnitId)
+{
+	const FWBGenericEffectPayload* TerrainPayload = Effect.Payloads.FindByPredicate(
+		[](const FWBGenericEffectPayload& Payload)
+		{
+			return Payload.Operation == EWBGenericEffectOp::SetTerrain;
+		});
+	const FWBPublicUnitBoardSummary* SourceUnit = PublicBoardSummary.Units.FindByPredicate(
+		[SourceUnitId](const FWBPublicUnitBoardSummary& Unit)
+		{
+			return Unit.UnitId == SourceUnitId;
+		});
+	if (TerrainPayload == nullptr || SourceUnit == nullptr
+		|| TerrainPayload->SetTerrainEffect.RangeMetric
+			!= EWBEffectTileRangeMetric::Manhattan
+		|| TerrainPayload->SetTerrainEffect.RangeStat != EWBEffectRangeStat::AR)
+	{
+		return TArray<FWBCardActivationTargetOption>();
+	}
+
+	TArray<FWBCardActivationTargetOption> Options;
+	for (int32 Y = 0; Y < PublicBoardSummary.BoardHeight; ++Y)
+	{
+		for (int32 X = 0; X < PublicBoardSummary.BoardWidth; ++X)
+		{
+			if (FMath::Abs(X - SourceUnit->X) + FMath::Abs(Y - SourceUnit->Y)
+				> SourceUnit->AR)
+			{
+				continue;
+			}
+			FWBCardActivationTargetOption Option;
+			Option.Type = EWBCardActivationTargetOptionType::Tile;
+			Option.TargetTile = FWBTile(X, Y);
+			Option.PublicLabel = FString::Printf(TEXT("Tile (%d,%d)"), X, Y);
+			Options.Add(MoveTemp(Option));
+		}
+	}
+	return Options;
+}
+
 TArray<FWBCardActivationTargetOption> BuildTargetOptionsForEffect(
 	const FWBCardEffectDefinition& Effect,
 	const FWBPublicBoardSummary& PublicBoardSummary,
@@ -245,6 +288,27 @@ TArray<FWBCardActivationTargetOption> BuildTargetOptionsForEffect(
 		return Options;
 	}
 	case EWBCardEffectTargetRequirement::Tile:
+	{
+		const bool bSetTerrain = Effect.Payloads.ContainsByPredicate(
+			[](const FWBGenericEffectPayload& Payload)
+			{
+				return Payload.Operation == EWBGenericEffectOp::SetTerrain;
+			});
+		if (!bSetTerrain)
+		{
+			AddDiagnostic(Diagnostics, TEXT("target_options_deferred"),
+				Definition.CardId, InstanceId, SourceUnitId);
+			return TArray<FWBCardActivationTargetOption>();
+		}
+		TArray<FWBCardActivationTargetOption> Options = BuildTileTargetOptions(
+			Effect, PublicBoardSummary, SourceUnitId);
+		if (Options.IsEmpty())
+		{
+			AddDiagnostic(Diagnostics, TEXT("no_tile_targets_available"),
+				Definition.CardId, InstanceId, SourceUnitId);
+		}
+		return Options;
+	}
 	case EWBCardEffectTargetRequirement::WallEdge:
 		AddDiagnostic(Diagnostics, TEXT("target_options_deferred"), Definition.CardId, InstanceId, SourceUnitId);
 		return TArray<FWBCardActivationTargetOption>();
@@ -325,12 +389,20 @@ void AppendActionForEffectIfAllowed(
 		return;
 	}
 
-	const FWBCardActivationSourceGateContext SourceGateContext = MakeSourceGateContext(
+	FWBCardActivationSourceGateContext SourceGateContext = MakeSourceGateContext(
 		PlayerId,
 		SourceUnitId,
 		Definition.CardId,
 		RequiredZone,
 		FixtureZoneContext);
+	if (Effect.SourceGate.bOncePerTurn)
+	{
+		SourceGateContext.ActivationUsageKey =
+			!Effect.SourceGate.OncePerTurnKey.IsEmpty()
+				? Effect.SourceGate.OncePerTurnKey
+				: WBCardActivationSourceGate::BuildDefaultUsageKey(
+					PlayerId, SourceUnitId, Definition.CardId, Effect.EffectId);
+	}
 	const FWBCardActivationSourceGateResult SourceGateResult =
 		WBCardActivationSourceGate::Evaluate(State, Effect.SourceGate, SourceGateContext);
 	if (!SourceGateResult.bOk)

@@ -866,6 +866,15 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 	const FWBGameStateData& State,
 	const FWBCardActivationCommand& Command)
 {
+	return CanApplyCardActivationCommand(
+		State, FWBCardDefinitionRepository(), Command);
+}
+
+FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBCardActivationCommand& Command)
+{
 	if (State.bGameOver)
 	{
 		return FWBActionQueryResult::Deny(TEXT("game_over"));
@@ -965,7 +974,9 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 		FilledRequest.Source.SourceEffectId = Command.Source.SourceEffectId;
 	}
 
-	return CanApplyEffectRequest(State, FilledRequest);
+	return Repository.RepositoryId.IsEmpty()
+		? CanApplyEffectRequest(State, FilledRequest)
+		: CanApplyEffectRequest(State, Repository, FilledRequest);
 }
 
 FWBActionQueryResult WBRules::CanApplyEffectRequest(
@@ -1294,6 +1305,64 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 					return FWBActionQueryResult::Deny(
 						TEXT("activated_deck_summon_source_faction_mismatch"));
 				}
+			}
+			break;
+		}
+		case EWBGenericEffectOp::SetTerrain:
+		{
+			if (!IsTileInBounds(Request.Target.TargetTile))
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_target_out_of_bounds"));
+			}
+			const FWBUnitState* SourceUnit = State.GetUnitById(
+				Request.Source.SourceUnitId);
+			if (SourceUnit == nullptr || SourceUnit->bDefeated
+				|| !SourceUnit->IsUnitOnBoard())
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_source_unavailable"));
+			}
+			if (SourceUnit->OwnerId != Request.Source.PlayerId
+				|| SourceUnit->CardId != Request.Source.SourceCardId)
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_source_mismatch"));
+			}
+			const FString TerrainId = Payload.SetTerrainEffect.TerrainId
+				.GetPlainNameString().ToLower();
+			if (TerrainId != TEXT("normal") && TerrainId != TEXT("mud")
+				&& TerrainId != TEXT("lava") && TerrainId != TEXT("water")
+				&& TerrainId != TEXT("ice"))
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_id_unsupported"));
+			}
+			if (Payload.SetTerrainEffect.RangeMetric
+					!= EWBEffectTileRangeMetric::Manhattan
+				|| Payload.SetTerrainEffect.RangeStat != EWBEffectRangeStat::AR)
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_range_policy_unsupported"));
+			}
+			if (Payload.SetTerrainEffect.bRequireLineOfSight)
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_line_of_sight_unsupported"));
+			}
+			if (!Payload.SetTerrainEffect.bAllowOccupied
+				&& State.IsTileOccupied(Request.Target.TargetTile))
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_target_occupied"));
+			}
+			if (Repository.RepositoryId.IsEmpty())
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("card_definition_repository_required"));
+			}
+			const FWBTile SourceTile(SourceUnit->X, SourceUnit->Y);
+			const int32 Distance = FMath::Abs(
+				Request.Target.TargetTile.X - SourceTile.X)
+				+ FMath::Abs(Request.Target.TargetTile.Y - SourceTile.Y);
+			const int32 EffectiveAR = WBUnitStatQuery::GetEffectiveAR(
+				State, Repository, SourceUnit->UnitId).EffectiveValue;
+			if (Distance > EffectiveAR)
+			{
+				return FWBActionQueryResult::Deny(TEXT("terrain_target_out_of_range"));
 			}
 			break;
 		}

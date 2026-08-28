@@ -24,7 +24,8 @@ bool IsKnownPayloadOperation(const EWBGenericEffectOp Operation)
 		|| Operation == EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution
 		|| Operation == EWBGenericEffectOp::ReplacePendingAttackDefenderFromHand
 		|| Operation == EWBGenericEffectOp::
-			SacrificeSourceThenSummonCharacterFromDeckToSourceTile;
+			SacrificeSourceThenSummonCharacterFromDeckToSourceTile
+		|| Operation == EWBGenericEffectOp::SetTerrain;
 }
 
 bool IsValidTileCoordinate(const FWBTile& Tile)

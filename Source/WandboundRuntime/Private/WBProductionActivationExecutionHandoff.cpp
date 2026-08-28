@@ -358,6 +358,7 @@ FWBProductionActivationExecutionHandoff::ExecuteSelectedActivation(
 	const FWBRuntimeActivationExecutionResult ExecutionResult =
 		WBRuntimeActivationExecutionBridge::ExecuteResolvedActivationHandoff(
 			*Input.GameState,
+			*Input.Repository,
 			RuntimeHandoff);
 	if (!ExecutionResult.bOk)
 	{

@@ -73,6 +73,7 @@ public:
 	static bool ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit);
 	static FWBActionQueryResult CanApplyZeroHPDeathRemoval(const FWBGameStateData& State);
 	static FWBActionQueryResult CanApplyCardActivationCommand(const FWBGameStateData& State, const FWBCardActivationCommand& Command);
+	static FWBActionQueryResult CanApplyCardActivationCommand(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBCardActivationCommand& Command);
 	static FWBActionQueryResult CanApplyEffectRequest(const FWBGameStateData& State, const FWBEffectRequest& Request);
 	static FWBActionQueryResult CanApplyEffectRequest(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBEffectRequest& Request);
 	static FWBActionQueryResult QueryEndTurn(const FWBGameStateData& State, const FWBAction& Action);

@@ -644,20 +644,26 @@ FName FWBGameStateData::GetTerrainAt(const FWBTile& Tile) const
 	return TerrainId != nullptr ? *TerrainId : DefaultTerrainId;
 }
 
-void FWBGameStateData::SetTerrainForTest(const FWBTile& Tile, const FName TerrainId)
+bool FWBGameStateData::SetTerrainAt(const FWBTile& Tile, const FName TerrainId)
 {
 	if (!WBRules::IsTileInBounds(Tile) || TerrainId.IsNone())
 	{
-		return;
+		return false;
 	}
 
 	if (TerrainId.GetPlainNameString().Equals(DefaultTerrainId.GetPlainNameString(), ESearchCase::IgnoreCase))
 	{
-		ClearTerrainForTest(Tile);
-		return;
+		TerrainByTileIndex.Remove(TileToIndex(Tile));
+		return true;
 	}
 
 	TerrainByTileIndex.Add(TileToIndex(Tile), TerrainId);
+	return true;
+}
+
+void FWBGameStateData::SetTerrainForTest(const FWBTile& Tile, const FName TerrainId)
+{
+	SetTerrainAt(Tile, TerrainId);
 }
 
 void FWBGameStateData::ClearTerrainForTest(const FWBTile& Tile)

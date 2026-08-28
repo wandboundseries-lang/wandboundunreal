@@ -42,6 +42,7 @@ struct WANDBOUNDRUNTIME_API FWBProductionActivationTargetSelectionResult
 	FString SourceCardId;
 	FString EffectId;
 	int32 TargetUnitId = -1;
+	FWBTile TargetTile;
 };
 
 class WANDBOUNDRUNTIME_API FWBProductionActivationTargetSelectionBridge

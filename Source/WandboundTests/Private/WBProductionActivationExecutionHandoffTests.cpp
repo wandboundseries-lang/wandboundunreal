@@ -784,8 +784,8 @@ bool FWBProductionActivationExecutionHandoffNoTargetCurrentExecutionFailsSafelyT
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionActivationExecutionHandoffTileUnsupportedTest, "Wandbound.Runtime.ProductionActivationExecutionHandoff.TileTargetUnsupported", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-bool FWBProductionActivationExecutionHandoffTileUnsupportedTest::RunTest(const FString& Parameters)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionActivationExecutionHandoffTileMissingOptionTest, "Wandbound.Runtime.ProductionActivationExecutionHandoff.TileTargetWithoutProviderOptionFailsClosed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBProductionActivationExecutionHandoffTileMissingOptionTest::RunTest(const FString& Parameters)
 {
 	FWBGameStateData State = MakeHandoffState();
 	const FWBCardDefinitionRepository Repository = MakeBoardRepository(EWBCardEffectTargetRequirement::Tile);
@@ -801,11 +801,11 @@ bool FWBProductionActivationExecutionHandoffTileUnsupportedTest::RunTest(const F
 	const FWBProductionActivationExecutionHandoffResult Result =
 		FWBProductionActivationExecutionHandoff().ExecuteSelectedActivation(
 			MakeExecutionInput(State, Repository, Provider, MakeSelectionRequest(*Action)));
-	AssertResultCode(
-		*this,
-		Result,
-		EWBProductionActivationExecutionHandoffResultCode::UnsupportedTargetRequirement,
-		TEXT("Tile unsupported"));
+	TestEqual(TEXT("Tile target missing code"), Result.Code,
+		EWBProductionActivationExecutionHandoffResultCode::SelectionFailed);
+	TestFalse(TEXT("Tile target missing fails closed"), Result.bOk);
+	TestEqual(TEXT("Missing provider option reason"), Result.Reason,
+		FString(TEXT("target_required_but_missing")));
 	return true;
 }
 

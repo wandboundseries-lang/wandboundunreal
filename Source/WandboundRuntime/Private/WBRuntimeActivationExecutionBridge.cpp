@@ -1,5 +1,6 @@
 #include "WBRuntimeActivationExecutionBridge.h"
 
+#include "WBCardDefinitionRepository.h"
 #include "WBEffectRunner.h"
 
 namespace
@@ -40,6 +41,16 @@ WBRuntimeActivationExecutionBridge::ExecuteResolvedActivationHandoff(
 	FWBGameStateData& State,
 	const FWBRuntimeActivationExecutionHandoffResult& Handoff)
 {
+	return ExecuteResolvedActivationHandoff(
+		State, FWBCardDefinitionRepository(), Handoff);
+}
+
+FWBRuntimeActivationExecutionResult
+WBRuntimeActivationExecutionBridge::ExecuteResolvedActivationHandoff(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBRuntimeActivationExecutionHandoffResult& Handoff)
+{
 	if (!Handoff.bHandoffOk)
 	{
 		return MakeActivationExecutionFailure(
@@ -76,7 +87,8 @@ WBRuntimeActivationExecutionBridge::ExecuteResolvedActivationHandoff(
 	Result.Handoff = Handoff;
 	Result.ActivationResult = WBEffectRunner::ApplyCardActivationCommand(
 		State,
-		Handoff.ActivationAction.Command);
+		Handoff.ActivationAction.Command,
+		Repository);
 	Result.bOk = Result.ActivationResult.bOk;
 	Result.bActivationResolved = Result.ActivationResult.bOk;
 	Result.Reason = Result.ActivationResult.Reason;

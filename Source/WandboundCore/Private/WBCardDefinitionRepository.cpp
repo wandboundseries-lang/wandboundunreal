@@ -362,6 +362,27 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 						Repository,
 						TEXT("invalid_activated_deck_summon_definition"));
 				}
+				if (Payload.Operation == EWBGenericEffectOp::SetTerrain
+					&& (Effect.TargetRequirement
+							!= EWBCardEffectTargetRequirement::Tile
+						|| Effect.SourceGate.RequiredZone
+							!= EWBCardActivationSourceZone::Board
+						|| Effect.SourceGate.Timing
+							!= EWBCardActivationTimingRequirement::NormalTurnPriority
+						|| !Effect.SourceGate.bRequiresSourceUnit
+						|| !Effect.SourceGate.bRequiresSourceUnitOwnership
+						|| !Effect.SourceGate.bOncePerTurn
+						|| Payload.SetTerrainEffect.TerrainId.IsNone()
+						|| Payload.SetTerrainEffect.RangeMetric
+							!= EWBEffectTileRangeMetric::Manhattan
+						|| Payload.SetTerrainEffect.RangeStat
+							!= EWBEffectRangeStat::AR
+						|| !Payload.SetTerrainEffect.bAllowOccupied
+						|| Payload.SetTerrainEffect.bRequireLineOfSight))
+				{
+					return MakeValidationFailure(
+						Repository, TEXT("invalid_set_terrain_definition"));
+				}
 			}
 		}
 

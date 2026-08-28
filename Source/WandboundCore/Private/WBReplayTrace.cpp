@@ -218,6 +218,15 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetStringField(TEXT("damage_cause"), Event.DamageCause.ToString());
 	}
+	if (!Event.PreviousTerrainId.IsNone())
+	{
+		Object->SetStringField(
+			TEXT("previous_terrain_id"), Event.PreviousTerrainId.ToString());
+	}
+	if (!Event.NewTerrainId.IsNone())
+	{
+		Object->SetStringField(TEXT("new_terrain_id"), Event.NewTerrainId.ToString());
+	}
 
 	if (Event.HealAmount != -1)
 	{

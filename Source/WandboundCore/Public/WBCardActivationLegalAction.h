@@ -8,7 +8,8 @@ struct FWBPublicBoardSummary;
 enum class EWBCardActivationTargetOptionType : uint8
 {
 	Unknown,
-	Unit
+	Unit,
+	Tile
 };
 
 struct WANDBOUNDCORE_API FWBCardActivationTargetOption

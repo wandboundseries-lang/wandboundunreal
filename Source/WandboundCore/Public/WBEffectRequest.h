@@ -20,7 +20,29 @@ enum class EWBGenericEffectOp : uint8
 	RedirectPendingAttack,
 	RegisterPendingAttackHPDamageSubstitution,
 	ReplacePendingAttackDefenderFromHand,
-	SacrificeSourceThenSummonCharacterFromDeckToSourceTile
+	SacrificeSourceThenSummonCharacterFromDeckToSourceTile,
+	SetTerrain
+};
+
+enum class EWBEffectTileRangeMetric : uint8
+{
+	Unknown,
+	Manhattan
+};
+
+enum class EWBEffectRangeStat : uint8
+{
+	Unknown,
+	AR
+};
+
+struct WANDBOUNDCORE_API FWBSetTerrainEffectRequest
+{
+	FName TerrainId;
+	EWBEffectTileRangeMetric RangeMetric = EWBEffectTileRangeMetric::Unknown;
+	EWBEffectRangeStat RangeStat = EWBEffectRangeStat::Unknown;
+	bool bAllowOccupied = false;
+	bool bRequireLineOfSight = false;
 };
 
 enum class EWBEffectAuxiliaryCardZone : uint8
@@ -70,6 +92,7 @@ struct WANDBOUNDCORE_API FWBGenericEffectPayload
 	FWBStatusEffectRequest StatusEffect;
 	FWBDamageEffectRequest DamageEffect;
 	FWBHealEffectRequest HealEffect;
+	FWBSetTerrainEffectRequest SetTerrainEffect;
 	FString PendingEffectFrameId;
 	FString PendingAttackContinuationId;
 	FString RequiredSourceFaction;

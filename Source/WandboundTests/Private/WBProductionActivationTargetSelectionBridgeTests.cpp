@@ -648,8 +648,8 @@ bool FWBProductionActivationTargetSelectionBridgeNoTargetProvidedFailsTest::RunT
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionActivationTargetSelectionBridgeTileUnsupportedTest, "Wandbound.Runtime.ProductionActivationTargetSelectionBridge.TileTargetUnsupported", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-bool FWBProductionActivationTargetSelectionBridgeTileUnsupportedTest::RunTest(const FString& Parameters)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWBProductionActivationTargetSelectionBridgeTileMissingOptionTest, "Wandbound.Runtime.ProductionActivationTargetSelectionBridge.TileTargetWithoutProviderOptionFailsClosed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FWBProductionActivationTargetSelectionBridgeTileMissingOptionTest::RunTest(const FString& Parameters)
 {
 	const FWBGameStateData State = MakeBridgeState();
 	const FWBCardDefinitionRepository Repository =
@@ -666,8 +666,8 @@ bool FWBProductionActivationTargetSelectionBridgeTileUnsupportedTest::RunTest(co
 	AssertBridgeResult(
 		*this,
 		Result,
-		EWBProductionActivationTargetSelectionResultCode::UnsupportedTargetRequirement,
-		TEXT("Tile unsupported"));
+		EWBProductionActivationTargetSelectionResultCode::TargetRequiredButMissing,
+		TEXT("Tile target missing"));
 	return true;
 }
 

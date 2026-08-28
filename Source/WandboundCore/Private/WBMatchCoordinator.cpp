@@ -95,7 +95,7 @@ FString BuildPendingEffectCanonicalState(
 		for (const FWBGenericEffectPayload& Payload : Frame.Command.EffectRequest.Payloads)
 		{
 			Out += FString::Printf(
-				TEXT("payload=%d;armor_op=%d;armor_target=%d;armor_amount=%d;status_op=%d;status_target=%d;status_duration=%d;damage_target=%d;damage_source_unit=%d;damage_source_player=%d;damage_amount=%d;damage_bypass=%d;heal_target=%d;heal_source_unit=%d;heal_source_player=%d;heal_amount=%d;"),
+				TEXT("payload=%d;armor_op=%d;armor_target=%d;armor_amount=%d;status_op=%d;status_target=%d;status_duration=%d;damage_target=%d;damage_source_unit=%d;damage_source_player=%d;damage_amount=%d;damage_bypass=%d;heal_target=%d;heal_source_unit=%d;heal_source_player=%d;heal_amount=%d;terrain=%s;terrain_metric=%d;terrain_stat=%d;terrain_occupied=%d;terrain_los=%d;"),
 				static_cast<int32>(Payload.Operation),
 				static_cast<int32>(Payload.ArmorEffect.Operation),
 				Payload.ArmorEffect.TargetUnitId,
@@ -111,7 +111,12 @@ FString BuildPendingEffectCanonicalState(
 				Payload.HealEffect.TargetUnitId,
 				Payload.HealEffect.SourceUnitId,
 				Payload.HealEffect.SourcePlayerId,
-				Payload.HealEffect.Amount);
+				Payload.HealEffect.Amount,
+				*Payload.SetTerrainEffect.TerrainId.ToString(),
+				static_cast<int32>(Payload.SetTerrainEffect.RangeMetric),
+				static_cast<int32>(Payload.SetTerrainEffect.RangeStat),
+				Payload.SetTerrainEffect.bAllowOccupied ? 1 : 0,
+				Payload.SetTerrainEffect.bRequireLineOfSight ? 1 : 0);
 			AppendString(TEXT("target_frame"), Payload.PendingEffectFrameId);
 			AppendString(TEXT("required_source_faction"), Payload.RequiredSourceFaction);
 			AppendString(TEXT("required_replacement_faction"), Payload.RequiredReplacementFaction);
@@ -401,6 +406,15 @@ TArray<FWBEffectTargetRef> BuildActivationTargets(const FWBGameStateData& State)
 		FWBEffectTargetRef Target;
 		Target.TargetUnitId = Unit->UnitId;
 		Targets.Add(Target);
+	}
+	for (int32 Y = 0; Y < 9; ++Y)
+	{
+		for (int32 X = 0; X < 9; ++X)
+		{
+			FWBEffectTargetRef Target;
+			Target.TargetTile = FWBTile(X, Y);
+			Targets.Add(Target);
+		}
 	}
 	return Targets;
 }
@@ -854,15 +868,12 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				}
 			}
 		}
-		if (bControlsPendingAttack)
+		const FWBActionQueryResult Query =
+			WBRules::CanApplyCardActivationCommand(
+				State, Repository, Action.ActivationCommand);
+		if (!Query.bOk)
 		{
-			const FWBActionQueryResult Query =
-				WBRules::CanApplyCardActivationCommand(
-					State, Action.ActivationCommand);
-			if (!Query.bOk)
-			{
-				continue;
-			}
+			continue;
 		}
 		Result.Actions.Add(MoveTemp(Action));
 	}
@@ -2465,7 +2476,7 @@ bool WBMatchCoordinator::BeginPendingEffectActivation(
 	}
 	const FWBActionQueryResult Query =
 		WBRules::CanApplyCardActivationCommand(
-			WorkingState, Action.ActivationCommand);
+			WorkingState, Repository, Action.ActivationCommand);
 	if (!Query.bOk)
 	{
 		OutReason = Query.Reason;

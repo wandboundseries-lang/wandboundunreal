@@ -20,6 +20,7 @@
 #include "WBProductionMatchReplayRuntime.h"
 #include "WBProductionMatchReplaySmoke.h"
 #include "WBProductionMarrowBlackcoinBouncerSmoke.h"
+#include "WBProductionTerrainCartographerSmoke.h"
 #include "WBProductionNPCReactionCombatSmoke.h"
 #include "WBProductionPendingAttackRedirectSmoke.h"
 #include "WBProductionCSNBodyDoubleSmoke.h"
@@ -178,7 +179,25 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 			Log,
 			TEXT("Wandbound production CardDB digest: %s"),
 			*ProductionCardDatabase->ContentDigest);
-		if (WBProductionMarrowBlackcoinBouncerSmoke::IsRequested())
+		if (WBProductionTerrainCartographerSmoke::IsRequested())
+		{
+			const FWBProductionTerrainCartographerSmokeResult TerrainSmoke =
+				WBProductionTerrainCartographerSmoke::Run(
+					PendingBootstrapRequest);
+			if (!TerrainSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound Terrain Cartographer smoke failed: %s"),
+					*TerrainSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				TerrainSmoke.bOk ? 0 : 39,
+				TEXT("WandboundProductionTerrainCartographerSmoke"));
+		}
+		else if (WBProductionMarrowBlackcoinBouncerSmoke::IsRequested())
 		{
 			const FWBProductionMarrowBlackcoinBouncerSmokeResult BlackcoinSmoke =
 				WBProductionMarrowBlackcoinBouncerSmoke::Run(

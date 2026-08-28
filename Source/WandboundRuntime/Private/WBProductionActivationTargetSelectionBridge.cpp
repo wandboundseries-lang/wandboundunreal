@@ -81,8 +81,16 @@ bool TargetOptionMatchesProviderOption(
 	const FWBCardActivationTargetOption& Selected,
 	const FWBCardActivationTargetOption& ProviderOption)
 {
-	if (ProviderOption.Type != EWBCardActivationTargetOptionType::Unit
-		|| Selected.Type != EWBCardActivationTargetOptionType::Unit)
+	if (ProviderOption.Type != Selected.Type)
+	{
+		return false;
+	}
+	if (ProviderOption.Type == EWBCardActivationTargetOptionType::Tile)
+	{
+		return IsValidTile(Selected.TargetTile)
+			&& Selected.TargetTile == ProviderOption.TargetTile;
+	}
+	if (ProviderOption.Type != EWBCardActivationTargetOptionType::Unit)
 	{
 		return false;
 	}
@@ -159,6 +167,7 @@ FWBProductionActivationTargetSelectionResult MakeSuccess(
 	Result.SourceCardId = SafeSourceCardIdFromAction(Action);
 	Result.EffectId = SafeEffectIdFromAction(Action);
 	Result.TargetUnitId = TargetUnitId;
+	Result.TargetTile = Result.Command.EffectRequest.Target.TargetTile;
 	return Result;
 }
 }
@@ -255,6 +264,31 @@ FWBProductionActivationTargetSelectionBridge::BuildCommandForSelection(
 			Request.SelectedTargetOption.TargetUnitId);
 	}
 	case EWBCardEffectTargetRequirement::Tile:
+	{
+		if (!Request.bHasSelectedTarget)
+		{
+			return MakeFailure(EWBProductionActivationTargetSelectionResultCode::TargetRequiredButMissing);
+		}
+		if (Request.SelectedTargetOption.Type
+			!= EWBCardActivationTargetOptionType::Tile)
+		{
+			return MakeFailure(EWBProductionActivationTargetSelectionResultCode::TargetTypeMismatch);
+		}
+		if (!IsValidTile(Request.SelectedTargetOption.TargetTile))
+		{
+			return MakeFailure(EWBProductionActivationTargetSelectionResultCode::TargetStaleOrMissing);
+		}
+		if (!HasMatchingProviderTargetOption(*MatchedAction, Request.SelectedTargetOption))
+		{
+			return MakeFailure(EWBProductionActivationTargetSelectionResultCode::TargetNotAllowed);
+		}
+
+		FWBCardActivationCommand Command = MakeSafeCommandCopy(*MatchedAction);
+		Command.EffectRequest.Target.TargetUnitId = -1;
+		Command.EffectRequest.Target.TargetTile = Request.SelectedTargetOption.TargetTile;
+		Command.EffectRequest.Target.TargetWallEdge = FWBWallEdge();
+		return MakeSuccess(*MatchedAction, MoveTemp(Command), -1);
+	}
 	case EWBCardEffectTargetRequirement::WallEdge:
 	default:
 		return MakeFailure(EWBProductionActivationTargetSelectionResultCode::UnsupportedTargetRequirement);

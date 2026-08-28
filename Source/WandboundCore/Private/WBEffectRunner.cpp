@@ -301,6 +301,7 @@ void AppendEffectRequestResolvedTrace(
 	Event.PlayerId = Request.Source.PlayerId;
 	Event.SourceUnitId = Request.Source.SourceUnitId;
 	Event.TargetUnitId = Request.Target.TargetUnitId;
+	Event.ToTile = Request.Target.TargetTile;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
 }
@@ -328,8 +329,40 @@ void AppendCardActivationResolvedTrace(
 	Event.PlayerId = Command.Source.PlayerId;
 	Event.SourceUnitId = Command.Source.SourceUnitId;
 	Event.TargetUnitId = Command.EffectRequest.Target.TargetUnitId;
+	Event.ToTile = Command.EffectRequest.Target.TargetTile;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
+}
+
+FWBApplyActionResult ApplySetTerrainEffect(
+	FWBGameStateData& State,
+	const FWBEffectRequest& Request,
+	const FWBSetTerrainEffectRequest& TerrainRequest)
+{
+	FWBApplyActionResult Result;
+	const FName PreviousTerrain = State.GetTerrainAt(Request.Target.TargetTile);
+	const FName NewTerrain(*TerrainRequest.TerrainId.GetPlainNameString().ToLower());
+	if (!State.SetTerrainAt(Request.Target.TargetTile, NewTerrain))
+	{
+		Result.Reason = TEXT("terrain_change_failed");
+		return Result;
+	}
+
+	Result.bOk = true;
+	if (!PreviousTerrain.GetPlainNameString().Equals(
+		NewTerrain.GetPlainNameString(), ESearchCase::IgnoreCase))
+	{
+		FWBTraceEvent Event;
+		Event.Kind = FName(TEXT("terrain_changed"));
+		Event.PlayerId = Request.Source.PlayerId;
+		Event.SourceUnitId = Request.Source.SourceUnitId;
+		Event.ToTile = Request.Target.TargetTile;
+		Event.PreviousTerrainId = PreviousTerrain;
+		Event.NewTerrainId = NewTerrain;
+		Event.bOk = true;
+		Result.TraceEvents.Add(MoveTemp(Event));
+	}
+	return Result;
 }
 
 void AppendCardActivationUsageMarkedTrace(
@@ -1362,6 +1395,12 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 			PayloadResult.bOk = true;
 			break;
 		}
+		case EWBGenericEffectOp::SetTerrain:
+		{
+			PayloadResult = ApplySetTerrainEffect(
+				WorkingState, Request, Payload.SetTerrainEffect);
+			break;
+		}
 		default:
 			Result.bOk = false;
 			Result.Reason = TEXT("unknown_effect_payload_operation");
@@ -1403,7 +1442,9 @@ FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
 	FWBCardActivationCommandResult Result;
 	Result.Command = Command;
 
-	const FWBActionQueryResult Query = WBRules::CanApplyCardActivationCommand(State, Command);
+	const FWBActionQueryResult Query = Repository.RepositoryId.IsEmpty()
+		? WBRules::CanApplyCardActivationCommand(State, Command)
+		: WBRules::CanApplyCardActivationCommand(State, Repository, Command);
 	if (!Query.bOk)
 	{
 		Result.bOk = false;

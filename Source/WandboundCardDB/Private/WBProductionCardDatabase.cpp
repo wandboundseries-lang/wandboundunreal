@@ -592,6 +592,15 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 				static_cast<int32>(Payload.ArmorEffect.Operation),
 				Payload.ArmorEffect.Amount);
 			break;
+		case EWBGenericEffectOp::SetTerrain:
+			Digest += FString::Printf(
+				TEXT(":%s:%d:%d:%d:%d"),
+				*Payload.SetTerrainEffect.TerrainId.ToString(),
+				static_cast<int32>(Payload.SetTerrainEffect.RangeMetric),
+				static_cast<int32>(Payload.SetTerrainEffect.RangeStat),
+				Payload.SetTerrainEffect.bAllowOccupied ? 1 : 0,
+				Payload.SetTerrainEffect.bRequireLineOfSight ? 1 : 0);
+			break;
 		case EWBGenericEffectOp::PreventPendingAttack:
 		case EWBGenericEffectOp::RedirectPendingAttack:
 		case EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution:
@@ -2521,6 +2530,7 @@ private:
 				TEXT("target_requirement"),
 				TargetRequirement)
 				|| (TargetRequirement != TEXT("unit")
+					&& TargetRequirement != TEXT("tile")
 					&& TargetRequirement != TEXT("none")))
 			{
 				AddError(
@@ -2528,7 +2538,7 @@ private:
 					Record.SourceManifestPath,
 					Record.CoreDefinition.CardId,
 					EffectPath + TEXT(".target_requirement"),
-					TEXT("Production activations support explicit unit targets and control payloads with no public target."));
+					TEXT("Production activations support explicit public unit or tile targets and control payloads with no public target."));
 			}
 			Effect.TargetRequirement = ParseTargetRequirement(TargetRequirement);
 
@@ -3506,19 +3516,20 @@ private:
 		}
 		if (Effect.SourceGate.bOncePerTurn)
 		{
-			if (!TryReadString(
-				GateObject,
-				TEXT("once_per_turn_key"),
-				Effect.SourceGate.OncePerTurnKey)
-				|| !WBProductionCardDatabase::IsSafeDefinitionId(
-					Effect.SourceGate.OncePerTurnKey))
+			if (HasField(GateObject, TEXT("once_per_turn_key"))
+				&& (!TryReadString(
+					GateObject,
+					TEXT("once_per_turn_key"),
+					Effect.SourceGate.OncePerTurnKey)
+					|| !WBProductionCardDatabase::IsSafeDefinitionId(
+						Effect.SourceGate.OncePerTurnKey)))
 			{
 				AddError(
 					TEXT("usage_key_invalid"),
 					Record.SourceManifestPath,
 					Record.CoreDefinition.CardId,
 					EffectPath + TEXT(".source_gate.once_per_turn_key"),
-					TEXT("Once-per-turn activations require a stable canonical usage key."));
+					TEXT("Explicit once-per-turn usage keys must be stable canonical identifiers."));
 			}
 		}
 		else if (HasField(GateObject, TEXT("once_per_turn_key")))
@@ -3640,6 +3651,10 @@ private:
 			else if (Type == TEXT("armor_effect"))
 			{
 				ParseArmorPayload(PayloadObject, PayloadPath, Record, Payload);
+			}
+			else if (Type == TEXT("set_terrain"))
+			{
+				ParseSetTerrainPayload(PayloadObject, PayloadPath, Record, Payload);
 			}
 			else if (Type == TEXT("negate_pending_effect"))
 			{
@@ -4006,6 +4021,81 @@ private:
 		}
 		OutPayload.ArmorEffect.SourceReason = FName(TEXT("production_carddb"));
 		ValidateSelectedTarget(Object, Path, Record);
+	}
+
+	void ParseSetTerrainPayload(
+		const TSharedPtr<FJsonObject>& Object,
+		const FString& Path,
+		const FWBProductionCardRecord& Record,
+		FWBGenericEffectPayload& OutPayload)
+	{
+		ValidateKnownFields(
+			Object,
+			{
+				TEXT("type"), TEXT("target"), TEXT("terrain_id"),
+				TEXT("range_metric"), TEXT("range_stat"),
+				TEXT("allow_occupied"), TEXT("require_line_of_sight")
+			},
+			Record.SourceManifestPath,
+			Record.CoreDefinition.CardId,
+			Path);
+		OutPayload.Operation = EWBGenericEffectOp::SetTerrain;
+		ValidateSelectedTarget(Object, Path, Record);
+
+		FString Value;
+		if (!TryReadString(Object, TEXT("terrain_id"), Value)
+			|| (Value != TEXT("mud") && Value != TEXT("lava")
+				&& Value != TEXT("water") && Value != TEXT("ice")))
+		{
+			AddError(TEXT("terrain_id_unsupported"), Record.SourceManifestPath,
+				Record.CoreDefinition.CardId, Path + TEXT(".terrain_id"),
+				TEXT("Set-terrain payloads require mud, lava, water, or ice."));
+		}
+		OutPayload.SetTerrainEffect.TerrainId = FName(*Value);
+
+		if (!TryReadString(Object, TEXT("range_metric"), Value)
+			|| Value != TEXT("manhattan"))
+		{
+			AddError(TEXT("terrain_range_metric_unsupported"),
+				Record.SourceManifestPath, Record.CoreDefinition.CardId,
+				Path + TEXT(".range_metric"),
+				TEXT("Set-terrain payloads require Manhattan range."));
+		}
+		else
+		{
+			OutPayload.SetTerrainEffect.RangeMetric =
+				EWBEffectTileRangeMetric::Manhattan;
+		}
+		if (!TryReadString(Object, TEXT("range_stat"), Value)
+			|| Value != TEXT("ar"))
+		{
+			AddError(TEXT("terrain_range_stat_unsupported"),
+				Record.SourceManifestPath, Record.CoreDefinition.CardId,
+				Path + TEXT(".range_stat"),
+				TEXT("Set-terrain payloads require effective AR range."));
+		}
+		else
+		{
+			OutPayload.SetTerrainEffect.RangeStat = EWBEffectRangeStat::AR;
+		}
+		if (!TryReadBool(Object, TEXT("allow_occupied"),
+				OutPayload.SetTerrainEffect.bAllowOccupied)
+			|| !OutPayload.SetTerrainEffect.bAllowOccupied)
+		{
+			AddError(TEXT("terrain_occupied_policy_unsupported"),
+				Record.SourceManifestPath, Record.CoreDefinition.CardId,
+				Path + TEXT(".allow_occupied"),
+				TEXT("Set-terrain payloads must explicitly allow occupied tiles."));
+		}
+		if (!TryReadBool(Object, TEXT("require_line_of_sight"),
+				OutPayload.SetTerrainEffect.bRequireLineOfSight)
+			|| OutPayload.SetTerrainEffect.bRequireLineOfSight)
+		{
+			AddError(TEXT("terrain_line_of_sight_policy_unsupported"),
+				Record.SourceManifestPath, Record.CoreDefinition.CardId,
+				Path + TEXT(".require_line_of_sight"),
+				TEXT("Set-terrain payloads must explicitly disable line of sight."));
+		}
 	}
 
 	void ValidateEffectCompatibility(

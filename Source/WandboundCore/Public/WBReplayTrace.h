@@ -49,6 +49,8 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	int32 ActualHPDamageAmount = -1;
 	bool bFrozenBreak = false;
 	FName DamageCause;
+	FName PreviousTerrainId;
+	FName NewTerrainId;
 	int32 HealAmount = -1;
 	int32 EffectiveHealAmount = -1;
 	int32 CostAmount = -1;
