@@ -137,7 +137,8 @@ FWBPreDamageAttackTriggerResult WBPreDamageAttackTrigger::Resolve(
 		const FString UsageKey = BuildUsageKey(
 			InitialDefenderUnitId, Trigger.TriggerId, State.TurnNumber);
 		if (Trigger.bOncePerTurn
-			&& State.HasActivationUsageKeyThisTurn(Defender->OwnerId, UsageKey))
+			&& State.HasActivationUsageKeyThisTurn(
+				Defender->GetControllerPlayerIdForRules(), UsageKey))
 		{
 			continue;
 		}
@@ -155,13 +156,14 @@ FWBPreDamageAttackTriggerResult WBPreDamageAttackTrigger::Resolve(
 		}
 		if (Trigger.bOncePerTurn)
 		{
-			State.MarkActivationUsageKeyForTest(Defender->OwnerId, UsageKey);
+			State.MarkActivationUsageKeyForTest(
+				Defender->GetControllerPlayerIdForRules(), UsageKey);
 		}
 
 		FWBTraceEvent Event;
 		Event.Kind = FName(TEXT("random_branch_resolved"));
 		Event.ActionId = Trigger.TriggerId;
-		Event.PlayerId = Defender->OwnerId;
+		Event.PlayerId = Defender->GetControllerPlayerIdForRules();
 		Event.SourceUnitId = InitialDefenderUnitId;
 		Event.PreviousTargetUnitId = InitialDefenderUnitId;
 		Event.TargetUnitId = State.PendingAttack.DefenderUnitId;

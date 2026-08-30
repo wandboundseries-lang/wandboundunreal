@@ -65,7 +65,7 @@ FWBUnitStatDeltaResult WBUnitStatDelta::ApplyPersistentDelta(
 	FWBTraceEvent Applied;
 	Applied.Kind = FName(TEXT("unit_stat_delta_applied"));
 	Applied.ActionId = Request.TransactionId;
-	Applied.PlayerId = MutableTarget->OwnerId;
+	Applied.PlayerId = MutableTarget->GetControllerPlayerIdForRules();
 	Applied.SourceUnitId = Request.SourceUnitId;
 	Applied.TargetUnitId = Request.TargetUnitId;
 	Applied.PreviousATK = PreviousATK;

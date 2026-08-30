@@ -47,7 +47,8 @@ FWBApplyActionResult MakeDeathResolutionFailure(const FString& Reason)
 
 bool IsHeroUnitForOwner(const FWBGameStateData& State, const FWBUnitState& Unit)
 {
-	const FWBPlayerStateData* Player = State.GetPlayerById(Unit.OwnerId);
+	const FWBPlayerStateData* Player = State.GetPlayerById(
+		Unit.GetOwnerPlayerIdForRules());
 	return Player != nullptr && Player->HeroUnitId == Unit.UnitId;
 }
 
@@ -57,7 +58,7 @@ FWBDeathResolutionCandidate MakeDeathResolutionCandidate(
 {
 	FWBDeathResolutionCandidate Candidate;
 	Candidate.UnitId = Unit.UnitId;
-	Candidate.OwnerId = Unit.OwnerId;
+	Candidate.OwnerId = Unit.GetControllerPlayerIdForRules();
 	Candidate.bIsHero = IsHeroUnitForOwner(State, Unit);
 	return Candidate;
 }
@@ -107,7 +108,7 @@ FWBTraceEvent MakeUnitDefeatedTrace(
 {
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("unit_defeated"));
-	Event.PlayerId = Unit.OwnerId;
+	Event.PlayerId = Unit.GetControllerPlayerIdForRules();
 	Event.TargetUnitId = Unit.UnitId;
 	Event.PreviousHP = PreviousHP;
 	Event.NewHP = Unit.HP;
@@ -126,7 +127,7 @@ FWBTraceEvent MakeUnitRemovedFromBoardTrace(
 {
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("unit_removed_from_board"));
-	Event.PlayerId = Unit.OwnerId;
+	Event.PlayerId = Unit.GetControllerPlayerIdForRules();
 	Event.TargetUnitId = Unit.UnitId;
 	Event.FromTile = PreviousTile;
 	Event.ResolutionOrder = ResolutionOrder;
@@ -142,7 +143,7 @@ FWBTraceEvent MakeHeroDefeatedTrace(
 {
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("hero_defeated"));
-	Event.PlayerId = Unit.OwnerId;
+	Event.PlayerId = Unit.GetControllerPlayerIdForRules();
 	Event.TargetUnitId = Unit.UnitId;
 	Event.WinningPlayerId = WinningPlayerId;
 	Event.ResolutionOrder = ResolutionOrder;
@@ -277,7 +278,8 @@ bool WBDeathResolution::BuildSuccessfulDestructionSnapshot(
 		UnitId);
 	OutSnapshot.DestroyedUnitId = UnitId;
 	OutSnapshot.DestroyedCardId = Unit->CardId;
-	OutSnapshot.ControllerPlayerId = Unit->OwnerId;
+	OutSnapshot.OwnerPlayerId = Unit->GetOwnerPlayerIdForRules();
+	OutSnapshot.ControllerPlayerId = Unit->GetControllerPlayerIdForRules();
 	OutSnapshot.LastTile = FWBTile(Unit->X, Unit->Y);
 	OutSnapshot.bWasHero = IsHeroUnitForOwner(State, *Unit);
 	OutSnapshot.Cause = Cause;
@@ -298,7 +300,9 @@ bool WBDeathResolution::BuildSuccessfulDestructionSnapshot(
 		FWBPostDestructionObserverSourceSnapshot Observer;
 		Observer.SourceUnitId = Candidate.UnitId;
 		Observer.SourceCardId = Candidate.CardId;
-		Observer.ControllerPlayerId = Candidate.OwnerId;
+		Observer.OwnerPlayerId = Candidate.GetOwnerPlayerIdForRules();
+		Observer.ControllerPlayerId =
+			Candidate.GetControllerPlayerIdForRules();
 		OutSnapshot.ObserverSources.Add(MoveTemp(Observer));
 	}
 	OutSnapshot.ObserverSources.Sort([](
@@ -373,7 +377,7 @@ FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(
 
 			if (IsHeroUnitForOwner(State, Unit))
 			{
-				LosingHeroOwnerIds.Add(Unit.OwnerId);
+				LosingHeroOwnerIds.Add(Unit.GetOwnerPlayerIdForRules());
 			}
 		}
 	}
@@ -473,12 +477,13 @@ FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(
 
 		if (bHeroUnit)
 		{
-			const int32 WinningPlayerId = OpposingPlayerId(Unit->OwnerId);
+			const int32 LosingPlayerId = Unit->GetOwnerPlayerIdForRules();
+			const int32 WinningPlayerId = OpposingPlayerId(LosingPlayerId);
 			WorkingState.bGameOver = true;
 			WorkingState.WinnerPlayerId = WinningPlayerId;
 			WorkingState.TerminalOutcome.bTerminal = true;
 			WorkingState.TerminalOutcome.WinnerPlayerId = WinningPlayerId;
-			WorkingState.TerminalOutcome.LoserPlayerId = Unit->OwnerId;
+			WorkingState.TerminalOutcome.LoserPlayerId = LosingPlayerId;
 			WorkingState.TerminalOutcome.Reason =
 				EWBTerminalReason::HeroDefeatedWithoutReplacement;
 			WorkingState.TerminalOutcome.Source = EWBTerminalSource::Unknown;

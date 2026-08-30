@@ -288,7 +288,8 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 			if (LiveSource == nullptr
 				|| !LiveSource->IsUnitOnBoard()
 				|| LiveSource->bDefeated
-				|| LiveSource->OwnerId != Observer.Source.ControllerPlayerId
+				|| LiveSource->GetControllerPlayerIdForRules()
+					!= Observer.Source.ControllerPlayerId
 				|| LiveSource->CardId != Observer.Source.SourceCardId)
 			{
 				Result.TraceEvents.Add(MakeObserverTrace(
@@ -496,6 +497,15 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 	FWBPostDestructionTriggerResult Result;
 	Result.bOk = true;
 	Result.bSummoned = Summon.bOk;
+	FWBTraceEvent DeclaredTarget;
+	DeclaredTarget.Kind = FName(TEXT("mandatory_deck_target_declared"));
+	DeclaredTarget.ActionId = ActionId;
+	DeclaredTarget.PlayerId = Choice.ControllerPlayerId;
+	DeclaredTarget.SourceUnitId = Event.DestroyedUnitId;
+	DeclaredTarget.CardInstanceId = *SelectedInstance;
+	DeclaredTarget.bDeclaredTarget = true;
+	DeclaredTarget.bOk = true;
+	Result.TraceEvents.Add(MoveTemp(DeclaredTarget));
 	Result.TraceEvents.Append(Summon.TraceEvents);
 	Result.TraceEvents.Add(MakeTriggerTrace(
 		Summon.bOk

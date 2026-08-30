@@ -500,6 +500,18 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetBoolField(TEXT("counter_attack"), true);
 	}
+	if (Event.bDeclaredAttack)
+	{
+		Object->SetBoolField(TEXT("declared_attack"), true);
+	}
+	if (Event.bDeclaredActivation)
+	{
+		Object->SetBoolField(TEXT("declared_activation"), true);
+	}
+	if (Event.bDeclaredTarget)
+	{
+		Object->SetBoolField(TEXT("declared_target"), true);
+	}
 
 	if (Event.bDeferredBoundary)
 	{

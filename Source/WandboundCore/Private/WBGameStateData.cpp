@@ -102,6 +102,46 @@ bool FWBUnitState::IsUnitOnBoard() const
 	return !bDefeated && !bRemovedFromBoard && X >= 0 && Y >= 0;
 }
 
+int32 FWBUnitState::GetOwnerPlayerIdForRules() const
+{
+	return FWBGameStateData::IsValidPlayerId(OwnerPlayerId)
+		? OwnerPlayerId
+		: GetControllerPlayerIdForRules();
+}
+
+int32 FWBUnitState::GetControllerPlayerIdForRules() const
+{
+	// Legacy callers still mutate OwnerId directly to change control, including
+	// assigning INDEX_NONE for neutral NPCs. Production identity setters keep
+	// both fields synchronized, so a mismatch means the compatibility field was
+	// changed after normalization and must remain authoritative for control.
+	return OwnerId != ControllerPlayerId ? OwnerId : ControllerPlayerId;
+}
+
+void FWBUnitState::SetOwnerAndControllerForRules(
+	const int32 InOwnerPlayerId,
+	const int32 InControllerPlayerId)
+{
+	OwnerPlayerId = InOwnerPlayerId;
+	ControllerPlayerId = InControllerPlayerId;
+	OwnerId = InControllerPlayerId;
+}
+
+void FWBUnitState::SetControllerPlayerIdForRules(const int32 InControllerPlayerId)
+{
+	ControllerPlayerId = InControllerPlayerId;
+	OwnerId = InControllerPlayerId;
+}
+
+void FWBUnitState::NormalizeIdentityForRules()
+{
+	const int32 Controller = GetControllerPlayerIdForRules();
+	const int32 Owner = FWBGameStateData::IsValidPlayerId(OwnerPlayerId)
+		? OwnerPlayerId
+		: Controller;
+	SetOwnerAndControllerForRules(Owner, Controller);
+}
+
 int32 FWBUnitState::GetBaseRLForRules() const
 {
 	if (BaseRL != 0 || CurrentRL != 0 || RLTotal == 0)
@@ -323,24 +363,51 @@ void FWBGameStateData::ClearCardZoneStateForTest()
 
 TArray<const FWBUnitState*> FWBGameStateData::GetUnitsForPlayer(const int32 PlayerId) const
 {
-	TArray<const FWBUnitState*> OwnedUnits;
-	for (const FWBUnitState& Unit : Units)
-	{
-		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard())
-		{
-			OwnedUnits.Add(&Unit);
-		}
-	}
-
-	return OwnedUnits;
+	return GetUnitsControlledByPlayer(PlayerId);
 }
 
 TArray<FWBUnitState*> FWBGameStateData::GetMutableUnitsForPlayer(const int32 PlayerId)
 {
-	TArray<FWBUnitState*> OwnedUnits;
+	return GetMutableUnitsControlledByPlayer(PlayerId);
+}
+
+TArray<const FWBUnitState*> FWBGameStateData::GetUnitsControlledByPlayer(
+	const int32 PlayerId) const
+{
+	TArray<const FWBUnitState*> ControlledUnits;
+	for (const FWBUnitState& Unit : Units)
+	{
+		if (Unit.GetControllerPlayerIdForRules() == PlayerId && Unit.IsUnitOnBoard())
+		{
+			ControlledUnits.Add(&Unit);
+		}
+	}
+
+	return ControlledUnits;
+}
+
+TArray<FWBUnitState*> FWBGameStateData::GetMutableUnitsControlledByPlayer(
+	const int32 PlayerId)
+{
+	TArray<FWBUnitState*> ControlledUnits;
 	for (FWBUnitState& Unit : Units)
 	{
-		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard())
+		if (Unit.GetControllerPlayerIdForRules() == PlayerId && Unit.IsUnitOnBoard())
+		{
+			ControlledUnits.Add(&Unit);
+		}
+	}
+
+	return ControlledUnits;
+}
+
+TArray<const FWBUnitState*> FWBGameStateData::GetUnitsOwnedByPlayer(
+	const int32 PlayerId) const
+{
+	TArray<const FWBUnitState*> OwnedUnits;
+	for (const FWBUnitState& Unit : Units)
+	{
+		if (Unit.GetOwnerPlayerIdForRules() == PlayerId && Unit.IsUnitOnBoard())
 		{
 			OwnedUnits.Add(&Unit);
 		}
@@ -593,8 +660,12 @@ bool FWBGameStateData::AddUnitForTest(const FWBUnitState& Unit)
 		return false;
 	}
 
-	FindOrAddTestPlayerState(*this, Unit.OwnerId, Unit.MPRemaining);
 	FWBUnitState NormalizedUnit = Unit;
+	NormalizedUnit.NormalizeIdentityForRules();
+	FindOrAddTestPlayerState(
+		*this,
+		NormalizedUnit.GetControllerPlayerIdForRules(),
+		NormalizedUnit.MPRemaining);
 	NormalizedUnit.SetArmorForTest(Unit.CurrentArmor, Unit.MaxArmor);
 	Units.Add(NormalizedUnit);
 	return true;

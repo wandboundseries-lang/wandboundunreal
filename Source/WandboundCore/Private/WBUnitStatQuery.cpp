@@ -97,7 +97,9 @@ FWBEffectiveUnitStatResult WBUnitStatQuery::GetEffectiveAR(
 	TArray<const FWBUnitState*> Sources;
 	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (Unit.UnitId != UnitId && Unit.OwnerId != Target->OwnerId
+		if (Unit.UnitId != UnitId
+			&& Unit.GetControllerPlayerIdForRules()
+				!= Target->GetControllerPlayerIdForRules()
 			&& WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(Unit))
 		{
 			Sources.Add(&Unit);

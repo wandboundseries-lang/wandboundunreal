@@ -61,7 +61,8 @@ TArray<FWBAction> GenerateLegalAttackActions(
 	TArray<const FWBUnitState*> Attackers;
 	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard() && !Unit.bDefeated)
+		if (Unit.GetControllerPlayerIdForRules() == PlayerId
+			&& Unit.IsUnitOnBoard() && !Unit.bDefeated)
 		{
 			Attackers.Add(&Unit);
 		}
@@ -298,14 +299,16 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 	const FWBPlayerStateData* Player = nullptr;
 	if (bNPCAuthority)
 	{
-		if (Action.PlayerId != -1 || Unit->OwnerId != -1)
+		if (Action.PlayerId != -1
+			|| Unit->GetControllerPlayerIdForRules() != -1)
 		{
 			return FWBMoveQueryResult::Deny(TEXT("npc_authority_required"));
 		}
 	}
 	else
 	{
-		if (Unit->OwnerId == -1 || !FWBGameStateData::IsValidPlayerId(Action.PlayerId))
+		if (Unit->GetControllerPlayerIdForRules() == -1
+			|| !FWBGameStateData::IsValidPlayerId(Action.PlayerId))
 		{
 			return FWBMoveQueryResult::Deny(TEXT("bad_player"));
 		}
@@ -317,7 +320,7 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 		{
 			return FWBMoveQueryResult::Deny(TEXT("no_priority"));
 		}
-		if (Action.PlayerId != Unit->OwnerId)
+		if (Action.PlayerId != Unit->GetControllerPlayerIdForRules())
 		{
 			return FWBMoveQueryResult::Deny(TEXT("wrong_player"));
 		}
@@ -444,16 +447,18 @@ FWBActionQueryResult CanDeclareAttackWithAuthority(
 
 	if (bNPCAuthority)
 	{
-		if (Action.PlayerId != -1 || Attacker->OwnerId != -1)
+		if (Action.PlayerId != -1
+			|| Attacker->GetControllerPlayerIdForRules() != -1)
 		{
 			return FWBActionQueryResult::Deny(TEXT("npc_authority_required"));
 		}
-		if (!FWBGameStateData::IsValidPlayerId(Defender->OwnerId))
+		if (!FWBGameStateData::IsValidPlayerId(
+			Defender->GetControllerPlayerIdForRules()))
 		{
 			return FWBActionQueryResult::Deny(TEXT("npc_target_not_player_controlled"));
 		}
 	}
-	else if (Attacker->OwnerId != Action.PlayerId)
+	else if (Attacker->GetControllerPlayerIdForRules() != Action.PlayerId)
 	{
 		return FWBActionQueryResult::Deny(TEXT("wrong_player"));
 	}
@@ -464,14 +469,16 @@ FWBActionQueryResult CanDeclareAttackWithAuthority(
 			WBTurnOneRestrictions::QueryAttackTarget(
 				State,
 				Action.PlayerId,
-				Defender->OwnerId);
+				Defender->GetControllerPlayerIdForRules());
 		if (!TurnOneQuery.bOk)
 		{
 			return FWBActionQueryResult::Deny(*TurnOneQuery.Reason);
 		}
 	}
 
-	if (!bNPCAuthority && Defender->OwnerId == Attacker->OwnerId)
+	if (!bNPCAuthority
+		&& Defender->GetControllerPlayerIdForRules()
+			== Attacker->GetControllerPlayerIdForRules())
 	{
 		if (!IsFrozen(*Defender))
 		{
@@ -903,7 +910,8 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 			return FWBActionQueryResult::Deny(TEXT("card_activation_source_unit_removed"));
 		}
 
-		if (SourceUnit->OwnerId != Command.Source.PlayerId)
+		if (SourceUnit->GetControllerPlayerIdForRules()
+			!= Command.Source.PlayerId)
 		{
 			return FWBActionQueryResult::Deny(TEXT("card_activation_source_owner_mismatch"));
 		}
@@ -1242,7 +1250,8 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 				return FWBActionQueryResult::Deny(
 					TEXT("replacement_source_unavailable"));
 			}
-			if (Defender->OwnerId != Request.Source.PlayerId)
+			if (Defender->GetControllerPlayerIdForRules()
+				!= Request.Source.PlayerId)
 			{
 				return FWBActionQueryResult::Deny(
 					TEXT("replacement_source_owner_mismatch"));
@@ -1287,7 +1296,8 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 				return FWBActionQueryResult::Deny(
 					TEXT("activated_deck_summon_source_unavailable"));
 			}
-			if (Source->OwnerId != Request.Source.PlayerId
+			if (Source->GetControllerPlayerIdForRules()
+				!= Request.Source.PlayerId
 				|| Source->CardId != Request.Source.SourceCardId)
 			{
 				return FWBActionQueryResult::Deny(
@@ -1321,7 +1331,8 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			{
 				return FWBActionQueryResult::Deny(TEXT("terrain_source_unavailable"));
 			}
-			if (SourceUnit->OwnerId != Request.Source.PlayerId
+			if (SourceUnit->GetControllerPlayerIdForRules()
+				!= Request.Source.PlayerId
 				|| SourceUnit->CardId != Request.Source.SourceCardId)
 			{
 				return FWBActionQueryResult::Deny(TEXT("terrain_source_mismatch"));
@@ -1692,7 +1703,8 @@ TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(const FWBGameStateData&
 		// Deterministic ordering: units are traversed in stable state order; each unit emits east, west, south, north moves; EndTurn is appended last.
 		for (const FWBUnitState& Unit : State.Units)
 		{
-			if (Unit.OwnerId != PlayerId || Unit.bDefeated || !Unit.IsUnitOnBoard())
+			if (Unit.GetControllerPlayerIdForRules() != PlayerId
+				|| Unit.bDefeated || !Unit.IsUnitOnBoard())
 			{
 				continue;
 			}

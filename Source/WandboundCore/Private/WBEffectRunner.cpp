@@ -197,7 +197,8 @@ void AppendArmorModifiedTrace(
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("armor_modified"));
 	Event.TargetUnitId = ArmorResult.Request.TargetUnitId;
-	Event.PlayerId = Target != nullptr ? Target->OwnerId : -1;
+	Event.PlayerId = Target != nullptr
+		? Target->GetControllerPlayerIdForRules() : -1;
 	Event.PreviousArmor = ArmorResult.PreviousCurrentArmor;
 	Event.NewArmor = ArmorResult.NewCurrentArmor;
 	Event.PreviousMaxArmor = ArmorResult.PreviousMaxArmor;
@@ -216,7 +217,8 @@ void AppendStatusModifiedTrace(
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("status_modified"));
 	Event.TargetUnitId = StatusResult.Request.TargetUnitId;
-	Event.PlayerId = Target != nullptr ? Target->OwnerId : -1;
+	Event.PlayerId = Target != nullptr
+		? Target->GetControllerPlayerIdForRules() : -1;
 	Event.StatusId = StatusResult.Request.StatusId;
 	Event.StatusEffectOperation = WBStatusEffect::GetOperationName(StatusResult.Request.Operation);
 	Event.PreviousStatusTurns = StatusResult.PreviousDuration;
@@ -236,7 +238,8 @@ void AppendStatusEffectRemovedTrace(
 	Event.Kind = FName(TEXT("status_removed"));
 	Event.StatusId = StatusId;
 	Event.TargetUnitId = StatusResult.Request.TargetUnitId;
-	Event.PlayerId = Target != nullptr ? Target->OwnerId : -1;
+	Event.PlayerId = Target != nullptr
+		? Target->GetControllerPlayerIdForRules() : -1;
 	Event.StatusEffectOperation = WBStatusEffect::GetOperationName(StatusResult.Request.Operation);
 	Event.PreviousStatusTurns = StatusId == StatusResult.Request.StatusId ? StatusResult.PreviousDuration : -1;
 	Event.NewStatusTurns = 0;
@@ -255,7 +258,7 @@ void AppendDamageEffectResolvedTrace(
 	Event.SourceUnitId = DamageResult.Request.SourceUnitId;
 	Event.PlayerId = FWBGameStateData::IsValidPlayerId(DamageResult.Request.SourcePlayerId)
 		? DamageResult.Request.SourcePlayerId
-		: (Target != nullptr ? Target->OwnerId : -1);
+		: (Target != nullptr ? Target->GetControllerPlayerIdForRules() : -1);
 	Event.DamageAmount = DamageResult.Request.Amount;
 	Event.PreviousHP = DamageResult.PreviousHP;
 	Event.NewHP = DamageResult.NewHP;
@@ -283,7 +286,7 @@ void AppendHealEffectResolvedTrace(
 	Event.SourceUnitId = HealResult.Request.SourceUnitId;
 	Event.PlayerId = FWBGameStateData::IsValidPlayerId(HealResult.Request.SourcePlayerId)
 		? HealResult.Request.SourcePlayerId
-		: (Target != nullptr ? Target->OwnerId : -1);
+		: (Target != nullptr ? Target->GetControllerPlayerIdForRules() : -1);
 	Event.PreviousHP = HealResult.PreviousHP;
 	Event.NewHP = HealResult.NewHP;
 	Event.HealAmount = HealResult.Request.Amount;
@@ -578,6 +581,8 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(
 	AttackEvent.ToTile = FWBTile(Defender->X, Defender->Y);
 	AttackEvent.AttacksLeftBefore = AttacksLeftBefore;
 	AttackEvent.AttacksLeftAfter = Attacker->AttacksLeft;
+	AttackEvent.bDeclaredAttack = true;
+	AttackEvent.bDeclaredTarget = true;
 	AttackEvent.bOk = true;
 
 	FWBPendingAttackState PendingAttack;
@@ -592,6 +597,10 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(
 	PendingAttack.AttackerTile = FWBTile(Attacker->X, Attacker->Y);
 	PendingAttack.DefenderTile = FWBTile(Defender->X, Defender->Y);
 	PendingAttack.DeclarationActionId = WBActionCodec::MakeActionId(Action);
+	PendingAttack.AttackDeclaration =
+		EWBDeclarationProvenance::PlayerDeclared;
+	PendingAttack.TargetDeclaration =
+		EWBDeclarationProvenance::PlayerDeclared;
 	PendingAttack.ContinuationId = FString::Printf(
 		TEXT("attack_continuation:%s"),
 		*PendingAttack.DeclarationActionId);
@@ -659,6 +668,8 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(
 		TEXT("npc_attack:u%d:t%d"),
 		Attacker->UnitId,
 		Defender->UnitId);
+	PendingAttack.AttackDeclaration = EWBDeclarationProvenance::Automatic;
+	PendingAttack.TargetDeclaration = EWBDeclarationProvenance::Automatic;
 	PendingAttack.ContinuationId = FString::Printf(
 		TEXT("attack_continuation:%s"),
 		*PendingAttack.DeclarationActionId);
@@ -1875,7 +1886,8 @@ FWBApplyActionResult WBEffectRunner::ApplyTurnStartResourceReset(
 	int32 ResetUnitCount = 0;
 	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (Unit.OwnerId == PlayerId && Unit.IsUnitOnBoard())
+		if (Unit.GetControllerPlayerIdForRules() == PlayerId
+			&& Unit.IsUnitOnBoard())
 		{
 			++ResetUnitCount;
 		}

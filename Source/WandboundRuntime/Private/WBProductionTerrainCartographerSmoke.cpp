@@ -13,7 +13,7 @@
 
 namespace
 {
-const FWBMatchLegalAction* FindCore(
+const FWBMatchLegalAction* FindTerrainCore(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const EWBActionType Type)
 {
@@ -24,7 +24,7 @@ const FWBMatchLegalAction* FindCore(
 	});
 }
 
-const FWBMatchLegalAction* FindSummon(
+const FWBMatchLegalAction* FindTerrainSummon(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const FString& CardId,
 	const FWBTile Tile)
@@ -38,7 +38,7 @@ const FWBMatchLegalAction* FindSummon(
 	});
 }
 
-const FWBMatchLegalAction* FindMove(
+const FWBMatchLegalAction* FindTerrainMove(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const int32 SourceUnitId,
 	const FWBTile Tile)
@@ -53,7 +53,7 @@ const FWBMatchLegalAction* FindMove(
 	});
 }
 
-const FWBMatchLegalAction* FindActivation(
+const FWBMatchLegalAction* FindTerrainActivation(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const FString& CardId,
 	const FWBTile Tile)
@@ -66,7 +66,7 @@ const FWBMatchLegalAction* FindActivation(
 	});
 }
 
-const FWBMatchLegalAction* FindResponsePass(
+const FWBMatchLegalAction* FindTerrainResponsePass(
 	const TArray<FWBMatchLegalAction>& Actions)
 {
 	return Actions.FindByPredicate([](const FWBMatchLegalAction& Action)
@@ -76,7 +76,7 @@ const FWBMatchLegalAction* FindResponsePass(
 	});
 }
 
-bool Submit(
+bool SubmitTerrainAction(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FWBMatchLegalAction& Action,
@@ -98,7 +98,7 @@ bool Submit(
 	return true;
 }
 
-bool ResolveResponses(
+bool ResolveTerrainResponses(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	FString& OutReason)
@@ -110,7 +110,7 @@ bool ResolveResponses(
 		const FWBMatchLegalActionGenerationResult Legal =
 			Coordinator.EnumerateLegalActions();
 		const FWBMatchLegalAction* Pass = Legal.bOk
-			? FindResponsePass(Legal.Actions) : nullptr;
+			? FindTerrainResponsePass(Legal.Actions) : nullptr;
 		if (Pass == nullptr)
 		{
 			OutReason = Legal.bOk
@@ -118,7 +118,7 @@ bool ResolveResponses(
 				: Legal.Reason;
 			return false;
 		}
-		if (!Submit(Coordinator, Recorder, *Pass, OutReason))
+		if (!SubmitTerrainAction(Coordinator, Recorder, *Pass, OutReason))
 		{
 			return false;
 		}
@@ -131,17 +131,17 @@ bool ResolveResponses(
 	return true;
 }
 
-bool SubmitAndResolve(
+bool SubmitAndResolveTerrainAction(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FWBMatchLegalAction& Action,
 	FString& OutReason)
 {
-	return Submit(Coordinator, Recorder, Action, OutReason)
-		&& ResolveResponses(Coordinator, Recorder, OutReason);
+	return SubmitTerrainAction(Coordinator, Recorder, Action, OutReason)
+		&& ResolveTerrainResponses(Coordinator, Recorder, OutReason);
 }
 
-bool ResolveTurnStart(
+bool ResolveTerrainTurnStart(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	FString& OutReason)
@@ -159,7 +159,7 @@ bool ResolveTurnStart(
 				: Legal.Reason;
 			return false;
 		}
-		if (!Submit(Coordinator, Recorder, Legal.Actions[0], OutReason))
+		if (!SubmitTerrainAction(Coordinator, Recorder, Legal.Actions[0], OutReason))
 		{
 			return false;
 		}
@@ -167,7 +167,7 @@ bool ResolveTurnStart(
 	return !Coordinator.HasPendingTurnStartDecision();
 }
 
-bool EndTurn(
+bool EndTerrainTurn(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	FString& OutReason)
@@ -175,18 +175,18 @@ bool EndTurn(
 	const FWBMatchLegalActionGenerationResult Legal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* End = Legal.bOk
-		? FindCore(Legal.Actions, EWBActionType::EndTurn) : nullptr;
+		? FindTerrainCore(Legal.Actions, EWBActionType::EndTurn) : nullptr;
 	if (End == nullptr)
 	{
 		OutReason = Legal.bOk
 			? FString(TEXT("terrain_cartographer_end_turn_missing")) : Legal.Reason;
 		return false;
 	}
-	return Submit(Coordinator, Recorder, *End, OutReason)
-		&& ResolveTurnStart(Coordinator, Recorder, OutReason);
+	return SubmitTerrainAction(Coordinator, Recorder, *End, OutReason)
+		&& ResolveTerrainTurnStart(Coordinator, Recorder, OutReason);
 }
 
-bool Summon(
+bool SummonTerrainFixtureUnit(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FString& CardId,
@@ -196,7 +196,7 @@ bool Summon(
 	const FWBMatchLegalActionGenerationResult Legal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Action = Legal.bOk
-		? FindSummon(Legal.Actions, CardId, Tile) : nullptr;
+		? FindTerrainSummon(Legal.Actions, CardId, Tile) : nullptr;
 	if (Action == nullptr)
 	{
 		OutReason = Legal.bOk
@@ -204,10 +204,10 @@ bool Summon(
 			: Legal.Reason;
 		return false;
 	}
-	return SubmitAndResolve(Coordinator, Recorder, *Action, OutReason);
+	return SubmitAndResolveTerrainAction(Coordinator, Recorder, *Action, OutReason);
 }
 
-bool Activate(
+bool ActivateTerrainCartographer(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const FString& CardId,
@@ -217,7 +217,7 @@ bool Activate(
 	const FWBMatchLegalActionGenerationResult Legal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Action = Legal.bOk
-		? FindActivation(Legal.Actions, CardId, Tile) : nullptr;
+		? FindTerrainActivation(Legal.Actions, CardId, Tile) : nullptr;
 	if (Action == nullptr)
 	{
 		OutReason = Legal.bOk
@@ -225,10 +225,10 @@ bool Activate(
 			: Legal.Reason;
 		return false;
 	}
-	return SubmitAndResolve(Coordinator, Recorder, *Action, OutReason);
+	return SubmitAndResolveTerrainAction(Coordinator, Recorder, *Action, OutReason);
 }
 
-bool MoveUnit(
+bool MoveTerrainFixtureUnit(
 	WBMatchCoordinator& Coordinator,
 	FWBProductionMatchReplayRecorder& Recorder,
 	const int32 SourceUnitId,
@@ -238,17 +238,17 @@ bool MoveUnit(
 	const FWBMatchLegalActionGenerationResult Legal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Action = Legal.bOk
-		? FindMove(Legal.Actions, SourceUnitId, Tile) : nullptr;
+		? FindTerrainMove(Legal.Actions, SourceUnitId, Tile) : nullptr;
 	if (Action == nullptr)
 	{
 		OutReason = Legal.bOk
 			? FString(TEXT("terrain_cartographer_vex_move_missing")) : Legal.Reason;
 		return false;
 	}
-	return SubmitAndResolve(Coordinator, Recorder, *Action, OutReason);
+	return SubmitAndResolveTerrainAction(Coordinator, Recorder, *Action, OutReason);
 }
 
-bool HasTerrainTrace(
+bool HasTerrainChangeTrace(
 	const TArray<FWBTraceEvent>& Trace,
 	const FName Previous,
 	const FName Next,
@@ -307,18 +307,18 @@ WBProductionTerrainCartographerSmoke::Run(
 		return Result;
 	}
 
-	if (!Summon(Coordinator, Recorder, TEXT("char_mire_cartographer"),
+	if (!SummonTerrainFixtureUnit(Coordinator, Recorder, TEXT("char_mire_cartographer"),
 			FWBTile(4, 7), Result.Reason)
-		|| !Summon(Coordinator, Recorder, TEXT("char_emberfault_cartographer"),
+		|| !SummonTerrainFixtureUnit(Coordinator, Recorder, TEXT("char_emberfault_cartographer"),
 			FWBTile(3, 8), Result.Reason)
-		|| !Summon(Coordinator, Recorder, TEXT("char_tidecall_cartographer"),
+		|| !SummonTerrainFixtureUnit(Coordinator, Recorder, TEXT("char_tidecall_cartographer"),
 			FWBTile(5, 8), Result.Reason)
-		|| !EndTurn(Coordinator, Recorder, Result.Reason)
-		|| !Summon(Coordinator, Recorder, TEXT("char_rimecall_cartographer"),
+		|| !EndTerrainTurn(Coordinator, Recorder, Result.Reason)
+		|| !SummonTerrainFixtureUnit(Coordinator, Recorder, TEXT("char_rimecall_cartographer"),
 			FWBTile(3, 0), Result.Reason)
-		|| !Summon(Coordinator, Recorder, TEXT("char_csn_vex"),
+		|| !SummonTerrainFixtureUnit(Coordinator, Recorder, TEXT("char_csn_vex"),
 			FWBTile(4, 1), Result.Reason)
-		|| !Activate(Coordinator, Recorder, TEXT("char_rimecall_cartographer"),
+		|| !ActivateTerrainCartographer(Coordinator, Recorder, TEXT("char_rimecall_cartographer"),
 			FWBTile(3, 0), Result.Reason))
 	{
 		return Result;
@@ -329,30 +329,30 @@ WBProductionTerrainCartographerSmoke::Run(
 			return Unit.CardId == TEXT("char_csn_vex") && Unit.IsUnitOnBoard();
 		});
 	if (Vex == nullptr
-		|| !MoveUnit(Coordinator, Recorder, Vex->UnitId,
+		|| !MoveTerrainFixtureUnit(Coordinator, Recorder, Vex->UnitId,
 			FWBTile(4, 2), Result.Reason)
-		|| !EndTurn(Coordinator, Recorder, Result.Reason)
-		|| !EndTurn(Coordinator, Recorder, Result.Reason)
-		|| !MoveUnit(Coordinator, Recorder, Vex->UnitId,
+		|| !EndTerrainTurn(Coordinator, Recorder, Result.Reason)
+		|| !EndTerrainTurn(Coordinator, Recorder, Result.Reason)
+		|| !MoveTerrainFixtureUnit(Coordinator, Recorder, Vex->UnitId,
 			FWBTile(4, 3), Result.Reason)
-		|| !EndTurn(Coordinator, Recorder, Result.Reason)
-		|| !EndTurn(Coordinator, Recorder, Result.Reason)
-		|| !MoveUnit(Coordinator, Recorder, Vex->UnitId,
+		|| !EndTerrainTurn(Coordinator, Recorder, Result.Reason)
+		|| !EndTerrainTurn(Coordinator, Recorder, Result.Reason)
+		|| !MoveTerrainFixtureUnit(Coordinator, Recorder, Vex->UnitId,
 			FWBTile(4, 4), Result.Reason)
-		|| !EndTurn(Coordinator, Recorder, Result.Reason))
+		|| !EndTerrainTurn(Coordinator, Recorder, Result.Reason))
 	{
 		return Result;
 	}
 
 	const FWBMatchLegalActionGenerationResult EffectiveRangeLegal =
 		Coordinator.EnumerateLegalActions();
-	const FWBMatchLegalAction* WallProbeAction = FindActivation(
+	const FWBMatchLegalAction* WallProbeAction = FindTerrainActivation(
 		EffectiveRangeLegal.Actions,
 		TEXT("char_mire_cartographer"),
 		FWBTile(4, 5));
 	if (!EffectiveRangeLegal.bOk
 		|| WallProbeAction == nullptr
-		|| FindActivation(EffectiveRangeLegal.Actions,
+		|| FindTerrainActivation(EffectiveRangeLegal.Actions,
 			TEXT("char_mire_cartographer"), FWBTile(4, 4)) != nullptr)
 	{
 		Result.Reason = TEXT("terrain_cartographer_effective_ar_mismatch");
@@ -390,7 +390,7 @@ WBProductionTerrainCartographerSmoke::Run(
 		return Result;
 	}
 
-	if (!Activate(Coordinator, Recorder, TEXT("char_mire_cartographer"),
+	if (!ActivateTerrainCartographer(Coordinator, Recorder, TEXT("char_mire_cartographer"),
 			FWBTile(4, 7), Result.Reason))
 	{
 		return Result;
@@ -408,9 +408,9 @@ WBProductionTerrainCartographerSmoke::Run(
 		Result.Reason = TEXT("terrain_cartographer_once_per_turn_mismatch");
 		return Result;
 	}
-	if (!Activate(Coordinator, Recorder, TEXT("char_emberfault_cartographer"),
+	if (!ActivateTerrainCartographer(Coordinator, Recorder, TEXT("char_emberfault_cartographer"),
 			FWBTile(4, 7), Result.Reason)
-		|| !Activate(Coordinator, Recorder, TEXT("char_tidecall_cartographer"),
+		|| !ActivateTerrainCartographer(Coordinator, Recorder, TEXT("char_tidecall_cartographer"),
 			FWBTile(5, 8), Result.Reason))
 	{
 		return Result;
@@ -420,9 +420,9 @@ WBProductionTerrainCartographerSmoke::Run(
 	if (State.GetTerrainAt(FWBTile(4, 7)) != FName(TEXT("lava"))
 		|| State.GetTerrainAt(FWBTile(5, 8)) != FName(TEXT("water"))
 		|| State.GetTerrainAt(FWBTile(3, 0)) != FName(TEXT("ice"))
-		|| !HasTerrainTrace(Coordinator.GetTraceLog(),
+		|| !HasTerrainChangeTrace(Coordinator.GetTraceLog(),
 			FName(TEXT("normal")), FName(TEXT("mud")), FWBTile(4, 7))
-		|| !HasTerrainTrace(Coordinator.GetTraceLog(),
+		|| !HasTerrainChangeTrace(Coordinator.GetTraceLog(),
 			FName(TEXT("mud")), FName(TEXT("lava")), FWBTile(4, 7)))
 	{
 		Result.Reason = TEXT("terrain_cartographer_final_terrain_mismatch");

@@ -9,6 +9,8 @@ FWBPublicBoardSummary WBBoardViewDemoData::MakeSmallDemoBoardSummary()
 
 	FWBPublicUnitBoardSummary PlayerUnit;
 	PlayerUnit.UnitId = 1;
+	PlayerUnit.OwnerPlayerId = 0;
+	PlayerUnit.ControllerPlayerId = 0;
 	PlayerUnit.OwnerId = 0;
 	PlayerUnit.CardId = TEXT("demo_player_unit");
 	PlayerUnit.X = 3;
@@ -22,6 +24,8 @@ FWBPublicBoardSummary WBBoardViewDemoData::MakeSmallDemoBoardSummary()
 
 	FWBPublicUnitBoardSummary OpponentUnit;
 	OpponentUnit.UnitId = 2;
+	OpponentUnit.OwnerPlayerId = 1;
+	OpponentUnit.ControllerPlayerId = 1;
 	OpponentUnit.OwnerId = 1;
 	OpponentUnit.CardId = TEXT("demo_opponent_unit");
 	OpponentUnit.X = 5;

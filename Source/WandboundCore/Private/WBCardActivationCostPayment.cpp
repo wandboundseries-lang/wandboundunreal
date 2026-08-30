@@ -39,7 +39,7 @@ FWBCardActivationCostPaymentResult WBCardActivationCostPayment::CanPayCost(
 		return MakePaymentFailure(Request, TEXT("source_unit_removed"));
 	}
 
-	if (SourceUnit->OwnerId != Request.PlayerId)
+	if (SourceUnit->GetControllerPlayerIdForRules() != Request.PlayerId)
 	{
 		return MakePaymentFailure(Request, TEXT("source_unit_owner_mismatch"));
 	}

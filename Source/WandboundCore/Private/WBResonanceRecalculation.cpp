@@ -106,13 +106,14 @@ FWBResonanceRecalculationResult CalculateUnitInternal(
 
 	FWBResonanceRecalculationResult Result;
 	Result.UnitId = Unit->UnitId;
-	Result.OwnerPlayerId = Unit->OwnerId;
+	Result.OwnerPlayerId = Unit->GetControllerPlayerIdForRules();
 	Result.PreviousBaseRL = Unit->GetBaseRLForRules();
 	Result.PreviousCurrentRL = Unit->GetCurrentRLForRules();
 	Result.PreviousRLUsed = Unit->RLUsed;
 
-	if (!FWBGameStateData::IsValidPlayerId(Unit->OwnerId)
-		|| State.GetPlayerById(Unit->OwnerId) == nullptr)
+	if (!FWBGameStateData::IsValidPlayerId(
+		Unit->GetControllerPlayerIdForRules())
+		|| State.GetPlayerById(Unit->GetControllerPlayerIdForRules()) == nullptr)
 	{
 		Result.FailureReason = TEXT("invalid_unit_owner");
 		return Result;

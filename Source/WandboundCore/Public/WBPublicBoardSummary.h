@@ -14,6 +14,9 @@ struct WANDBOUNDCORE_API FWBPublicUnitStatusSummary
 struct WANDBOUNDCORE_API FWBPublicUnitBoardSummary
 {
 	int32 UnitId = -1;
+	int32 OwnerPlayerId = -1;
+	int32 ControllerPlayerId = -1;
+	// Compatibility mirror of ControllerPlayerId.
 	int32 OwnerId = -1;
 	bool bHeroUnit = false;
 	FString CardId;
@@ -32,6 +35,20 @@ struct WANDBOUNDCORE_API FWBPublicUnitBoardSummary
 	int32 AvailableRL = 0;
 	int32 AttacksLeft = 0;
 	TArray<FWBPublicUnitStatusSummary> Statuses;
+
+	int32 GetOwnerPlayerId() const
+	{
+		return FWBGameStateData::IsValidPlayerId(OwnerPlayerId)
+			? OwnerPlayerId
+			: GetControllerPlayerId();
+	}
+
+	int32 GetControllerPlayerId() const
+	{
+		return FWBGameStateData::IsValidPlayerId(ControllerPlayerId)
+			? ControllerPlayerId
+			: OwnerId;
+	}
 };
 
 struct WANDBOUNDCORE_API FWBPublicWallEdgeSummary

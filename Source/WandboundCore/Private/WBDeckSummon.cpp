@@ -115,7 +115,7 @@ FWBDeckSummonResult WBDeckSummon::SummonExactCharacterToTile(
 
 	FWBUnitState Unit;
 	Unit.UnitId = NewUnitId;
-	Unit.OwnerId = Request.PlayerId;
+	Unit.SetOwnerAndControllerForRules(Request.PlayerId, Request.PlayerId);
 	Unit.CardId = SelectedCardId;
 	Unit.X = Request.TargetTile.X;
 	Unit.Y = Request.TargetTile.Y;

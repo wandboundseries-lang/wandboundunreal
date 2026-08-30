@@ -175,7 +175,7 @@ WBActivatedDeckSummonContinuation::Resolve(
 		return MakeActivatedDeckSummonFailure(
 			TEXT("activated_deck_summon_source_unavailable"));
 	}
-	if (Source->OwnerId != Command.Source.PlayerId
+	if (Source->GetControllerPlayerIdForRules() != Command.Source.PlayerId
 		|| Source->CardId != Command.Source.SourceCardId)
 	{
 		return MakeActivatedDeckSummonFailure(
@@ -204,10 +204,11 @@ WBActivatedDeckSummonContinuation::Resolve(
 	FWBActivatedEffectSourceSnapshot Snapshot;
 	Snapshot.SourceUnitId = WorkingSource->UnitId;
 	Snapshot.SourceCardId = WorkingSource->CardId;
-	Snapshot.ControllerPlayerId = WorkingSource->OwnerId;
+	Snapshot.OwnerPlayerId = WorkingSource->GetOwnerPlayerIdForRules();
+	Snapshot.ControllerPlayerId = WorkingSource->GetControllerPlayerIdForRules();
 	Snapshot.SourceTile = SourceTile;
 	const FWBPlayerStateData* Player = WorkingState.GetPlayerById(
-		WorkingSource->OwnerId);
+		WorkingSource->GetOwnerPlayerIdForRules());
 	Snapshot.bWasHero = Player != nullptr
 		&& Player->HeroUnitId == WorkingSource->UnitId;
 	Snapshot.BaseRLSnapshot = WorkingSource->GetBaseRLForRules();

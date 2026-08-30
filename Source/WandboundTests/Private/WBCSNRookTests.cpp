@@ -543,6 +543,18 @@ bool FWBCSNRookUndertowCompositionTest::RunTest(const FString&)
 	const FString Action = Actions[0];
 	const FWBPostDestructionTriggerResult Result = WBPostDestructionTrigger::SubmitChoice(State, Repository, Action);
 	TestTrue(TEXT("78 Rook to Undertow succeeds"), Result.bSummoned);
+	const FWBTraceEvent* DeclaredTarget = Result.TraceEvents.FindByPredicate(
+		[](const FWBTraceEvent& Event)
+		{
+			return Event.Kind == FName(TEXT("mandatory_deck_target_declared"));
+		});
+	TestTrue(TEXT("78a Rook exact Deck choice is a declared target"),
+		DeclaredTarget != nullptr && DeclaredTarget->bDeclaredTarget);
+	TestTrue(TEXT("78b Rook trigger is not declared"),
+		DeclaredTarget != nullptr && !DeclaredTarget->bDeclaredActivation);
+	TestEqual(TEXT("78c Rook trigger remains resolution-only"),
+		CountTrace(Result.TraceEvents,
+			FName(TEXT("pending_effect_activation_declared"))), 0);
 	const FWBUnitState* Undertow = FindBoardCard(State, TEXT("undertow_candidate"));
 	TestNotNull(TEXT("79 Undertow summoned"), Undertow);
 	TestEqual(TEXT("80 inheritance trace once"), CountTrace(Result.TraceEvents, FName(TEXT("csn_inheritance"))), 1);

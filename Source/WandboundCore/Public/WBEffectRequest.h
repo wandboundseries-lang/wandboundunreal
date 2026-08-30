@@ -68,6 +68,7 @@ struct WANDBOUNDCORE_API FWBEffectAuxiliaryCardSelection
 	EWBEffectAuxiliaryCardZone Zone = EWBEffectAuxiliaryCardZone::None;
 	FString CardInstanceId;
 	FString CardId;
+	EWBDeclarationProvenance TargetDeclaration = EWBDeclarationProvenance::Automatic;
 };
 
 struct WANDBOUNDCORE_API FWBEffectSourceRef
@@ -76,6 +77,15 @@ struct WANDBOUNDCORE_API FWBEffectSourceRef
 	int32 SourceUnitId = -1;
 	FString SourceCardId;
 	FString SourceEffectId;
+	EWBActivationProvenance ActivationProvenance =
+		EWBActivationProvenance::ResolutionOnly;
+
+	int32 GetCasterUnitId() const
+	{
+		return WBIsActivation(ActivationProvenance) && SourceUnitId >= 0
+			? SourceUnitId
+			: INDEX_NONE;
+	}
 };
 
 struct WANDBOUNDCORE_API FWBEffectTargetRef
@@ -83,6 +93,7 @@ struct WANDBOUNDCORE_API FWBEffectTargetRef
 	int32 TargetUnitId = -1;
 	FWBTile TargetTile;
 	FWBWallEdge TargetWallEdge;
+	EWBDeclarationProvenance TargetDeclaration = EWBDeclarationProvenance::Automatic;
 };
 
 struct WANDBOUNDCORE_API FWBGenericEffectPayload

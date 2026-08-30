@@ -26,6 +26,9 @@ struct WANDBOUNDCORE_API FWBResonanceModifierState
 struct WANDBOUNDCORE_API FWBUnitState
 {
 	int32 UnitId = -1;
+	int32 OwnerPlayerId = -1;
+	int32 ControllerPlayerId = -1;
+	// Compatibility mirror of ControllerPlayerId for legacy fixtures/consumers.
 	int32 OwnerId = -1;
 	FString CardId;
 	int32 X = -1;
@@ -56,6 +59,11 @@ struct WANDBOUNDCORE_API FWBUnitState
 	TArray<FWBResonanceModifierState> ResonanceModifiers;
 
 	bool IsUnitOnBoard() const;
+	int32 GetOwnerPlayerIdForRules() const;
+	int32 GetControllerPlayerIdForRules() const;
+	void SetOwnerAndControllerForRules(int32 InOwnerPlayerId, int32 InControllerPlayerId);
+	void SetControllerPlayerIdForRules(int32 InControllerPlayerId);
+	void NormalizeIdentityForRules();
 	int32 GetBaseRLForRules() const;
 	int32 GetCurrentRLForRules() const;
 	int32 GetAvailableRLForRules() const;
@@ -175,6 +183,8 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	FWBTile DefenderTile;
 	FString DeclarationActionId;
 	FString ContinuationId;
+	EWBDeclarationProvenance AttackDeclaration = EWBDeclarationProvenance::Automatic;
+	EWBDeclarationProvenance TargetDeclaration = EWBDeclarationProvenance::Automatic;
 	bool bPrevented = false;
 	bool bDamageResolved = false;
 	bool bPostHitCompleted = false;
@@ -234,6 +244,7 @@ struct WANDBOUNDCORE_API FWBPostDestructionObserverSourceSnapshot
 {
 	int32 SourceUnitId = INDEX_NONE;
 	FString SourceCardId;
+	int32 OwnerPlayerId = INDEX_NONE;
 	int32 ControllerPlayerId = INDEX_NONE;
 	int32 SourceOrder = INDEX_NONE;
 };
@@ -243,6 +254,7 @@ struct WANDBOUNDCORE_API FWBUnitDestructionSnapshot
 	FString EventId;
 	int32 DestroyedUnitId = INDEX_NONE;
 	FString DestroyedCardId;
+	int32 OwnerPlayerId = INDEX_NONE;
 	int32 ControllerPlayerId = INDEX_NONE;
 	FWBTile LastTile;
 	bool bWasHero = false;
@@ -262,6 +274,7 @@ struct WANDBOUNDCORE_API FWBActivatedEffectSourceSnapshot
 {
 	int32 SourceUnitId = INDEX_NONE;
 	FString SourceCardId;
+	int32 OwnerPlayerId = INDEX_NONE;
 	int32 ControllerPlayerId = INDEX_NONE;
 	FWBTile SourceTile = FWBTile(-1, -1);
 	bool bWasHero = false;
@@ -346,6 +359,9 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void ClearCardZoneStateForTest();
 	TArray<const FWBUnitState*> GetUnitsForPlayer(int32 PlayerId) const;
 	TArray<FWBUnitState*> GetMutableUnitsForPlayer(int32 PlayerId);
+	TArray<const FWBUnitState*> GetUnitsControlledByPlayer(int32 PlayerId) const;
+	TArray<FWBUnitState*> GetMutableUnitsControlledByPlayer(int32 PlayerId);
+	TArray<const FWBUnitState*> GetUnitsOwnedByPlayer(int32 PlayerId) const;
 	bool IsNormalTurnPhase() const;
 	bool IsResponsePhase() const;
 	bool HasOpenReactionWindow() const;

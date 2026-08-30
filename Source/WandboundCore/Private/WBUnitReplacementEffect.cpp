@@ -110,15 +110,16 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 	{
 		return Fail(TEXT("replacement_source_unavailable"));
 	}
-	if (SourceUnit->OwnerId != Request.Source.PlayerId)
+	if (SourceUnit->GetControllerPlayerIdForRules() != Request.Source.PlayerId)
 	{
 		return Fail(TEXT("replacement_source_owner_mismatch"));
 	}
 	FWBDeathResolutionCandidate DeathCandidate;
 	DeathCandidate.UnitId = SourceUnit->UnitId;
-	DeathCandidate.OwnerId = SourceUnit->OwnerId;
-	DeathCandidate.bIsHero = State.GetPlayerById(SourceUnit->OwnerId) != nullptr
-		&& State.GetPlayerById(SourceUnit->OwnerId)->HeroUnitId
+	DeathCandidate.OwnerId = SourceUnit->GetControllerPlayerIdForRules();
+	DeathCandidate.bIsHero = State.GetPlayerById(
+		SourceUnit->GetOwnerPlayerIdForRules()) != nullptr
+		&& State.GetPlayerById(SourceUnit->GetOwnerPlayerIdForRules())->HeroUnitId
 			== SourceUnit->UnitId;
 	const FWBDeathPreventionResult DeathPrevention =
 		WBDeathResolution::EvaluateDeathPrevention(State, DeathCandidate);
@@ -161,6 +162,8 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 	{
 		return Fail(TEXT("selected_replacement_not_in_hand"));
 	}
+	const int32 ReplacementOwnerPlayerId =
+		PlayerZones->Hand[HandIndex].Card.OwnerPlayerId;
 
 	const FWBCardDefinitionRepositoryLookupResult ReplacementDefinition =
 		WBCardDefinitionRepository::FindCardById(
@@ -264,7 +267,9 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 
 	FWBUnitState Replacement;
 	Replacement.UnitId = NewUnitId;
-	Replacement.OwnerId = Request.Source.PlayerId;
+	Replacement.SetOwnerAndControllerForRules(
+		ReplacementOwnerPlayerId,
+		Request.Source.PlayerId);
 	Replacement.CardId = Request.AuxiliaryCardSelection.CardId;
 	Replacement.X = VacatedTile.X;
 	Replacement.Y = VacatedTile.Y;

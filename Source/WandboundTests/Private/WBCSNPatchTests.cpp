@@ -594,6 +594,13 @@ bool FWBCSNPatchInheritanceTest::RunTest(const FString&)
 		WBMandatoryDeckChoice::Submit(State, Repository, Actions[0]);
 	TestTrue(TEXT("Choice accepted"), Resolved.bOk);
 	TestTrue(TEXT("Summon succeeds after slot freed"), Resolved.bSummoned);
+	const FWBTraceEvent* DeclaredTarget = Resolved.TraceEvents.FindByPredicate(
+		[](const FWBTraceEvent& Event)
+		{
+			return Event.Kind == FName(TEXT("mandatory_deck_target_declared"));
+		});
+	TestTrue(TEXT("Later exact Deck choice is a declared target"),
+		DeclaredTarget != nullptr && DeclaredTarget->bDeclaredTarget);
 	TestFalse(TEXT("Choice clears"), State.HasPendingMandatoryDeckChoice());
 	const FWBUnitState* Summoned = FindBoardCardAtTile(
 		State, TEXT("candidate_a"), FWBTile(4, 4));

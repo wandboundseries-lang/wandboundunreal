@@ -92,7 +92,8 @@ FWBCardActivationSourceGateResult EvaluateSourceUnitState(
 		return MakeSourceGateFailure(TEXT("source_unit_removed"));
 	}
 
-	if (Gate.bRequiresSourceUnitOwnership && SourceUnit->OwnerId != Context.PlayerId)
+	if (Gate.bRequiresSourceUnitOwnership
+		&& SourceUnit->GetControllerPlayerIdForRules() != Context.PlayerId)
 	{
 		return MakeSourceGateFailure(TEXT("source_unit_owner_mismatch"));
 	}
@@ -320,7 +321,8 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::EvaluateBoardSourc
 		return MakeSourceGateFailure(TEXT("board_source_unit_not_on_board"));
 	}
 
-	if (Gate.bRequiresSourceUnitOwnership && SourceUnit->OwnerId != Context.PlayerId)
+	if (Gate.bRequiresSourceUnitOwnership
+		&& SourceUnit->GetControllerPlayerIdForRules() != Context.PlayerId)
 	{
 		return MakeSourceGateFailure(TEXT("board_source_owner_mismatch"));
 	}

@@ -44,7 +44,8 @@ FWBCSNInheritanceMutationResult WBCSNInheritance::Apply(
 		return MakeCSNInheritanceFailure(TEXT("csn_inheritance_context_invalid"));
 	}
 	const FWBUnitState* Target = State.GetUnitById(Request.TargetUnitId);
-	if (Target == nullptr || Target->OwnerId != Request.ControllerPlayerId
+	if (Target == nullptr
+		|| Target->GetControllerPlayerIdForRules() != Request.ControllerPlayerId
 		|| !Target->IsUnitOnBoard() || Target->bDefeated)
 	{
 		return MakeCSNInheritanceFailure(TEXT("csn_inheritance_target_invalid"));

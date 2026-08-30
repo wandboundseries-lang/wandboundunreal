@@ -153,14 +153,16 @@ void CollectTriggers(
 			const bool bApplies =
 				Definition.Scope
 					== EWBTurnStartTriggerScope::AtStartOfEachTurn
-				|| Unit.OwnerId == Sequence.ActivePlayerId;
+				|| Unit.GetControllerPlayerIdForRules()
+					== Sequence.ActivePlayerId;
 			if (!bApplies || Definition.TriggerId.IsEmpty())
 			{
 				continue;
 			}
 
 			FWBTurnStartTriggerInstance Trigger;
-			Trigger.ControllerPlayerId = Unit.OwnerId;
+			Trigger.ControllerPlayerId =
+				Unit.GetControllerPlayerIdForRules();
 			Trigger.SourceUnitId = Unit.UnitId;
 			Trigger.SourceCardId = Unit.CardId;
 			Trigger.Definition = Definition;

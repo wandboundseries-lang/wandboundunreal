@@ -1,0 +1,166 @@
+{
+  "baseline": {
+    "commit": "d6933215acf310bcfd3b5444387d980009677227",
+    "subject": "Add production Terrain Cartographers",
+    "head_matches_origin_main": true,
+    "automation_succeeded": 2391,
+    "replay_schema": 1,
+    "action_codec_changed": false
+  },
+  "identity_model": {
+    "owner": "FWBUnitState.OwnerPlayerId",
+    "controller": "FWBUnitState.ControllerPlayerId",
+    "legacy_owner_id": {
+      "classification": "compatibility_controller_mirror",
+      "rules_authority": false,
+      "legacy_direct_write_compatibility": true,
+      "planned_removal": "after legacy fixtures and consumers migrate"
+    },
+    "invariants": [
+      "ordinary_unit_owner_equals_controller",
+      "control_change_does_not_change_owner",
+      "controller_determines_action_authority",
+      "controller_determines_controlled_unit_membership",
+      "controller_determines_control_based_friendly_enemy_relationship",
+      "exact_card_instance_owner_and_id_remain_stable"
+    ]
+  },
+  "field_classifications": [
+    { "field": "FWBUnitState.OwnerPlayerId", "classification": "immutable_owner" },
+    { "field": "FWBUnitState.ControllerPlayerId", "classification": "current_controller" },
+    { "field": "FWBUnitState.OwnerId", "classification": "compatibility_controller_mirror" },
+    { "field": "FWBCardInstanceRef.OwnerPlayerId", "classification": "immutable_card_owner" },
+    { "field": "FWBBoardCardReference.OwnerPlayerId", "classification": "compatibility_current_control_context" },
+    { "field": "FWBUnitDestructionSnapshot.OwnerPlayerId", "classification": "historical_owner" },
+    { "field": "FWBUnitDestructionSnapshot.ControllerPlayerId", "classification": "historical_controller" },
+    { "field": "FWBActivatedEffectSourceSnapshot.OwnerPlayerId", "classification": "historical_owner" },
+    { "field": "FWBActivatedEffectSourceSnapshot.ControllerPlayerId", "classification": "historical_controller" },
+    { "field": "FWBPostDestructionObserverSourceSnapshot.OwnerPlayerId", "classification": "historical_owner" },
+    { "field": "FWBPostDestructionObserverSourceSnapshot.ControllerPlayerId", "classification": "historical_controller" },
+    { "field": "FWBCSNInheritanceSourceData.ControllerPlayerId", "classification": "historical_controller" },
+    { "field": "FWBPendingAttackState.AttackingPlayerId", "classification": "historical_actor_controller" },
+    { "field": "FWBPendingMandatoryDeckChoice.ControllerPlayerId", "classification": "private_decision_authority" },
+    { "field": "FWBPublicUnitBoardSummary.OwnerPlayerId", "classification": "public_owner" },
+    { "field": "FWBPublicUnitBoardSummary.ControllerPlayerId", "classification": "public_controller" },
+    { "field": "FWBPublicUnitBoardSummary.OwnerId", "classification": "compatibility_controller_mirror" }
+  ],
+  "declaration_model": {
+    "attack_target_type": "EWBDeclarationProvenance",
+    "attack_target_values": ["Automatic", "PlayerDeclared"],
+    "activation_type": "EWBActivationProvenance",
+    "activation_values": ["ResolutionOnly", "AutomaticActivation", "PlayerDeclared"],
+    "independent_dimensions": ["attack", "activation", "target"],
+    "classifications": {
+      "player_attack": { "attack": "declared", "target": "declared" },
+      "counterattack": { "attack": "automatic", "target": "automatic" },
+      "npc_attack": { "attack": "automatic", "target": "automatic" },
+      "terrain_cartographer": { "activation": "declared", "tile": "declared" },
+      "synthetic_automatic_unit_activation": { "activation": "automatic", "caster": "SourceUnitId" },
+      "csn_rook": { "trigger_resolution": "resolution_only", "deck_choice": "declared", "fixed_tile": "automatic" },
+      "csn_patch": { "activation": "declared", "deck_choice": "declared", "fixed_tile": "automatic" },
+      "csn_crash_in": { "hand_choice": "declared", "fixed_defender_and_destination": "automatic" },
+      "redirect_substitute_reflect": { "final_recipient": "automatic" }
+    }
+  },
+  "caster_mapping": {
+    "persisted_caster_field_added": false,
+    "declared_unit_activation": "SourceUnitId",
+    "automatic_unit_activation": "SourceUnitId",
+    "equipped_wand_activation": "equipped SourceUnitId",
+    "resolution_only_source": "no caster even when SourceUnitId exists",
+    "source_unit_alone_implies_caster": false,
+    "declared_non_unit_activation_fabricates_caster": false,
+    "existing_resolution_paths_reclassified_as_activations": false
+  },
+  "privacy": {
+    "private_instance_choices_remain_private": true,
+    "public_receipt_fields": 8,
+    "opponent_candidate_visibility_changed": false,
+    "public_board_exposes_owner_and_controller": true
+  },
+  "replay": {
+    "schema": 1,
+    "action_codec_changed": false,
+    "trace_flags": ["declared_attack", "declared_activation", "declared_target"],
+    "state_digest_distinguishes_split_identity": true,
+    "packaged_baseline_state_digest": "dad14fc8bc0a0cf9c6fe3f9c63bdba52497a7e296502bf12ce3136e4eded03d9",
+    "packaged_final_state_digest": "dad14fc8bc0a0cf9c6fe3f9c63bdba52497a7e296502bf12ce3136e4eded03d9",
+    "packaged_final_trace_digest": "2bd3ec042c7379fa1e49e7247c7b0849d750beb5010d6e7c218014d03a9ebe53",
+    "packaged_final_replay_digest": "4ca4e049f130cb83392fc115f0148d3852879116a4bfe5f40f08d5380cd77799",
+    "first_baseline_difference_record": 6,
+    "first_difference_reason": "terrain_cartographer_declared_activation_and_target_trace_provenance"
+  },
+  "deferred": {
+    "hero_control_change": "unsupported_canon_undefined",
+    "equipped_wand_cross_owner_control": "fails_closed",
+    "controlled_unit_leaving_board_destination": "owner_ruling_required",
+    "marrow_informant": "foundation_only",
+    "sealed": [
+      "rl_use",
+      "rl_modification",
+      "rl_transfer",
+      "equip_affordability",
+      "overflow",
+      "equipped_wand_effect_eligibility",
+      "status_application_removal",
+      "cleanse",
+      "replay",
+      "public_state",
+      "ai_legal_actions"
+    ]
+  },
+  "validation": {
+    "focused_vocabulary": { "succeeded": 16, "failed": 0, "warnings": 0, "not_run": 0 },
+    "focused_card_activation": { "succeeded": 101, "failed": 0, "not_run": 0 },
+    "focused_reaction": { "succeeded": 37, "failed": 0, "not_run": 0 },
+    "focused_pending_effect": { "succeeded": 24, "failed": 0, "not_run": 0 },
+    "focused_csn_rook": { "succeeded": 11, "failed": 0, "not_run": 0, "resolution_only_lifecycle_asserted": true },
+    "focused_csn": { "succeeded": 85, "failed": 0, "warnings": 0, "not_run": 0 },
+    "full_automation": { "succeeded": 2407, "failed": 0, "warnings": 0, "not_run": 0, "baseline_delta": 16, "caster_correction_delta": 2 },
+    "build_matrix": {
+	  "caster_correction_editor_non_unity": "succeeded_fresh_297_actions_472.24_seconds",
+	  "caster_correction_game_non_unity": "succeeded_fresh_282_actions_411.76_seconds",
+	  "caster_correction_final_test_incremental": "succeeded_4_actions_51.92_seconds",
+      "editor_non_unity": "succeeded",
+      "game_non_unity": "succeeded_fresh_282_actions",
+      "editor_default": "succeeded_11_actions_108.04_seconds",
+      "game_default": "succeeded_9_actions_106.33_seconds",
+      "editor_forced_unity": "succeeded_fresh_243_actions_312.07_seconds",
+      "game_forced_unity": "succeeded_fresh_218_actions_344.14_seconds",
+      "max_parallel_actions": 2
+    },
+    "unity_repair": "terrain_smoke_anonymous_helpers_given_unique_names",
+    "build_cook_run": { "result": "succeeded", "seconds": 609.42, "actions": 461 },
+    "caster_correction_package_rerun": {
+      "required": true,
+      "result": "succeeded_final_commit_gate"
+    },
+    "package_replay": {
+      "runs": 2,
+      "both_exit_zero": true,
+      "stderr_empty": true,
+      "fresh_replay_matches": true,
+      "archive_sha256": "5953dab4f04cabe5e5d3ba24dd8421963562a59ddf20e3af84ec69d363bd5ced",
+      "receipt_sha256": "792e76edb52447f09523a8aa699d11c72385105674a5d3f7c7bb704ff82635fb",
+      "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c",
+      "replay_schema": 1,
+      "accepted_records": 22,
+      "final_generation": 1,
+      "final_revision": 23,
+      "final_state_digest": "dad14fc8bc0a0cf9c6fe3f9c63bdba52497a7e296502bf12ce3136e4eded03d9",
+      "final_trace_digest": "2bd3ec042c7379fa1e49e7247c7b0849d750beb5010d6e7c218014d03a9ebe53",
+      "final_replay_digest": "4ca4e049f130cb83392fc115f0148d3852879116a4bfe5f40f08d5380cd77799",
+      "receipt_fields": 8,
+      "privacy_scan": "clean",
+      "source_package_data_hashes_match": true
+    },
+    "git_diff_check": "clean",
+    "staged_files": 0,
+    "task_changed_paths": 56
+  },
+  "unrelated_preserved": [
+    "Content/Maps/NewProjectTest.umap",
+    "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+    "h origin main"
+  ]
+}

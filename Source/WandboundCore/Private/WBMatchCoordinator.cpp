@@ -368,7 +368,13 @@ FWBCardActivationFixtureZoneContext BuildActivationZoneContext(const FWBGameStat
 	{
 		if (Unit.IsUnitOnBoard())
 		{
-			AppendFixtureZoneEntry(Context, Unit.CardId, FString(), Unit.OwnerId, EWBCardActivationSourceZone::Board, Unit.UnitId);
+			AppendFixtureZoneEntry(
+				Context,
+				Unit.CardId,
+				FString(),
+				Unit.GetControllerPlayerIdForRules(),
+				EWBCardActivationSourceZone::Board,
+				Unit.UnitId);
 		}
 	}
 
@@ -451,7 +457,8 @@ bool DoesActivationConditionMatch(
 		}
 		const FWBUnitState* Defender = State.GetUnitById(
 			State.PendingAttack.DefenderUnitId);
-		if (Defender == nullptr || Defender->OwnerId != PlayerId)
+		if (Defender == nullptr
+			|| Defender->GetControllerPlayerIdForRules() != PlayerId)
 		{
 			return false;
 		}
@@ -477,7 +484,7 @@ bool DoesActivationConditionMatch(
 	}
 	if (Condition.TargetController
 		== EWBCardEffectTargetControllerRequirement::Self
-		&& TargetUnit->OwnerId != PlayerId)
+		&& TargetUnit->GetControllerPlayerIdForRules() != PlayerId)
 	{
 		return false;
 	}
@@ -2234,7 +2241,9 @@ bool WBMatchCoordinator::ApplyAutomaticResolution(
 		TArray<const FWBUnitState*> Units;
 		for (const FWBUnitState& Unit : WorkingState.Units)
 		{
-			if (Unit.IsUnitOnBoard() && FWBGameStateData::IsValidPlayerId(Unit.OwnerId))
+			if (Unit.IsUnitOnBoard()
+				&& FWBGameStateData::IsValidPlayerId(
+					Unit.GetControllerPlayerIdForRules()))
 			{
 				Units.Add(&Unit);
 			}
@@ -2596,6 +2605,13 @@ bool WBMatchCoordinator::BeginPendingEffectActivation(
 	Declared.PendingEffectFrameId = Frame.FrameId;
 	Declared.ParentPendingEffectFrameId = Frame.ParentFrameId;
 	Declared.PendingEffectStackDepth = WorkingPendingEffects.Num();
+	Declared.bDeclaredActivation = WBIsPlayerDeclaredActivation(
+		Action.ActivationCommand.Source.ActivationProvenance);
+	Declared.bDeclaredTarget = WBIsPlayerDeclared(
+		Action.ActivationCommand.EffectRequest.Target.TargetDeclaration)
+		|| WBIsPlayerDeclared(
+			Action.ActivationCommand.EffectRequest.AuxiliaryCardSelection.
+				TargetDeclaration);
 	OutTraceEvents.Add(MoveTemp(Declared));
 
 	FWBTraceEvent Opened = MakeMatchTrace(
@@ -3016,9 +3032,10 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 		const FWBUnitState* Defender =
 			WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId);
 		if (Defender != nullptr
-			&& FWBGameStateData::IsValidPlayerId(Defender->OwnerId))
+			&& FWBGameStateData::IsValidPlayerId(
+				Defender->GetControllerPlayerIdForRules()))
 		{
-			return Defender->OwnerId;
+			return Defender->GetControllerPlayerIdForRules();
 		}
 		return 1 - WorkingState.CurrentPlayer;
 	};
@@ -3036,6 +3053,8 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 		Event.AttackContinuationStage = Stage;
 		Event.bAttackPrevented = Attack.bPrevented;
 		Event.bCounterAttack = Attack.bCounter;
+		Event.bDeclaredAttack = WBIsPlayerDeclared(Attack.AttackDeclaration);
+		Event.bDeclaredTarget = WBIsPlayerDeclared(Attack.TargetDeclaration);
 		OutTraceEvents.Add(MoveTemp(Event));
 	};
 	auto AddStageTrace = [&](const FName Kind, const FName Stage)
@@ -3314,14 +3333,19 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 				}
 				WorkingState.PendingAttack.AttackerUnitId = OriginalDefender;
 				WorkingState.PendingAttack.DefenderUnitId = OriginalAttacker;
-				WorkingState.PendingAttack.AttackingPlayerId = CounterAttacker->OwnerId;
+				WorkingState.PendingAttack.AttackingPlayerId =
+					CounterAttacker->GetControllerPlayerIdForRules();
 				WorkingState.PendingAttack.AuthorityKind =
-					CounterAttacker->OwnerId == -1
+					CounterAttacker->GetControllerPlayerIdForRules() == -1
 						? EWBAttackAuthorityKind::NeutralNPC
 						: EWBAttackAuthorityKind::Player;
 				WorkingState.PendingAttack.AttackerTile = FWBTile(CounterAttacker->X, CounterAttacker->Y);
 				WorkingState.PendingAttack.DefenderTile = FWBTile(CounterDefender->X, CounterDefender->Y);
 				WorkingState.PendingAttack.bCounter = true;
+				WorkingState.PendingAttack.AttackDeclaration =
+					EWBDeclarationProvenance::Automatic;
+				WorkingState.PendingAttack.TargetDeclaration =
+					EWBDeclarationProvenance::Automatic;
 				WorkingState.PendingAttack.bDamageResolved = false;
 				WorkingState.PendingAttack.bPostHitCompleted = false;
 				WorkingState.PendingAttack.bFrozenBroken = false;
@@ -3339,7 +3363,8 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 			const FWBUnitState* CounterTarget =
 				WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId);
 			const bool bNeutralCounterTarget =
-				CounterTarget != nullptr && CounterTarget->OwnerId == -1;
+				CounterTarget != nullptr
+				&& CounterTarget->GetControllerPlayerIdForRules() == -1;
 			if (bNeutralCounterTarget)
 			{
 				break;
@@ -3584,7 +3609,8 @@ bool WBMatchCoordinator::ResumeNPCPhaseAndTurnTransition(
 		const FWBUnitState* Defender =
 			WorkingState.GetUnitById(WorkingState.PendingAttack.DefenderUnitId);
 		if (Defender == nullptr
-			|| !FWBGameStateData::IsValidPlayerId(Defender->OwnerId))
+			|| !FWBGameStateData::IsValidPlayerId(
+				Defender->GetControllerPlayerIdForRules()))
 		{
 			OutReason = TEXT("npc_attack_response_owner_invalid");
 			return false;
@@ -3601,7 +3627,7 @@ bool WBMatchCoordinator::ResumeNPCPhaseAndTurnTransition(
 			WorkingState.PendingAttack.DefenderUnitId,
 			OutTraceEvents,
 			OutReason,
-			Defender->OwnerId))
+			Defender->GetControllerPlayerIdForRules()))
 		{
 			return false;
 		}

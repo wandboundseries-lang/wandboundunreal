@@ -9,6 +9,35 @@ enum class EWBCombatCapability : uint8
 	ImmuneToEnemyEffects
 };
 
+enum class EWBDeclarationProvenance : uint8
+{
+	Automatic,
+	PlayerDeclared
+};
+
+enum class EWBActivationProvenance : uint8
+{
+	ResolutionOnly,
+	AutomaticActivation,
+	PlayerDeclared
+};
+
+inline bool WBIsPlayerDeclared(const EWBDeclarationProvenance Provenance)
+{
+	return Provenance == EWBDeclarationProvenance::PlayerDeclared;
+}
+
+inline bool WBIsActivation(const EWBActivationProvenance Provenance)
+{
+	return Provenance != EWBActivationProvenance::ResolutionOnly;
+}
+
+inline bool WBIsPlayerDeclaredActivation(
+	const EWBActivationProvenance Provenance)
+{
+	return Provenance == EWBActivationProvenance::PlayerDeclared;
+}
+
 struct WANDBOUNDCORE_API FWBTile
 {
 	int32 X = -1;

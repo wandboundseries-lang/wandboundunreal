@@ -537,7 +537,8 @@ TArray<FWBBoardCardReference> WBCardZoneState::BuildBoardCardReferencesForTest(
 		FWBBoardCardReference Reference;
 		Reference.UnitId = Unit.UnitId;
 		Reference.CardId = Unit.CardId;
-		Reference.OwnerPlayerId = Unit.OwnerId;
+		// This legacy fixture field represents current board control.
+		Reference.OwnerPlayerId = Unit.GetControllerPlayerIdForRules();
 		References.Add(Reference);
 	}
 

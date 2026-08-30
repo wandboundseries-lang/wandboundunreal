@@ -106,6 +106,9 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FName AttackContinuationStage;
 	bool bAttackPrevented = false;
 	bool bCounterAttack = false;
+	bool bDeclaredAttack = false;
+	bool bDeclaredActivation = false;
+	bool bDeclaredTarget = false;
 	bool bDeferredBoundary = false;
 	FWBTile FromTile;
 	FWBTile ToTile;

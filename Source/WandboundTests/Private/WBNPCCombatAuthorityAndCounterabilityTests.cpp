@@ -193,6 +193,8 @@ struct FNPCReactionRun
 	int32 MPRollTraceCount = 0;
 	int32 DamageTraceCount = 0;
 	int32 CounterTraceCount = 0;
+	bool bCounterWasDeclaredAttack = false;
+	bool bCounterTargetWasDeclared = false;
 	int32 NPCHPAfter = -1;
 	FString StateDigest;
 	FString TraceDigest;
@@ -282,6 +284,15 @@ FNPCReactionRun RunNPCReaction(const int32 TargetPlayerId)
 	Run.MPRollTraceCount = CountTrace(Coordinator.GetTraceLog(), FName(TEXT("npc_mp_rolled")));
 	Run.DamageTraceCount = CountTrace(Coordinator.GetTraceLog(), FName(TEXT("npc_attack_damage_resolved")));
 	Run.CounterTraceCount = CountTrace(Coordinator.GetTraceLog(), FName(TEXT("counter_started")));
+	if (const FWBTraceEvent* CounterTrace = Coordinator.GetTraceLog().FindByPredicate(
+		[](const FWBTraceEvent& Event)
+		{
+			return Event.Kind == FName(TEXT("counter_started"));
+		}))
+	{
+		Run.bCounterWasDeclaredAttack = CounterTrace->bDeclaredAttack;
+		Run.bCounterTargetWasDeclared = CounterTrace->bDeclaredTarget;
+	}
 	const FWBUnitState* FinalNPC = Coordinator.GetState().GetUnitById(NPCUnitId);
 	Run.NPCHPAfter = FinalNPC == nullptr ? 0 : FinalNPC->HP;
 	Run.StateDigest = Coordinator.GetCurrentStateDigest();
@@ -335,6 +346,8 @@ bool FWBNPCReactionPlayerZeroPriorityTest::RunTest(const FString&)
 	TestEqual(TEXT("One NPC damage trace"), Run.DamageTraceCount, 1);
 	TestEqual(TEXT("One MP roll"), Run.MPRollTraceCount, 1);
 	TestEqual(TEXT("Defender counter occurs"), Run.CounterTraceCount, 1);
+	TestFalse(TEXT("Counter is not a declared attack"), Run.bCounterWasDeclaredAttack);
+	TestFalse(TEXT("Automatic counter target is not declared"), Run.bCounterTargetWasDeclared);
 	TestEqual(TEXT("Counter damages NPC once"), Run.NPCHPAfter, 9);
 	return true;
 }

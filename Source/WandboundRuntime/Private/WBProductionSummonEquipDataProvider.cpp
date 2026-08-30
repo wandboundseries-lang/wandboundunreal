@@ -41,7 +41,7 @@ const FWBUnitState* FindHeroUnit(
 
 	const FWBUnitState* Hero = State.GetUnitById(Player->HeroUnitId);
 	if (Hero == nullptr
-		|| Hero->OwnerId != PlayerId
+		|| Hero->GetControllerPlayerIdForRules() != PlayerId
 		|| Hero->bDefeated
 		|| !Hero->IsUnitOnBoard())
 	{
@@ -92,9 +92,11 @@ TArray<const FWBUnitState*> GetSortedOwnedBoardUnits(
 	TArray<const FWBUnitState*> Units = State.GetUnitsForPlayer(PlayerId);
 	Units.Sort([](const FWBUnitState& A, const FWBUnitState& B)
 	{
-		if (A.OwnerId != B.OwnerId)
+		if (A.GetControllerPlayerIdForRules()
+			!= B.GetControllerPlayerIdForRules())
 		{
-			return A.OwnerId < B.OwnerId;
+			return A.GetControllerPlayerIdForRules()
+				< B.GetControllerPlayerIdForRules();
 		}
 		if (A.Y != B.Y)
 		{

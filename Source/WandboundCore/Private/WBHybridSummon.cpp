@@ -62,7 +62,7 @@ bool IsValidOwnedHero(
 		return false;
 	}
 	const FWBUnitState* Hero = State.GetUnitById(Player->HeroUnitId);
-	if (Hero == nullptr || Hero->OwnerId != PlayerId || !Hero->IsUnitOnBoard())
+	if (Hero == nullptr || Hero->GetControllerPlayerIdForRules() != PlayerId || !Hero->IsUnitOnBoard())
 	{
 		return false;
 	}
@@ -565,7 +565,7 @@ FWBHybridSummonResult WBHybridSummon::ExecuteSummon(
 	}
 	FWBUnitState NewHybrid;
 	NewHybrid.UnitId = NewUnitId;
-	NewHybrid.OwnerId = Plan.ActingPlayerId;
+	NewHybrid.SetOwnerAndControllerForRules(Plan.ActingPlayerId, Plan.ActingPlayerId);
 	NewHybrid.CardId = Plan.HybridDefinitionId;
 	NewHybrid.X = Plan.DestinationTile.X;
 	NewHybrid.Y = Plan.DestinationTile.Y;

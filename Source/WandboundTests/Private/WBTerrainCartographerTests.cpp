@@ -487,6 +487,15 @@ bool FWBTerrainCartographerMutationTest::RunTest(const FString&)
 		Repository, TEXT("alternate_identity"), TEXT("survey"), FWBTile(4, 6));
 	const FWBCardActivationCommand Lookalike = MakeCommand(
 		Repository, TEXT("cartographer_name_only"), TEXT("survey"), FWBTile(4, 6));
+	TestTrue(TEXT("Cartographer activation exists"), WBIsActivation(
+		Mud.Source.ActivationProvenance));
+	TestTrue(TEXT("Cartographer activation is declared"),
+		WBIsPlayerDeclaredActivation(
+		Mud.Source.ActivationProvenance));
+	TestEqual(TEXT("Cartographer source unit is caster"),
+		Mud.Source.GetCasterUnitId(), 10);
+	TestTrue(TEXT("Chosen terrain tile is a declared target"), WBIsPlayerDeclared(
+		Mud.EffectRequest.Target.TargetDeclaration));
 
 	const FWBCardActivationCommandResult MudResult =
 		WBEffectRunner::ApplyCardActivationCommand(State, Mud, Repository);

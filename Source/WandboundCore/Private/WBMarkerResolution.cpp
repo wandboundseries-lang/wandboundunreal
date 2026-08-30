@@ -516,7 +516,8 @@ FWBMarkerResolutionResult WBMarkerResolution::ResolveMarkerAtUnitTile(
 		Pending.OriginTile = Marker.Tile;
 		Pending.SpawnOrder = SpawnOrder;
 		Pending.TriggeredByUnitId = EnteringUnitId;
-		Pending.TriggeredByOwnerId = EnteringUnit->OwnerId;
+		Pending.TriggeredByOwnerId =
+			EnteringUnit->GetControllerPlayerIdForRules();
 		Pending.CreatedTurnNumber = WorkingState.TurnNumber;
 		WorkingState.PendingNPCSpawns.Add(Pending);
 		TraceEvents.Add(MakePendingTrace(FName(TEXT("npc_spawn_scheduled")), Pending));
@@ -658,7 +659,7 @@ FWBNPCPhaseResult WBMarkerResolution::ProcessPendingNPCSpawns(
 
 		FWBUnitState NPC;
 		NPC.UnitId = NewUnitId;
-		NPC.OwnerId = -1;
+		NPC.SetOwnerAndControllerForRules(INDEX_NONE, INDEX_NONE);
 		NPC.CardId = PendingSnapshot.NPCDefinitionId;
 		NPC.X = SpawnTile.X;
 		NPC.Y = SpawnTile.Y;

@@ -25,11 +25,12 @@ FWBResonanceLoadSummary WBResonanceLoad::BuildUnitLoadSummary(
 
 	FWBResonanceLoadSummary Summary;
 	Summary.UnitId = Unit->UnitId;
-	Summary.OwnerPlayerId = Unit->OwnerId;
+	Summary.OwnerPlayerId = Unit->GetControllerPlayerIdForRules();
 	Summary.CurrentRL = Unit->GetCurrentRLForRules();
 	Summary.RLUsed = Unit->RLUsed;
 
-	if (!FWBGameStateData::IsValidPlayerId(Unit->OwnerId))
+	if (!FWBGameStateData::IsValidPlayerId(
+		Unit->GetControllerPlayerIdForRules()))
 	{
 		Summary.Reason = TEXT("invalid_unit_owner");
 		return Summary;

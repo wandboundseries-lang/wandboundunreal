@@ -62,7 +62,7 @@ const FWBUnitState* FindHeroUnit(
 
 	const FWBUnitState* Hero = State.GetUnitById(Player->HeroUnitId);
 	if (Hero == nullptr
-		|| Hero->OwnerId != PlayerId
+		|| Hero->GetControllerPlayerIdForRules() != PlayerId
 		|| !Hero->IsUnitOnBoard())
 	{
 		return nullptr;
@@ -260,7 +260,7 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 
 	FWBUnitState NewUnit;
 	NewUnit.UnitId = NewUnitId;
-	NewUnit.OwnerId = Request.PlayerId;
+	NewUnit.SetOwnerAndControllerForRules(Request.PlayerId, Request.PlayerId);
 	NewUnit.CardId = Request.SourceCardId;
 	NewUnit.X = Request.TargetTile.X;
 	NewUnit.Y = Request.TargetTile.Y;

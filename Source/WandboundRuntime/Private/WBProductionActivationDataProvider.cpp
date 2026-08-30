@@ -161,7 +161,7 @@ FString PublicLabelForEffect(const FWBCardEffectDefinition& Effect)
 bool IsValidUnitTargetOptionSource(const FWBPublicUnitBoardSummary& Unit)
 {
 	return Unit.UnitId >= 0
-		&& FWBGameStateData::IsValidPlayerId(Unit.OwnerId)
+		&& FWBGameStateData::IsValidPlayerId(Unit.GetControllerPlayerId())
 		&& Unit.X >= 0
 		&& Unit.Y >= 0
 		&& !Unit.CardId.IsEmpty();
@@ -188,7 +188,7 @@ TArray<FWBCardActivationTargetOption> BuildUnitTargetOptions(
 		FWBCardActivationTargetOption Option;
 		Option.Type = EWBCardActivationTargetOptionType::Unit;
 		Option.TargetUnitId = Unit.UnitId;
-		Option.TargetOwnerPlayerId = Unit.OwnerId;
+		Option.TargetOwnerPlayerId = Unit.GetControllerPlayerId();
 		Option.TargetTile = FWBTile(Unit.X, Unit.Y);
 		Option.TargetCardId = Unit.CardId;
 		Option.PublicLabel = PublicLabelForTargetUnit(Unit);
@@ -492,7 +492,7 @@ void AppendBoardSourceActions(
 
 	for (const FWBPublicUnitBoardSummary& UnitSummary : PublicBoardSummary.Units)
 	{
-		if (UnitSummary.OwnerId != ViewerPlayerId)
+		if (UnitSummary.GetControllerPlayerId() != ViewerPlayerId)
 		{
 			continue;
 		}

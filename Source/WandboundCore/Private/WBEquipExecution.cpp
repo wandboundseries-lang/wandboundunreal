@@ -194,9 +194,17 @@ FWBEquipExecutionResult WBEquipExecution::ExecuteWandEquipFromHand(
 		return MakeResult(EWBEquipExecutionResultCode::TargetUnitNotFound, Request);
 	}
 
-	if (TargetUnit->OwnerId != Request.PlayerId)
+	if (TargetUnit->GetControllerPlayerIdForRules() != Request.PlayerId)
 	{
 		return MakeResult(EWBEquipExecutionResultCode::TargetUnitNotOwned, Request);
+	}
+	if (TargetUnit->GetOwnerPlayerIdForRules()
+		!= TargetUnit->GetControllerPlayerIdForRules())
+	{
+		return MakeResult(
+			EWBEquipExecutionResultCode::TargetUnitNotOwned,
+			Request,
+			TEXT("controlled_unit_wand_ownership_unsupported"));
 	}
 
 	const FWBResonanceRecalculationResult PreEquipRL =

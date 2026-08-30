@@ -205,11 +205,11 @@ FWBAfterDamageTriggerCollection WBAfterDamageTrigger::CaptureBeforeDamage(
 	const FWBUnitState* FinalRecipient =
 		State.GetUnitById(Context.FinalDamageRecipientUnitId);
 	Context.AttackerControllerId = Attacker != nullptr
-		? Attacker->OwnerId : INDEX_NONE;
+		? Attacker->GetControllerPlayerIdForRules() : INDEX_NONE;
 	Context.HitUnitControllerId = HitUnit != nullptr
-		? HitUnit->OwnerId : INDEX_NONE;
+		? HitUnit->GetControllerPlayerIdForRules() : INDEX_NONE;
 	Context.FinalRecipientControllerId = FinalRecipient != nullptr
-		? FinalRecipient->OwnerId : INDEX_NONE;
+		? FinalRecipient->GetControllerPlayerIdForRules() : INDEX_NONE;
 	Context.FinalRecipientPreviousHP = FinalRecipient != nullptr
 		? FinalRecipient->HP : 0;
 	Context.FinalRecipientResultingHP = Context.FinalRecipientPreviousHP;
@@ -242,7 +242,7 @@ FWBAfterDamageTriggerCollection WBAfterDamageTrigger::CaptureBeforeDamage(
 		{
 			AddDefinitionsForSource(
 				Lookup.Definition,
-				Unit->OwnerId,
+				Unit->GetControllerPlayerIdForRules(),
 				Unit->UnitId,
 				EWBAfterDamageTriggerSourceKind::Unit,
 				FString(),

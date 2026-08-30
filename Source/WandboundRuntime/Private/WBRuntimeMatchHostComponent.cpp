@@ -938,8 +938,8 @@ void UWBRuntimeMatchHostComponent::RebuildPresentationModels(const FString& Stat
 	{
 		FWBRuntimeUnitPresentation Presentation;
 		Presentation.UnitId = Unit.UnitId;
-		Presentation.OwnerId = Unit.OwnerId;
-		Presentation.bNeutralNPC = Unit.OwnerId < 0;
+		Presentation.OwnerId = Unit.GetControllerPlayerId();
+		Presentation.bNeutralNPC = Unit.GetControllerPlayerId() < 0;
 		Presentation.bHero = HeroDefinitionIds.Contains(Unit.CardId);
 		Presentation.Tile = FIntPoint(Unit.X, Unit.Y);
 		Presentation.HP = Unit.HP;

@@ -165,13 +165,14 @@ FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
 	}
 
 	FWBResonanceOverflowPlan Plan = MakePlan(EWBResonanceOverflowResultCode::Success, UnitId);
-	Plan.PlayerId = Unit->OwnerId;
+	Plan.PlayerId = Unit->GetControllerPlayerIdForRules();
 	Plan.RLTotal = RLResult.RecalculatedCurrentRL;
 	Plan.RLUsedBefore = RLResult.RecalculatedRLUsed;
 	Plan.RLUsedAfter = RLResult.RecalculatedRLUsed;
 
-	if (!FWBGameStateData::IsValidPlayerId(Unit->OwnerId)
-		|| State.GetPlayerById(Unit->OwnerId) == nullptr)
+	if (!FWBGameStateData::IsValidPlayerId(
+		Unit->GetControllerPlayerIdForRules())
+		|| State.GetPlayerById(Unit->GetControllerPlayerIdForRules()) == nullptr)
 	{
 		return MakePlan(EWBResonanceOverflowResultCode::InvalidPlayer, UnitId);
 	}
@@ -237,7 +238,7 @@ FWBResonanceOverflowPlan WBResonanceOverflow::BuildOverflowPlanForUnit(
 		}
 
 		FWBResonanceOverflowRemoval Removal;
-		Removal.PlayerId = Unit->OwnerId;
+		Removal.PlayerId = Unit->GetControllerPlayerIdForRules();
 		Removal.UnitId = UnitId;
 		Removal.SourceInstanceId = Entry.Card.InstanceId;
 		Removal.SourceCardId = Entry.Card.CardId;

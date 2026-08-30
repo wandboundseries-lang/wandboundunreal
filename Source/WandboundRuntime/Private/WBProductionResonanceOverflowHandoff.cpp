@@ -51,7 +51,7 @@ FWBProductionResonanceOverflowHandoff::ResolveOverflowAndRefresh(
 		return MakeFailure(Request, TEXT("target_unit_not_found"));
 	}
 
-	if (Unit->OwnerId != Request.ViewerPlayerId)
+	if (Unit->GetControllerPlayerIdForRules() != Request.ViewerPlayerId)
 	{
 		return MakeFailure(Request, TEXT("target_unit_not_owned"));
 	}

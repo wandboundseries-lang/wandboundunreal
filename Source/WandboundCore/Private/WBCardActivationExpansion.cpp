@@ -184,13 +184,30 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 		break;
 	}
 	Result.Command.Source.SourceEffectId = MatchingEffect->EffectId;
+	Result.Command.Source.ActivationProvenance =
+		EWBActivationProvenance::PlayerDeclared;
 	Result.Command.EffectRequest.Source.PlayerId = Request.PlayerId;
 	Result.Command.EffectRequest.Source.SourceUnitId = Request.SourceUnitId;
 	Result.Command.EffectRequest.Source.SourceCardId = Request.CardDefinition.CardId;
 	Result.Command.EffectRequest.Source.SourceEffectId = MatchingEffect->EffectId;
+	Result.Command.EffectRequest.Source.ActivationProvenance =
+		EWBActivationProvenance::PlayerDeclared;
 	Result.Command.EffectRequest.Target = Request.Target;
+	if (Request.Target.TargetUnitId >= 0
+		|| IsValidTileCoordinate(Request.Target.TargetTile)
+		|| IsValidWallEdgeCoordinate(Request.Target.TargetWallEdge))
+	{
+		Result.Command.EffectRequest.Target.TargetDeclaration =
+			EWBDeclarationProvenance::PlayerDeclared;
+	}
 	Result.Command.EffectRequest.AuxiliaryCardSelection =
 		Request.AuxiliaryCardSelection;
+	if (Request.AuxiliaryCardSelection.Zone
+		!= EWBEffectAuxiliaryCardZone::None)
+	{
+		Result.Command.EffectRequest.AuxiliaryCardSelection.TargetDeclaration =
+			EWBDeclarationProvenance::PlayerDeclared;
+	}
 	Result.Command.EffectRequest.Payloads = MatchingEffect->Payloads;
 	if (MatchingEffect->SourceGate.CostGate.bRequiresExternalAffordability
 		|| MatchingEffect->SourceGate.CostGate.RequiredRR > 0)

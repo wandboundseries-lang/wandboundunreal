@@ -89,6 +89,17 @@ FWBTraceEvent MakeEffectSummonTrace(
 	Trace.bOk = Reason.IsEmpty();
 	return Trace;
 }
+
+FWBTraceEvent MakePrivateDeclaredTargetTrace(
+	const FWBPendingMandatoryDeckChoiceState& Choice,
+	const FString& CardInstanceId)
+{
+	FWBTraceEvent Trace = MakeEffectSummonTrace(
+		FName(TEXT("mandatory_deck_target_declared")), Choice);
+	Trace.CardInstanceId = CardInstanceId;
+	Trace.bDeclaredTarget = true;
+	return Trace;
+}
 }
 
 FString WBMandatoryDeckChoice::BuildActionId(
@@ -215,6 +226,8 @@ FWBMandatoryDeckChoiceResult WBMandatoryDeckChoice::Submit(
 	FWBMandatoryDeckChoiceResult Result;
 	Result.bOk = true;
 	Result.bSummoned = Summon.bOk;
+	Result.TraceEvents.Add(MakePrivateDeclaredTargetTrace(
+		Choice, *SelectedInstance));
 	Result.TraceEvents.Append(Summon.TraceEvents);
 	if (!Summon.bOk)
 	{

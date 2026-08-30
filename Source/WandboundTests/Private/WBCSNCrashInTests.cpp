@@ -437,6 +437,9 @@ bool FWBCSNCrashInCandidateChoiceTest::RunTest(const FString&)
 		TestEqual(TEXT("Command captures first exact instance"),
 			Generated.Candidates[0].Command.EffectRequest.AuxiliaryCardSelection.CardInstanceId,
 			FString(TEXT("replacement_instance_a")));
+		TestTrue(TEXT("Explicit replacement instance is a declared target"),
+			WBIsPlayerDeclared(Generated.Candidates[0].Command.EffectRequest.
+				AuxiliaryCardSelection.TargetDeclaration));
 	}
 	const FWBCardActivationCandidateGenerationResult Missing =
 		WBCardActivationCandidateGenerator::GenerateCandidates(

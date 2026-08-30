@@ -52,6 +52,9 @@ TSharedRef<FJsonObject> PublicUnitBoardSummaryToJsonObject(const FWBPublicUnitBo
 	TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 	Object->SetNumberField(TEXT("unit_id"), Unit.UnitId);
 	Object->SetNumberField(TEXT("owner_id"), Unit.OwnerId);
+	Object->SetNumberField(TEXT("owner_player_id"), Unit.GetOwnerPlayerId());
+	Object->SetNumberField(
+		TEXT("controller_player_id"), Unit.GetControllerPlayerId());
 	Object->SetStringField(TEXT("card_id"), Unit.CardId);
 	Object->SetNumberField(TEXT("x"), Unit.X);
 	Object->SetNumberField(TEXT("y"), Unit.Y);

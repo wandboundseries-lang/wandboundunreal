@@ -13,6 +13,15 @@ struct WANDBOUNDCORE_API FWBCardActivationSource
 	FString SourceCardInstanceId;
 	EWBCardZone SourceZone = EWBCardZone::Unknown;
 	FString SourceEffectId;
+	EWBActivationProvenance ActivationProvenance =
+		EWBActivationProvenance::ResolutionOnly;
+
+	int32 GetCasterUnitId() const
+	{
+		return WBIsActivation(ActivationProvenance) && SourceUnitId >= 0
+			? SourceUnitId
+			: INDEX_NONE;
+	}
 };
 
 struct WANDBOUNDCORE_API FWBCardActivationUsageCommit

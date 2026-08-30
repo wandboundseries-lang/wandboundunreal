@@ -56,7 +56,7 @@ WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
 
 	const FWBUnitState* Unit = State.GetUnitById(Context.InheritingUnitId);
 	if (Unit == nullptr
-		|| Unit->OwnerId != Context.InheritingPlayerId
+		|| Unit->GetControllerPlayerIdForRules() != Context.InheritingPlayerId
 		|| !Unit->IsUnitOnBoard()
 		|| Unit->bDefeated)
 	{

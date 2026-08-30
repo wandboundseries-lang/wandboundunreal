@@ -203,7 +203,8 @@ int32 SelectTarget(
 	TArray<FTargetRank> Ranks;
 	for (const FWBUnitState& Candidate : State.Units)
 	{
-		if (!FWBGameStateData::IsValidPlayerId(Candidate.OwnerId)
+		if (!FWBGameStateData::IsValidPlayerId(
+			Candidate.GetControllerPlayerIdForRules())
 			|| Candidate.bDefeated
 			|| !Candidate.IsUnitOnBoard())
 		{
@@ -227,7 +228,7 @@ int32 SelectTarget(
 			FWBTile(Candidate.X, Candidate.Y));
 		Rank.HP = Candidate.HP;
 		Rank.TriggerPriority = Candidate.UnitId == NPC.NPCTriggeredByUnitId ? 0 : 1;
-		Rank.OwnerId = Candidate.OwnerId;
+		Rank.OwnerId = Candidate.GetControllerPlayerIdForRules();
 		Ranks.Add(Rank);
 	}
 	if (Ranks.IsEmpty())
@@ -259,11 +260,11 @@ bool ValidateNPCState(
 		UnitIds.Add(Unit.UnitId);
 		const bool bHasNPCMetadata = Unit.NPCSpawnOrder != INDEX_NONE
 			|| Unit.NPCCreationTurnNumber != INDEX_NONE;
-		if (Unit.OwnerId != -1 && !bHasNPCMetadata)
+		if (Unit.GetControllerPlayerIdForRules() != -1 && !bHasNPCMetadata)
 		{
 			continue;
 		}
-		if (Unit.OwnerId != -1)
+		if (Unit.GetControllerPlayerIdForRules() != -1)
 		{
 			OutReason = TEXT("npc_owner_invalid");
 			return false;
@@ -372,7 +373,8 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::BeginPhase(
 	TArray<FWBUnitState> OrderedNPCs;
 	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (Unit.OwnerId == -1 && Unit.IsUnitOnBoard() && !Unit.bDefeated)
+		if (Unit.GetControllerPlayerIdForRules() == -1
+			&& Unit.IsUnitOnBoard() && !Unit.bDefeated)
 		{
 			OrderedNPCs.Add(Unit);
 		}
@@ -596,7 +598,8 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 				TArray<FWBUnitState> NewlySpawned;
 				for (const FWBUnitState& Candidate : State.Units)
 				{
-					if (Candidate.OwnerId == -1 && Candidate.IsUnitOnBoard()
+					if (Candidate.GetControllerPlayerIdForRules() == -1
+						&& Candidate.IsUnitOnBoard()
 						&& !Continuation.OrderedNPCUnitIds.Contains(Candidate.UnitId))
 					{
 						NewlySpawned.Add(Candidate);
@@ -695,7 +698,8 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 	TArray<FWBUnitState> OrderedNPCs;
 	for (const FWBUnitState& Unit : WorkingState.Units)
 	{
-		if (Unit.OwnerId == -1 && Unit.IsUnitOnBoard() && !Unit.bDefeated)
+		if (Unit.GetControllerPlayerIdForRules() == -1
+			&& Unit.IsUnitOnBoard() && !Unit.bDefeated)
 		{
 			OrderedNPCs.Add(Unit);
 		}
@@ -890,7 +894,8 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 				TArray<FWBUnitState> NewlySpawned;
 				for (const FWBUnitState& Candidate : WorkingState.Units)
 				{
-					if (Candidate.OwnerId == -1 && Candidate.IsUnitOnBoard()
+					if (Candidate.GetControllerPlayerIdForRules() == -1
+						&& Candidate.IsUnitOnBoard()
 						&& !Queue.Contains(Candidate.UnitId))
 					{
 						NewlySpawned.Add(Candidate);

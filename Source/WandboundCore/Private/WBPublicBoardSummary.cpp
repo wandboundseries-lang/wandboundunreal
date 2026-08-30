@@ -99,8 +99,10 @@ FWBPublicUnitBoardSummary BuildPublicUnitSummary(
 {
 	FWBPublicUnitBoardSummary Summary;
 	Summary.UnitId = Unit.UnitId;
-	Summary.OwnerId = Unit.OwnerId;
-	const FWBPlayerStateData* Owner = State.GetPlayerById(Unit.OwnerId);
+	Summary.OwnerPlayerId = Unit.GetOwnerPlayerIdForRules();
+	Summary.ControllerPlayerId = Unit.GetControllerPlayerIdForRules();
+	Summary.OwnerId = Summary.ControllerPlayerId;
+	const FWBPlayerStateData* Owner = State.GetPlayerById(Summary.OwnerPlayerId);
 	Summary.bHeroUnit = Owner != nullptr && Owner->HeroUnitId == Unit.UnitId;
 	Summary.CardId = Unit.CardId;
 	Summary.X = Unit.X;

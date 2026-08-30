@@ -134,7 +134,13 @@ FString CanonicalGameState(const FWBGameStateData& State)
 	for (const FWBUnitState& Unit : Units)
 	{
 		AppendInt(Out, TEXT("unit.id"), Unit.UnitId);
-		AppendInt(Out, TEXT("unit.owner"), Unit.OwnerId);
+		const int32 UnitController = Unit.GetControllerPlayerIdForRules();
+		const int32 UnitOwner = Unit.GetOwnerPlayerIdForRules();
+		AppendInt(Out, TEXT("unit.owner"), UnitController);
+		if (UnitOwner != UnitController)
+		{
+			AppendInt(Out, TEXT("unit.card_owner"), UnitOwner);
+		}
 		AppendString(Out, TEXT("unit.card"), Unit.CardId);
 		AppendInt(Out, TEXT("unit.x"), Unit.X);
 		AppendInt(Out, TEXT("unit.y"), Unit.Y);
@@ -268,6 +274,14 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendBool(Out, TEXT("attack.post_hit_completed"), State.PendingAttack.bPostHitCompleted);
 		AppendBool(Out, TEXT("attack.frozen_broken"), State.PendingAttack.bFrozenBroken);
 		AppendBool(Out, TEXT("attack.counter"), State.PendingAttack.bCounter);
+		AppendInt(
+			Out,
+			TEXT("attack.declaration"),
+			static_cast<int32>(State.PendingAttack.AttackDeclaration));
+		AppendInt(
+			Out,
+			TEXT("attack.target_declaration"),
+			static_cast<int32>(State.PendingAttack.TargetDeclaration));
 		AppendBool(Out, TEXT("attack.automatic_pre_damage_processed"),
 			State.PendingAttack.bAutomaticPreDamageModifiersProcessed);
 		AppendBool(Out, TEXT("attack.hit_reflected_to_attacker"),
@@ -329,6 +343,11 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendInt(Out, TEXT("destruction.unit"), Event.DestroyedUnitId);
 		AppendString(Out, TEXT("destruction.card"), Event.DestroyedCardId);
 		AppendInt(Out, TEXT("destruction.controller"), Event.ControllerPlayerId);
+		if (FWBGameStateData::IsValidPlayerId(Event.OwnerPlayerId)
+			&& Event.OwnerPlayerId != Event.ControllerPlayerId)
+		{
+			AppendInt(Out, TEXT("destruction.owner"), Event.OwnerPlayerId);
+		}
 		AppendTile(Out, TEXT("destruction.tile"), Event.LastTile);
 		AppendBool(Out, TEXT("destruction.hero"), Event.bWasHero);
 		AppendInt(Out, TEXT("destruction.cause"), static_cast<int32>(Event.Cause));
@@ -358,6 +377,14 @@ FString CanonicalGameState(const FWBGameStateData& State)
 				Out,
 				TEXT("destruction.observer.controller"),
 				Observer.ControllerPlayerId);
+			if (FWBGameStateData::IsValidPlayerId(Observer.OwnerPlayerId)
+				&& Observer.OwnerPlayerId != Observer.ControllerPlayerId)
+			{
+				AppendInt(
+					Out,
+					TEXT("destruction.observer.owner"),
+					Observer.OwnerPlayerId);
+			}
 			AppendInt(Out, TEXT("destruction.observer.order"), Observer.SourceOrder);
 		}
 		AppendInt(Out, TEXT("destruction.wand_count"), Event.EquippedWands.Num());

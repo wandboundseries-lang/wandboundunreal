@@ -49,11 +49,15 @@ bool TriggerMatches(
 	case EWBSetupSummonTriggerScope::UnitSummoned:
 		return true;
 	case EWBSetupSummonTriggerScope::YouSummonUnit:
-		return Listener.OwnerId == Summoned.OwnerId;
+		return Listener.GetControllerPlayerIdForRules()
+			== Summoned.GetControllerPlayerIdForRules();
 	case EWBSetupSummonTriggerScope::OpponentSummonsUnit:
-		return FWBGameStateData::IsValidPlayerId(Listener.OwnerId)
-			&& FWBGameStateData::IsValidPlayerId(Summoned.OwnerId)
-			&& Listener.OwnerId != Summoned.OwnerId;
+		return FWBGameStateData::IsValidPlayerId(
+				Listener.GetControllerPlayerIdForRules())
+			&& FWBGameStateData::IsValidPlayerId(
+				Summoned.GetControllerPlayerIdForRules())
+			&& Listener.GetControllerPlayerIdForRules()
+				!= Summoned.GetControllerPlayerIdForRules();
 	case EWBSetupSummonTriggerScope::FactionSummoned:
 		return !Trigger.FactionId.IsEmpty()
 			&& SummonedDefinition.PublicFactions.Contains(Trigger.FactionId);
@@ -119,7 +123,7 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 
 		FWBUnitState Hero;
 		Hero.UnitId = Placement.PlayerId;
-		Hero.OwnerId = Placement.PlayerId;
+		Hero.SetOwnerAndControllerForRules(Placement.PlayerId, Placement.PlayerId);
 		Hero.CardId = Placement.HeroCardId;
 		Hero.X = Placement.SpawnTile.X;
 		Hero.Y = Placement.SpawnTile.Y;
@@ -196,7 +200,8 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 				}
 
 				FCollectedSetupTrigger Item;
-				Item.ControllerPlayerId = Listener.OwnerId;
+				Item.ControllerPlayerId =
+					Listener.GetControllerPlayerIdForRules();
 				Item.ListenerUnitId = Listener.UnitId;
 				Item.SummonedUnitId = Summoned.UnitId;
 				Item.Definition = Trigger;

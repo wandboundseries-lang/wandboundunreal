@@ -237,7 +237,7 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 				return MakeGenerationFailure(TEXT("missing_source_unit"));
 			}
 
-			if (SourceUnit->OwnerId != Source.PlayerId)
+			if (SourceUnit->GetControllerPlayerIdForRules() != Source.PlayerId)
 			{
 				return MakeGenerationFailure(TEXT("source_unit_owner_mismatch"));
 			}
