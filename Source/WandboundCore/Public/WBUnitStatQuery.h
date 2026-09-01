@@ -20,6 +20,9 @@ public:
 		const FWBGameStateData& State,
 		const FWBCardDefinitionRepository& Repository,
 		int32 UnitId);
+	static int32 GetIntrinsicAR(
+		const FWBGameStateData& State,
+		int32 UnitId);
 
 	// Deliberately excludes range-dependent enemy AR auras, preventing mutual
 	// aura sources from recursively redefining one another's radius.

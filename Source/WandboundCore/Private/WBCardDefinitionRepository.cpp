@@ -228,6 +228,12 @@ bool HasValidKindMetadata(const FWBCardDefinition& Definition, FString& OutReaso
 			OutReason = TEXT("invalid_character_stats");
 			return false;
 		}
+		if (!Definition.MovementGeometry.IsValid()
+			|| !Definition.AttackGeometry.IsValid())
+		{
+			OutReason = TEXT("invalid_unit_geometry");
+			return false;
+		}
 		if (Definition.Kind == EWBCardDefinitionKind::Hybrid
 			&& (Definition.HybridSummon.SacrificeCount != 1
 				|| Definition.HybridSummon.SacrificeRequirement

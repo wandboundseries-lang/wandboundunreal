@@ -1,0 +1,239 @@
+{
+  "audit_id": "board_geometry_highground_foundation",
+  "result": "ready",
+  "baseline": {
+    "branch": "main",
+    "head": "0f8eb6866e512818066d05030ea185c5b86a15b5",
+    "origin_main": "0f8eb6866e512818066d05030ea185c5b86a15b5",
+    "commit_subject": "Add vocabulary foundation reconciliation",
+    "automation_succeeded": 2407,
+    "staged_files": 0
+  },
+  "legacy_attacks_diagonally": {
+    "classification": "additive_attack_geometry_capability",
+    "preserved": true,
+    "definition_geometry_can_represent": [
+      "orthogonal_only",
+      "diagonal_only",
+      "orthogonal_and_diagonal"
+    ]
+  },
+  "geometry": {
+    "authority": "WBBoardGeometry",
+    "profile_type": "FWBGridGeometryProfile",
+    "diagonal_step": "abs(delta_x)==1 && abs(delta_y)==1",
+    "diagonal_distance": "one_per_diagonal_tile",
+    "diagonal_wall_rule": "route_1_blocked && route_2_blocked",
+    "multi_step_wall_check": "each_step",
+    "intervening_unit_policy": "direct_line_only",
+    "side_tile_units_block": false,
+    "godot_conflict": "read_only Godot uses either-corner blocking; owner-approved two-route canon supersedes it for Unreal",
+    "callers": [
+      "player_movement_legality",
+      "legal_move_generation",
+      "npc_pathing_and_movement",
+      "player_attack_legality",
+      "legal_attack_generation",
+      "npc_attack_legality",
+      "pending_attack_redirect",
+      "counterattack",
+      "continuous_attack_line_aura"
+    ]
+  },
+  "highground": {
+    "state_authority": "FWBGameStateData.TerrainByTileIndex",
+    "single_terrain_identity": true,
+    "metadata_authority": "WBTerrainRules",
+    "entry_mp_modifier": 1,
+    "occupant_ar_modifier": 1,
+    "attack_wall_behavior": "ignore_walls",
+    "movement_wall_bypass": false,
+    "intervening_unit_bypass": false,
+    "grants_diagonal_geometry": false,
+    "defensive_ar_penalty": false,
+    "raw_ar_mutated": false,
+    "stationary_terrain_change_charges_mp": false,
+    "aura_wall_bypass": false
+  },
+  "movement_costs": {
+    "normal_to_normal": 1,
+    "normal_to_highground": 2,
+    "highground_to_highground": 2,
+    "highground_to_normal": 1,
+    "diagonal_normal_to_highground": 2
+  },
+  "ar_layers": {
+    "stored": "FWBUnitState.AR",
+    "intrinsic": "stored_plus_terrain",
+    "effective": "intrinsic_plus_enemy_continuous_modifiers",
+    "immune_to_enemy_effects_preserves_terrain": true,
+    "aura_source_range_uses_intrinsic": true,
+    "recursive_enemy_aura_query": false
+  },
+  "carddb_patterns": {
+    "movement": [
+      "orthogonal_adjacent",
+      "diagonal_adjacent",
+      "orthogonal_or_diagonal_adjacent"
+    ],
+    "attack": [
+      "orthogonal_line",
+      "diagonal_line",
+      "orthogonal_or_diagonal_line"
+    ],
+    "set_terrain_added": "highground",
+    "production_card_data_changed": false,
+    "card_id_branching": false
+  },
+  "composition": {
+    "vex": "shared geometry, intrinsic Highground AR, aura-specific walls, no Highground wall bypass",
+    "cartographer": "effective AR includes Highground",
+    "counter": "defender geometry, effective AR, true-Attack Highground wall bypass",
+    "npc": "definition geometry, affordable path planning, destination MP cost, true-Attack Highground wall bypass",
+    "turn_one": "shared relocation restriction",
+    "post_move": "existing coordinator lifecycle unchanged",
+    "redirect": "final target geometry/range/walls/units revalidated"
+  },
+  "move_declared_move": {
+    "player_move": "accepted FWBAction Move and replay action",
+    "npc_move": "NPC authority and npc_moved trace",
+    "forced_relocation": "separate relocation authority and trace",
+    "six_move_limit_implemented": false,
+    "future_need": "turn-scoped accepted player Move count plus owner canon for scope and reset"
+  },
+  "tests": {
+    "new_test_count": 13,
+    "new_tests_succeeded": 13,
+    "full_succeeded": 2420,
+    "full_failed": 0,
+    "full_warnings": 0,
+    "full_not_run": 0,
+    "delta": 13,
+    "focused_groups": {
+      "movement": 17,
+      "attack": 40,
+      "npc": 5,
+      "core_npc": 17,
+      "terrain_cartographers": 9,
+      "vex": 14,
+      "crash_in": 9,
+      "body_double": 13,
+      "attack_redirect": 15,
+      "turn_one": 30,
+      "public_board": 16,
+      "runtime_board_summary": 8,
+      "vocabulary": 16,
+      "post_move": 1,
+      "counterability": 3,
+      "counter_continuation": 1
+    }
+  },
+  "build_matrix": [
+    { "target": "Editor", "mode": "non_unity", "result": "succeeded", "seconds": 118.83, "compile_actions": 132 },
+    { "target": "Game", "mode": "non_unity", "result": "succeeded", "seconds": 101.25, "compile_actions": 133 },
+    { "target": "Editor", "mode": "default", "result": "succeeded", "seconds": 329.36, "compile_actions": 210 },
+    { "target": "Game", "mode": "default", "result": "succeeded", "seconds": 308.64, "compile_actions": 185 },
+    { "target": "Editor", "mode": "forced_unity", "result": "succeeded", "seconds": 264.68, "compile_actions": 201, "adaptive_unity": false },
+    { "target": "Game", "mode": "forced_unity", "result": "succeeded", "seconds": 270.34, "compile_actions": 176, "adaptive_unity": false }
+  ],
+  "package": {
+    "build_cook_run": "succeeded",
+    "seconds": 610.03,
+    "build_seconds": 494.94,
+    "compile_actions": 395,
+    "cook_total_packages": 532,
+    "packaged_packages": 459,
+    "cook_errors": 0,
+    "cook_warnings": 0,
+    "local_play_smoke_runs": 2,
+    "local_play_result_sha256": "767ab5d8229e750322c0d1265eb29312338e70467ea039e585615ee538d5dde1",
+    "local_play_byte_identical": true
+  },
+  "packaged_replay_smokes": {
+    "vex": {
+      "runs": 2,
+      "exit_code": 0,
+      "archive_sha256": "c697bab4a160f7aa2cd697d3436e91fda9a282526f35f95bb6b273f5835baa44",
+      "receipt_sha256": "5aa0b99774a7a980eac1ece3aafb39637099222a55e91ece95db67ca7fd56414",
+      "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c",
+      "record_count": 13,
+      "final_generation": 1,
+      "final_revision": 14,
+      "final_state_digest": "f78b95e4e2567aaaa2e3fcd5bc55d131f38f838a637753756103dcb56a5d0690",
+      "final_trace_digest": "69bb6305a2f70376d02ab34950760c531afa79f5ed564bb9ebfb39fdf5df0747",
+      "fresh_replay_verified": true,
+      "byte_identical": true,
+      "stderr_bytes": 0
+    },
+    "terrain": {
+      "runs": 2,
+      "exit_code": 0,
+      "archive_sha256": "5953dab4f04cabe5e5d3ba24dd8421963562a59ddf20e3af84ec69d363bd5ced",
+      "receipt_sha256": "792e76edb52447f09523a8aa699d11c72385105674a5d3f7c7bb704ff82635fb",
+      "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c",
+      "record_count": 22,
+      "final_generation": 1,
+      "final_revision": 23,
+      "final_state_digest": "dad14fc8bc0a0cf9c6fe3f9c63bdba52497a7e296502bf12ce3136e4eded03d9",
+      "final_trace_digest": "2bd3ec042c7379fa1e49e7247c7b0849d750beb5010d6e7c218014d03a9ebe53",
+      "fresh_replay_verified": true,
+      "byte_identical": true,
+      "stderr_bytes": 0
+    }
+  },
+  "replay_privacy": {
+    "schema_version": 1,
+    "receipt_field_count": 8,
+    "action_codec_changed": false,
+    "action_codec_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "receipt_contains_state_digest": false,
+    "receipt_contains_trace_digest": false,
+    "receipt_contains_ordered_deck": false,
+    "receipt_contains_private": false,
+    "receipt_contains_opponent_hand": false
+  },
+  "changed_files": [
+    "Docs/Board_Geometry_Highground_Foundation_Audit.md",
+    "Docs/Board_Geometry_Highground_Foundation_Audit.json",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBBoardGeometry.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBNPCPhaseResolution.cpp",
+    "Source/WandboundCore/Private/WBPublicBoardSummary.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundCore/Private/WBTerrainRules.cpp",
+    "Source/WandboundCore/Private/WBUnitStatQuery.cpp",
+    "Source/WandboundCore/Public/WBBoardGeometry.h",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBEffectRunner.h",
+    "Source/WandboundCore/Public/WBRules.h",
+    "Source/WandboundCore/Public/WBTerrainRules.h",
+    "Source/WandboundCore/Public/WBTypes.h",
+    "Source/WandboundCore/Public/WBUnitStatQuery.h",
+    "Source/WandboundTests/Private/WBBoardGeometryHighgroundTests.cpp"
+  ],
+  "deferred": [
+    "Whimsy production cards",
+    "six-declared-moves Wand",
+    "defensive Highground AR penalty",
+    "Sealed",
+    "strategic AI",
+    "hyper-detailed telemetry",
+    "general Swim/Ice Skate/Mudslide/Lava Flow production wiring"
+  ],
+  "git_hygiene": {
+    "staged_files": 0,
+    "committed": false,
+    "pushed": false,
+    "config_changed": false,
+    "godot_changed": false,
+    "meshy_changed": false,
+    "asset_changed": false,
+    "unrelated_untracked_preserved": [
+      "Content/Maps/NewProjectTest.umap",
+      "Plugins/meshy/Content/Materials/M_MeshyPBR.uasset",
+      "h origin main"
+    ]
+  }
+}

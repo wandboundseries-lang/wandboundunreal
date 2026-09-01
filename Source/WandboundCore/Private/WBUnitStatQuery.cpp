@@ -1,7 +1,9 @@
 #include "WBUnitStatQuery.h"
 
+#include "WBBoardGeometry.h"
 #include "WBCharacterPassiveEligibility.h"
 #include "WBRules.h"
+#include "WBTerrainRules.h"
 
 namespace
 {
@@ -14,53 +16,16 @@ bool HasStrictAttackLine(
 {
 	const FWBTile From(Source.X, Source.Y);
 	const FWBTile To(Target.X, Target.Y);
-	const int32 DeltaX = FMath::Abs(To.X - From.X);
-	const int32 DeltaY = FMath::Abs(To.Y - From.Y);
-	const bool bOrthogonal = (DeltaX == 0) != (DeltaY == 0);
-	const bool bDiagonal = DeltaX > 0 && DeltaX == DeltaY
-		&& WBRules::UnitHasCombatCapability(
-			State, &Repository, Source.UnitId,
-			EWBCombatCapability::AttacksDiagonally);
-	if (!bOrthogonal && !bDiagonal)
+	const FWBGridGeometryProfile Geometry =
+		WBRules::GetAttackGeometryProfile(
+			State, &Repository, Source.UnitId);
+	const FWBGeometryLineQueryResult Line = WBBoardGeometry::QueryLine(
+		State, Geometry, From, To,
+		!Aura.bBlockedByWalls, Aura.bBlockedByUnits);
+	if (!Line.bOk || Line.Distance <= 0
+		|| Line.Distance > WBUnitStatQuery::GetAuraRangeAR(State, Source.UnitId))
 	{
 		return false;
-	}
-
-	const int32 Distance = bDiagonal ? DeltaX : DeltaX + DeltaY;
-	if (Distance <= 0
-		|| Distance > WBUnitStatQuery::GetAuraRangeAR(State, Source.UnitId))
-	{
-		return false;
-	}
-
-	const int32 StepX = DeltaX == 0 ? 0 : (To.X > From.X ? 1 : -1);
-	const int32 StepY = DeltaY == 0 ? 0 : (To.Y > From.Y ? 1 : -1);
-	FWBTile Current = From;
-	while (Current != To)
-	{
-		const FWBTile Next(Current.X + StepX, Current.Y + StepY);
-		if (Aura.bBlockedByWalls)
-		{
-			if (StepX != 0 && StepY != 0)
-			{
-				const FWBTile Horizontal(Current.X + StepX, Current.Y);
-				const FWBTile Vertical(Current.X, Current.Y + StepY);
-				if (WBRules::HasWallBetween(State, Current, Horizontal)
-					|| WBRules::HasWallBetween(State, Current, Vertical))
-				{
-					return false;
-				}
-			}
-			else if (WBRules::HasWallBetween(State, Current, Next))
-			{
-				return false;
-			}
-		}
-		if (Aura.bBlockedByUnits && Next != To && State.UnitIdAt(Next) != -1)
-		{
-			return false;
-		}
-		Current = Next;
 	}
 	return true;
 }
@@ -80,7 +45,9 @@ FWBEffectiveUnitStatResult WBUnitStatQuery::GetEffectiveAR(
 	}
 
 	Result.StoredValue = Target->AR;
-	Result.EffectiveValue = Target->AR;
+	Result.EffectiveValue = GetIntrinsicAR(State, UnitId);
+	Result.AppliedModifierCount = Result.EffectiveValue != Result.StoredValue
+		? 1 : 0;
 	if (!Target->IsUnitOnBoard() || Target->bDefeated)
 	{
 		Result.bOk = true;
@@ -151,6 +118,20 @@ int32 WBUnitStatQuery::GetAuraRangeAR(
 	const FWBGameStateData& State,
 	const int32 UnitId)
 {
+	return FMath::Max(0, GetIntrinsicAR(State, UnitId));
+}
+
+int32 WBUnitStatQuery::GetIntrinsicAR(
+	const FWBGameStateData& State,
+	const int32 UnitId)
+{
 	const FWBUnitState* Unit = State.GetUnitById(UnitId);
-	return Unit != nullptr ? FMath::Max(0, Unit->AR) : 0;
+	if (Unit == nullptr)
+	{
+		return 0;
+	}
+	return FMath::Max(
+		0,
+		Unit->AR + WBTerrainRules::GetOccupantARModifier(
+			State.GetTerrainAt(FWBTile(Unit->X, Unit->Y))));
 }

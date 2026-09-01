@@ -115,7 +115,7 @@ FWBPublicUnitBoardSummary BuildPublicUnitSummary(
 	Summary.AR = Repository != nullptr
 		? WBUnitStatQuery::GetEffectiveAR(
 			State, *Repository, Unit.UnitId).EffectiveValue
-		: Unit.AR;
+		: WBUnitStatQuery::GetIntrinsicAR(State, Unit.UnitId);
 	Summary.BaseRL = Unit.GetBaseRLForRules();
 	Summary.CurrentRL = Unit.GetCurrentRLForRules();
 	Summary.RLTotal = Summary.CurrentRL;
@@ -152,6 +152,11 @@ FString CanonicalPublicTerrainIdString(const FName TerrainId)
 	if (LowerTerrainId == TEXT("water"))
 	{
 		return TEXT("water");
+	}
+
+	if (LowerTerrainId == TEXT("highground"))
+	{
+		return TEXT("highground");
 	}
 
 	return TerrainId.GetPlainNameString();

@@ -1,18 +1,12 @@
 #include "WBNPCPhaseResolution.h"
 
+#include "WBBoardGeometry.h"
 #include "WBEffectRunner.h"
 #include "WBMarkerResolution.h"
 #include "WBRules.h"
 
 namespace
 {
-const FWBTile PathDirections[] = {
-	FWBTile(1, 0),
-	FWBTile(-1, 0),
-	FWBTile(0, 1),
-	FWBTile(0, -1)
-};
-
 struct FPathNode
 {
 	FWBTile Tile;
@@ -104,6 +98,7 @@ FWBAction MakeNPCAttackAction(const FWBUnitState& NPC, const FWBUnitState& Targe
 
 bool FindPathToTarget(
 	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	const int32 NPCUnitId,
 	const int32 TargetUnitId,
 	TArray<FWBTile>& OutPath)
@@ -118,6 +113,11 @@ bool FindPathToTarget(
 
 	const FWBTile Start(NPC->X, NPC->Y);
 	const FWBTile Goal(Target->X, Target->Y);
+	const FWBGridGeometryProfile MovementGeometry =
+		WBRules::GetMovementGeometryProfile(
+			State, &Repository, NPCUnitId);
+	const TArray<FWBTile> PathDirections =
+		WBBoardGeometry::GetStepDirections(MovementGeometry);
 	TArray<FPathNode> Nodes;
 	TArray<int32> Frontier;
 	TSet<int32> Visited;
@@ -147,7 +147,10 @@ bool FindPathToTarget(
 			bool bLegalStep = false;
 			if (Next == Goal)
 			{
-				bLegalStep = !WBRules::HasWallBetween(State, Current, Next);
+				bLegalStep = WBBoardGeometry::AreAdjacent(
+					MovementGeometry, Current, Next)
+					&& !WBBoardGeometry::IsStepBlockedByWalls(
+						State, Current, Next);
 			}
 			else
 			{
@@ -159,8 +162,9 @@ bool FindPathToTarget(
 					QueryNPC->Y = Current.Y;
 					bLegalStep = WBRules::QueryNPCMove(
 						QueryState,
+						Repository,
 						MakeNPCMoveAction(*QueryNPC, Next),
-						1).bOk;
+						QueryNPC->MPRemaining).bOk;
 				}
 			}
 			if (!bLegalStep)
@@ -218,7 +222,8 @@ int32 SelectTarget(
 		}
 
 		TArray<FWBTile> Path;
-		const bool bReachable = FindPathToTarget(State, NPC.UnitId, Candidate.UnitId, Path);
+		const bool bReachable = FindPathToTarget(
+			State, Repository, NPC.UnitId, Candidate.UnitId, Path);
 		FTargetRank Rank;
 		Rank.UnitId = Candidate.UnitId;
 		Rank.bReachable = bReachable;
@@ -531,7 +536,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 			Result.TraceEvents.Add(Selected);
 
 			TArray<FWBTile> Path;
-			if (!FindPathToTarget(State, NPCUnitId, ChaseTargetId, Path)
+			if (!FindPathToTarget(State, Repository, NPCUnitId, ChaseTargetId, Path)
 				|| Path.IsEmpty()
 				|| State.UnitIdAt(Path[0]) != -1)
 			{
@@ -556,6 +561,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::AdvanceUntilAttackOrComplete(
 			Result.TraceEvents.Add(Planned);
 			const FWBApplyActionResult MoveResult = WBEffectRunner::ApplyNPCMove(
 				State,
+				Repository,
 				MakeNPCMoveAction(*NPC, Path[0]));
 			if (!MoveResult.bOk)
 			{
@@ -828,7 +834,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 			Result.TraceEvents.Add(Selected);
 
 			TArray<FWBTile> Path;
-			if (!FindPathToTarget(WorkingState, NPCUnitId, ChaseTargetId, Path)
+			if (!FindPathToTarget(WorkingState, Repository, NPCUnitId, ChaseTargetId, Path)
 				|| Path.IsEmpty()
 				|| WorkingState.UnitIdAt(Path[0]) != -1)
 			{
@@ -847,6 +853,7 @@ FWBNPCPhaseResolutionResult WBNPCPhaseResolution::ResolvePhase(
 			Result.TraceEvents.Add(Planned);
 			const FWBApplyActionResult MoveResult = WBEffectRunner::ApplyNPCMove(
 				WorkingState,
+				Repository,
 				MakeNPCMoveAction(*NPC, Path[0]));
 			if (!MoveResult.bOk)
 			{

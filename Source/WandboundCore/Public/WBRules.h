@@ -32,6 +32,7 @@ class WANDBOUNDCORE_API WBRules
 public:
 	static bool IsTileInBounds(const FWBTile& Tile);
 	static bool AreOrthogonallyAdjacent(const FWBTile& A, const FWBTile& B);
+	static bool AreDiagonallyAdjacent(const FWBTile& A, const FWBTile& B);
 	static bool IsValidWallEdge(const FWBWallEdge& Edge);
 	static FWBWallEdge NormalizeWallEdge(const FWBWallEdge& Edge);
 	static bool AreSameWallEdge(const FWBWallEdge& A, const FWBWallEdge& B);
@@ -39,10 +40,14 @@ public:
 	static bool IsTileOccupied(const FWBGameStateData& State, const FWBTile& Tile);
 	static const FWBUnitState* GetUnitById(const FWBGameStateData& State, int32 UnitId);
 	static int32 OrthogonalDistance(const FWBTile& A, const FWBTile& B);
+	static int32 DiagonalDistance(const FWBTile& A, const FWBTile& B);
 	static bool AreTilesOrthogonallyAligned(const FWBTile& A, const FWBTile& B);
+	static bool AreTilesDiagonallyAligned(const FWBTile& A, const FWBTile& B);
 	static bool HasOrthogonalLineOfSight(const FWBGameStateData& State, const FWBTile& From, const FWBTile& To, FString& OutReason);
 	static FWBMoveQueryResult QueryMove(const FWBGameStateData& State, const FWBAction& Action);
+	static FWBMoveQueryResult QueryMove(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBAction& Action);
 	static FWBMoveQueryResult QueryNPCMove(const FWBGameStateData& State, const FWBAction& Action, int32 AvailableMP);
+	static FWBMoveQueryResult QueryNPCMove(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBAction& Action, int32 AvailableMP);
 	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action);
 	static FWBActionQueryResult CanDeclareAttack(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, const FWBAction& Action);
 	static FWBActionQueryResult CanDeclareNPCAttack(const FWBGameStateData& State, const FWBAction& Action);
@@ -70,6 +75,14 @@ public:
 		const FWBCardDefinitionRepository* Repository,
 		int32 UnitId,
 		EWBCombatCapability Capability);
+	static FWBGridGeometryProfile GetMovementGeometryProfile(
+		const FWBGameStateData& State,
+		const FWBCardDefinitionRepository* Repository,
+		int32 UnitId);
+	static FWBGridGeometryProfile GetAttackGeometryProfile(
+		const FWBGameStateData& State,
+		const FWBCardDefinitionRepository* Repository,
+		int32 UnitId);
 	static bool ShouldUnitBeDefeatedAtZeroHP(const FWBGameStateData& State, const FWBUnitState& Unit);
 	static FWBActionQueryResult CanApplyZeroHPDeathRemoval(const FWBGameStateData& State);
 	static FWBActionQueryResult CanApplyCardActivationCommand(const FWBGameStateData& State, const FWBCardActivationCommand& Command);
@@ -86,6 +99,7 @@ public:
 	static bool CanApplyEndOfTurnStatusTicks(const FWBGameStateData& State, int32 PlayerId, FString& OutReason);
 	static bool CanApplyDeterministicTurnTransition(const FWBGameStateData& State, int32 EndingPlayerId, int32 NextPlayerExplicitMPRoll, FString& OutReason);
 	static TArray<FWBAction> GenerateLegalMoveActions(const FWBGameStateData& State, int32 PlayerId, int32 UnitId);
+	static TArray<FWBAction> GenerateLegalMoveActions(const FWBGameStateData& State, const FWBCardDefinitionRepository& Repository, int32 PlayerId, int32 UnitId);
 	static void GenerateLegalActions(const FWBGameStateData& State, int32 PlayerId, TArray<FWBAction>& OutActions);
 	static TArray<FWBAction> GenerateLegalActions(const FWBGameStateData& State);
 	static TArray<FWBAction> GenerateLegalActionsForPlayer(const FWBGameStateData& State, int32 PlayerId);

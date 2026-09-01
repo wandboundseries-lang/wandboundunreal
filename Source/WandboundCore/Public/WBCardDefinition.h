@@ -322,6 +322,8 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	FString PublicRulesText;
 	EWBCardDefinitionKind Kind = EWBCardDefinitionKind::Unknown;
 	FWBCardCharacterStatsDefinition CharacterStats;
+	FWBGridGeometryProfile MovementGeometry;
+	FWBGridGeometryProfile AttackGeometry;
 	FWBCardWandStatsDefinition WandStats;
 	TSet<EWBCombatCapability> GrantedCombatCapabilitiesWhileEquipped;
 	FWBCardHybridSummonDefinition HybridSummon;

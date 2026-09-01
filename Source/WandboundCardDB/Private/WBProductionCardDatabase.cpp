@@ -2081,15 +2081,39 @@ private:
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				CardPath + TEXT(".movement"));
-			if (!TryReadString(Movement, TEXT("pattern"), Record.Movement.Pattern)
-				|| Record.Movement.Pattern != TEXT("orthogonal_adjacent"))
+			if (!TryReadString(Movement, TEXT("pattern"), Record.Movement.Pattern))
 			{
 				AddError(
 					TEXT("movement_pattern_unsupported"),
 					Record.SourceManifestPath,
 					Record.CoreDefinition.CardId,
 					CardPath + TEXT(".movement.pattern"),
-					TEXT("The current deterministic runtime supports orthogonal adjacent movement only."));
+					TEXT("Movement pattern must be a supported adjacent geometry."));
+			}
+			else if (Record.Movement.Pattern == TEXT("orthogonal_adjacent"))
+			{
+				Record.CoreDefinition.MovementGeometry =
+					FWBGridGeometryProfile::OrthogonalOnly();
+			}
+			else if (Record.Movement.Pattern == TEXT("diagonal_adjacent"))
+			{
+				Record.CoreDefinition.MovementGeometry =
+					FWBGridGeometryProfile::DiagonalOnly();
+			}
+			else if (Record.Movement.Pattern
+				== TEXT("orthogonal_or_diagonal_adjacent"))
+			{
+				Record.CoreDefinition.MovementGeometry =
+					FWBGridGeometryProfile::OrthogonalAndDiagonal();
+			}
+			else
+			{
+				AddError(
+					TEXT("movement_pattern_unsupported"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					CardPath + TEXT(".movement.pattern"),
+					TEXT("Supported movement patterns are orthogonal_adjacent, diagonal_adjacent, and orthogonal_or_diagonal_adjacent."));
 			}
 		}
 
@@ -2111,9 +2135,11 @@ private:
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				CardPath + TEXT(".attack"));
-			if (!TryReadString(Attack, TEXT("pattern"), Record.Attack.Pattern)
-				|| Record.Attack.Pattern != TEXT("orthogonal_line")
-				|| !TryReadInteger(Attack, TEXT("range"), Record.Attack.Range)
+			const bool bPatternRead = TryReadString(
+				Attack, TEXT("pattern"), Record.Attack.Pattern);
+			const bool bRangeRead = TryReadInteger(
+				Attack, TEXT("range"), Record.Attack.Range);
+			if (!bPatternRead || !bRangeRead
 				|| Record.Attack.Range != Record.CoreDefinition.CharacterStats.AR)
 			{
 				AddError(
@@ -2121,7 +2147,32 @@ private:
 					Record.SourceManifestPath,
 					Record.CoreDefinition.CardId,
 					CardPath + TEXT(".attack"),
-					TEXT("Attack data must use orthogonal_line with range equal to canonical AR."));
+					TEXT("Attack data must use a supported line geometry with range equal to canonical AR."));
+			}
+			else if (Record.Attack.Pattern == TEXT("orthogonal_line"))
+			{
+				Record.CoreDefinition.AttackGeometry =
+					FWBGridGeometryProfile::OrthogonalOnly();
+			}
+			else if (Record.Attack.Pattern == TEXT("diagonal_line"))
+			{
+				Record.CoreDefinition.AttackGeometry =
+					FWBGridGeometryProfile::DiagonalOnly();
+			}
+			else if (Record.Attack.Pattern
+				== TEXT("orthogonal_or_diagonal_line"))
+			{
+				Record.CoreDefinition.AttackGeometry =
+					FWBGridGeometryProfile::OrthogonalAndDiagonal();
+			}
+			else
+			{
+				AddError(
+					TEXT("attack_pattern_unsupported"),
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					CardPath + TEXT(".attack.pattern"),
+					TEXT("Supported attack patterns are orthogonal_line, diagonal_line, and orthogonal_or_diagonal_line."));
 			}
 		}
 	}
@@ -4045,11 +4096,12 @@ private:
 		FString Value;
 		if (!TryReadString(Object, TEXT("terrain_id"), Value)
 			|| (Value != TEXT("mud") && Value != TEXT("lava")
-				&& Value != TEXT("water") && Value != TEXT("ice")))
+				&& Value != TEXT("water") && Value != TEXT("ice")
+				&& Value != TEXT("highground")))
 		{
 			AddError(TEXT("terrain_id_unsupported"), Record.SourceManifestPath,
 				Record.CoreDefinition.CardId, Path + TEXT(".terrain_id"),
-				TEXT("Set-terrain payloads require mud, lava, water, or ice."));
+				TEXT("Set-terrain payloads require mud, lava, water, ice, or highground."));
 		}
 		OutPayload.SetTerrainEffect.TerrainId = FName(*Value);
 

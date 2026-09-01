@@ -450,14 +450,28 @@ FWBApplyActionResult WBEffectRunner::ApplyAction(
 	{
 		return ApplyAttackDeclare(State, Repository, Action);
 	}
+	if (Action.Type == EWBActionType::Move)
+	{
+		return ApplyMove(State, Repository, Action);
+	}
 	return ApplyAction(State, Action);
 }
 
 FWBApplyActionResult WBEffectRunner::ApplyMove(FWBGameStateData& State, const FWBAction& Action)
 {
+	return ApplyMove(State, FWBCardDefinitionRepository(), Action);
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyMove(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
 	FWBApplyActionResult Result;
 
-	const FWBMoveQueryResult MoveQuery = WBRules::QueryMove(State, Action);
+	const FWBMoveQueryResult MoveQuery = Repository.RepositoryId.IsEmpty()
+		? WBRules::QueryMove(State, Action)
+		: WBRules::QueryMove(State, Repository, Action);
 	if (!MoveQuery.bOk)
 	{
 		Result.bOk = false;
@@ -503,10 +517,20 @@ FWBApplyActionResult WBEffectRunner::ApplyMove(FWBGameStateData& State, const FW
 
 FWBApplyActionResult WBEffectRunner::ApplyNPCMove(FWBGameStateData& State, const FWBAction& Action)
 {
+	return ApplyNPCMove(State, FWBCardDefinitionRepository(), Action);
+}
+
+FWBApplyActionResult WBEffectRunner::ApplyNPCMove(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
 	FWBApplyActionResult Result;
 	const FWBUnitState* ExistingUnit = State.GetUnitById(Action.SourceUnitId);
 	const int32 AvailableMP = ExistingUnit == nullptr ? 0 : ExistingUnit->MPRemaining;
-	const FWBMoveQueryResult MoveQuery = WBRules::QueryNPCMove(State, Action, AvailableMP);
+	const FWBMoveQueryResult MoveQuery = Repository.RepositoryId.IsEmpty()
+		? WBRules::QueryNPCMove(State, Action, AvailableMP)
+		: WBRules::QueryNPCMove(State, Repository, Action, AvailableMP);
 	if (!MoveQuery.bOk)
 	{
 		Result.Reason = MoveQuery.Reason;

@@ -9,6 +9,50 @@ enum class EWBCombatCapability : uint8
 	ImmuneToEnemyEffects
 };
 
+enum class EWBGridGeometry : uint8
+{
+	None,
+	Orthogonal,
+	Diagonal
+};
+
+struct WANDBOUNDCORE_API FWBGridGeometryProfile
+{
+	bool bOrthogonal = true;
+	bool bDiagonal = false;
+
+	bool Allows(const EWBGridGeometry Geometry) const
+	{
+		return (Geometry == EWBGridGeometry::Orthogonal && bOrthogonal)
+			|| (Geometry == EWBGridGeometry::Diagonal && bDiagonal);
+	}
+
+	bool IsValid() const
+	{
+		return bOrthogonal || bDiagonal;
+	}
+
+	static FWBGridGeometryProfile OrthogonalOnly()
+	{
+		return FWBGridGeometryProfile();
+	}
+
+	static FWBGridGeometryProfile DiagonalOnly()
+	{
+		FWBGridGeometryProfile Result;
+		Result.bOrthogonal = false;
+		Result.bDiagonal = true;
+		return Result;
+	}
+
+	static FWBGridGeometryProfile OrthogonalAndDiagonal()
+	{
+		FWBGridGeometryProfile Result;
+		Result.bDiagonal = true;
+		return Result;
+	}
+};
+
 enum class EWBDeclarationProvenance : uint8
 {
 	Automatic,

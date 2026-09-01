@@ -1,5 +1,7 @@
 #include "WBRules.h"
 
+#include "WBBoardGeometry.h"
+#include "WBTerrainRules.h"
 #include "WBTurnOneRestrictions.h"
 
 #include "WBCardActivationCommand.h"
@@ -10,13 +12,6 @@
 
 namespace
 {
-constexpr int32 RulesBoardSize = 9;
-const FWBTile MoveDirections[] = {
-	FWBTile(1, 0),
-	FWBTile(-1, 0),
-	FWBTile(0, 1),
-	FWBTile(0, -1)
-};
 bool HasMovementBlockingStatus(const FWBUnitState& Unit)
 {
 	return Unit.HasStatus(FName(TEXT("Rooted")))
@@ -150,14 +145,17 @@ FWBActionQueryResult FWBActionQueryResult::Deny(const TCHAR* InReason)
 
 bool WBRules::IsTileInBounds(const FWBTile& Tile)
 {
-	return Tile.X >= 0 && Tile.X < RulesBoardSize && Tile.Y >= 0 && Tile.Y < RulesBoardSize;
+	return WBBoardGeometry::IsTileInBounds(Tile);
 }
 
 bool WBRules::AreOrthogonallyAdjacent(const FWBTile& A, const FWBTile& B)
 {
-	const int32 DeltaX = FMath::Abs(A.X - B.X);
-	const int32 DeltaY = FMath::Abs(A.Y - B.Y);
-	return DeltaX + DeltaY == 1;
+	return WBBoardGeometry::AreOrthogonallyAdjacent(A, B);
+}
+
+bool WBRules::AreDiagonallyAdjacent(const FWBTile& A, const FWBTile& B)
+{
+	return WBBoardGeometry::AreDiagonallyAdjacent(A, B);
 }
 
 bool WBRules::IsValidWallEdge(const FWBWallEdge& Edge)
@@ -177,21 +175,7 @@ bool WBRules::AreSameWallEdge(const FWBWallEdge& A, const FWBWallEdge& B)
 
 bool WBRules::HasWallBetween(const FWBGameStateData& State, const FWBTile& A, const FWBTile& B)
 {
-	const FWBWallEdge CandidateEdge(A, B);
-	if (!IsValidWallEdge(CandidateEdge))
-	{
-		return false;
-	}
-
-	for (const FWBWallEdge& Wall : State.Walls)
-	{
-		if (AreSameWallEdge(Wall, CandidateEdge))
-		{
-			return true;
-		}
-	}
-
-	return false;
+	return WBBoardGeometry::HasOrthogonalWallBetween(State, A, B);
 }
 
 bool WBRules::IsTileOccupied(const FWBGameStateData& State, const FWBTile& Tile)
@@ -206,12 +190,22 @@ const FWBUnitState* WBRules::GetUnitById(const FWBGameStateData& State, const in
 
 int32 WBRules::OrthogonalDistance(const FWBTile& A, const FWBTile& B)
 {
-	return FMath::Abs(A.X - B.X) + FMath::Abs(A.Y - B.Y);
+	return WBBoardGeometry::OrthogonalDistance(A, B);
+}
+
+int32 WBRules::DiagonalDistance(const FWBTile& A, const FWBTile& B)
+{
+	return WBBoardGeometry::DiagonalDistance(A, B);
 }
 
 bool WBRules::AreTilesOrthogonallyAligned(const FWBTile& A, const FWBTile& B)
 {
-	return A != B && (A.X == B.X || A.Y == B.Y);
+	return WBBoardGeometry::AreOrthogonallyAligned(A, B);
+}
+
+bool WBRules::AreTilesDiagonallyAligned(const FWBTile& A, const FWBTile& B)
+{
+	return WBBoardGeometry::AreDiagonallyAligned(A, B);
 }
 
 bool WBRules::HasOrthogonalLineOfSight(
@@ -220,41 +214,11 @@ bool WBRules::HasOrthogonalLineOfSight(
 	const FWBTile& To,
 	FString& OutReason)
 {
-	if (!IsTileInBounds(From) || !IsTileInBounds(To))
-	{
-		OutReason = TEXT("out_of_bounds");
-		return false;
-	}
-
-	if (!AreTilesOrthogonallyAligned(From, To))
-	{
-		OutReason = TEXT("not_in_line");
-		return false;
-	}
-
-	const int32 StepX = From.X == To.X ? 0 : (To.X > From.X ? 1 : -1);
-	const int32 StepY = From.Y == To.Y ? 0 : (To.Y > From.Y ? 1 : -1);
-	FWBTile Current = From;
-	while (Current != To)
-	{
-		const FWBTile Next(Current.X + StepX, Current.Y + StepY);
-		if (HasWallBetween(State, Current, Next))
-		{
-			OutReason = TEXT("blocked_by_wall");
-			return false;
-		}
-
-		if (Next != To && State.UnitIdAt(Next) != -1)
-		{
-			OutReason = TEXT("blocked_by_unit");
-			return false;
-		}
-
-		Current = Next;
-	}
-
-	OutReason.Reset();
-	return true;
+	const FWBGeometryLineQueryResult Query = WBBoardGeometry::QueryLine(
+		State, FWBGridGeometryProfile::OrthogonalOnly(),
+		From, To, false, true);
+	OutReason = Query.Reason;
+	return Query.bOk;
 }
 
 namespace
@@ -263,7 +227,8 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 	const FWBGameStateData& State,
 	const FWBAction& Action,
 	const bool bNPCAuthority,
-	const int32 AvailableMP)
+	const int32 AvailableMP,
+	const FWBCardDefinitionRepository* Repository)
 {
 	if (Action.Type != EWBActionType::Move)
 	{
@@ -347,12 +312,17 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 		return FWBMoveQueryResult::Deny(TEXT("tile_occupied"));
 	}
 
-	if (!WBRules::AreOrthogonallyAdjacent(Action.FromTile, Action.ToTile))
+	const FWBGridGeometryProfile MovementGeometry =
+		WBRules::GetMovementGeometryProfile(
+			State, Repository, Unit->UnitId);
+	if (!WBBoardGeometry::AreAdjacent(
+		MovementGeometry, Action.FromTile, Action.ToTile))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("illegal_move_distance"));
 	}
 
-	if (WBRules::HasWallBetween(State, Action.FromTile, Action.ToTile))
+	if (WBBoardGeometry::IsStepBlockedByWalls(
+		State, Action.FromTile, Action.ToTile))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("blocked_by_wall"));
 	}
@@ -368,13 +338,17 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 		return FWBMoveQueryResult::Deny(*RelocationQuery.Reason);
 	}
 
+	const int32 CostMP = FMath::Max(
+		0,
+		1 + WBTerrainRules::GetEntryMPCostModifier(
+			State.GetTerrainAt(Action.ToTile)));
 	const int32 MovementPoints = bNPCAuthority ? AvailableMP : Player->RemainingMP;
-	if (MovementPoints <= 0)
+	if (MovementPoints < CostMP)
 	{
 		return FWBMoveQueryResult::Deny(TEXT("insufficient_mp"));
 	}
 
-	return FWBMoveQueryResult::Ok(1);
+	return FWBMoveQueryResult::Ok(CostMP);
 }
 
 FWBActionQueryResult CanDeclareAttackWithAuthority(
@@ -503,23 +477,33 @@ FWBActionQueryResult CanDeclareAttackWithAuthority(
 		return FWBActionQueryResult::Deny(TEXT("cannot_attack"));
 	}
 
-	if (!WBRules::AreTilesOrthogonallyAligned(AttackerTile, DefenderTile))
+	const FWBGridGeometryProfile AttackGeometry =
+		WBRules::GetAttackGeometryProfile(
+			State, Repository, Attacker->UnitId);
+	const EWBGridGeometry LineGeometry = WBBoardGeometry::ClassifyLine(
+		AttackGeometry, AttackerTile, DefenderTile);
+	if (LineGeometry == EWBGridGeometry::None)
 	{
 		return FWBActionQueryResult::Deny(TEXT("not_in_line"));
 	}
 
 	const int32 AttackRange = Repository != nullptr
 		? WBUnitStatQuery::GetEffectiveAR(State, *Repository, Attacker->UnitId).EffectiveValue
-		: Attacker->AR;
-	if (WBRules::OrthogonalDistance(AttackerTile, DefenderTile) > AttackRange)
+		: WBUnitStatQuery::GetIntrinsicAR(State, Attacker->UnitId);
+	if (WBBoardGeometry::LineDistance(
+		LineGeometry, AttackerTile, DefenderTile) > AttackRange)
 	{
 		return FWBActionQueryResult::Deny(TEXT("out_of_range"));
 	}
 
-	FString LOSReason;
-	if (!WBRules::HasOrthogonalLineOfSight(State, AttackerTile, DefenderTile, LOSReason))
+	const bool bIgnoreWalls = WBTerrainRules::AttacksIgnoreWalls(
+		State.GetTerrainAt(AttackerTile));
+	const FWBGeometryLineQueryResult LineQuery = WBBoardGeometry::QueryLine(
+		State, AttackGeometry, AttackerTile, DefenderTile,
+		bIgnoreWalls, true);
+	if (!LineQuery.bOk)
 	{
-		return FWBActionQueryResult::Deny(*LOSReason);
+		return FWBActionQueryResult::Deny(*LineQuery.Reason);
 	}
 
 	return FWBActionQueryResult::Ok();
@@ -528,7 +512,15 @@ FWBActionQueryResult CanDeclareAttackWithAuthority(
 
 FWBMoveQueryResult WBRules::QueryMove(const FWBGameStateData& State, const FWBAction& Action)
 {
-	return QueryMoveWithAuthority(State, Action, false, 0);
+	return QueryMoveWithAuthority(State, Action, false, 0, nullptr);
+}
+
+FWBMoveQueryResult WBRules::QueryMove(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action)
+{
+	return QueryMoveWithAuthority(State, Action, false, 0, &Repository);
 }
 
 FWBMoveQueryResult WBRules::QueryNPCMove(
@@ -536,7 +528,17 @@ FWBMoveQueryResult WBRules::QueryNPCMove(
 	const FWBAction& Action,
 	const int32 AvailableMP)
 {
-	return QueryMoveWithAuthority(State, Action, true, AvailableMP);
+	return QueryMoveWithAuthority(State, Action, true, AvailableMP, nullptr);
+}
+
+FWBMoveQueryResult WBRules::QueryNPCMove(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBAction& Action,
+	const int32 AvailableMP)
+{
+	return QueryMoveWithAuthority(
+		State, Action, true, AvailableMP, &Repository);
 }
 
 FWBActionQueryResult WBRules::CanDeclareAttack(const FWBGameStateData& State, const FWBAction& Action)
@@ -679,23 +681,34 @@ FWBActionQueryResult WBRules::CanRedirectPendingAttack(
 	{
 		return FWBActionQueryResult::Deny(TEXT("out_of_bounds"));
 	}
-	if (!AreTilesOrthogonallyAligned(AttackerTile, NewTargetTile))
+	const FWBCardDefinitionRepository* RepositoryPtr =
+		Repository.RepositoryId.IsEmpty() ? nullptr : &Repository;
+	const FWBGridGeometryProfile AttackGeometry =
+		GetAttackGeometryProfile(
+			State, RepositoryPtr, Attacker->UnitId);
+	const EWBGridGeometry LineGeometry = WBBoardGeometry::ClassifyLine(
+		AttackGeometry, AttackerTile, NewTargetTile);
+	if (LineGeometry == EWBGridGeometry::None)
 	{
 		return FWBActionQueryResult::Deny(TEXT("not_in_line"));
 	}
 	const int32 AttackRange = Repository.RepositoryId.IsEmpty()
-		? Attacker->AR
+		? WBUnitStatQuery::GetIntrinsicAR(State, Attacker->UnitId)
 		: WBUnitStatQuery::GetEffectiveAR(
 			State, Repository, Attacker->UnitId).EffectiveValue;
-	if (OrthogonalDistance(AttackerTile, NewTargetTile) > AttackRange)
+	if (WBBoardGeometry::LineDistance(
+		LineGeometry, AttackerTile, NewTargetTile) > AttackRange)
 	{
 		return FWBActionQueryResult::Deny(TEXT("out_of_range"));
 	}
-	FString LOSReason;
-	if (!HasOrthogonalLineOfSight(
-		State, AttackerTile, NewTargetTile, LOSReason))
+	const FWBGeometryLineQueryResult LineQuery = WBBoardGeometry::QueryLine(
+		State, AttackGeometry, AttackerTile, NewTargetTile,
+		WBTerrainRules::AttacksIgnoreWalls(
+			State.GetTerrainAt(AttackerTile)),
+		true);
+	if (!LineQuery.bOk)
 	{
-		return FWBActionQueryResult::Deny(*LOSReason);
+		return FWBActionQueryResult::Deny(*LineQuery.Reason);
 	}
 	return FWBActionQueryResult::Ok();
 }
@@ -776,6 +789,53 @@ bool WBRules::UnitHasCombatCapability(
 	return false;
 }
 
+FWBGridGeometryProfile WBRules::GetMovementGeometryProfile(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository* Repository,
+	const int32 UnitId)
+{
+	const FWBUnitState* Unit = State.GetUnitById(UnitId);
+	if (Unit == nullptr || Repository == nullptr)
+	{
+		return FWBGridGeometryProfile::OrthogonalOnly();
+	}
+	const FWBCardDefinitionRepositoryLookupResult Lookup =
+		WBCardDefinitionRepository::FindCardById(*Repository, Unit->CardId);
+	return Lookup.bFound && Lookup.Definition.MovementGeometry.IsValid()
+		? Lookup.Definition.MovementGeometry
+		: FWBGridGeometryProfile::OrthogonalOnly();
+}
+
+FWBGridGeometryProfile WBRules::GetAttackGeometryProfile(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository* Repository,
+	const int32 UnitId)
+{
+	FWBGridGeometryProfile Result =
+		FWBGridGeometryProfile::OrthogonalOnly();
+	const FWBUnitState* Unit = State.GetUnitById(UnitId);
+	if (Unit != nullptr && Repository != nullptr)
+	{
+		const FWBCardDefinitionRepositoryLookupResult Lookup =
+			WBCardDefinitionRepository::FindCardById(
+				*Repository, Unit->CardId);
+		if (Lookup.bFound && Lookup.Definition.AttackGeometry.IsValid())
+		{
+			Result = Lookup.Definition.AttackGeometry;
+		}
+	}
+	// Existing AttacksDiagonally semantics are additive. Equipped Wands and
+	// direct semantic capabilities add the diagonal line without removing the
+	// unit definition's base geometry.
+	if (UnitHasCombatCapability(
+		State, Repository, UnitId,
+		EWBCombatCapability::AttacksDiagonally))
+	{
+		Result.bDiagonal = true;
+	}
+	return Result;
+}
+
 FWBActionQueryResult WBRules::CanResolveCounterattack(const FWBGameStateData& State)
 {
 	return CanResolveCounterattack(State, FWBCardDefinitionRepository());
@@ -824,22 +884,33 @@ FWBActionQueryResult WBRules::CanResolveCounterattack(
 
 	const FWBTile From(OriginalDefender->X, OriginalDefender->Y);
 	const FWBTile To(OriginalAttacker->X, OriginalAttacker->Y);
-	if (!AreTilesOrthogonallyAligned(From, To))
+	const FWBGridGeometryProfile CounterGeometry =
+		GetAttackGeometryProfile(
+			State, RepositoryForCapabilities,
+			OriginalDefender->UnitId);
+	const EWBGridGeometry LineGeometry = WBBoardGeometry::ClassifyLine(
+		CounterGeometry, From, To);
+	if (LineGeometry == EWBGridGeometry::None)
 	{
 		return FWBActionQueryResult::Deny(TEXT("counter_not_in_line"));
 	}
 	const int32 CounterRange = Repository.RepositoryId.IsEmpty()
-		? OriginalDefender->AR
+		? WBUnitStatQuery::GetIntrinsicAR(
+			State, OriginalDefender->UnitId)
 		: WBUnitStatQuery::GetEffectiveAR(
 			State, Repository, OriginalDefender->UnitId).EffectiveValue;
-	if (OrthogonalDistance(From, To) > CounterRange)
+	if (WBBoardGeometry::LineDistance(
+		LineGeometry, From, To) > CounterRange)
 	{
 		return FWBActionQueryResult::Deny(TEXT("counter_out_of_range"));
 	}
-	FString LOSReason;
-	if (!HasOrthogonalLineOfSight(State, From, To, LOSReason))
+	const FWBGeometryLineQueryResult LineQuery = WBBoardGeometry::QueryLine(
+		State, CounterGeometry, From, To,
+		WBTerrainRules::AttacksIgnoreWalls(State.GetTerrainAt(From)),
+		true);
+	if (!LineQuery.bOk)
 	{
-		return FWBActionQueryResult::Deny(*LOSReason);
+		return FWBActionQueryResult::Deny(*LineQuery.Reason);
 	}
 	return FWBActionQueryResult::Ok();
 }
@@ -1337,11 +1408,8 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			{
 				return FWBActionQueryResult::Deny(TEXT("terrain_source_mismatch"));
 			}
-			const FString TerrainId = Payload.SetTerrainEffect.TerrainId
-				.GetPlainNameString().ToLower();
-			if (TerrainId != TEXT("normal") && TerrainId != TEXT("mud")
-				&& TerrainId != TEXT("lava") && TerrainId != TEXT("water")
-				&& TerrainId != TEXT("ice"))
+			if (!WBTerrainRules::IsSupportedTerrain(
+				Payload.SetTerrainEffect.TerrainId))
 			{
 				return FWBActionQueryResult::Deny(TEXT("terrain_id_unsupported"));
 			}
@@ -1649,6 +1717,16 @@ bool WBRules::CanApplyDeterministicTurnTransition(
 
 TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& State, const int32 PlayerId, const int32 UnitId)
 {
+	return GenerateLegalMoveActions(
+		State, FWBCardDefinitionRepository(), PlayerId, UnitId);
+}
+
+TArray<FWBAction> WBRules::GenerateLegalMoveActions(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const int32 PlayerId,
+	const int32 UnitId)
+{
 	TArray<FWBAction> LegalMoves;
 
 	const FWBUnitState* Unit = State.GetUnitById(UnitId);
@@ -1658,7 +1736,10 @@ TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& Stat
 	}
 
 	const FWBTile FromTile(Unit->X, Unit->Y);
-	for (const FWBTile& Direction : MoveDirections)
+	const FWBCardDefinitionRepository* RepositoryPtr =
+		Repository.RepositoryId.IsEmpty() ? nullptr : &Repository;
+	for (const FWBTile& Direction : WBBoardGeometry::GetStepDirections(
+		GetMovementGeometryProfile(State, RepositoryPtr, UnitId)))
 	{
 		FWBAction Candidate;
 		Candidate.Type = EWBActionType::Move;
@@ -1667,7 +1748,10 @@ TArray<FWBAction> WBRules::GenerateLegalMoveActions(const FWBGameStateData& Stat
 		Candidate.FromTile = FromTile;
 		Candidate.ToTile = FWBTile(FromTile.X + Direction.X, FromTile.Y + Direction.Y);
 
-		if (QueryMove(State, Candidate).bOk)
+		const FWBMoveQueryResult Query = RepositoryPtr != nullptr
+			? QueryMove(State, Repository, Candidate)
+			: QueryMove(State, Candidate);
+		if (Query.bOk)
 		{
 			LegalMoves.Add(Candidate);
 		}
@@ -1750,21 +1834,32 @@ TArray<FWBAction> WBRules::GenerateLegalActionsForPlayer(
 	}
 	LegalActions.RemoveAll([](const FWBAction& Action)
 	{
-		return Action.Type == EWBActionType::Attack;
+		return Action.Type == EWBActionType::Move
+			|| Action.Type == EWBActionType::Attack;
 	});
 	const int32 EndTurnIndex = LegalActions.IndexOfByPredicate([](const FWBAction& Action)
 	{
 		return Action.Type == EWBActionType::EndTurn;
 	});
-	const TArray<FWBAction> Attacks = GenerateLegalAttackActions(
-		State, &Repository, PlayerId);
+	TArray<FWBAction> MainActions;
+	for (const FWBUnitState& Unit : State.Units)
+	{
+		if (Unit.GetControllerPlayerIdForRules() == PlayerId
+			&& !Unit.bDefeated && Unit.IsUnitOnBoard())
+		{
+			MainActions.Append(GenerateLegalMoveActions(
+				State, Repository, PlayerId, Unit.UnitId));
+		}
+	}
+	MainActions.Append(GenerateLegalAttackActions(
+		State, &Repository, PlayerId));
 	if (EndTurnIndex == INDEX_NONE)
 	{
-		LegalActions.Append(Attacks);
+		LegalActions.Append(MainActions);
 	}
 	else
 	{
-		LegalActions.Insert(Attacks, EndTurnIndex);
+		LegalActions.Insert(MainActions, EndTurnIndex);
 	}
 	return LegalActions;
 }
