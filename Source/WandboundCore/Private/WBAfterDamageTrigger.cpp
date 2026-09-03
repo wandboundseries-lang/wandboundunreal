@@ -1,13 +1,10 @@
 #include "WBAfterDamageTrigger.h"
 
 #include "WBEffectRunner.h"
+#include "WBCharacterPassiveEligibility.h"
 
 namespace
 {
-const FName AfterDamageFrozenStatusId(TEXT("Frozen"));
-const FName AfterDamageNegatedStatusId(TEXT("Negated"));
-const FName AfterDamageStunnedStatusId(TEXT("Stunned"));
-
 bool MatchesSourceRole(
 	const int32 SourceUnitId,
 	const FWBAfterDamageEventContext& Context,
@@ -31,11 +28,7 @@ bool MatchesSourceRole(
 
 bool IsEligibleUnitSource(const FWBUnitState& Unit)
 {
-	return Unit.IsUnitOnBoard()
-		&& !Unit.bDefeated
-		&& !Unit.HasStatus(AfterDamageStunnedStatusId)
-		&& !Unit.HasStatus(AfterDamageFrozenStatusId)
-		&& !Unit.HasStatus(AfterDamageNegatedStatusId);
+	return WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(Unit);
 }
 
 bool IsEligibleWandBearer(const FWBUnitState& Unit)
@@ -457,6 +450,7 @@ FWBAfterDamageTriggerResolutionResult WBAfterDamageTrigger::Resolve(
 			&& LiveSource->IsUnitOnBoard() && !LiveSource->bDefeated
 			? Trigger.SourceUnitId : INDEX_NONE;
 		Request.Source.SourceCardId = Trigger.SourceCardId;
+		Request.Source.SourceCardInstanceId = Trigger.SourceCardInstanceId;
 		Request.Source.SourceEffectId = Trigger.Definition.TriggerId;
 		Request.Target.TargetUnitId = TargetUnitId;
 		Request.Payloads = Trigger.Definition.Payloads;

@@ -3610,6 +3610,8 @@ bool ParseOptionalCardActivationSourceGateDefinitionField(
 		*GateObject,
 		TEXT("blocked_by_stunned"),
 		OutGate.bBlockedByStunned);
+	OutGate.bHasExplicitBlockedByFrozen =
+		(*GateObject)->HasField(TEXT("blocked_by_frozen"));
 	OutGate.bBlockedByFrozen = ReadBoolFieldOrDefault(
 		*GateObject,
 		TEXT("blocked_by_frozen"),

@@ -1,12 +1,11 @@
 #include "WBTurnStartSequence.h"
 
+#include "WBCharacterPassiveEligibility.h"
 #include "WBCardLifecycle.h"
 #include "WBEffectRunner.h"
 
 namespace
 {
-const FName TurnStartNegatedStatusId(TEXT("Negated"));
-
 FWBTraceEvent MakeTurnStartTrace(
 	const FName Kind,
 	const int32 PlayerId,
@@ -59,9 +58,7 @@ bool IsEligibleSource(
 	const FWBUnitState* Source =
 		State.GetUnitById(Trigger.SourceUnitId);
 	return Source != nullptr
-		&& Source->IsUnitOnBoard()
-		&& !Source->bDefeated
-		&& !Source->HasStatus(TurnStartNegatedStatusId)
+		&& WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(*Source)
 		&& Source->CardId == Trigger.SourceCardId;
 }
 
@@ -131,9 +128,7 @@ void CollectTriggers(
 {
 	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (!Unit.IsUnitOnBoard()
-			|| Unit.bDefeated
-			|| Unit.HasStatus(TurnStartNegatedStatusId))
+		if (!WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(Unit))
 		{
 			continue;
 		}

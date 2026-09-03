@@ -2445,6 +2445,8 @@ void ValidateSourceGate(
 	SourceGateObject->TryGetBoolField(TEXT("requires_source_unit"), OutSourceGate.bRequiresSourceUnit);
 	SourceGateObject->TryGetBoolField(TEXT("requires_source_unit_ownership"), OutSourceGate.bRequiresSourceUnitOwnership);
 	SourceGateObject->TryGetBoolField(TEXT("blocked_by_stunned"), OutSourceGate.bBlockedByStunned);
+	OutSourceGate.bHasExplicitBlockedByFrozen =
+		SourceGateObject->HasField(TEXT("blocked_by_frozen"));
 	SourceGateObject->TryGetBoolField(TEXT("blocked_by_frozen"), OutSourceGate.bBlockedByFrozen);
 	SourceGateObject->TryGetBoolField(TEXT("requires_costs_satisfied_externally"), OutSourceGate.bRequiresCostsSatisfiedExternally);
 	SourceGateObject->TryGetBoolField(TEXT("once_per_turn"), OutSourceGate.bOncePerTurn);

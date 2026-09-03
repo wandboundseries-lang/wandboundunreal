@@ -202,7 +202,7 @@ bool FWBCSNBodyDoubleDamageArmorTest::RunTest(const FString&)
 }
 
 WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleFrozenTest,
-	"Wandbound.CSNBodyDouble.Damage.HitFrozenBreaksSubstituteFrozenIgnored")
+	"Wandbound.CSNBodyDouble.Damage.FinalRecipientFrozenBreaksOriginalDefenderFrozenRemains")
 bool FWBCSNBodyDoubleFrozenTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
@@ -214,8 +214,10 @@ bool FWBCSNBodyDoubleFrozenTest::RunTest(const FString&)
 	const FWBApplyActionResult Damage =
 		WBEffectRunner::ApplyPendingAttackDamage(State, true);
 	TestTrue(TEXT("Frozen resolution succeeds"), Damage.bOk);
-	TestTrue(TEXT("Recipient Frozen remains"), State.GetUnitById(30)->HasStatus(FName(TEXT("Frozen"))));
-	TestFalse(TEXT("Hero Frozen breaks"), State.GetUnitById(20)->HasStatus(FName(TEXT("Frozen"))));
+	TestFalse(TEXT("Final recipient Frozen breaks"),
+		State.GetUnitById(30)->HasStatus(FName(TEXT("Frozen"))));
+	TestTrue(TEXT("Original defender Frozen remains"),
+		State.GetUnitById(20)->HasStatus(FName(TEXT("Frozen"))));
 	TestEqual(TEXT("Recipient takes no HP damage"), State.GetUnitById(30)->HP, 8);
 	TestEqual(TEXT("Hero takes no HP damage"), State.GetUnitById(20)->HP, 8);
 	TestTrue(TEXT("Hit-unit Frozen suppresses counter eligibility"),
@@ -332,7 +334,7 @@ bool FWBCSNBodyDoubleNoRedirectGeometryTest::RunTest(const FString&)
 }
 
 WB_BODY_DOUBLE_TEST(FWBCSNBodyDoubleSubstituteFrozenTransferTest,
-	"Wandbound.CSNBodyDouble.Damage.SubstituteFrozenDoesNotBlockTransferredHPDamage")
+	"Wandbound.CSNBodyDouble.Damage.SubstituteFrozenBlocksTransferredHPDamage")
 bool FWBCSNBodyDoubleSubstituteFrozenTransferTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakeState();
@@ -344,8 +346,8 @@ bool FWBCSNBodyDoubleSubstituteFrozenTransferTest::RunTest(const FString&)
 		WBEffectRunner::ApplyPendingAttackDamage(State, true);
 	TestTrue(TEXT("Attack resolves"), Result.bOk);
 	TestEqual(TEXT("Hero HP is protected"), State.GetUnitById(20)->HP, 8);
-	TestEqual(TEXT("Substitute loses exact damage"), State.GetUnitById(30)->HP, 5);
-	TestTrue(TEXT("Substitute remains Frozen"),
+	TestEqual(TEXT("Substitute HP is protected by Frozen"), State.GetUnitById(30)->HP, 8);
+	TestFalse(TEXT("Substitute Frozen breaks"),
 		State.GetUnitById(30)->HasStatus(FName(TEXT("Frozen"))));
 	return true;
 }

@@ -1,0 +1,86 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "status_authority_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic units for production status-authority validation.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "status_authority_fixture_hero_alpha",
+      "public_name": "Status Authority Fixture Hero Alpha",
+      "kind": "hero",
+      "public_text": "An isolated status-authority fixture attacker.",
+      "public_category": "Hero",
+      "factions": ["wandwright"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 3, "ar": 8, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      }
+    },
+    {
+      "schema_version": 1,
+      "card_id": "status_authority_fixture_hero_beta",
+      "public_name": "Status Authority Fixture Hero Beta",
+      "kind": "hero",
+      "public_text": "Applies Frozen to itself for isolated status validation.",
+      "public_category": "Hero",
+      "factions": ["black_meridian"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 12, "atk": 1, "ar": 8, "rl": 3 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 8 },
+      "hero": {
+        "role": "hero",
+        "match_start_placement": "canonical_hero_spawn"
+      },
+      "activated_effects": [
+        {
+          "effect_id": "fixture_freeze_self",
+          "public_label": "Freeze Self",
+          "target_requirement": "unit",
+          "source_gate": {
+            "required_zone": "board",
+            "timing": "normal_turn_priority",
+            "requires_source_unit": true,
+            "requires_source_unit_ownership": true,
+            "once_per_turn": true,
+            "once_per_turn_key": "fixture_freeze_self"
+          },
+          "payloads": [
+            {
+              "type": "status_effect",
+              "operation": "apply_status",
+              "status_id": "Frozen",
+              "turns_remaining": 2,
+              "target": "selected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "status_authority_fixture_filler",
+      "public_name": "Status Authority Fixture Filler",
+      "kind": "character",
+      "public_text": "An isolated fixture deck card.",
+      "public_category": "Character",
+      "factions": ["officer"],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": { "hp": 8, "atk": 1, "ar": 1, "rl": 1 },
+      "movement": { "pattern": "orthogonal_adjacent" },
+      "attack": { "pattern": "orthogonal_line", "range": 1 }
+    }
+  ]
+}

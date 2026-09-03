@@ -1,5 +1,7 @@
 #include "WBCardActivationSourceGate.h"
 
+#include "WBStatusSemantics.h"
+
 namespace
 {
 FWBCardActivationSourceGateResult MakeSourceGateFailure(const TCHAR* Reason)
@@ -98,12 +100,18 @@ FWBCardActivationSourceGateResult EvaluateSourceUnitState(
 		return MakeSourceGateFailure(TEXT("source_unit_owner_mismatch"));
 	}
 
-	if (Gate.bBlockedByStunned && SourceUnit->HasStatus(FName(TEXT("Stunned"))))
+	if (Gate.bBlockedByStunned
+		&& WBStatusSemantics::HasCanonicalStatus(
+			*SourceUnit, FName(TEXT("Stunned"))))
 	{
 		return MakeSourceGateFailure(TEXT("source_unit_stunned"));
 	}
 
-	if (Gate.bBlockedByFrozen && SourceUnit->HasStatus(FName(TEXT("Frozen"))))
+	const bool bBlockedByFrozen = !Gate.bHasExplicitBlockedByFrozen
+		|| Gate.bBlockedByFrozen;
+	if (bBlockedByFrozen
+		&& WBStatusSemantics::HasCanonicalStatus(
+			*SourceUnit, FName(TEXT("Frozen"))))
 	{
 		return MakeSourceGateFailure(TEXT("source_unit_frozen"));
 	}

@@ -8,29 +8,15 @@
 #include "WBCardActivationCostPayment.h"
 #include "WBEffectRequest.h"
 #include "WBStatusEffect.h"
+#include "WBStatusSemantics.h"
 #include "WBUnitStatQuery.h"
 
 namespace
 {
-bool HasMovementBlockingStatus(const FWBUnitState& Unit)
-{
-	return Unit.HasStatus(FName(TEXT("Rooted")))
-		|| Unit.HasStatus(FName(TEXT("Stunned")));
-}
-
-bool HasAttackBlockingStatus(const FWBUnitState& Unit)
-{
-	return Unit.HasStatus(FName(TEXT("Stunned")))
-		|| Unit.HasStatus(FName(TEXT("Frozen")))
-		|| Unit.HasStatus(FName(TEXT("CannotAttack")))
-		|| Unit.HasStatus(FName(TEXT("Cannot Attack")))
-		|| Unit.HasStatus(FName(TEXT("cannot_attack")))
-		|| Unit.HasStatus(FName(TEXT("no_attack")));
-}
-
 bool IsFrozen(const FWBUnitState& Unit)
 {
-	return Unit.HasStatus(FName(TEXT("Frozen")));
+	return WBStatusSemantics::HasCanonicalStatus(
+		Unit, FName(TEXT("Frozen")));
 }
 
 bool UnitTileLess(const FWBUnitState& A, const FWBUnitState& B)
@@ -256,7 +242,7 @@ FWBMoveQueryResult QueryMoveWithAuthority(
 		return FWBMoveQueryResult::Deny(TEXT("unit_removed"));
 	}
 
-	if (HasMovementBlockingStatus(*Unit))
+	if (!WBStatusSemantics::CanDeclareMove(*Unit))
 	{
 		return FWBMoveQueryResult::Deny(TEXT("cannot_move"));
 	}
@@ -472,7 +458,7 @@ FWBActionQueryResult CanDeclareAttackWithAuthority(
 		return FWBActionQueryResult::Deny(TEXT("no_attacks_left"));
 	}
 
-	if (HasAttackBlockingStatus(*Attacker))
+	if (!WBStatusSemantics::CanDeclareAttack(*Attacker))
 	{
 		return FWBActionQueryResult::Deny(TEXT("cannot_attack"));
 	}
@@ -877,7 +863,7 @@ FWBActionQueryResult WBRules::CanResolveCounterattack(
 	{
 		return FWBActionQueryResult::Deny(TEXT("attack_cannot_be_countered"));
 	}
-	if (HasAttackBlockingStatus(*OriginalDefender))
+	if (!WBStatusSemantics::CanCounterattack(*OriginalDefender))
 	{
 		return FWBActionQueryResult::Deny(TEXT("counter_cannot_attack"));
 	}

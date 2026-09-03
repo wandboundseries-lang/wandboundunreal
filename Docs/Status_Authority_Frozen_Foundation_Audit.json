@@ -1,0 +1,182 @@
+{
+  "audit_id": "status_authority_frozen_foundation",
+  "public_safe": true,
+  "baseline_commit": "f95c936a61941e58572dc698f23e9abc0a6e5bca",
+  "internal_audit_content_copied": false,
+  "scope": [
+    "source_aware_status_authority",
+    "canonical_status_identity",
+    "duration_and_cleanse_authority",
+    "status_action_restrictions",
+    "frozen_attack_parity",
+    "deterministic_status_provenance"
+  ],
+  "canonical_status_ids": [
+    "Burn",
+    "Poison",
+    "Rooted",
+    "Stunned",
+    "Frozen",
+    "Cannot Attack"
+  ],
+  "status_model": {
+    "authoritative_type": "FWBStatusInstanceState",
+    "semantic_authority": "WBStatusSemantics",
+    "legality_authority": "WBRules",
+    "mutation_authority": "WBEffectRunner",
+    "same_status_instances_per_unit": 1,
+    "reapplication": "maximum_duration_refresh",
+    "permanent_duration": 0,
+    "legacy_fields": "normalized_compatibility_mirrors",
+    "provenance_is_event_time_snapshot": true,
+    "source_linked_expiration": false
+  },
+  "status_semantics": {
+    "Burn": "end_turn_one_armor_bypassing_damage_then_decay",
+    "Poison": "start_turn_reduce_max_hp_one_clamp_hp_minimum_max_hp_one_then_decay",
+    "Rooted": "blocks_declared_move_not_forced_relocation",
+    "Stunned": "blocks_source_unit_actions_passives_and_counter",
+    "Cannot Attack": "blocks_declared_attack_not_counter",
+    "Frozen": "blocks_source_unit_actions_passives_and_counter_and_breaks_on_true_attack"
+  },
+  "frozen_attack": {
+    "evaluated_recipient": "final_damage_recipient_after_substitution",
+    "zero_attack_breaks": true,
+    "armor_consumed": false,
+    "hp_damage": 0,
+    "positive_hp_after_damage_emitted": false,
+    "post_hit_preserved": true,
+    "counter_suppressed": true,
+    "npc_and_counter_paths_shared": true
+  },
+  "privacy": {
+    "provenance_authoritative_private_state": true,
+    "public_summary_exposes_provenance": false,
+    "trace_exposes_private_card_instance": false,
+    "receipt_field_count": 8,
+    "receipt_exposes_protected_digest": false
+  },
+  "compatibility": {
+    "replay_schema": 1,
+    "action_codec_cpp_blob_before": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "action_codec_cpp_blob_after": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "action_codec_h_blob_before": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "action_codec_h_blob_after": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "source_gate_omitted_frozen_policy": "blocked",
+    "source_gate_explicit_false": "allowed_exception",
+    "production_bundle_digest_representation_changed": false
+  },
+  "validation": {
+    "focused_status_attack_substitution": {
+      "succeeded": 44,
+      "failed": 0,
+      "warnings": 0
+    },
+    "focused_compatibility": {
+      "succeeded": 106,
+      "failed": 0,
+      "warnings": 0
+    },
+    "full_automation": {
+      "baseline": 2420,
+      "succeeded": 2448,
+      "delta": 28,
+      "failed": 0,
+      "warnings": 0,
+      "not_run": 0
+    },
+    "builds": {
+      "editor_non_unity": "succeeded",
+      "game_non_unity": "succeeded",
+      "editor_default": "succeeded",
+      "game_default": "succeeded",
+      "editor_forced_unity": "succeeded",
+      "game_forced_unity": "succeeded"
+    },
+    "build_cook_run": {
+      "result": "succeeded",
+      "cooked_packages": 532,
+      "exit_code": 0
+    },
+    "packaged_smoke": {
+      "runs": 2,
+      "fresh_replay_verified_each_run": true,
+      "archive_byte_identical": true,
+      "receipt_byte_identical": true,
+      "startup_byte_identical": true,
+      "record_count": 4,
+      "final_generation": 1,
+      "final_revision": 5,
+      "archive_sha256": "c3865c4cae183f23796be6c7ca97d8b4e09daef04b467186e1a5529bb70b1c3e",
+      "receipt_sha256": "6afa6d2bc05b81509b8d86441511c229babb2284a8aa10c8cee6bb902ca18999",
+      "startup_sha256": "0b175a36ae5130511e7ce5f957448c1bdf6af35f5142f5bfd0a0177e5ea430f7",
+      "final_state_digest": "16d1c37897ac627c3ab320880e17d3e6515433c41e399caa1457943fbf024092",
+      "final_trace_digest": "f00575444f0da6a3e54e494f4e5df19598a7b24122fc45519316a22ee92ebb5f",
+      "replay_digest": "5095735c145558689a54486eaa21f044f87f102e6edbfe4f79779ae9585ec7bc"
+    }
+  },
+  "godot_audit": {
+    "modified": false,
+    "global_boundary_tick_behavior_preserved": true,
+    "global_boundary_tick_owner_scope_resolved": false,
+    "unreal_permanent_duration_zero_preserved": true
+  },
+  "changed_files": [
+    "Source/WandboundCore/Public/WBStatusTypes.h",
+    "Source/WandboundCore/Public/WBStatusSemantics.h",
+    "Source/WandboundCore/Private/WBStatusSemantics.cpp",
+    "Source/WandboundCore/Public/WBStatusEffect.h",
+    "Source/WandboundCore/Private/WBStatusEffect.cpp",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Private/WBGameStateData.cpp",
+    "Source/WandboundCore/Public/WBEffectRequest.h",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundCore/Private/WBTurnStartSequence.cpp",
+    "Source/WandboundCore/Private/WBCharacterPassiveEligibility.cpp",
+    "Source/WandboundCore/Private/WBAfterDamageTrigger.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Private/WBPublicBoardSummary.cpp",
+    "Source/WandboundCore/Public/WBCardActivationSourceGate.h",
+    "Source/WandboundCore/Private/WBCardActivationSourceGate.cpp",
+    "Source/WandboundCore/Private/WBCardActivationCandidateGenerator.cpp",
+    "Source/WandboundCore/Private/WBCardActivationExpansion.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundRuntime/Public/WBProductionStatusAuthoritySmoke.h",
+    "Source/WandboundRuntime/Private/WBProductionStatusAuthoritySmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Data/Replay/StatusAuthorityFixture/root_manifest.json",
+    "Data/Replay/StatusAuthorityFixture/bundle_manifest.json",
+    "Data/Replay/StatusAuthorityFixture/units.json",
+    "Data/Replay/StatusAuthorityFixture/markers.json",
+    "Data/Replay/StatusAuthorityFixture/match_spec.json",
+    "Source/WandboundTests/Private/WBStatusAuthorityFrozenParityTests.cpp",
+    "Source/WandboundTests/Private/WBProductionStatusAuthoritySmokeTests.cpp",
+    "Source/WandboundTests/Private/WBAttackDamageCalculationPipelineTests.cpp",
+    "Source/WandboundTests/Private/WBCSNBodyDoubleDamageSubstitutionTests.cpp",
+    "Source/WandboundTests/Private/WBCSNPatchTests.cpp",
+    "Source/WandboundTests/Private/WBCardActivationBoardSourceParityTests.cpp",
+    "Source/WandboundTests/Private/WBCardActivationSourceGateTests.cpp",
+    "Source/WandboundTests/Private/WBCardDBSchemaFixtureValidator.cpp",
+    "Source/WandboundTests/Private/WBProductionActivationDataProviderTargetOptionsTests.cpp",
+    "Source/WandboundTests/Private/WBProductionActivationDataProviderTests.cpp",
+    "Source/WandboundTests/Private/WBProductionActivationExecutionHandoffTests.cpp",
+    "Source/WandboundTests/Private/WBProductionActivationTargetSelectionBridgeTests.cpp",
+    "Source/WandboundTests/Private/WBReplayFixtureTestUtils.cpp",
+    "Docs/Status_Authority_Frozen_Foundation_Audit.md",
+    "Docs/Status_Authority_Frozen_Foundation_Audit.json"
+  ],
+  "deferred": [
+    "sealed_gameplay_and_new_wand_ruling",
+    "generalized_trigger_snapshots",
+    "private_exact_instance_continuations",
+    "broad_stat_mutation",
+    "broad_zone_mutation",
+    "generic_control_change",
+    "new_cards_statuses_and_effects",
+    "ai",
+    "forensic_telemetry"
+  ]
+}

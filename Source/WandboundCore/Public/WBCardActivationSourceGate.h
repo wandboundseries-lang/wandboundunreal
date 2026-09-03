@@ -67,6 +67,8 @@ struct WANDBOUNDCORE_API FWBCardActivationSourceGateDefinition
 	bool bRequiresSourceUnitOwnership = true;
 	bool bBlockedByStunned = true;
 	bool bBlockedByFrozen = false;
+	// Omission uses the canonical Frozen block; explicit false is a supported exception.
+	bool bHasExplicitBlockedByFrozen = false;
 
 	bool bRequiresCostsSatisfiedExternally = false;
 	FWBCardActivationCostGateDefinition CostGate;

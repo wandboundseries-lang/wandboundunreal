@@ -347,6 +347,7 @@ bool FWBCardActivationSourceGateSourcePolicyTest::RunTest(const FString& Paramet
 	State.GetMutableUnitById(1)->RemoveStatus(FName(TEXT("Stunned")));
 	State.GetMutableUnitById(1)->AddStatus(FName(TEXT("Frozen")), 1);
 	Gate.bBlockedByFrozen = false;
+	Gate.bHasExplicitBlockedByFrozen = true;
 	Result = WBCardActivationSourceGate::Evaluate(State, Gate, Context);
 	TestTrue(TEXT("Frozen source passes when not blocked"), Result.bOk);
 	Gate.bBlockedByFrozen = true;
@@ -490,6 +491,7 @@ bool FWBCardActivationSourceGateCandidateFilteringTest::RunTest(const FString& P
 	FrozenState.GetMutableUnitById(1)->AddStatus(FName(TEXT("Frozen")), 1);
 	FWBCardActivationSourceGateDefinition FrozenAllowedGate = MakeBoardGate();
 	FrozenAllowedGate.bBlockedByFrozen = false;
+	FrozenAllowedGate.bHasExplicitBlockedByFrozen = true;
 	const FWBCardActivationCandidateGenerationResult FrozenAllowedResult =
 		WBCardActivationCandidateGenerator::GenerateCandidates(
 			FrozenState,

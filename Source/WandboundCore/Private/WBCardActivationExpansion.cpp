@@ -189,6 +189,8 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 	Result.Command.EffectRequest.Source.PlayerId = Request.PlayerId;
 	Result.Command.EffectRequest.Source.SourceUnitId = Request.SourceUnitId;
 	Result.Command.EffectRequest.Source.SourceCardId = Request.CardDefinition.CardId;
+	Result.Command.EffectRequest.Source.SourceCardInstanceId =
+		Request.SourceGateContext.SourceCardInstanceId;
 	Result.Command.EffectRequest.Source.SourceEffectId = MatchingEffect->EffectId;
 	Result.Command.EffectRequest.Source.ActivationProvenance =
 		EWBActivationProvenance::PlayerDeclared;

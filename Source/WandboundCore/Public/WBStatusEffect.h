@@ -22,6 +22,7 @@ struct WANDBOUNDCORE_API FWBStatusEffectRequest
 	FName StatusId;
 	int32 Duration = 0;
 	FName SourceReason;
+	FWBStatusSourceProvenance Source;
 };
 
 struct WANDBOUNDCORE_API FWBStatusEffectResult
@@ -34,6 +35,12 @@ struct WANDBOUNDCORE_API FWBStatusEffectResult
 	int32 PreviousDuration = 0;
 	int32 NewDuration = 0;
 	TArray<FName> RemovedStatuses;
+	bool bIncomingStatusConsumedByFrozen = false;
+	bool bAppliedImmediatePoisonTick = false;
+	int32 PreviousHP = -1;
+	int32 NewHP = -1;
+	int32 PreviousMaxHP = -1;
+	int32 NewMaxHP = -1;
 };
 
 class WANDBOUNDCORE_API WBStatusEffect

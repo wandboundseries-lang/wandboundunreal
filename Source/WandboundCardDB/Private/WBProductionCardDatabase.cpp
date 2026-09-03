@@ -3537,7 +3537,9 @@ private:
 				EffectPath + TEXT(".source_gate.blocked_by_stunned"),
 				TEXT("blocked_by_stunned must be boolean."));
 		}
-		if (HasField(GateObject, TEXT("blocked_by_frozen"))
+		Effect.SourceGate.bHasExplicitBlockedByFrozen =
+			HasField(GateObject, TEXT("blocked_by_frozen"));
+		if (Effect.SourceGate.bHasExplicitBlockedByFrozen
 			&& !TryReadBool(
 				GateObject,
 				TEXT("blocked_by_frozen"),

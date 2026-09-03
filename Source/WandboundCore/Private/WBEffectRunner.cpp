@@ -11,6 +11,7 @@
 #include "WBHealEffect.h"
 #include "WBMatchCoordinator.h"
 #include "WBStatusEffect.h"
+#include "WBStatusSemantics.h"
 #include "WBRules.h"
 #include "WBUnitReplacementEffect.h"
 
@@ -21,6 +22,61 @@ const FName PoisonStatusId(TEXT("Poison"));
 const FName RootedStatusId(TEXT("Rooted"));
 const FName EffectRunnerStunnedStatusId(TEXT("Stunned"));
 const FName EffectRunnerFrozenStatusId(TEXT("Frozen"));
+const FName CannotAttackStatusId(TEXT("Cannot Attack"));
+
+FWBStatusSourceProvenance BuildStatusSourceProvenance(
+	const FWBGameStateData& State,
+	const FWBEffectRequest& Request,
+	const FWBStatusSourceProvenance& ExplicitSource)
+{
+	FWBStatusSourceProvenance Source = ExplicitSource;
+	if (Source.SourcePlayerId == INDEX_NONE)
+	{
+		Source.SourcePlayerId = Request.Source.PlayerId;
+	}
+	if (Source.SourceUnitId == INDEX_NONE)
+	{
+		Source.SourceUnitId = Request.Source.SourceUnitId;
+	}
+	if (Source.SourceCardId.IsEmpty())
+	{
+		Source.SourceCardId = Request.Source.SourceCardId;
+	}
+	if (Source.SourceCardInstanceId.IsEmpty())
+	{
+		Source.SourceCardInstanceId = Request.Source.SourceCardInstanceId;
+	}
+	if (Source.SourceEffectId.IsEmpty())
+	{
+		Source.SourceEffectId = Request.Source.SourceEffectId;
+	}
+	if (Source.SourceOwnerPlayerId == INDEX_NONE
+		&& Source.SourceUnitId != INDEX_NONE)
+	{
+		const FWBUnitState* SourceUnit = State.GetUnitById(Source.SourceUnitId);
+		if (SourceUnit != nullptr)
+		{
+			Source.SourceOwnerPlayerId =
+				SourceUnit->GetOwnerPlayerIdForRules();
+		}
+	}
+	if (Source.Origin == EWBStatusApplicationOrigin::Unknown)
+	{
+		if (WBIsActivation(Request.Source.ActivationProvenance))
+		{
+			Source.Origin = EWBStatusApplicationOrigin::Activation;
+		}
+		else if (!Request.Source.SourceEffectId.IsEmpty())
+		{
+			Source.Origin = EWBStatusApplicationOrigin::TriggeredResolution;
+		}
+		else
+		{
+			Source.Origin = EWBStatusApplicationOrigin::Other;
+		}
+	}
+	return Source;
+}
 
 void AppendStartTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const int32 PlayerId, const int32 TurnNumber)
 {
@@ -45,6 +101,7 @@ void AppendEndTurnStatusTickTrace(TArray<FWBTraceEvent>& TraceEvents, const int3
 void AppendBurnTickTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const int32 PlayerId,
+	const FWBStatusSourceProvenance& Source,
 	const FWBDamageResolutionResult& DamageResult,
 	const int32 PreviousMaxHP,
 	const int32 NewMaxHP,
@@ -54,7 +111,9 @@ void AppendBurnTickTrace(
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("status_tick"));
 	Event.StatusId = BurnStatusId;
-	Event.PlayerId = PlayerId;
+	Event.PlayerId = FWBGameStateData::IsValidPlayerId(Source.SourcePlayerId)
+		? Source.SourcePlayerId : PlayerId;
+	Event.SourceUnitId = Source.SourceUnitId;
 	Event.TargetUnitId = DamageResult.Request.TargetUnitId;
 	Event.DamageAmount = DamageResult.Request.BaseDamage;
 	Event.bDamagePrevented = DamageResult.Prevention.bPrevented;
@@ -81,6 +140,7 @@ void AppendBurnTickTrace(
 void AppendPoisonTickTrace(
 	TArray<FWBTraceEvent>& TraceEvents,
 	const int32 PlayerId,
+	const FWBStatusSourceProvenance& Source,
 	const int32 TargetUnitId,
 	const int32 PreviousHP,
 	const int32 NewHP,
@@ -92,7 +152,9 @@ void AppendPoisonTickTrace(
 	FWBTraceEvent Event;
 	Event.Kind = FName(TEXT("status_tick"));
 	Event.StatusId = PoisonStatusId;
-	Event.PlayerId = PlayerId;
+	Event.PlayerId = FWBGameStateData::IsValidPlayerId(Source.SourcePlayerId)
+		? Source.SourcePlayerId : PlayerId;
+	Event.SourceUnitId = Source.SourceUnitId;
 	Event.TargetUnitId = TargetUnitId;
 	Event.PreviousHP = PreviousHP;
 	Event.NewHP = NewHP;
@@ -219,6 +281,7 @@ void AppendStatusModifiedTrace(
 	Event.TargetUnitId = StatusResult.Request.TargetUnitId;
 	Event.PlayerId = Target != nullptr
 		? Target->GetControllerPlayerIdForRules() : -1;
+	Event.SourceUnitId = StatusResult.Request.Source.SourceUnitId;
 	Event.StatusId = StatusResult.Request.StatusId;
 	Event.StatusEffectOperation = WBStatusEffect::GetOperationName(StatusResult.Request.Operation);
 	Event.PreviousStatusTurns = StatusResult.PreviousDuration;
@@ -226,6 +289,30 @@ void AppendStatusModifiedTrace(
 	Event.RemovedStatuses = StatusResult.RemovedStatuses;
 	Event.bOk = true;
 	TraceEvents.Add(Event);
+}
+
+void AppendImmediatePoisonReapplyTrace(
+	TArray<FWBTraceEvent>& TraceEvents,
+	const FWBStatusEffectResult& StatusResult)
+{
+	if (!StatusResult.bAppliedImmediatePoisonTick)
+	{
+		return;
+	}
+	FWBTraceEvent Event;
+	Event.Kind = FName(TEXT("status_tick"));
+	Event.StatusId = PoisonStatusId;
+	Event.PlayerId = StatusResult.Request.Source.SourcePlayerId;
+	Event.SourceUnitId = StatusResult.Request.Source.SourceUnitId;
+	Event.TargetUnitId = StatusResult.Request.TargetUnitId;
+	Event.PreviousHP = StatusResult.PreviousHP;
+	Event.NewHP = StatusResult.NewHP;
+	Event.PreviousMaxHP = StatusResult.PreviousMaxHP;
+	Event.NewMaxHP = StatusResult.NewMaxHP;
+	Event.PreviousStatusTurns = StatusResult.PreviousDuration;
+	Event.NewStatusTurns = StatusResult.PreviousDuration;
+	Event.bOk = true;
+	TraceEvents.Add(MoveTemp(Event));
 }
 
 void AppendStatusEffectRemovedTrace(
@@ -742,11 +829,7 @@ FWBApplyActionResult WBEffectRunner::CalculatePendingAttackDamage(
 	Calculation.CalculatedArmor = Calculation.PreviousArmor;
 	Calculation.bPrevented = State.PendingAttack.bPrevented;
 
-	if (!Calculation.bPrevented && HitUnit->HasStatus(EffectRunnerFrozenStatusId))
-	{
-		Calculation.bFrozenBreak = true;
-	}
-	else if (!Calculation.bPrevented)
+	if (!Calculation.bPrevented)
 	{
 		FWBDamageRequest Request;
 		Request.DamageKind = EWBDamageKind::Attack;
@@ -859,6 +942,20 @@ FWBApplyActionResult WBEffectRunner::ResolvePendingAttackDamageSubstitution(
 			Result.TraceEvents.Add(MoveTemp(Event));
 		}
 	}
+	FWBPendingAttackState::FDamageCalculation& MutableCalculation =
+		State.PendingAttack.DamageCalculation;
+	const FWBUnitState* FinalRecipient = State.GetUnitById(
+		State.PendingAttack.FinalDamageRecipientUnitId);
+	if (!MutableCalculation.bPrevented
+		&& FinalRecipient != nullptr
+		&& WBStatusSemantics::HasCanonicalStatus(
+			*FinalRecipient, EffectRunnerFrozenStatusId))
+	{
+		MutableCalculation.bFrozenBreak = true;
+		MutableCalculation.CalculatedArmor = MutableCalculation.PreviousArmor;
+		MutableCalculation.ArmorAbsorbedAmount = 0;
+		MutableCalculation.CalculatedHPDamage = 0;
+	}
 	State.PendingAttack.Stage = EWBAttackContinuationStage::ApplyDamage;
 	Result.bOk = true;
 	return Result;
@@ -908,6 +1005,20 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 			State.PendingAttack.FinalDamageRecipientUnitId = Calculation.HitUnitId;
 		}
 	}
+	FWBUnitState* FinalRecipient =
+		State.GetMutableUnitById(FinalRecipientUnitId);
+	if (FinalRecipient == nullptr || !FinalRecipient->IsUnitOnBoard())
+	{
+		Result.Reason = TEXT("damage_recipient_removed");
+		return Result;
+	}
+	const bool bFrozenBreak = !Calculation.bPrevented
+		&& WBStatusSemantics::HasCanonicalStatus(
+			*FinalRecipient, EffectRunnerFrozenStatusId);
+	State.PendingAttack.DamageCalculation.bFrozenBreak = bFrozenBreak;
+	FWBPendingAttackState ResolvedPendingAttack = PendingAttack;
+	ResolvedPendingAttack.FinalDamageRecipientUnitId = FinalRecipientUnitId;
+	ResolvedPendingAttack.DamageCalculation.bFrozenBreak = bFrozenBreak;
 
 	FWBDamageResolutionResult Applied;
 	Applied.bOk = true;
@@ -922,30 +1033,32 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 		? Calculation.RawAttackDamage : 0;
 	Applied.Prevention.FinalDamage = Calculation.bPrevented
 		? 0 : Calculation.RawAttackDamage;
-	if (Calculation.bFrozenBreak)
+	if (bFrozenBreak)
 	{
 		Applied.Prevention.FinalDamage = 0;
 	}
-	Applied.PreviousHP = HitUnit->HP;
-	Applied.NewHP = HitUnit->HP;
-	Applied.PreviousArmor = Calculation.PreviousArmor;
-	Applied.NewArmor = Calculation.CalculatedArmor;
-	Applied.ArmorAbsorbedAmount = Calculation.ArmorAbsorbedAmount;
-	Applied.HPDamageAmount = Calculation.CalculatedHPDamage;
+	Applied.PreviousHP = FinalRecipient->HP;
+	Applied.NewHP = FinalRecipient->HP;
+	Applied.PreviousArmor = FinalRecipient->GetCurrentArmor();
+	Applied.NewArmor = FinalRecipient->GetCurrentArmor();
+	Applied.ArmorAbsorbedAmount = bFrozenBreak
+		? 0 : Calculation.ArmorAbsorbedAmount;
+	Applied.HPDamageAmount = bFrozenBreak
+		? 0 : Calculation.CalculatedHPDamage;
 
-	if (Calculation.bFrozenBreak)
+	if (bFrozenBreak)
 	{
-		HitUnit->RemoveStatus(EffectRunnerFrozenStatusId);
+		FinalRecipient->RemoveStatus(EffectRunnerFrozenStatusId);
 		AppendStatusRemovedTrace(
 			Result.TraceEvents,
 			PendingAttack.AttackingPlayerId,
 			EffectRunnerFrozenStatusId,
-			Calculation.HitUnitId,
+			FinalRecipientUnitId,
 			PendingAttack.AttackerUnitId,
 			PendingAttack.AttackerTile,
-			FWBTile(HitUnit->X, HitUnit->Y),
-			HitUnit->HP,
-			HitUnit->HP);
+			FWBTile(FinalRecipient->X, FinalRecipient->Y),
+			FinalRecipient->HP,
+			FinalRecipient->HP);
 	}
 	else if (!Calculation.bPrevented)
 	{
@@ -974,7 +1087,7 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 	if (bPreservePendingAttack)
 	{
 		State.PendingAttack.bDamageResolved = true;
-		State.PendingAttack.bFrozenBroken = Calculation.bFrozenBreak;
+		State.PendingAttack.bFrozenBroken = bFrozenBreak;
 		State.PendingAttack.Stage = EWBAttackContinuationStage::AfterDamage;
 	}
 	else
@@ -992,13 +1105,13 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 	AppliedEvent.DamageAmount = Calculation.RawAttackDamage;
 	AppliedEvent.PreviousHP = Applied.PreviousHP;
 	AppliedEvent.NewHP = Applied.NewHP;
-	AppliedEvent.PreviousArmor = Calculation.PreviousArmor;
-	AppliedEvent.NewArmor = Calculation.CalculatedArmor;
-	AppliedEvent.ArmorAbsorbedAmount = Calculation.ArmorAbsorbedAmount;
-	AppliedEvent.HPDamageAmount = Calculation.CalculatedHPDamage;
+	AppliedEvent.PreviousArmor = Applied.PreviousArmor;
+	AppliedEvent.NewArmor = Applied.NewArmor;
+	AppliedEvent.ArmorAbsorbedAmount = Applied.ArmorAbsorbedAmount;
+	AppliedEvent.HPDamageAmount = Applied.HPDamageAmount;
 	AppliedEvent.ActualHPDamageAmount = FMath::Max(
 		Applied.PreviousHP - Applied.NewHP, 0);
-	AppliedEvent.bFrozenBreak = Calculation.bFrozenBreak;
+	AppliedEvent.bFrozenBreak = bFrozenBreak;
 	AppliedEvent.bDamagePrevented = Calculation.bPrevented;
 	AppliedEvent.AttackContinuationId = PendingAttack.ContinuationId;
 	AppliedEvent.AttackContinuationStage = FName(TEXT("apply_damage"));
@@ -1007,12 +1120,12 @@ FWBApplyActionResult WBEffectRunner::ApplyCalculatedPendingAttackDamage(
 	Result.TraceEvents.Add(MoveTemp(AppliedEvent));
 	AppendAttackDamageResolvedTrace(
 		Result.TraceEvents,
-		PendingAttack,
-		Calculation.bFrozenBreak ? 0 : Calculation.RawAttackDamage,
+		ResolvedPendingAttack,
+		bFrozenBreak ? 0 : Calculation.RawAttackDamage,
 		Applied);
 
 	if (Applied.NewHP <= 0 && !Calculation.bPrevented
-		&& !Calculation.bFrozenBreak)
+		&& !bFrozenBreak)
 	{
 		FWBApplyActionResult Cleanup = ApplyZeroHPDeathRemoval(
 			State,
@@ -1223,6 +1336,7 @@ FWBApplyActionResult WBEffectRunner::ApplyStatusEffect(
 
 	Result.bOk = true;
 	const FWBUnitState* Target = State.GetUnitById(StatusResult.Request.TargetUnitId);
+	AppendImmediatePoisonReapplyTrace(Result.TraceEvents, StatusResult);
 	AppendStatusModifiedTrace(Result.TraceEvents, StatusResult, Target);
 	for (const FName& RemovedStatus : StatusResult.RemovedStatuses)
 	{
@@ -1335,6 +1449,8 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 			{
 				StatusRequest.TargetUnitId = Request.Target.TargetUnitId;
 			}
+			StatusRequest.Source = BuildStatusSourceProvenance(
+				WorkingState, Request, StatusRequest.Source);
 
 			PayloadResult = ApplyStatusEffect(WorkingState, StatusRequest);
 			break;
@@ -1500,9 +1616,22 @@ FWBCardActivationCommandResult WBEffectRunner::ApplyCardActivationCommand(
 	{
 		FilledCommand.EffectRequest.Source.SourceCardId = FilledCommand.Source.SourceCardId;
 	}
+	if (FilledCommand.EffectRequest.Source.SourceCardInstanceId.IsEmpty())
+	{
+		FilledCommand.EffectRequest.Source.SourceCardInstanceId =
+			FilledCommand.Source.SourceCardInstanceId;
+	}
 	if (FilledCommand.EffectRequest.Source.SourceEffectId.IsEmpty())
 	{
 		FilledCommand.EffectRequest.Source.SourceEffectId = FilledCommand.Source.SourceEffectId;
+	}
+	if (FilledCommand.EffectRequest.Source.ActivationProvenance
+			== EWBActivationProvenance::ResolutionOnly
+		&& FilledCommand.Source.ActivationProvenance
+			!= EWBActivationProvenance::ResolutionOnly)
+	{
+		FilledCommand.EffectRequest.Source.ActivationProvenance =
+			FilledCommand.Source.ActivationProvenance;
 	}
 
 	FWBGameStateData WorkingState = State;
@@ -1677,6 +1806,10 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 
 		const int32 PreviousHP = Unit.HP;
 		const int32 PreviousMaxHP = Unit.MaxHP;
+		const FWBStatusInstanceState* PoisonStatus =
+			Unit.GetStatusState(PoisonStatusId);
+		const FWBStatusSourceProvenance PoisonSource = PoisonStatus != nullptr
+			? PoisonStatus->Source : FWBStatusSourceProvenance();
 		const int32 PreviousStatusTurns = Unit.GetStatusTurnsRemaining(PoisonStatusId);
 		const int32 NewMaxHP = FMath::Max(PreviousMaxHP - 1, 1);
 
@@ -1703,6 +1836,7 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 		AppendPoisonTickTrace(
 			Result.TraceEvents,
 			PlayerId,
+			PoisonSource,
 			Unit.UnitId,
 			PreviousHP,
 			Unit.HP,
@@ -1749,25 +1883,39 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 	Result.bOk = true;
 	AppendEndTurnStatusTickTrace(Result.TraceEvents, PlayerId, State.TurnNumber);
 
-	for (FWBUnitState& Unit : State.Units)
+	TArray<int32> OrderedUnitIds;
+	for (const FWBUnitState& Unit : State.Units)
 	{
-		if (!Unit.IsUnitOnBoard())
+		if (Unit.IsUnitOnBoard())
+		{
+			OrderedUnitIds.Add(Unit.UnitId);
+		}
+	}
+	OrderedUnitIds.Sort();
+	for (const int32 UnitId : OrderedUnitIds)
+	{
+		FWBUnitState* UnitPtr = State.GetMutableUnitById(UnitId);
+		if (UnitPtr == nullptr || !UnitPtr->IsUnitOnBoard())
 		{
 			continue;
 		}
+		FWBUnitState& Unit = *UnitPtr;
 
 		if (Unit.HasStatus(BurnStatusId))
 		{
 			const int32 PreviousMaxHP = Unit.MaxHP;
-			int32 PreviousStatusTurns = 0;
-			int32 NewStatusTurns = 0;
-			const bool bExpired = DecayTimedStatus(Unit, BurnStatusId, PreviousStatusTurns, NewStatusTurns);
+			const FWBStatusInstanceState* BurnStatus =
+				Unit.GetStatusState(BurnStatusId);
+			const FWBStatusSourceProvenance BurnSource = BurnStatus != nullptr
+				? BurnStatus->Source : FWBStatusSourceProvenance();
+			const int32 PreviousStatusTurns =
+				Unit.GetStatusTurnsRemaining(BurnStatusId);
 
 			FWBDamageRequest BurnDamageRequest;
 			BurnDamageRequest.DamageKind = EWBDamageKind::Burn;
-			BurnDamageRequest.SourceUnitId = -1;
+			BurnDamageRequest.SourceUnitId = BurnSource.SourceUnitId;
 			BurnDamageRequest.TargetUnitId = Unit.UnitId;
-			BurnDamageRequest.SourcePlayerId = PlayerId;
+			BurnDamageRequest.SourcePlayerId = BurnSource.SourcePlayerId;
 			BurnDamageRequest.BaseDamage = 1;
 			BurnDamageRequest.bBypassArmor = true;
 			BurnDamageRequest.DamageCause = FName(TEXT("Burn"));
@@ -1778,10 +1926,18 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 				Result.Reason = BurnDamageResult.Reason;
 				return Result;
 			}
+			int32 DecayPreviousStatusTurns = 0;
+			int32 NewStatusTurns = 0;
+			const bool bExpired = DecayTimedStatus(
+				Unit,
+				BurnStatusId,
+				DecayPreviousStatusTurns,
+				NewStatusTurns);
 
 			AppendBurnTickTrace(
 				Result.TraceEvents,
 				PlayerId,
+				BurnSource,
 				BurnDamageResult,
 				PreviousMaxHP,
 				Unit.MaxHP,
@@ -1797,7 +1953,8 @@ FWBApplyActionResult WBEffectRunner::ApplyEndOfTurnStatusTicks(FWBGameStateData&
 		const FName EndTurnDurationStatusIds[] = {
 			RootedStatusId,
 			EffectRunnerStunnedStatusId,
-			EffectRunnerFrozenStatusId
+			EffectRunnerFrozenStatusId,
+			CannotAttackStatusId
 		};
 
 		for (const FName StatusId : EndTurnDurationStatusIds)

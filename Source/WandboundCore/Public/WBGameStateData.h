@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBCardZoneState.h"
+#include "WBStatusTypes.h"
 #include "WBTerminalOutcome.h"
 #include "WBTypes.h"
 
@@ -54,6 +55,8 @@ struct WANDBOUNDCORE_API FWBUnitState
 	bool bRemovedFromBoard = false;
 	TSet<FName> Statuses;
 	TMap<FName, int32> StatusTurnsRemaining;
+	// Canonical gameplay authority. The fields above are compatibility mirrors.
+	TArray<FWBStatusInstanceState> StatusStates;
 	TSet<FName> Passives;
 	TSet<EWBCombatCapability> CombatCapabilities;
 	TArray<FWBResonanceModifierState> ResonanceModifiers;
@@ -74,10 +77,17 @@ struct WANDBOUNDCORE_API FWBUnitState
 	void MarkUnitDefeated();
 	void RemoveUnitFromBoard();
 	bool HasStatus(FName StatusId) const;
-	void AddStatus(FName StatusId, int32 TurnsRemaining = 0);
+	void AddStatus(
+		FName StatusId,
+		int32 TurnsRemaining = 0,
+		const FWBStatusSourceProvenance& Source = FWBStatusSourceProvenance());
 	void RemoveStatus(FName StatusId);
 	int32 GetStatusTurnsRemaining(FName StatusId) const;
 	void SetStatusTurnsRemaining(FName StatusId, int32 TurnsRemaining);
+	const FWBStatusInstanceState* GetStatusState(FName StatusId) const;
+	FWBStatusInstanceState* GetMutableStatusState(FName StatusId);
+	void NormalizeStatusStateForRules();
+	TArray<FWBStatusInstanceState> GetSortedStatusStatesForRules() const;
 	TArray<FName> GetSortedStatusIdsForTrace() const;
 };
 

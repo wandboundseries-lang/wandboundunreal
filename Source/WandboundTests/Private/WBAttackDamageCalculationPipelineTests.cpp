@@ -100,20 +100,24 @@ bool FWBAttackCalculationStagePureTest::RunTest(const FString&)
 }
 
 WB_DAMAGE_PIPELINE_TEST(FWBFrozenCalculationPureTest,
-	"Wandbound.AttackDamagePipeline.Calculate.FrozenBreakDoesNotMutateUntilApply")
+	"Wandbound.AttackDamagePipeline.Substitution.FinalRecipientFrozenBreakDoesNotMutateUntilApply")
 bool FWBFrozenCalculationPureTest::RunTest(const FString&)
 {
 	FWBGameStateData State = MakePipelineState();
 	State.GetMutableUnitById(2)->AddStatus(FName(TEXT("Frozen")), 1);
 	TestTrue(TEXT("Calculate succeeds"),
 		WBEffectRunner::CalculatePendingAttackDamage(State).bOk);
-	TestTrue(TEXT("Frozen break is calculated"),
+	TestFalse(TEXT("Frozen break waits for final recipient"),
 		State.PendingAttack.DamageCalculation.bFrozenBreak);
-	TestEqual(TEXT("Frozen produces no HP damage"),
-		State.PendingAttack.DamageCalculation.CalculatedHPDamage, 0);
+	TestTrue(TEXT("Ordinary damage is calculated before substitution"),
+		State.PendingAttack.DamageCalculation.CalculatedHPDamage > 0);
 	TestTrue(TEXT("Calculate leaves Frozen present"),
 		State.GetUnitById(2)->HasStatus(FName(TEXT("Frozen"))));
 	WBEffectRunner::ResolvePendingAttackDamageSubstitution(State);
+	TestTrue(TEXT("Frozen break is finalized after substitution"),
+		State.PendingAttack.DamageCalculation.bFrozenBreak);
+	TestEqual(TEXT("Frozen produces no HP damage"),
+		State.PendingAttack.DamageCalculation.CalculatedHPDamage, 0);
 	TestTrue(TEXT("Apply succeeds"),
 		WBEffectRunner::ApplyCalculatedPendingAttackDamage(State, true).bOk);
 	TestFalse(TEXT("Apply removes Frozen"),

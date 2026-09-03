@@ -2,6 +2,7 @@
 
 #include "WBCardActivationExpansion.h"
 #include "WBCardActivationSourceGate.h"
+#include "WBStatusSemantics.h"
 
 namespace
 {
@@ -16,8 +17,7 @@ bool IsDynamicSourceExcluded(const FWBUnitState& Unit)
 {
 	return Unit.bRemovedFromBoard
 		|| Unit.bDefeated
-		|| Unit.HasStatus(FName(TEXT("Stunned")))
-		|| Unit.HasStatus(FName(TEXT("Frozen")));
+		|| !WBStatusSemantics::CanUseUnitActivation(Unit);
 }
 
 bool ShouldApplyLegacyDynamicSourceExclusion(

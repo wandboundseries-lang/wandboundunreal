@@ -1,6 +1,7 @@
 #include "WBPublicBoardSummary.h"
 
 #include "WBRules.h"
+#include "WBStatusSemantics.h"
 #include "WBUnitStatQuery.h"
 
 namespace
@@ -10,45 +11,16 @@ constexpr int32 PublicBoardHeight = 9;
 
 FString CanonicalPublicStatusIdString(const FName StatusId)
 {
-	const FString LowerStatusId = StatusId.GetPlainNameString().ToLower();
-	if (LowerStatusId == TEXT("burn") || LowerStatusId.StartsWith(TEXT("burn_")))
-	{
-		return TEXT("Burn");
-	}
-
-	if (LowerStatusId == TEXT("poison") || LowerStatusId.StartsWith(TEXT("poison_")))
-	{
-		return TEXT("Poison");
-	}
-
-	if (LowerStatusId == TEXT("root")
-		|| LowerStatusId.StartsWith(TEXT("root_"))
-		|| LowerStatusId == TEXT("rooted")
-		|| LowerStatusId.StartsWith(TEXT("rooted_")))
-	{
-		return TEXT("Rooted");
-	}
-
-	if (LowerStatusId == TEXT("stun")
-		|| LowerStatusId.StartsWith(TEXT("stun_"))
-		|| LowerStatusId == TEXT("stunned")
-		|| LowerStatusId.StartsWith(TEXT("stunned_")))
-	{
-		return TEXT("Stunned");
-	}
-
-	if (LowerStatusId == TEXT("frozen") || LowerStatusId.StartsWith(TEXT("frozen_")))
-	{
-		return TEXT("Frozen");
-	}
-
-	return FString();
+	const FName Canonical = WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	return WBStatusSemantics::IsCanonicalStatusId(Canonical)
+		? Canonical.GetPlainNameString()
+		: FString();
 }
 
 TArray<FWBPublicUnitStatusSummary> BuildPublicStatusSummaries(const FWBUnitState& Unit)
 {
 	TMap<FString, int32> TurnsByStatusId;
-	for (const FName& RawStatusId : Unit.Statuses)
+	for (const FName& RawStatusId : Unit.GetSortedStatusIdsForTrace())
 	{
 		const FString PublicStatusId = CanonicalPublicStatusIdString(RawStatusId);
 		if (PublicStatusId.IsEmpty())

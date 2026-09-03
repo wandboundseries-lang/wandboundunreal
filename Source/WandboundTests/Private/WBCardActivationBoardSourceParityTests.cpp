@@ -91,6 +91,7 @@ FWBCardActivationSourceGateDefinition MakeBoardParityGate(
 	Gate.bRequiresSourceUnitOwnership = bRequiresOwnership;
 	Gate.bBlockedByStunned = true;
 	Gate.bBlockedByFrozen = bBlockedByFrozen;
+	Gate.bHasExplicitBlockedByFrozen = true;
 	Gate.bHasExplicitSourceGate = true;
 	return Gate;
 }

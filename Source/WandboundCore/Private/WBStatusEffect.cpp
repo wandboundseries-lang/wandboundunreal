@@ -1,5 +1,7 @@
 #include "WBStatusEffect.h"
 
+#include "WBStatusSemantics.h"
+
 namespace
 {
 FWBStatusEffectResult MakeStatusEffectFailure(const FWBStatusEffectRequest& Request, const FString& Reason)
@@ -28,52 +30,24 @@ void AddUniqueCanonicalRemovedStatus(TArray<FName>& RemovedStatuses, const FName
 	}
 }
 
-void EnsureCanonicalActiveStatus(FWBUnitState& Unit, const FName CanonicalStatusId, const int32 Duration)
+void EnsureCanonicalActiveStatus(
+	FWBUnitState& Unit,
+	const FName CanonicalStatusId,
+	const int32 Duration,
+	const FWBStatusSourceProvenance& Source)
 {
 	if (CanonicalStatusId.IsNone())
 	{
 		return;
 	}
 
-	Unit.RemoveStatus(CanonicalStatusId);
-	Unit.AddStatus(CanonicalStatusId, Duration);
+	Unit.AddStatus(CanonicalStatusId, Duration, Source);
 }
 }
 
 FName WBStatusEffect::CanonicalizeStatusId(const FName StatusId)
 {
-	if (StatusId.IsNone())
-	{
-		return NAME_None;
-	}
-
-	const FString LowerStatusId = StatusId.ToString().ToLower();
-	if (LowerStatusId == TEXT("burn"))
-	{
-		return FName(TEXT("Burn"));
-	}
-
-	if (LowerStatusId == TEXT("poison"))
-	{
-		return FName(TEXT("Poison"));
-	}
-
-	if (LowerStatusId == TEXT("root") || LowerStatusId == TEXT("rooted"))
-	{
-		return FName(TEXT("Rooted"));
-	}
-
-	if (LowerStatusId == TEXT("stun") || LowerStatusId == TEXT("stunned"))
-	{
-		return FName(TEXT("Stunned"));
-	}
-
-	if (LowerStatusId == TEXT("frozen"))
-	{
-		return FName(TEXT("Frozen"));
-	}
-
-	return StatusId;
+	return WBStatusSemantics::CanonicalizeStatusId(StatusId);
 }
 
 bool WBStatusEffect::DoesOperationRequireStatusId(const EWBStatusEffectOp Operation)
@@ -158,17 +132,74 @@ FWBStatusEffectResult WBStatusEffect::ApplyStatusEffect(
 		Result.Reason = TEXT("missing_status_id");
 		return Result;
 	}
+	if (DoesOperationRequireStatusId(Request.Operation)
+		&& WBStatusSemantics::IsDeferredStatusId(CanonicalRequest.StatusId))
+	{
+		Result.bOk = false;
+		Result.Reason = TEXT("status_not_implemented");
+		return Result;
+	}
+	if (DoesOperationRequireStatusId(Request.Operation)
+		&& !WBStatusSemantics::IsCanonicalStatusId(CanonicalRequest.StatusId))
+	{
+		Result.bOk = false;
+		Result.Reason = TEXT("unknown_canonical_status_id");
+		return Result;
+	}
 
 	const FName CanonicalStatusId = CanonicalRequest.StatusId;
+	Target->NormalizeStatusStateForRules();
 	Result.bHadStatusBefore = !CanonicalStatusId.IsNone() && Target->HasStatus(CanonicalStatusId);
 	Result.PreviousDuration = Result.bHadStatusBefore ? Target->GetStatusTurnsRemaining(CanonicalStatusId) : 0;
 	Result.NewDuration = Result.PreviousDuration;
+	FWBStatusSourceProvenance ExistingSource;
+	if (const FWBStatusInstanceState* ExistingStatus =
+		Target->GetStatusState(CanonicalStatusId))
+	{
+		ExistingSource = ExistingStatus->Source;
+	}
 
 	switch (Request.Operation)
 	{
 	case EWBStatusEffectOp::ApplyStatus:
-		EnsureCanonicalActiveStatus(*Target, CanonicalStatusId, Request.Duration);
-		Result.NewDuration = Request.Duration > 0 ? Request.Duration : 0;
+		if (CanonicalStatusId != FName(TEXT("Frozen"))
+			&& Target->HasStatus(FName(TEXT("Frozen"))))
+		{
+			Target->RemoveStatus(FName(TEXT("Frozen")));
+			AddUniqueCanonicalRemovedStatus(
+				Result.RemovedStatuses, FName(TEXT("Frozen")));
+			Result.bIncomingStatusConsumedByFrozen = true;
+			Result.NewDuration = 0;
+			break;
+		}
+		if (CanonicalStatusId == FName(TEXT("Frozen"))
+			&& Target->HasStatus(FName(TEXT("Burn"))))
+		{
+			Target->RemoveStatus(FName(TEXT("Burn")));
+			AddUniqueCanonicalRemovedStatus(
+				Result.RemovedStatuses, FName(TEXT("Burn")));
+		}
+		if (CanonicalStatusId == FName(TEXT("Poison"))
+			&& Result.bHadStatusBefore)
+		{
+			Result.bAppliedImmediatePoisonTick = true;
+			Result.PreviousHP = Target->HP;
+			Result.PreviousMaxHP = Target->MaxHP;
+			Target->MaxHP = FMath::Max(Target->MaxHP - 1, 1);
+			Target->HP = FMath::Min(Target->HP, Target->MaxHP);
+			Result.NewHP = Target->HP;
+			Result.NewMaxHP = Target->MaxHP;
+		}
+		Result.NewDuration = Result.bHadStatusBefore
+			? (Result.PreviousDuration == 0 || Request.Duration == 0
+				? 0
+				: FMath::Max(Result.PreviousDuration, Request.Duration))
+			: FMath::Max(Request.Duration, 0);
+		EnsureCanonicalActiveStatus(
+			*Target,
+			CanonicalStatusId,
+			Result.NewDuration,
+			CanonicalRequest.Source);
 		break;
 	case EWBStatusEffectOp::RemoveStatus:
 	case EWBStatusEffectOp::CleanseStatus:
@@ -186,7 +217,11 @@ FWBStatusEffectResult WBStatusEffect::ApplyStatusEffect(
 			Result.Reason = TEXT("status_not_active");
 			return Result;
 		}
-		EnsureCanonicalActiveStatus(*Target, CanonicalStatusId, Request.Duration);
+		EnsureCanonicalActiveStatus(
+			*Target,
+			CanonicalStatusId,
+			Request.Duration,
+			ExistingSource);
 		Result.NewDuration = Request.Duration > 0 ? Request.Duration : 0;
 		break;
 	case EWBStatusEffectOp::AddStatusDuration:
@@ -198,8 +233,12 @@ FWBStatusEffectResult WBStatusEffect::ApplyStatusEffect(
 		}
 		Result.NewDuration = Result.PreviousDuration > 0
 			? Result.PreviousDuration + Request.Duration
-			: Request.Duration;
-		EnsureCanonicalActiveStatus(*Target, CanonicalStatusId, Result.NewDuration);
+			: 0;
+		EnsureCanonicalActiveStatus(
+			*Target,
+			CanonicalStatusId,
+			Result.NewDuration,
+			ExistingSource);
 		break;
 	case EWBStatusEffectOp::ReduceStatusDuration:
 		if (!Result.bHadStatusBefore)
@@ -219,24 +258,34 @@ FWBStatusEffectResult WBStatusEffect::ApplyStatusEffect(
 			}
 			else
 			{
-				EnsureCanonicalActiveStatus(*Target, CanonicalStatusId, Result.NewDuration);
+				EnsureCanonicalActiveStatus(
+					*Target,
+					CanonicalStatusId,
+					Result.NewDuration,
+					ExistingSource);
 			}
 		}
 		else
 		{
-			EnsureCanonicalActiveStatus(*Target, CanonicalStatusId, 0);
+			EnsureCanonicalActiveStatus(
+				*Target,
+				CanonicalStatusId,
+				0,
+				ExistingSource);
 			Result.NewDuration = 0;
 		}
 		break;
 	case EWBStatusEffectOp::CleanseAllStatuses:
 	{
-		TArray<FName> StatusIds = Target->GetSortedStatusIdsForTrace();
+		TArray<FName> StatusIds = WBStatusSemantics::GetCanonicalStatusIds();
 		for (const FName& StatusId : StatusIds)
 		{
-			AddUniqueCanonicalRemovedStatus(Result.RemovedStatuses, StatusId);
-			Target->RemoveStatus(StatusId);
+			if (Target->HasStatus(StatusId))
+			{
+				AddUniqueCanonicalRemovedStatus(Result.RemovedStatuses, StatusId);
+				Target->RemoveStatus(StatusId);
+			}
 		}
-		Target->StatusTurnsRemaining.Empty();
 		SortStatusNames(Result.RemovedStatuses);
 		Result.NewDuration = 0;
 		break;

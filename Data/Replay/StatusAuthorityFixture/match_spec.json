@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "match_id": "status_authority_smoke_match",
+  "seed": 920414,
+  "first_player": 0,
+  "initial_draw_count": 6,
+  "definition_bundle_digest": "82ab9b0bff92f80ae30e30b17da8ed4d40ffcaeb9ee302a509749b6937405743",
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "status_authority_fixture_hero_alpha",
+      "ordered_deck": [
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler"
+      ]
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "status_authority_fixture_hero_beta",
+      "ordered_deck": [
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler",
+        "status_authority_fixture_filler", "status_authority_fixture_filler"
+      ]
+    }
+  ],
+  "markers": [
+    { "player_id": 0, "type": "trap", "tile": { "x": 0, "y": 8 }, "definition_id": "status_authority_fixture_trap", "placement_order": 0 },
+    { "player_id": 0, "type": "trap", "tile": { "x": 1, "y": 8 }, "definition_id": "status_authority_fixture_trap", "placement_order": 1 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 0, "y": 7 }, "definition_id": "status_authority_fixture_npc", "placement_order": 2 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 1, "y": 7 }, "definition_id": "status_authority_fixture_npc", "placement_order": 3 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 0, "y": 0 }, "definition_id": "status_authority_fixture_trap", "placement_order": 4 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 1, "y": 0 }, "definition_id": "status_authority_fixture_trap", "placement_order": 5 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 0, "y": 1 }, "definition_id": "status_authority_fixture_npc", "placement_order": 6 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 1, "y": 1 }, "definition_id": "status_authority_fixture_npc", "placement_order": 7 }
+  ]
+}

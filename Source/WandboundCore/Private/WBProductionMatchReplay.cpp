@@ -163,13 +163,50 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendBool(Out, TEXT("unit.defeated"), Unit.bDefeated);
 		AppendBool(Out, TEXT("unit.removed"), Unit.bRemovedFromBoard);
 
-		TArray<FName> Statuses = Unit.Statuses.Array();
-		Statuses.Sort(FNameLexicalLess());
+		TArray<FName> Statuses = Unit.GetSortedStatusIdsForTrace();
 		AppendInt(Out, TEXT("unit.status_count"), Statuses.Num());
 		for (const FName Status : Statuses)
 		{
 			AppendName(Out, TEXT("unit.status"), Status);
-			AppendInt(Out, TEXT("unit.status_turns"), Unit.StatusTurnsRemaining.FindRef(Status));
+			AppendInt(
+				Out,
+				TEXT("unit.status_turns"),
+				Unit.GetStatusTurnsRemaining(Status));
+			const FWBStatusInstanceState* StatusState =
+				Unit.GetStatusState(Status);
+			if (StatusState != nullptr
+				&& StatusState->Source.HasDeterministicData())
+			{
+				AppendInt(Out, TEXT("unit.status_target"), StatusState->TargetUnitId);
+				AppendInt(
+					Out,
+					TEXT("unit.status_source_player"),
+					StatusState->Source.SourcePlayerId);
+				AppendInt(
+					Out,
+					TEXT("unit.status_source_owner"),
+					StatusState->Source.SourceOwnerPlayerId);
+				AppendInt(
+					Out,
+					TEXT("unit.status_source_unit"),
+					StatusState->Source.SourceUnitId);
+				AppendString(
+					Out,
+					TEXT("unit.status_source_card"),
+					StatusState->Source.SourceCardId);
+				AppendString(
+					Out,
+					TEXT("unit.status_source_instance"),
+					StatusState->Source.SourceCardInstanceId);
+				AppendString(
+					Out,
+					TEXT("unit.status_source_effect"),
+					StatusState->Source.SourceEffectId);
+				AppendInt(
+					Out,
+					TEXT("unit.status_source_origin"),
+					static_cast<int32>(StatusState->Source.Origin));
+			}
 		}
 		TArray<FName> Passives = Unit.Passives.Array();
 		Passives.Sort(FNameLexicalLess());

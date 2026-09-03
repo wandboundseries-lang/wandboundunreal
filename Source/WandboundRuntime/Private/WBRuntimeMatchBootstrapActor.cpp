@@ -27,6 +27,7 @@
 #include "WBProductionPendingEffectSmoke.h"
 #include "WBProductionReactionWindowSmoke.h"
 #include "WBProductionSuspendedAttackSmoke.h"
+#include "WBProductionStatusAuthoritySmoke.h"
 #include "WBProductionTerminalReplaySmoke.h"
 #include "WBProductionStartupResult.h"
 
@@ -297,6 +298,23 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 				false,
 				CrashInSmoke.bOk ? 0 : 32,
 				TEXT("WandboundProductionCSNCrashInSmoke"));
+		}
+		else if (WBProductionStatusAuthoritySmoke::IsRequested())
+		{
+			const FWBProductionStatusAuthoritySmokeResult StatusSmoke =
+				WBProductionStatusAuthoritySmoke::Run(PendingBootstrapRequest);
+			if (!StatusSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound status-authority smoke failed: %s"),
+					*StatusSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				StatusSmoke.bOk ? 0 : 32,
+				TEXT("WandboundProductionStatusAuthoritySmoke"));
 		}
 		else if (WBProductionAfterDamageTriggerSmoke::IsRequested())
 		{

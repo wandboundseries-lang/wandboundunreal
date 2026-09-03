@@ -76,6 +76,7 @@ struct WANDBOUNDCORE_API FWBEffectSourceRef
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;
 	FString SourceCardId;
+	FString SourceCardInstanceId;
 	FString SourceEffectId;
 	EWBActivationProvenance ActivationProvenance =
 		EWBActivationProvenance::ResolutionOnly;

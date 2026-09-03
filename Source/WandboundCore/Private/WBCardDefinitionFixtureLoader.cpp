@@ -1,5 +1,7 @@
 #include "WBCardDefinitionFixtureLoader.h"
 
+#include "WBStatusSemantics.h"
+
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "Misc/FileHelper.h"
@@ -578,14 +580,7 @@ EWBArmorEffectOp ParseArmorOperation(
 
 bool IsSupportedStatusId(const FString& StatusId)
 {
-	return StatusId == TEXT("Burn")
-		|| StatusId == TEXT("Poison")
-		|| StatusId == TEXT("Rooted")
-		|| StatusId == TEXT("Stunned")
-		|| StatusId == TEXT("Frozen")
-		|| StatusId == TEXT("CannotAttack")
-		|| StatusId == TEXT("Cannot Attack")
-		|| StatusId == TEXT("no_attack");
+	return WBStatusSemantics::IsCanonicalStatusId(FName(*StatusId));
 }
 
 bool ValidateOptionalSelectedTarget(
@@ -714,6 +709,7 @@ void ParseSourceGate(
 	TryReadOptionalBool(Object, TEXT("requires_source_unit"), Result, TEXT("source_gate_malformed"), CardId, EffectId, Path, Gate.bRequiresSourceUnit);
 	TryReadOptionalBool(Object, TEXT("requires_source_unit_ownership"), Result, TEXT("source_gate_malformed"), CardId, EffectId, Path, Gate.bRequiresSourceUnitOwnership);
 	TryReadOptionalBool(Object, TEXT("blocked_by_stunned"), Result, TEXT("source_gate_malformed"), CardId, EffectId, Path, Gate.bBlockedByStunned);
+	Gate.bHasExplicitBlockedByFrozen = Object->Values.Contains(TEXT("blocked_by_frozen"));
 	TryReadOptionalBool(Object, TEXT("blocked_by_frozen"), Result, TEXT("source_gate_malformed"), CardId, EffectId, Path, Gate.bBlockedByFrozen);
 	TryReadOptionalBool(Object, TEXT("once_per_turn"), Result, TEXT("source_gate_malformed"), CardId, EffectId, Path, Gate.bOncePerTurn);
 	TryReadOptionalBool(Object, TEXT("requires_fixture_zone_ownership"), Result, TEXT("source_gate_malformed"), CardId, EffectId, Path, Gate.bRequiresFixtureZoneOwnership);

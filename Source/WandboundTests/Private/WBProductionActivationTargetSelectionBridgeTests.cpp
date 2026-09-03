@@ -150,6 +150,7 @@ FWBCardActivationSourceGateDefinition MakeBridgeSourceGate(
 	Gate.bRequiresSourceUnitOwnership = true;
 	Gate.bBlockedByStunned = true;
 	Gate.bBlockedByFrozen = false;
+	Gate.bHasExplicitBlockedByFrozen = true;
 	Gate.bRequiresFixtureZoneOwnership = Zone == EWBCardActivationSourceZone::Board
 		|| Zone == EWBCardActivationSourceZone::Hand;
 	return Gate;

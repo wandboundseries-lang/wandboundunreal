@@ -1,65 +1,82 @@
 #include "WBGameStateData.h"
 
 #include "WBRules.h"
+#include "WBStatusSemantics.h"
 
 namespace
 {
-void AddUniqueStatusName(TArray<FName>& Names, const TCHAR* Name)
+bool StatusStateLess(
+	const FWBStatusInstanceState& A,
+	const FWBStatusInstanceState& B)
 {
-	Names.AddUnique(FName(Name));
+	return A.StatusId.GetPlainNameString() < B.StatusId.GetPlainNameString();
 }
 
-TArray<FName> GetStatusNameAliases(const FName StatusId)
+int32 FindCanonicalStatusStateIndex(
+	const TArray<FWBStatusInstanceState>& States,
+	const FName StatusId)
 {
-	TArray<FName> Names;
-	if (!StatusId.IsNone())
+	const FName Canonical = WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	for (int32 Index = 0; Index < States.Num(); ++Index)
 	{
-		Names.AddUnique(StatusId);
-	}
-
-	const FString LowerStatusId = StatusId.ToString().ToLower();
-	if (LowerStatusId == TEXT("root") || LowerStatusId == TEXT("rooted"))
-	{
-		AddUniqueStatusName(Names, TEXT("Rooted"));
-		AddUniqueStatusName(Names, TEXT("root"));
-	}
-	else if (LowerStatusId == TEXT("stun") || LowerStatusId == TEXT("stunned"))
-	{
-		AddUniqueStatusName(Names, TEXT("Stunned"));
-		AddUniqueStatusName(Names, TEXT("stun"));
-	}
-	else if (LowerStatusId == TEXT("poison"))
-	{
-		AddUniqueStatusName(Names, TEXT("Poison"));
-		AddUniqueStatusName(Names, TEXT("poison"));
-	}
-	else if (LowerStatusId == TEXT("burn"))
-	{
-		AddUniqueStatusName(Names, TEXT("Burn"));
-		AddUniqueStatusName(Names, TEXT("burn"));
-	}
-	else if (LowerStatusId == TEXT("frozen"))
-	{
-		AddUniqueStatusName(Names, TEXT("Frozen"));
-		AddUniqueStatusName(Names, TEXT("frozen"));
-	}
-
-	return Names;
-}
-
-bool TryFindActiveStatusKey(const FWBUnitState& Unit, const FName StatusId, FName& OutStatusKey)
-{
-	for (const FName& Alias : GetStatusNameAliases(StatusId))
-	{
-		if (Unit.Statuses.Contains(Alias))
+		if (States[Index].StatusId == Canonical)
 		{
-			OutStatusKey = Alias;
-			return true;
+			return Index;
 		}
 	}
+	return INDEX_NONE;
+}
 
-	OutStatusKey = NAME_None;
-	return false;
+int32 GetLegacyStatusDuration(
+	const FWBUnitState& Unit,
+	const FName CanonicalStatusId)
+
+{
+	bool bFoundMatchingStatus = false;
+	int32 MaximumDuration = 0;
+	for (const FName ActiveStatusId : Unit.Statuses)
+	{
+		if (!WBStatusSemantics::IsCanonicalStatusId(ActiveStatusId)
+			|| WBStatusSemantics::CanonicalizeStatusId(ActiveStatusId)
+				!= CanonicalStatusId)
+		{
+			continue;
+		}
+		bFoundMatchingStatus = true;
+		const int32* Duration = Unit.StatusTurnsRemaining.Find(ActiveStatusId);
+		if (Duration == nullptr || *Duration <= 0)
+		{
+			return 0;
+		}
+		MaximumDuration = FMath::Max(MaximumDuration, *Duration);
+	}
+	return bFoundMatchingStatus ? MaximumDuration : 0;
+}
+
+void RebuildCanonicalStatusMirrors(FWBUnitState& Unit)
+{
+	for (auto It = Unit.Statuses.CreateIterator(); It; ++It)
+	{
+		if (WBStatusSemantics::IsCanonicalStatusId(*It))
+		{
+			It.RemoveCurrent();
+		}
+	}
+	for (auto It = Unit.StatusTurnsRemaining.CreateIterator(); It; ++It)
+	{
+		if (WBStatusSemantics::IsCanonicalStatusId(It.Key()))
+		{
+			It.RemoveCurrent();
+		}
+	}
+	for (const FWBStatusInstanceState& Status : Unit.StatusStates)
+	{
+		Unit.Statuses.Add(Status.StatusId);
+		if (Status.Duration > 0)
+		{
+			Unit.StatusTurnsRemaining.Add(Status.StatusId, Status.Duration);
+		}
+	}
 }
 
 FWBPlayerStateData* FindOrAddTestPlayerState(FWBGameStateData& State, const int32 PlayerId, const int32 InitialRemainingMP)
@@ -86,9 +103,25 @@ FWBPlayerStateData* FindOrAddTestPlayerState(FWBGameStateData& State, const int3
 
 bool FWBUnitState::HasStatus(const FName StatusId) const
 {
-	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	const FName CanonicalStatusId =
+		WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	if (WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId)
+		&& FindCanonicalStatusStateIndex(StatusStates, CanonicalStatusId)
+			!= INDEX_NONE)
 	{
-		if (Statuses.Contains(Alias))
+		return true;
+	}
+	for (const FName ActiveStatusId : Statuses)
+	{
+		if (WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId))
+		{
+			if (WBStatusSemantics::CanonicalizeStatusId(ActiveStatusId)
+				== CanonicalStatusId)
+			{
+				return true;
+			}
+		}
+		else if (ActiveStatusId == StatusId)
 		{
 			return true;
 		}
@@ -206,44 +239,89 @@ void FWBUnitState::RemoveUnitFromBoard()
 	Y = -1;
 }
 
-void FWBUnitState::AddStatus(const FName StatusId, const int32 TurnsRemaining)
+void FWBUnitState::AddStatus(
+	const FName StatusId,
+	const int32 TurnsRemaining,
+	const FWBStatusSourceProvenance& Source)
 {
 	if (StatusId.IsNone())
 	{
 		return;
 	}
 
-	Statuses.Add(StatusId);
-	if (TurnsRemaining > 0)
+	const FName CanonicalStatusId =
+		WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	if (!WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId))
 	{
-		StatusTurnsRemaining.Add(StatusId, TurnsRemaining);
+		Statuses.Add(StatusId);
+		if (TurnsRemaining > 0)
+		{
+			StatusTurnsRemaining.Add(StatusId, TurnsRemaining);
+		}
+		else
+		{
+			StatusTurnsRemaining.Remove(StatusId);
+		}
+		return;
+	}
+
+	NormalizeStatusStateForRules();
+	FWBStatusInstanceState* Existing = GetMutableStatusState(CanonicalStatusId);
+	if (Existing == nullptr)
+	{
+		FWBStatusInstanceState State;
+		State.TargetUnitId = UnitId;
+		State.StatusId = CanonicalStatusId;
+		State.Duration = FMath::Max(TurnsRemaining, 0);
+		State.Source = Source;
+		StatusStates.Add(MoveTemp(State));
+		StatusStates.Sort(StatusStateLess);
 	}
 	else
 	{
-		for (const FName& Alias : GetStatusNameAliases(StatusId))
-		{
-			StatusTurnsRemaining.Remove(Alias);
-		}
+		Existing->TargetUnitId = UnitId;
+		Existing->Duration = FMath::Max(TurnsRemaining, 0);
+		Existing->Source = Source;
 	}
+	RebuildCanonicalStatusMirrors(*this);
 }
 
 void FWBUnitState::RemoveStatus(const FName StatusId)
 {
-	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	const FName CanonicalStatusId =
+		WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	if (!WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId))
 	{
-		Statuses.Remove(Alias);
-		StatusTurnsRemaining.Remove(Alias);
+		Statuses.Remove(StatusId);
+		StatusTurnsRemaining.Remove(StatusId);
+		return;
 	}
+
+	NormalizeStatusStateForRules();
+	StatusStates.RemoveAll([CanonicalStatusId](const FWBStatusInstanceState& State)
+	{
+		return State.StatusId == CanonicalStatusId;
+	});
+	RebuildCanonicalStatusMirrors(*this);
 }
 
 int32 FWBUnitState::GetStatusTurnsRemaining(const FName StatusId) const
 {
-	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	const FName CanonicalStatusId =
+		WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	if (WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId))
 	{
-		if (const int32* TurnsRemaining = StatusTurnsRemaining.Find(Alias))
+		const int32 Index =
+			FindCanonicalStatusStateIndex(StatusStates, CanonicalStatusId);
+		if (Index != INDEX_NONE)
 		{
-			return *TurnsRemaining;
+			return StatusStates[Index].Duration;
 		}
+		return GetLegacyStatusDuration(*this, CanonicalStatusId);
+	}
+	if (const int32* TurnsRemaining = StatusTurnsRemaining.Find(StatusId))
+	{
+		return *TurnsRemaining;
 	}
 
 	return 0;
@@ -251,26 +329,146 @@ int32 FWBUnitState::GetStatusTurnsRemaining(const FName StatusId) const
 
 void FWBUnitState::SetStatusTurnsRemaining(const FName StatusId, const int32 TurnsRemaining)
 {
-	FName ActiveStatusKey;
-	if (!TryFindActiveStatusKey(*this, StatusId, ActiveStatusKey))
+	const FName CanonicalStatusId =
+		WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	if (!WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId))
 	{
+		if (Statuses.Contains(StatusId))
+		{
+			if (TurnsRemaining > 0)
+			{
+				StatusTurnsRemaining.Add(StatusId, TurnsRemaining);
+			}
+			else
+			{
+				StatusTurnsRemaining.Remove(StatusId);
+			}
+		}
 		return;
 	}
 
-	for (const FName& Alias : GetStatusNameAliases(StatusId))
+	NormalizeStatusStateForRules();
+	FWBStatusInstanceState* Status = GetMutableStatusState(CanonicalStatusId);
+	if (Status == nullptr)
 	{
-		StatusTurnsRemaining.Remove(Alias);
+		return;
+	}
+	Status->Duration = FMath::Max(TurnsRemaining, 0);
+	RebuildCanonicalStatusMirrors(*this);
+}
+
+const FWBStatusInstanceState* FWBUnitState::GetStatusState(
+	const FName StatusId) const
+
+{
+	const FName CanonicalStatusId =
+		WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	const int32 Index =
+		FindCanonicalStatusStateIndex(StatusStates, CanonicalStatusId);
+	return Index == INDEX_NONE ? nullptr : &StatusStates[Index];
+}
+
+FWBStatusInstanceState* FWBUnitState::GetMutableStatusState(
+	const FName StatusId)
+
+{
+	const FName CanonicalStatusId =
+		WBStatusSemantics::CanonicalizeStatusId(StatusId);
+	const int32 Index =
+		FindCanonicalStatusStateIndex(StatusStates, CanonicalStatusId);
+	return Index == INDEX_NONE ? nullptr : &StatusStates[Index];
+}
+
+void FWBUnitState::NormalizeStatusStateForRules()
+
+{
+	TArray<FWBStatusInstanceState> Normalized;
+	for (const FWBStatusInstanceState& Existing : StatusStates)
+	{
+		const FName CanonicalStatusId =
+			WBStatusSemantics::CanonicalizeStatusId(Existing.StatusId);
+		if (!WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId))
+		{
+			continue;
+		}
+		FWBStatusInstanceState State = Existing;
+		State.TargetUnitId = UnitId;
+		State.StatusId = CanonicalStatusId;
+		State.Duration = FMath::Max(State.Duration, 0);
+		const int32 ExistingIndex =
+			FindCanonicalStatusStateIndex(Normalized, CanonicalStatusId);
+		if (ExistingIndex == INDEX_NONE)
+		{
+			Normalized.Add(MoveTemp(State));
+		}
+		else
+		{
+			FWBStatusInstanceState& Current = Normalized[ExistingIndex];
+			Current.Duration = Current.Duration == 0 || State.Duration == 0
+				? 0 : FMath::Max(Current.Duration, State.Duration);
+		}
 	}
 
-	if (TurnsRemaining > 0)
+	TArray<FName> LegacyStatuses = Statuses.Array();
+	LegacyStatuses.Sort(FNameLexicalLess());
+	for (const FName LegacyStatusId : LegacyStatuses)
 	{
-		StatusTurnsRemaining.Add(ActiveStatusKey, TurnsRemaining);
+		const FName CanonicalStatusId =
+			WBStatusSemantics::CanonicalizeStatusId(LegacyStatusId);
+		if (!WBStatusSemantics::IsCanonicalStatusId(CanonicalStatusId))
+		{
+			continue;
+		}
+		const int32 LegacyDuration =
+			GetLegacyStatusDuration(*this, CanonicalStatusId);
+		const int32 ExistingIndex =
+			FindCanonicalStatusStateIndex(Normalized, CanonicalStatusId);
+		if (ExistingIndex == INDEX_NONE)
+		{
+			FWBStatusInstanceState State;
+			State.TargetUnitId = UnitId;
+			State.StatusId = CanonicalStatusId;
+			State.Duration = LegacyDuration;
+			Normalized.Add(MoveTemp(State));
+		}
+		else if (Normalized[ExistingIndex].Duration != LegacyDuration)
+		{
+			Normalized[ExistingIndex].Duration =
+				Normalized[ExistingIndex].Duration == 0 || LegacyDuration == 0
+					? 0
+					: FMath::Max(
+						Normalized[ExistingIndex].Duration,
+						LegacyDuration);
+		}
 	}
+
+	Normalized.Sort(StatusStateLess);
+	StatusStates = MoveTemp(Normalized);
+	RebuildCanonicalStatusMirrors(*this);
+}
+
+TArray<FWBStatusInstanceState> FWBUnitState::GetSortedStatusStatesForRules() const
+
+{
+	TArray<FWBStatusInstanceState> Sorted = StatusStates;
+	Sorted.Sort(StatusStateLess);
+	return Sorted;
 }
 
 TArray<FName> FWBUnitState::GetSortedStatusIdsForTrace() const
 {
-	TArray<FName> SortedStatusIds = Statuses.Array();
+	TArray<FName> SortedStatusIds;
+	for (const FWBStatusInstanceState& Status : StatusStates)
+	{
+		SortedStatusIds.AddUnique(Status.StatusId);
+	}
+	for (const FName StatusId : Statuses)
+	{
+		SortedStatusIds.AddUnique(
+			WBStatusSemantics::IsCanonicalStatusId(StatusId)
+				? WBStatusSemantics::CanonicalizeStatusId(StatusId)
+				: StatusId);
+	}
 	SortedStatusIds.Sort([](const FName& A, const FName& B)
 	{
 		return A.ToString() < B.ToString();
@@ -662,6 +860,7 @@ bool FWBGameStateData::AddUnitForTest(const FWBUnitState& Unit)
 
 	FWBUnitState NormalizedUnit = Unit;
 	NormalizedUnit.NormalizeIdentityForRules();
+	NormalizedUnit.NormalizeStatusStateForRules();
 	FindOrAddTestPlayerState(
 		*this,
 		NormalizedUnit.GetControllerPlayerIdForRules(),

@@ -665,7 +665,7 @@ bool FWBCSNPatchActivationGatesTest::RunTest(const FString&)
 
 	FWBUnitState* Source = State.GetMutableUnitById(PatchSourceId);
 	Source->AddStatus(FName(TEXT("Frozen")), 1);
-	TestFalse(TEXT("Frozen follows generic non-Stunned policy"),
+	TestTrue(TEXT("Frozen blocks activation when policy is omitted"),
 		FindPatchActivationId().IsEmpty());
 	Source->AddStatus(FName(TEXT("Stunned")), 1);
 	TestTrue(TEXT("Stunned blocks generic Character activation"),

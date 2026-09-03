@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "status_authority_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "status_authority",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic production status-authority fixture only."
+  }
+}
