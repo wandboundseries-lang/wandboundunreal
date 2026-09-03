@@ -783,10 +783,20 @@ void FWBGameStateData::ClearPendingAttack()
 
 bool FWBGameStateData::HasPendingMandatoryDeckChoice() const
 {
-	return PendingMandatoryDeckChoice.bActive;
+	return HasPendingPrivateCardChoice();
 }
 
 void FWBGameStateData::ClearPendingMandatoryDeckChoice()
+{
+	ClearPendingPrivateCardChoice();
+}
+
+bool FWBGameStateData::HasPendingPrivateCardChoice() const
+{
+	return PendingMandatoryDeckChoice.bActive;
+}
+
+void FWBGameStateData::ClearPendingPrivateCardChoice()
 {
 	PendingMandatoryDeckChoice.Reset();
 }

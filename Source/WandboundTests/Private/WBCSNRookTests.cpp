@@ -459,7 +459,7 @@ bool FWBCSNRookDeckChoiceTest::RunTest(const FString&)
 	AddDeckCard(State, TEXT("candidate_b"), TEXT("csn_candidate_b"));
 	const FWBPostDestructionTriggerResult Result = DestroyAndAdvance(State, Repository);
 	TestTrue(TEXT("43 choice opens"), Result.bPendingChoice);
-	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository);
+	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository, 0);
 	TestEqual(TEXT("44 only CSN Characters qualify"), Actions.Num(), 3);
 	if (Actions.Num() != 3) return false;
 	TestTrue(TEXT("45 first duplicate exact instance"), Actions[0].EndsWith(TEXT(":ia_copy_2")));
@@ -469,7 +469,7 @@ bool FWBCSNRookDeckChoiceTest::RunTest(const FString&)
 	TestFalse(TEXT("49 Wand excluded"), FString::Join(Actions, TEXT("|")).Contains(TEXT(":iwand")));
 	TestFalse(TEXT("50 action excluded"), FString::Join(Actions, TEXT("|")).Contains(TEXT(":iaction")));
 	TestFalse(TEXT("51 Hybrid excluded"), FString::Join(Actions, TEXT("|")).Contains(TEXT(":ihybrid")));
-	TestEqual(TEXT("52 selected set immutable"), State.PendingMandatoryDeckChoice.EligibleCardInstanceIds.Num(), 3);
+	TestEqual(TEXT("52 selected set immutable"), State.PendingMandatoryDeckChoice.Descriptor.FrozenCandidateInstanceIds.Num(), 3);
 
 	const FWBCardZonePublicSummary Public = WBCardZoneObservation::BuildPublicSummary(State);
 	TestFalse(TEXT("53 public zones hide candidate identity"),
@@ -482,8 +482,14 @@ bool FWBCSNRookDeckChoiceTest::RunTest(const FString&)
 	StaleZones->Deck.RemoveAt(0);
 	const FWBPostDestructionTriggerResult StaleResult =
 		WBPostDestructionTrigger::SubmitChoice(Stale, Repository, Actions[0]);
-	TestTrue(TEXT("55 stale choice resolves historical trigger without rollback"), StaleResult.bOk);
-	TestFalse(TEXT("56 stale choice does not summon"), StaleResult.bSummoned);
+	TestFalse(TEXT("55 removed frozen candidate fails closed"), StaleResult.bOk);
+	TestFalse(TEXT("56 rejected candidate does not summon"), StaleResult.bSummoned);
+	TestTrue(TEXT("57 rejected choice remains pending"),
+		Stale.HasPendingMandatoryDeckChoice());
+	TestEqual(TEXT("58 rejected choice preserves remaining Deck"),
+		StaleZones->Deck.Num(), 6);
+	TestEqual(TEXT("59 rejected choice preserves destruction event"),
+		Stale.PendingUnitDestructionEvents.Num(), 1);
 	return true;
 }
 
@@ -501,7 +507,7 @@ bool FWBCSNRookSummonInheritanceTest::RunTest(const FString&)
 	TestEqual(TEXT("58 source Current RL captured"), State.PendingUnitDestructionEvents[0].CurrentRLSnapshot, 5);
 	TestEqual(TEXT("59 exact Wand captured"), State.PendingUnitDestructionEvents[0].EquippedWands.Num(), 1);
 	TestEqual(TEXT("60 Wand moved to Discard during death"), PlayerZones(State)->Discard.Num(), 1);
-	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository);
+	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository, 0);
 	if (Actions.IsEmpty()) return false;
 	const FString Action = Actions[0];
 	const FWBPostDestructionTriggerResult Resolved = WBPostDestructionTrigger::SubmitChoice(State, Repository, Action);
@@ -538,7 +544,7 @@ bool FWBCSNRookUndertowCompositionTest::RunTest(const FString&)
 	AddRookWand(State);
 	const FWBPostDestructionTriggerResult Pending = DestroyAndAdvance(State, Repository);
 	TestTrue(TEXT("77 Rook trigger reaches Undertow choice"), Pending.bPendingChoice);
-	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository);
+	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository, 0);
 	if (Actions.IsEmpty()) return false;
 	const FString Action = Actions[0];
 	const FWBPostDestructionTriggerResult Result = WBPostDestructionTrigger::SubmitChoice(State, Repository, Action);
@@ -567,7 +573,7 @@ bool FWBCSNRookUndertowCompositionTest::RunTest(const FString&)
 	AddDeckCard(MissingWand, TEXT("candidate"), TEXT("csn_candidate_a"));
 	AddRookWand(MissingWand, TEXT("missing_wand"));
 	DestroyAndAdvance(MissingWand, Repository);
-	const TArray<FString> MissingActions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(MissingWand, Repository);
+	const TArray<FString> MissingActions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(MissingWand, Repository, 0);
 	if (MissingActions.IsEmpty()) return false;
 	const FString MissingAction = MissingActions[0];
 	FWBPlayerCardZoneState* Zones = WBCardZoneState::FindMutablePlayerZones(
@@ -598,7 +604,7 @@ bool FWBCSNRookVexCompositionTest::RunTest(const FString&)
 	const FWBPostDestructionTriggerResult Pending = DestroyAndAdvance(State, Repository);
 	TestTrue(TEXT("Rook creates mandatory Vex choice"), Pending.bPendingChoice);
 	const TArray<FString> Actions =
-		WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository);
+		WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository, 0);
 	if (Actions.Num() != 1) return false;
 	const FWBPostDestructionTriggerResult Resolved =
 		WBPostDestructionTrigger::SubmitChoice(State, Repository, Actions[0]);
@@ -645,7 +651,7 @@ bool FWBCSNRookEdgesTest::RunTest(const FString&)
 	Combat.SetPendingAttackForTest(Pending);
 	AddDeckCard(Combat, TEXT("candidate"), TEXT("csn_candidate_a"));
 	DestroyAndAdvance(Combat, Repository);
-	const FString CombatAction = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(Combat, Repository)[0];
+	const FString CombatAction = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(Combat, Repository, 0)[0];
 	WBPostDestructionTrigger::SubmitChoice(Combat, Repository, CombatAction);
 	TestFalse(TEXT("92 original combat remains complete"), Combat.HasPendingAttack());
 	TestEqual(TEXT("93 no extra attack budget consumed"), Combat.GetUnitById(EnemyHeroId)->AttacksLeft, 1);
@@ -690,7 +696,7 @@ bool FWBCSNRookFundamentalLegalityTest::RunTest(const FString&)
 		DestroyAndAdvance(OrderedDeck, Repository).bPendingChoice);
 	const TArray<FString> OrderedActions =
 		WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(
-			OrderedDeck, Repository);
+			OrderedDeck, Repository, 0);
 	TestEqual(TEXT("127 one eligible middle choice"), OrderedActions.Num(), 1);
 	if (OrderedActions.Num() != 1) return false;
 	TestTrue(TEXT("128 ordered Deck summon succeeds"),
@@ -762,7 +768,7 @@ bool FWBCSNRookFundamentalLegalityTest::RunTest(const FString&)
 		DestroyAndAdvance(ZeroInheritance, Repository).bPendingChoice);
 	const TArray<FString> ZeroActions =
 		WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(
-			ZeroInheritance, Repository);
+			ZeroInheritance, Repository, 0);
 	if (ZeroActions.IsEmpty()) return false;
 	TestTrue(TEXT("143 zero RL and zero Wands still inherit successfully"),
 		WBPostDestructionTrigger::SubmitChoice(
@@ -791,7 +797,7 @@ bool FWBCSNRookFundamentalLegalityTest::RunTest(const FString&)
 	TestTrue(TEXT("148 overflow inheritance opens choice"),
 		DestroyAndAdvance(Overflow, Repository).bPendingChoice);
 	const TArray<FString> OverflowActions =
-		WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(Overflow, Repository);
+		WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(Overflow, Repository, 0);
 	if (OverflowActions.IsEmpty()) return false;
 	TestTrue(TEXT("149 overflow inheritance succeeds"),
 		WBPostDestructionTrigger::SubmitChoice(
@@ -823,7 +829,7 @@ bool FWBCSNRookDeterminismTest::RunTest(const FString&)
 		AddRookWand(State);
 		const FWBPostDestructionTriggerResult Pending = DestroyAndAdvance(State, Repository);
 		Trace.Append(Pending.TraceEvents);
-		const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository);
+		const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository, 0);
 		if (Actions.IsEmpty()) return;
 		const FWBPostDestructionTriggerResult Resolved =
 			WBPostDestructionTrigger::SubmitChoice(State, Repository, Actions[0]);

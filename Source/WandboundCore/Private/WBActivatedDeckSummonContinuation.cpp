@@ -2,6 +2,7 @@
 
 #include "WBCardDefinitionRepository.h"
 #include "WBCardZoneState.h"
+#include "WBPrivateCardChoice.h"
 #include "WBTerminalOutcome.h"
 
 namespace
@@ -63,36 +64,6 @@ bool ReleaseSnapshotWandsToDiscard(
 		State.GetMutableCardZoneStateForTest());
 	OutReason.Reset();
 	return true;
-}
-
-TArray<FWBZoneCardEntry> BuildEligibleDeckEntries(
-	const FWBGameStateData& State,
-	const FWBCardDefinitionRepository& Repository,
-	const int32 PlayerId,
-	const FString& RequiredFaction)
-{
-	TArray<FWBZoneCardEntry> Eligible;
-	const FWBPlayerCardZoneState* Zones = WBCardZoneState::FindPlayerZones(
-		State.GetCardZoneState(), PlayerId);
-	if (Zones == nullptr) return Eligible;
-	for (const FWBZoneCardEntry& Entry : Zones->Deck)
-	{
-		const FWBCardDefinitionRepositoryLookupResult Lookup =
-			WBCardDefinitionRepository::FindCardById(
-				Repository, Entry.Card.CardId);
-		if (Lookup.bFound
-			&& Lookup.Definition.Kind == EWBCardDefinitionKind::Character
-			&& Lookup.Definition.PublicFactions.Contains(RequiredFaction))
-		{
-			Eligible.Add(Entry);
-		}
-	}
-	Eligible.Sort([](const FWBZoneCardEntry& A, const FWBZoneCardEntry& B)
-	{
-		if (A.ZoneIndex != B.ZoneIndex) return A.ZoneIndex < B.ZoneIndex;
-		return A.Card.InstanceId < B.Card.InstanceId;
-	});
-	return Eligible;
 }
 
 FWBTraceEvent MakeTrace(
@@ -298,10 +269,29 @@ WBActivatedDeckSummonContinuation::Resolve(
 		return Result;
 	}
 
-	const TArray<FWBZoneCardEntry> Eligible = BuildEligibleDeckEntries(
-		WorkingState, Repository, Snapshot.ControllerPlayerId,
-		Payload->RequiredReplacementFaction);
-	if (Eligible.IsEmpty())
+	FWBPrivateCardChoiceDescriptor Descriptor;
+	Descriptor.ChoiceId = PendingEffectFrameId + TEXT(":deck_summon");
+	Descriptor.ChoosingPlayerId = Snapshot.ControllerPlayerId;
+	Descriptor.SourceZone = EWBCardZone::Deck;
+	Descriptor.Timing = EWBPrivateCardChoiceTiming::ResolutionContinuation;
+	Descriptor.Requirement = EWBPrivateCardChoiceRequirement::Mandatory;
+	Descriptor.TargetDeclaration = EWBDeclarationProvenance::PlayerDeclared;
+	Descriptor.ContinuationKind =
+		EWBPrivateCardChoiceContinuationKind::ActivatedEffectContinuation;
+	Descriptor.SourceActionId = ActivationActionId;
+	Descriptor.SourceEffectFrameId = PendingEffectFrameId;
+	Descriptor.Filter.RequiredKind = EWBCardDefinitionKind::Character;
+	Descriptor.Filter.RequiredFaction = Payload->RequiredReplacementFaction;
+	Descriptor.ResumePriorityPlayerId = ResumePriorityPlayerId;
+	Descriptor.ResumeMatchPhase = ResumeMatchPhase;
+	const FWBPrivateCardChoiceCandidateResult Eligible =
+		WBPrivateCardChoice::FreezeCandidates(
+			WorkingState, Repository, Descriptor);
+	if (!Eligible.bOk)
+	{
+		return MakeActivatedDeckSummonFailure(Eligible.Reason);
+	}
+	if (Eligible.Candidates.IsEmpty())
 	{
 		FString ReleaseReason;
 		if (!ReleaseSnapshotWandsToDiscard(
@@ -318,30 +308,18 @@ WBActivatedDeckSummonContinuation::Resolve(
 		return Result;
 	}
 
-	FWBPendingMandatoryDeckChoiceState Choice;
+	FWBPendingPrivateCardChoiceState Choice;
 	Choice.bActive = true;
-	Choice.Origin = EWBMandatoryDeckChoiceOrigin::
-		ActivatedEffectContinuation;
-	Choice.ChoiceId = PendingEffectFrameId + TEXT(":deck_summon");
-	Choice.SourceActionId = ActivationActionId;
-	Choice.SourceEffectFrameId = PendingEffectFrameId;
-	Choice.ControllerPlayerId = Snapshot.ControllerPlayerId;
-	Choice.RequiredFaction = Payload->RequiredReplacementFaction;
-	Choice.DestinationTile = Snapshot.SourceTile;
-	Choice.ActivatedEffectSourceSnapshot = Snapshot;
-	Choice.bApplyCSNInheritance = true;
-	Choice.ResumePriorityPlayerId = ResumePriorityPlayerId;
-	Choice.ResumeMatchPhase = ResumeMatchPhase;
-	for (const FWBZoneCardEntry& Entry : Eligible)
-	{
-		Choice.EligibleCardInstanceIds.Add(Entry.Card.InstanceId);
-	}
+	Choice.Descriptor = MoveTemp(Descriptor);
+	Choice.ActivatedEffect.DestinationTile = Snapshot.SourceTile;
+	Choice.ActivatedEffect.ActivatedEffectSourceSnapshot = Snapshot;
+	Choice.ActivatedEffect.bApplyCSNInheritance = true;
 	WorkingState.PendingMandatoryDeckChoice = MoveTemp(Choice);
 
 	FWBTraceEvent Opened = MakeTrace(
 		FName(TEXT("activated_effect_deck_choice_opened")),
 		Snapshot, ActivationActionId, PendingEffectFrameId);
-	Opened.CardCount = Eligible.Num();
+	Opened.CardCount = Eligible.Candidates.Num();
 	Result.TraceEvents.Add(MoveTemp(Opened));
 	Result.bPendingChoice = true;
 	State = MoveTemp(WorkingState);

@@ -420,7 +420,7 @@ bool FWBCSNSableRookCompositionTest::RunTest(const FString&)
 	TestTrue(TEXT("104 mandatory choice state active"), State.HasPendingMandatoryDeckChoice());
 	TestEqual(TEXT("105 observer has not run before choice"), State.GetUnitById(SableAId)->ATK, 1);
 	TestEqual(TEXT("106 event retained while choice pending"), State.PendingUnitDestructionEvents.Num(), 1);
-	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository);
+	const TArray<FString> Actions = WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(State, Repository, 0);
 	TestEqual(TEXT("107 one private exact choice"), Actions.Num(), 1);
 	if (Actions.IsEmpty()) return false;
 	const FWBPostDestructionTriggerResult Submitted =

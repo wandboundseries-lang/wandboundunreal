@@ -4,6 +4,7 @@
 #include "WBCSNInheritance.h"
 #include "WBDeathResolution.h"
 #include "WBEffectRunner.h"
+#include "WBPrivateCardChoice.h"
 
 namespace
 {
@@ -135,6 +136,30 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 				Payload.RequiredSourceFaction)))
 	{
 		return Fail(TEXT("replacement_source_faction_mismatch"));
+	}
+
+	FWBPrivateCardChoiceDescriptor PrivateSelection;
+	PrivateSelection.ChoosingPlayerId = Request.Source.PlayerId;
+	PrivateSelection.SourceZone = EWBCardZone::Hand;
+	PrivateSelection.Timing = EWBPrivateCardChoiceTiming::ActivationDeclaration;
+	PrivateSelection.TargetDeclaration = EWBDeclarationProvenance::PlayerDeclared;
+	PrivateSelection.Filter.RequiredKind = EWBCardDefinitionKind::Character;
+	PrivateSelection.Filter.RequiredFaction = Payload.RequiredReplacementFaction;
+	const FWBPrivateCardChoiceSelectionResult SelectionValidation =
+		WBPrivateCardChoice::ValidateSelection(
+			State,
+			Repository,
+			PrivateSelection,
+			Request.AuxiliaryCardSelection.CardInstanceId,
+			false);
+	if (!SelectionValidation.bOk)
+	{
+		return Fail(TEXT("selected_replacement_not_in_hand"));
+	}
+	if (SelectionValidation.Selected.CardId
+		!= Request.AuxiliaryCardSelection.CardId)
+	{
+		return Fail(TEXT("auxiliary_hand_card_selection_mismatch"));
 	}
 
 	const FWBPlayerCardZoneState* PlayerZones = WBCardZoneState::FindPlayerZones(

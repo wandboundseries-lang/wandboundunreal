@@ -2,6 +2,8 @@
 
 #include "WBCardZoneState.h"
 #include "WBDeckSummon.h"
+#include "WBMandatoryDeckChoice.h"
+#include "WBPrivateCardChoice.h"
 #include "WBUnitStatDelta.h"
 
 namespace
@@ -141,37 +143,6 @@ FWBTraceEvent MakeObserverTrace(
 	return Trace;
 }
 
-TArray<FWBZoneCardEntry> EligibleDeckEntries(
-	const FWBGameStateData& State,
-	const FWBCardDefinitionRepository& Repository,
-	const int32 PlayerId,
-	const FString& RequiredFaction)
-{
-	TArray<FWBZoneCardEntry> Eligible;
-	const FWBPlayerCardZoneState* Zones = WBCardZoneState::FindPlayerZones(
-		State.GetCardZoneState(), PlayerId);
-	if (Zones == nullptr) return Eligible;
-	for (const FWBZoneCardEntry& Entry : Zones->Deck)
-	{
-		const FWBCardDefinitionRepositoryLookupResult Lookup =
-			WBCardDefinitionRepository::FindCardById(
-				Repository, Entry.Card.CardId);
-		if (Lookup.bFound
-			&& Lookup.Definition.Kind == EWBCardDefinitionKind::Character
-			&& (RequiredFaction.IsEmpty()
-				|| Lookup.Definition.PublicFactions.Contains(RequiredFaction)))
-		{
-			Eligible.Add(Entry);
-		}
-	}
-	Eligible.Sort([](const FWBZoneCardEntry& A, const FWBZoneCardEntry& B)
-	{
-		if (A.ZoneIndex != B.ZoneIndex) return A.ZoneIndex < B.ZoneIndex;
-		return A.Card.InstanceId < B.Card.InstanceId;
-	});
-	return Eligible;
-}
-
 bool CanAttemptSummon(
 	const FWBGameStateData& State,
 	const FWBUnitDestructionSnapshot& Event,
@@ -205,8 +176,8 @@ FString WBPostDestructionTrigger::BuildChoiceActionId(
 {
 	return FString::Printf(
 		TEXT("mandatory_deck_choice:p%d:c%s:i%s"),
-		Choice.ControllerPlayerId,
-		*Choice.ChoiceId,
+		Choice.Descriptor.ChoosingPlayerId,
+		*Choice.Descriptor.ChoiceId,
 		*CardInstanceId);
 }
 
@@ -361,13 +332,27 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 			Event,
 			Trigger.TriggerId));
 		FString NoSummonReason;
-		const TArray<FWBZoneCardEntry> Eligible = EligibleDeckEntries(
-			State,
-			Repository,
-			Event.ControllerPlayerId,
-			Trigger.RequiredFaction);
+		FWBPrivateCardChoiceDescriptor Descriptor;
+		Descriptor.ChoiceId = Event.EventId + TEXT(":") + Trigger.TriggerId;
+		Descriptor.ChoosingPlayerId = Event.ControllerPlayerId;
+		Descriptor.SourceZone = EWBCardZone::Deck;
+		Descriptor.Timing = EWBPrivateCardChoiceTiming::ResolutionContinuation;
+		Descriptor.Requirement = EWBPrivateCardChoiceRequirement::Mandatory;
+		Descriptor.TargetDeclaration = EWBDeclarationProvenance::PlayerDeclared;
+		Descriptor.ContinuationKind =
+			EWBPrivateCardChoiceContinuationKind::PostDestructionTrigger;
+		Descriptor.Filter.RequiredKind = EWBCardDefinitionKind::Character;
+		Descriptor.Filter.RequiredFaction = Trigger.RequiredFaction;
+		Descriptor.ResumePriorityPlayerId = ResumePriorityPlayerId;
+		Descriptor.ResumeMatchPhase = ResumeMatchPhase;
+		const FWBPrivateCardChoiceCandidateResult Eligible =
+			WBPrivateCardChoice::FreezeCandidates(State, Repository, Descriptor);
+		if (!Eligible.bOk)
+		{
+			return MakePostDestructionFailure(Eligible.Reason);
+		}
 		if (!CanAttemptSummon(State, Event, NoSummonReason)
-			|| Eligible.IsEmpty())
+			|| Eligible.Candidates.IsEmpty())
 		{
 			if (NoSummonReason.IsEmpty())
 			{
@@ -381,23 +366,15 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 			continue;
 		}
 
-		FWBPendingMandatoryDeckChoiceState Choice;
+		FWBPendingPrivateCardChoiceState Choice;
 		Choice.bActive = true;
-		Choice.Origin = EWBMandatoryDeckChoiceOrigin::PostDestructionTrigger;
-		Choice.ChoiceId = Event.EventId + TEXT(":") + Trigger.TriggerId;
-		Choice.DestructionEventId = Event.EventId;
-		Choice.TriggerId = Trigger.TriggerId;
-		Choice.ControllerPlayerId = Event.ControllerPlayerId;
-		Choice.RequiredFaction = Trigger.RequiredFaction;
-		Choice.DestinationTile = Event.LastTile;
-		Choice.SourceSnapshot = Event;
-		Choice.bApplyCSNInheritance = Trigger.bApplyCSNInheritance;
-		Choice.ResumePriorityPlayerId = ResumePriorityPlayerId;
-		Choice.ResumeMatchPhase = ResumeMatchPhase;
-		for (const FWBZoneCardEntry& Entry : Eligible)
-		{
-			Choice.EligibleCardInstanceIds.Add(Entry.Card.InstanceId);
-		}
+		Choice.Descriptor = MoveTemp(Descriptor);
+		Choice.PostDestruction.DestructionEventId = Event.EventId;
+		Choice.PostDestruction.TriggerId = Trigger.TriggerId;
+		Choice.PostDestruction.DestinationTile = Event.LastTile;
+		Choice.PostDestruction.SourceSnapshot = Event;
+		Choice.PostDestruction.bApplyCSNInheritance =
+			Trigger.bApplyCSNInheritance;
 		State.PendingMandatoryDeckChoice = MoveTemp(Choice);
 		Result.bOk = true;
 		Result.bPendingChoice = true;
@@ -410,34 +387,11 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 
 TArray<FString> WBPostDestructionTrigger::EnumerateLegalChoiceActionIds(
 	const FWBGameStateData& State,
-	const FWBCardDefinitionRepository& Repository)
+	const FWBCardDefinitionRepository& Repository,
+	const int32 ViewerPlayerId)
 {
-	TArray<FString> ActionIds;
-	if (!State.HasPendingMandatoryDeckChoice()
-		|| State.PendingUnitDestructionEvents.IsEmpty())
-	{
-		return ActionIds;
-	}
-	const FWBPendingMandatoryDeckChoiceState& Choice =
-		State.PendingMandatoryDeckChoice;
-	const FWBPlayerCardZoneState* Zones = WBCardZoneState::FindPlayerZones(
-		State.GetCardZoneState(), Choice.ControllerPlayerId);
-	if (Zones == nullptr) return ActionIds;
-	for (const FString& InstanceId : Choice.EligibleCardInstanceIds)
-	{
-		const FWBZoneCardEntry* Entry = Zones->Deck.FindByPredicate(
-			[&InstanceId](const FWBZoneCardEntry& Candidate)
-			{
-				return Candidate.Card.InstanceId == InstanceId;
-			});
-		if (Entry != nullptr
-			&& WBCardDefinitionRepository::FindCardById(
-				Repository, Entry->Card.CardId).bFound)
-		{
-			ActionIds.Add(BuildChoiceActionId(Choice, InstanceId));
-		}
-	}
-	return ActionIds;
+	return WBMandatoryDeckChoice::EnumerateLegalActionIds(
+		State, Repository, ViewerPlayerId);
 }
 
 FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
@@ -445,25 +399,34 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 	const FWBCardDefinitionRepository& Repository,
 	const FString& ActionId)
 {
+	const FWBMandatoryDeckChoiceResult Generic =
+		WBMandatoryDeckChoice::Submit(State, Repository, ActionId);
+	FWBPostDestructionTriggerResult Result;
+	Result.bOk = Generic.bOk;
+	Result.Reason = Generic.Reason;
+	Result.bPendingChoice = Generic.bPendingChoice;
+	Result.bSummoned = Generic.bSummoned;
+	Result.TraceEvents = Generic.TraceEvents;
+	return Result;
+}
+
+FWBPostDestructionTriggerResult WBPostDestructionTrigger::ResolveSelectedChoice(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FString& SelectedCardInstanceId,
+	const FString& ActionId)
+{
 	if (!State.HasPendingMandatoryDeckChoice()
 		|| State.PendingUnitDestructionEvents.IsEmpty())
 	{
 		return MakePostDestructionFailure(TEXT("mandatory_deck_choice_missing"));
 	}
-	const FWBPendingMandatoryDeckChoiceState Choice =
-		State.PendingMandatoryDeckChoice;
-	const FString* SelectedInstance = Choice.EligibleCardInstanceIds.FindByPredicate(
-		[&Choice, &ActionId](const FString& InstanceId)
-		{
-			return BuildChoiceActionId(Choice, InstanceId) == ActionId;
-		});
-	if (SelectedInstance == nullptr)
-	{
-		return MakePostDestructionFailure(TEXT("mandatory_deck_choice_illegal"));
-	}
+	const FWBPendingPrivateCardChoiceState Choice = State.PendingMandatoryDeckChoice;
 	const FWBUnitDestructionSnapshot Event =
 		State.PendingUnitDestructionEvents[0];
-	if (Event.EventId != Choice.DestructionEventId)
+	if (Choice.Descriptor.ContinuationKind
+			!= EWBPrivateCardChoiceContinuationKind::PostDestructionTrigger
+		|| Event.EventId != Choice.PostDestruction.DestructionEventId)
 	{
 		return MakePostDestructionFailure(TEXT("mandatory_deck_choice_stale"));
 	}
@@ -480,7 +443,7 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 		Triggers.FindByPredicate(
 			[&Choice](const FWBAfterUnitDestroyedTriggerDefinition& Candidate)
 			{
-				return Candidate.TriggerId == Choice.TriggerId;
+				return Candidate.TriggerId == Choice.PostDestruction.TriggerId;
 			});
 	if (Trigger == nullptr)
 	{
@@ -488,8 +451,8 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 	}
 
 	FWBDeckSummonRequest Request;
-	Request.PlayerId = Choice.ControllerPlayerId;
-	Request.SelectedCardInstanceId = *SelectedInstance;
+	Request.PlayerId = Choice.Descriptor.ChoosingPlayerId;
+	Request.SelectedCardInstanceId = SelectedCardInstanceId;
 	Request.RequiredFaction = Trigger->RequiredFaction;
 	Request.TargetTile = Event.LastTile;
 	Request.InheritanceSource.SourceSnapshot =
@@ -497,7 +460,7 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 	Request.InheritanceSource.SourceUnitId = Event.DestroyedUnitId;
 	Request.InheritanceSource.SourceCurrentRL = Event.CurrentRLSnapshot;
 	Request.InheritanceSource.EquippedWands = Event.EquippedWands;
-	Request.TransactionId = Choice.ChoiceId;
+	Request.TransactionId = Choice.Descriptor.ChoiceId;
 	const FWBDeckSummonResult Summon = WBDeckSummon::SummonExactCharacterToTile(
 		State, Repository, Request);
 
@@ -507,10 +470,11 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 	FWBTraceEvent DeclaredTarget;
 	DeclaredTarget.Kind = FName(TEXT("mandatory_deck_target_declared"));
 	DeclaredTarget.ActionId = ActionId;
-	DeclaredTarget.PlayerId = Choice.ControllerPlayerId;
+	DeclaredTarget.PlayerId = Choice.Descriptor.ChoosingPlayerId;
 	DeclaredTarget.SourceUnitId = Event.DestroyedUnitId;
-	DeclaredTarget.CardInstanceId = *SelectedInstance;
-	DeclaredTarget.bDeclaredTarget = true;
+	DeclaredTarget.CardInstanceId = SelectedCardInstanceId;
+	DeclaredTarget.bDeclaredTarget = WBIsPlayerDeclared(
+		Choice.Descriptor.TargetDeclaration);
 	DeclaredTarget.bOk = true;
 	Result.TraceEvents.Add(MoveTemp(DeclaredTarget));
 	Result.TraceEvents.Append(Summon.TraceEvents);
@@ -519,7 +483,7 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 			? FName(TEXT("post_destruction_trigger_resolved"))
 			: FName(TEXT("post_destruction_trigger_failed")),
 		Event,
-		Choice.TriggerId,
+		Choice.PostDestruction.TriggerId,
 		Summon.bOk ? FString() : Summon.Reason));
 	State.ClearPendingMandatoryDeckChoice();
 
@@ -527,8 +491,8 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 		AdvanceToDecisionOrComplete(
 			State,
 			Repository,
-			Choice.ResumePriorityPlayerId,
-			Choice.ResumeMatchPhase);
+			Choice.Descriptor.ResumePriorityPlayerId,
+			Choice.Descriptor.ResumeMatchPhase);
 	if (!Continued.bOk)
 	{
 		return Continued;

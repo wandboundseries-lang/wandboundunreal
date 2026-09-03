@@ -445,67 +445,87 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendInt(
 			Out,
 			TEXT("mandatory_choice.origin"),
-			static_cast<int32>(Choice.Origin));
-		AppendString(Out, TEXT("mandatory_choice.id"), Choice.ChoiceId);
+			static_cast<int32>(Choice.Descriptor.ContinuationKind));
+		AppendString(Out, TEXT("mandatory_choice.id"), Choice.Descriptor.ChoiceId);
 		AppendString(
 			Out,
 			TEXT("mandatory_choice.event"),
-			Choice.DestructionEventId);
-		AppendString(Out, TEXT("mandatory_choice.trigger"), Choice.TriggerId);
+			Choice.PostDestruction.DestructionEventId);
+		AppendString(Out, TEXT("mandatory_choice.trigger"),
+			Choice.PostDestruction.TriggerId);
 		AppendString(
 			Out, TEXT("mandatory_choice.source_action"),
-			Choice.SourceActionId);
+			Choice.Descriptor.SourceActionId);
 		AppendString(
 			Out, TEXT("mandatory_choice.source_frame"),
-			Choice.SourceEffectFrameId);
+			Choice.Descriptor.SourceEffectFrameId);
 		AppendInt(
 			Out,
 			TEXT("mandatory_choice.controller"),
-			Choice.ControllerPlayerId);
+			Choice.Descriptor.ChoosingPlayerId);
 		AppendInt(
 			Out,
 			TEXT("mandatory_choice.resume_priority"),
-			Choice.ResumePriorityPlayerId);
+			Choice.Descriptor.ResumePriorityPlayerId);
 		AppendInt(
 			Out,
 			TEXT("mandatory_choice.resume_phase"),
-			Choice.ResumeMatchPhase);
+			Choice.Descriptor.ResumeMatchPhase);
 		AppendString(
 			Out, TEXT("mandatory_choice.required_faction"),
-			Choice.RequiredFaction);
+			Choice.Descriptor.Filter.RequiredFaction);
 		AppendTile(
 			Out, TEXT("mandatory_choice.destination"),
-			Choice.DestinationTile);
+			Choice.Descriptor.ContinuationKind
+				== EWBPrivateCardChoiceContinuationKind::ActivatedEffectContinuation
+				? Choice.ActivatedEffect.DestinationTile
+				: Choice.PostDestruction.DestinationTile);
 		AppendBool(
 			Out, TEXT("mandatory_choice.inheritance"),
-			Choice.bApplyCSNInheritance);
-		const bool bActivatedEffectContinuation = Choice.Origin
-			== EWBMandatoryDeckChoiceOrigin::ActivatedEffectContinuation;
+			Choice.Descriptor.ContinuationKind
+				== EWBPrivateCardChoiceContinuationKind::ActivatedEffectContinuation
+				? Choice.ActivatedEffect.bApplyCSNInheritance
+				: Choice.PostDestruction.bApplyCSNInheritance);
+		AppendInt(Out, TEXT("mandatory_choice.zone"),
+			static_cast<int32>(Choice.Descriptor.SourceZone));
+		AppendInt(Out, TEXT("mandatory_choice.timing"),
+			static_cast<int32>(Choice.Descriptor.Timing));
+		AppendInt(Out, TEXT("mandatory_choice.requirement"),
+			static_cast<int32>(Choice.Descriptor.Requirement));
+		AppendInt(Out, TEXT("mandatory_choice.target_declaration"),
+			static_cast<int32>(Choice.Descriptor.TargetDeclaration));
+		AppendInt(Out, TEXT("mandatory_choice.filter_kind"),
+			static_cast<int32>(Choice.Descriptor.Filter.RequiredKind));
+		AppendString(Out, TEXT("mandatory_choice.filter_card"),
+			Choice.Descriptor.Filter.RequiredCardId);
+		const bool bActivatedEffectContinuation =
+			Choice.Descriptor.ContinuationKind
+			== EWBPrivateCardChoiceContinuationKind::ActivatedEffectContinuation;
 		const int32 SourceUnitId = bActivatedEffectContinuation
-			? Choice.ActivatedEffectSourceSnapshot.SourceUnitId
-			: Choice.SourceSnapshot.DestroyedUnitId;
+			? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.SourceUnitId
+			: Choice.PostDestruction.SourceSnapshot.DestroyedUnitId;
 		const FString& SourceCardId = bActivatedEffectContinuation
-			? Choice.ActivatedEffectSourceSnapshot.SourceCardId
-			: Choice.SourceSnapshot.DestroyedCardId;
+			? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.SourceCardId
+			: Choice.PostDestruction.SourceSnapshot.DestroyedCardId;
 		const int32 SourceControllerPlayerId = bActivatedEffectContinuation
-			? Choice.ActivatedEffectSourceSnapshot.ControllerPlayerId
-			: Choice.SourceSnapshot.ControllerPlayerId;
+			? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.ControllerPlayerId
+			: Choice.PostDestruction.SourceSnapshot.ControllerPlayerId;
 		const FWBTile& SourceTile = bActivatedEffectContinuation
-			? Choice.ActivatedEffectSourceSnapshot.SourceTile
-			: Choice.SourceSnapshot.LastTile;
+			? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.SourceTile
+			: Choice.PostDestruction.SourceSnapshot.LastTile;
 		const int32 SourceBaseRL = bActivatedEffectContinuation
-			? Choice.ActivatedEffectSourceSnapshot.BaseRLSnapshot
-			: Choice.SourceSnapshot.BaseRLSnapshot;
+			? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.BaseRLSnapshot
+			: Choice.PostDestruction.SourceSnapshot.BaseRLSnapshot;
 		const int32 SourceCurrentRL = bActivatedEffectContinuation
-			? Choice.ActivatedEffectSourceSnapshot.CurrentRLSnapshot
-			: Choice.SourceSnapshot.CurrentRLSnapshot;
+			? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.CurrentRLSnapshot
+			: Choice.PostDestruction.SourceSnapshot.CurrentRLSnapshot;
 		const int32 SourceRLUsed = bActivatedEffectContinuation
-			? Choice.ActivatedEffectSourceSnapshot.RLUsedSnapshot
-			: Choice.SourceSnapshot.RLUsedSnapshot;
+			? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.RLUsedSnapshot
+			: Choice.PostDestruction.SourceSnapshot.RLUsedSnapshot;
 		const TArray<FWBEquippedCardEntry>& SourceWands =
 			bActivatedEffectContinuation
-				? Choice.ActivatedEffectSourceSnapshot.EquippedWands
-				: Choice.SourceSnapshot.EquippedWands;
+				? Choice.ActivatedEffect.ActivatedEffectSourceSnapshot.EquippedWands
+				: Choice.PostDestruction.SourceSnapshot.EquippedWands;
 		AppendInt(
 			Out, TEXT("mandatory_choice.source_unit"),
 			SourceUnitId);
@@ -551,8 +571,9 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendInt(
 			Out,
 			TEXT("mandatory_choice.option_count"),
-			Choice.EligibleCardInstanceIds.Num());
-		for (const FString& InstanceId : Choice.EligibleCardInstanceIds)
+			Choice.Descriptor.FrozenCandidateInstanceIds.Num());
+		for (const FString& InstanceId :
+			Choice.Descriptor.FrozenCandidateInstanceIds)
 		{
 			AppendString(
 				Out,

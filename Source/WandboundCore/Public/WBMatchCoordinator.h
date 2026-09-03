@@ -142,6 +142,10 @@ class WANDBOUNDCORE_API WBMatchCoordinator
 {
 public:
 	FWBMatchOperationResult InitializeMatch(const FWBMatchInitializationRequest& Request);
+	// Viewer-scoped output. Use this for runtime/public consumers.
+	FWBMatchLegalActionGenerationResult EnumerateLegalActionsForPlayer(
+		int32 ViewerPlayerId) const;
+	// Protected authoritative output used by replay and trusted orchestration.
 	FWBMatchLegalActionGenerationResult EnumerateLegalActions() const;
 	FWBMatchOperationResult SubmitActionId(int32 PlayerId, const FString& ActionId);
 	FWBMatchObservation BuildObservation(int32 ViewerPlayerId) const;

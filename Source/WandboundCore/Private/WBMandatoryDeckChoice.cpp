@@ -3,33 +3,18 @@
 #include "WBCardZoneState.h"
 #include "WBDeckSummon.h"
 #include "WBPostDestructionTrigger.h"
+#include "WBPrivateCardChoice.h"
 
 namespace
 {
-FWBMandatoryDeckChoiceResult MakeMandatoryDeckChoiceFailure(
-	const FString& Reason)
+FWBMandatoryDeckChoiceResult Fail(const FString& Reason)
 {
 	FWBMandatoryDeckChoiceResult Result;
 	Result.Reason = Reason;
 	return Result;
 }
 
-bool IsEligibleEntry(
-	const FWBZoneCardEntry& Entry,
-	const FWBPendingMandatoryDeckChoiceState& Choice,
-	const FWBCardDefinitionRepository& Repository)
-{
-	const FWBCardDefinitionRepositoryLookupResult Lookup =
-		WBCardDefinitionRepository::FindCardById(
-			Repository, Entry.Card.CardId);
-	return Lookup.bFound
-		&& Lookup.Definition.Kind == EWBCardDefinitionKind::Character
-		&& (Choice.RequiredFaction.IsEmpty()
-			|| Lookup.Definition.PublicFactions.Contains(
-				Choice.RequiredFaction));
-}
-
-void NormalizeMandatoryDeckChoiceZone(TArray<FWBZoneCardEntry>& Entries)
+void NormalizeZone(TArray<FWBZoneCardEntry>& Entries)
 {
 	for (int32 Index = 0; Index < Entries.Num(); ++Index)
 	{
@@ -39,18 +24,19 @@ void NormalizeMandatoryDeckChoiceZone(TArray<FWBZoneCardEntry>& Entries)
 
 bool ReleaseHeldWands(
 	FWBGameStateData& State,
-	const FWBPendingMandatoryDeckChoiceState& Choice,
+	const FWBPendingPrivateCardChoiceState& Choice,
 	FString& OutReason)
 {
+	const FWBActivatedEffectSourceSnapshot& Snapshot =
+		Choice.ActivatedEffect.ActivatedEffectSourceSnapshot;
 	FWBPlayerCardZoneState* Zones = WBCardZoneState::FindMutablePlayerZones(
-		State.GetMutableCardZoneStateForTest(), Choice.ControllerPlayerId);
+		State.GetMutableCardZoneStateForTest(), Choice.Descriptor.ChoosingPlayerId);
 	if (Zones == nullptr)
 	{
 		OutReason = TEXT("player_zones_missing");
 		return false;
 	}
-	for (const FWBEquippedCardEntry& Wand :
-		Choice.ActivatedEffectSourceSnapshot.EquippedWands)
+	for (const FWBEquippedCardEntry& Wand : Snapshot.EquippedWands)
 	{
 		FWBZoneCardEntry Existing;
 		if (WBCardZoneState::FindCardByInstanceId(
@@ -65,40 +51,87 @@ bool ReleaseHeldWands(
 		Discarded.ZoneIndex = Zones->Discard.Num();
 		Zones->Discard.Add(MoveTemp(Discarded));
 	}
-	NormalizeMandatoryDeckChoiceZone(Zones->Discard);
+	NormalizeZone(Zones->Discard);
 	WBCardZoneState::SortOrderedZonesDeterministically(
 		State.GetMutableCardZoneStateForTest());
 	OutReason.Reset();
 	return true;
 }
 
-FWBTraceEvent MakeEffectSummonTrace(
+FWBTraceEvent MakeEffectTrace(
 	const FName Kind,
-	const FWBPendingMandatoryDeckChoiceState& Choice,
+	const FWBPendingPrivateCardChoiceState& Choice,
 	const FString& Reason = FString())
 {
+	const FWBPrivateCardChoiceDescriptor& Descriptor = Choice.Descriptor;
+	const FWBActivatedEffectSourceSnapshot& Snapshot =
+		Choice.ActivatedEffect.ActivatedEffectSourceSnapshot;
 	FWBTraceEvent Trace;
 	Trace.Kind = Kind;
-	Trace.ActionId = Choice.SourceActionId;
-	Trace.PlayerId = Choice.ControllerPlayerId;
-	Trace.SourceUnitId = Choice.ActivatedEffectSourceSnapshot.SourceUnitId;
-	Trace.FromTile = Choice.ActivatedEffectSourceSnapshot.SourceTile;
-	Trace.ToTile = Choice.DestinationTile;
-	Trace.PendingEffectFrameId = Choice.SourceEffectFrameId;
+	Trace.ActionId = Descriptor.SourceActionId;
+	Trace.PlayerId = Descriptor.ChoosingPlayerId;
+	Trace.SourceUnitId = Snapshot.SourceUnitId;
+	Trace.FromTile = Snapshot.SourceTile;
+	Trace.ToTile = Choice.ActivatedEffect.DestinationTile;
+	Trace.PendingEffectFrameId = Descriptor.SourceEffectFrameId;
 	Trace.Reason = Reason;
 	Trace.bOk = Reason.IsEmpty();
 	return Trace;
 }
 
 FWBTraceEvent MakePrivateDeclaredTargetTrace(
-	const FWBPendingMandatoryDeckChoiceState& Choice,
+	const FWBPendingPrivateCardChoiceState& Choice,
 	const FString& CardInstanceId)
 {
-	FWBTraceEvent Trace = MakeEffectSummonTrace(
+	FWBTraceEvent Trace = MakeEffectTrace(
 		FName(TEXT("mandatory_deck_target_declared")), Choice);
 	Trace.CardInstanceId = CardInstanceId;
-	Trace.bDeclaredTarget = true;
+	Trace.bDeclaredTarget = WBIsPlayerDeclared(
+		Choice.Descriptor.TargetDeclaration);
 	return Trace;
+}
+
+FWBMandatoryDeckChoiceResult ResolveActivatedEffect(
+	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const FWBPendingPrivateCardChoiceState& Choice,
+	const FString& SelectedInstance)
+{
+	const FWBActivatedEffectSourceSnapshot& Snapshot =
+		Choice.ActivatedEffect.ActivatedEffectSourceSnapshot;
+	FWBDeckSummonRequest Request;
+	Request.PlayerId = Choice.Descriptor.ChoosingPlayerId;
+	Request.SelectedCardInstanceId = SelectedInstance;
+	Request.RequiredFaction = Choice.Descriptor.Filter.RequiredFaction;
+	Request.TargetTile = Choice.ActivatedEffect.DestinationTile;
+	Request.InheritanceSource.SourceSnapshot = Snapshot.SourceSnapshot.AsParticipant();
+	Request.InheritanceSource.SourceUnitId = Snapshot.SourceUnitId;
+	Request.InheritanceSource.SourceCurrentRL = Snapshot.CurrentRLSnapshot;
+	Request.InheritanceSource.EquippedWands = Snapshot.EquippedWands;
+	Request.InheritanceWandLocation =
+		EWBCSNInheritanceWandLocation::DetachedSourceSnapshot;
+	Request.SummonTraceKind = FName(TEXT("effect_summon_completed"));
+	Request.TransactionId = Choice.Descriptor.ChoiceId;
+	const FWBDeckSummonResult Summon =
+		WBDeckSummon::SummonExactCharacterToTile(State, Repository, Request);
+
+	FWBMandatoryDeckChoiceResult Result;
+	Result.bOk = true;
+	Result.bSummoned = Summon.bOk;
+	Result.TraceEvents.Add(MakePrivateDeclaredTargetTrace(Choice, SelectedInstance));
+	Result.TraceEvents.Append(Summon.TraceEvents);
+	if (!Summon.bOk)
+	{
+		FString ReleaseReason;
+		if (!ReleaseHeldWands(State, Choice, ReleaseReason))
+		{
+			return Fail(ReleaseReason);
+		}
+		Result.TraceEvents.Add(MakeEffectTrace(
+			FName(TEXT("effect_summon_failed")), Choice, Summon.Reason));
+	}
+	State.ClearPendingMandatoryDeckChoice();
+	return Result;
 }
 }
 
@@ -108,31 +141,31 @@ FString WBMandatoryDeckChoice::BuildActionId(
 {
 	return FString::Printf(
 		TEXT("mandatory_deck_choice:p%d:c%s:i%s"),
-		Choice.ControllerPlayerId,
-		*Choice.ChoiceId,
+		Choice.Descriptor.ChoosingPlayerId,
+		*Choice.Descriptor.ChoiceId,
 		*CardInstanceId);
 }
 
 TArray<FString> WBMandatoryDeckChoice::EnumerateLegalActionIds(
 	const FWBGameStateData& State,
-	const FWBCardDefinitionRepository& Repository)
+	const FWBCardDefinitionRepository& Repository,
+	const int32 ViewerPlayerId)
 {
 	TArray<FString> ActionIds;
 	if (!State.HasPendingMandatoryDeckChoice()) return ActionIds;
-	const FWBPendingMandatoryDeckChoiceState& Choice =
+	const FWBPendingPrivateCardChoiceState& Choice =
 		State.PendingMandatoryDeckChoice;
-	const FWBPlayerCardZoneState* Zones = WBCardZoneState::FindPlayerZones(
-		State.GetCardZoneState(), Choice.ControllerPlayerId);
-	if (Zones == nullptr) return ActionIds;
-
-	for (const FString& InstanceId : Choice.EligibleCardInstanceIds)
+	if (ViewerPlayerId != Choice.Descriptor.ChoosingPlayerId
+		|| State.bGameOver)
 	{
-		const FWBZoneCardEntry* Entry = Zones->Deck.FindByPredicate(
-			[&InstanceId](const FWBZoneCardEntry& Candidate)
-			{
-				return Candidate.Card.InstanceId == InstanceId;
-			});
-		if (Entry != nullptr && IsEligibleEntry(*Entry, Choice, Repository))
+		return ActionIds;
+	}
+	for (const FString& InstanceId : Choice.Descriptor.FrozenCandidateInstanceIds)
+	{
+		const FWBPrivateCardChoiceSelectionResult Validation =
+			WBPrivateCardChoice::ValidateSelection(
+				State, Repository, Choice.Descriptor, InstanceId, true);
+		if (Validation.bOk)
 		{
 			ActionIds.Add(BuildActionId(Choice, InstanceId));
 		}
@@ -147,100 +180,48 @@ FWBMandatoryDeckChoiceResult WBMandatoryDeckChoice::Submit(
 {
 	if (!State.HasPendingMandatoryDeckChoice())
 	{
-		return MakeMandatoryDeckChoiceFailure(
-			TEXT("mandatory_deck_choice_missing"));
+		return Fail(TEXT("mandatory_deck_choice_missing"));
 	}
-	if (State.PendingMandatoryDeckChoice.Origin
-		== EWBMandatoryDeckChoiceOrigin::PostDestructionTrigger)
-	{
-		const FWBPostDestructionTriggerResult Legacy =
-			WBPostDestructionTrigger::SubmitChoice(
-				State, Repository, ActionId);
-		FWBMandatoryDeckChoiceResult Result;
-		Result.bOk = Legacy.bOk;
-		Result.Reason = Legacy.Reason;
-		Result.bPendingChoice = Legacy.bPendingChoice;
-		Result.bSummoned = Legacy.bSummoned;
-		Result.TraceEvents = Legacy.TraceEvents;
-		return Result;
-	}
-	if (State.PendingMandatoryDeckChoice.Origin
-		!= EWBMandatoryDeckChoiceOrigin::ActivatedEffectContinuation)
-	{
-		return MakeMandatoryDeckChoiceFailure(
-			TEXT("mandatory_deck_choice_origin_unsupported"));
-	}
-
-	const FWBPendingMandatoryDeckChoiceState Choice =
-		State.PendingMandatoryDeckChoice;
+	const FWBPendingPrivateCardChoiceState Choice = State.PendingMandatoryDeckChoice;
 	const FString* SelectedInstance =
-		Choice.EligibleCardInstanceIds.FindByPredicate(
+		Choice.Descriptor.FrozenCandidateInstanceIds.FindByPredicate(
 			[&Choice, &ActionId](const FString& InstanceId)
 			{
 				return BuildActionId(Choice, InstanceId) == ActionId;
 			});
 	if (SelectedInstance == nullptr)
 	{
-		return MakeMandatoryDeckChoiceFailure(
-			TEXT("mandatory_deck_choice_illegal"));
+		return Fail(TEXT("mandatory_deck_choice_illegal"));
 	}
-	const FWBPlayerCardZoneState* PlayerZones = WBCardZoneState::FindPlayerZones(
-		State.GetCardZoneState(), Choice.ControllerPlayerId);
-	const FWBZoneCardEntry* Selected = PlayerZones != nullptr
-		? PlayerZones->Deck.FindByPredicate(
-			[SelectedInstance](const FWBZoneCardEntry& Entry)
-			{
-				return Entry.Card.InstanceId == *SelectedInstance;
-			})
-		: nullptr;
-	if (Selected == nullptr)
-	{
-		return MakeMandatoryDeckChoiceFailure(
-			TEXT("selected_deck_instance_unavailable"));
-	}
-	if (!IsEligibleEntry(*Selected, Choice, Repository))
-	{
-		return MakeMandatoryDeckChoiceFailure(
-			TEXT("selected_deck_instance_ineligible"));
-	}
+	const FWBPrivateCardChoiceSelectionResult Validation =
+		WBPrivateCardChoice::ValidateSelection(
+			State, Repository, Choice.Descriptor, *SelectedInstance, true);
+	if (!Validation.bOk) return Fail(Validation.Reason);
 
-	FWBDeckSummonRequest Request;
-	Request.PlayerId = Choice.ControllerPlayerId;
-	Request.SelectedCardInstanceId = *SelectedInstance;
-	Request.RequiredFaction = Choice.RequiredFaction;
-	Request.TargetTile = Choice.DestinationTile;
-	Request.InheritanceSource.SourceSnapshot =
-		Choice.ActivatedEffectSourceSnapshot.SourceSnapshot.AsParticipant();
-	Request.InheritanceSource.SourceUnitId =
-		Choice.ActivatedEffectSourceSnapshot.SourceUnitId;
-	Request.InheritanceSource.SourceCurrentRL =
-		Choice.ActivatedEffectSourceSnapshot.CurrentRLSnapshot;
-	Request.InheritanceSource.EquippedWands =
-		Choice.ActivatedEffectSourceSnapshot.EquippedWands;
-	Request.InheritanceWandLocation =
-		EWBCSNInheritanceWandLocation::DetachedSourceSnapshot;
-	Request.SummonTraceKind = FName(TEXT("effect_summon_completed"));
-	Request.TransactionId = Choice.ChoiceId;
-	const FWBDeckSummonResult Summon =
-		WBDeckSummon::SummonExactCharacterToTile(
-			State, Repository, Request);
-
+	FWBGameStateData WorkingState = State;
 	FWBMandatoryDeckChoiceResult Result;
-	Result.bOk = true;
-	Result.bSummoned = Summon.bOk;
-	Result.TraceEvents.Add(MakePrivateDeclaredTargetTrace(
-		Choice, *SelectedInstance));
-	Result.TraceEvents.Append(Summon.TraceEvents);
-	if (!Summon.bOk)
+	switch (Choice.Descriptor.ContinuationKind)
 	{
-		FString ReleaseReason;
-		if (!ReleaseHeldWands(State, Choice, ReleaseReason))
-		{
-			return MakeMandatoryDeckChoiceFailure(ReleaseReason);
-		}
-		Result.TraceEvents.Add(MakeEffectSummonTrace(
-			FName(TEXT("effect_summon_failed")), Choice, Summon.Reason));
+	case EWBPrivateCardChoiceContinuationKind::PostDestructionTrigger:
+	{
+		const FWBPostDestructionTriggerResult Continued =
+			WBPostDestructionTrigger::ResolveSelectedChoice(
+				WorkingState, Repository, *SelectedInstance, ActionId);
+		Result.bOk = Continued.bOk;
+		Result.Reason = Continued.Reason;
+		Result.bPendingChoice = Continued.bPendingChoice;
+		Result.bSummoned = Continued.bSummoned;
+		Result.TraceEvents = Continued.TraceEvents;
+		break;
 	}
-	State.ClearPendingMandatoryDeckChoice();
+	case EWBPrivateCardChoiceContinuationKind::ActivatedEffectContinuation:
+		Result = ResolveActivatedEffect(
+			WorkingState, Repository, Choice, *SelectedInstance);
+		break;
+	default:
+		return Fail(TEXT("mandatory_deck_choice_origin_unsupported"));
+	}
+	if (!Result.bOk) return Result;
+	State = MoveTemp(WorkingState);
 	return Result;
 }

@@ -1,0 +1,173 @@
+{
+  "audit": "private_exact_instance_choice_foundation",
+  "public_baseline": "792674a638b6b5549a24632bda32e7ec89315688",
+  "private_reference": {
+    "consulted_locally": true,
+    "published_inventory_content": false
+  },
+  "architecture": {
+    "authoritative_state": "single_pending_private_card_choice",
+    "supported_zones": ["Deck", "Hand", "Discard"],
+    "selection_count": 1,
+    "identity": "CardInstanceId",
+    "ordering": "authoritative_zone_order_then_instance_id",
+    "timings": ["ActivationDeclaration", "ResolutionContinuation"],
+    "requirements": ["Mandatory", "Optional"],
+    "continuations": ["PostDestructionTrigger", "ActivatedEffectContinuation"],
+    "candidate_policy": "freeze_identity_set_then_revalidate_zone_and_definition",
+    "transactional_submission": true,
+    "generic_zone_mutation": false
+  },
+  "mechanics": [
+    {
+      "name": "Rook",
+      "zone": "Deck",
+      "timing": "ResolutionContinuation",
+      "filter": "Character + CSN",
+      "mandatory_when_nonempty": true,
+      "single_candidate_requires_submission": true,
+      "declared_target": true,
+      "declared_activation": false,
+      "result": "post_destruction_exact_deck_summon"
+    },
+    {
+      "name": "Patch",
+      "zone": "Deck",
+      "timing": "ResolutionContinuation",
+      "filter": "Character + CSN",
+      "mandatory_when_nonempty": true,
+      "single_candidate_requires_submission": true,
+      "declared_target": true,
+      "declared_activation": true,
+      "result": "activated_exact_deck_summon_and_inheritance"
+    },
+    {
+      "name": "Crash-In",
+      "zone": "Hand",
+      "timing": "ActivationDeclaration",
+      "filter": "Character + required faction",
+      "mandatory_when_activation_selected": true,
+      "declared_target": true,
+      "declared_activation": true,
+      "result": "exact_hand_unit_replacement"
+    },
+    {
+      "name": "Synthetic Discard",
+      "zone": "Discard",
+      "timing": "ResolutionContinuation",
+      "filter": "typed definition metadata",
+      "production_card_added": false,
+      "result": "test_only_enumeration_and_validation"
+    }
+  ],
+  "privacy": {
+    "choosing_player_private_actions": true,
+    "opponent_private_actions": false,
+    "public_candidate_ids": false,
+    "public_zone_indices": false,
+    "public_frozen_candidate_set": false,
+    "public_protected_digests": false,
+    "receipt_fields": 8
+  },
+  "compatibility": {
+    "action_codec_changed": false,
+    "action_codec_source_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "action_codec_header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0",
+    "replay_schema": 1,
+    "mandatory_deck_action_ids_preserved": true
+  },
+  "tests": {
+    "dedicated_tests": 8,
+    "dedicated_assertions": 73,
+    "dedicated_failed": 0,
+    "focused_csn_succeeded": 85,
+    "focused_csn_failed": 0,
+    "full_baseline": 2456,
+    "full_succeeded": 2464,
+    "full_failed": 0,
+    "full_not_run": 0,
+    "delta": 8
+  },
+  "builds": [
+    {"target": "Editor", "mode": "default", "actions": 185, "seconds": 390.08, "result": "Succeeded"},
+    {"target": "Game", "mode": "default", "actions": 174, "seconds": 447.76, "result": "Succeeded"},
+    {"target": "Editor", "mode": "non-unity", "actions": 138, "seconds": 297.39, "result": "Succeeded"},
+    {"target": "Game", "mode": "non-unity", "actions": 128, "seconds": 221.21, "result": "Succeeded"},
+    {"target": "Editor", "mode": "forced-unity-adaptive-disabled", "actions": 205, "seconds": 318.33, "result": "Succeeded"},
+    {"target": "Game", "mode": "forced-unity-adaptive-disabled", "actions": 180, "seconds": 243.72, "result": "Succeeded"}
+  ],
+  "build_cook_run": {
+    "clean": true,
+    "build": "Succeeded",
+    "cook": "Succeeded",
+    "stage": "Succeeded",
+    "package": "Succeeded",
+    "archive": "Succeeded",
+    "seconds": 552.00
+  },
+  "packaged_smokes": {
+    "patch": {
+      "runs": 2,
+      "exit_status": 0,
+      "records": 5,
+      "final_generation": 1,
+      "final_revision": 6,
+      "state_digest": "f8cc43a4083540a3b61b7b6482709bf67fd53f3574194c5e5845e0034281cb2f",
+      "trace_digest": "6a601eb2ef6f77e709ffda30c91a02dec092916b7a012da10e68f62e6eb6a634",
+      "replay_digest": "b359c128414b96389ba6facb71ae2d6f938abe0aaa327411fcdb8e3ee01f017a",
+      "archive_sha256": "fc86ab99e87db9a8fe071d3425fc10d545d816d781937cda734e1b6fa8fbad86",
+      "receipt_sha256": "211a4c5f46c91a0ee422cf35a7d0969c7735e060c711435154907b9866c46cac",
+      "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c",
+      "byte_identical": true,
+      "fresh_replay_verified": true
+    },
+    "crash_in": {
+      "runs": 2,
+      "exit_status": 0,
+      "records": 8,
+      "final_generation": 1,
+      "final_revision": 9,
+      "state_digest": "a274b44a9894faf29609a5945c747a27d3ef663ad59055a31926125819b52a0b",
+      "trace_digest": "cdde411bd1959842bc43307087ad07df962b0d8a459732463adb0cce58d91bea",
+      "replay_digest": "29ef598251771ce419b74bd839a52ac50d639335cc72cc93815ddad6bb658714",
+      "archive_sha256": "4da7e6a17042dd8613aaf37590a7929d47090397211ba3b9c339b99f53acb4fb",
+      "receipt_sha256": "d8e83bcf913c7c90630b57fa4df885eda85fbe89a51fcfc32ea5cd117d4adcb3",
+      "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c",
+      "byte_identical": true,
+      "fresh_replay_verified": true
+    }
+  },
+  "deferred": [
+    "broad deterministic zone mutation",
+    "choose-N",
+    "optional-choice pass flow",
+    "new card transfers",
+    "generic inheritance",
+    "broad stat/summon/destruction composition",
+    "status tick ownership changes",
+    "AI",
+    "telemetry"
+  ],
+  "changed_path_count": 19,
+  "changed_paths": [
+    "Docs/Private_Exact_Instance_Choice_Foundation_Audit.json",
+    "Docs/Private_Exact_Instance_Choice_Foundation_Audit.md",
+    "Source/WandboundCore/Private/WBActivatedDeckSummonContinuation.cpp",
+    "Source/WandboundCore/Private/WBGameStateData.cpp",
+    "Source/WandboundCore/Private/WBMandatoryDeckChoice.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBPostDestructionTrigger.cpp",
+    "Source/WandboundCore/Private/WBPrivateCardChoice.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Private/WBUnitReplacementEffect.cpp",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBMandatoryDeckChoice.h",
+    "Source/WandboundCore/Public/WBMatchCoordinator.h",
+    "Source/WandboundCore/Public/WBPostDestructionTrigger.h",
+    "Source/WandboundCore/Public/WBPrivateCardChoice.h",
+    "Source/WandboundTests/Private/WBCSNPatchTests.cpp",
+    "Source/WandboundTests/Private/WBCSNRookTests.cpp",
+    "Source/WandboundTests/Private/WBCSNSableTests.cpp",
+    "Source/WandboundTests/Private/WBPrivateExactInstanceChoiceTests.cpp"
+  ]
+}

@@ -507,21 +507,21 @@ bool FWBCSNPatchSacrificeAndChoiceMatrixTest::RunTest(const FString&)
 		ResolveContinuation(State, Repository);
 	TestTrue(TEXT("Continuation resolves"), Pending.bOk);
 	TestTrue(TEXT("Choice opens"), Pending.bPendingChoice);
-	TestTrue(TEXT("Generic origin"), State.PendingMandatoryDeckChoice.Origin
+	TestTrue(TEXT("Generic origin"), State.PendingMandatoryDeckChoice.Descriptor.ContinuationKind
 		== EWBMandatoryDeckChoiceOrigin::ActivatedEffectContinuation);
 	TestEqual(TEXT("Source tile captured"),
-		State.PendingMandatoryDeckChoice.ActivatedEffectSourceSnapshot.SourceTile,
+		State.PendingMandatoryDeckChoice.ActivatedEffect.ActivatedEffectSourceSnapshot.SourceTile,
 		FWBTile(4, 4));
 	TestEqual(TEXT("Current RL captured"),
-		State.PendingMandatoryDeckChoice.ActivatedEffectSourceSnapshot.CurrentRLSnapshot, 5);
+		State.PendingMandatoryDeckChoice.ActivatedEffect.ActivatedEffectSourceSnapshot.CurrentRLSnapshot, 5);
 	TestEqual(TEXT("Two Wands captured"),
-		State.PendingMandatoryDeckChoice.ActivatedEffectSourceSnapshot.EquippedWands.Num(), 2);
+		State.PendingMandatoryDeckChoice.ActivatedEffect.ActivatedEffectSourceSnapshot.EquippedWands.Num(), 2);
 	TestEqual(TEXT("Equip order sorted"),
-		State.PendingMandatoryDeckChoice.ActivatedEffectSourceSnapshot.EquippedWands[0].EquipOrder, 1);
+		State.PendingMandatoryDeckChoice.ActivatedEffect.ActivatedEffectSourceSnapshot.EquippedWands[0].EquipOrder, 1);
 	TestEqual(TEXT("No destruction queue"),
 		State.PendingUnitDestructionEvents.Num(), 0);
 	const TArray<FString> Actions =
-		WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository);
+		WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository, 0);
 	TestEqual(TEXT("Only three CSN Characters"), Actions.Num(), 3);
 	TestTrue(TEXT("First duplicate exact"), Actions[0].EndsWith(TEXT(":iduplicate_2")));
 	TestTrue(TEXT("Second duplicate exact"), Actions[1].EndsWith(TEXT(":iduplicate_1")));
@@ -552,9 +552,9 @@ bool FWBCSNPatchSacrificeAndChoiceMatrixTest::RunTest(const FString&)
 	TestTrue(TEXT("Continuation remains after stale rejection"),
 		Stale.HasPendingMandatoryDeckChoice());
 	TestEqual(TEXT("Detached Wands remain privately held"),
-		Stale.PendingMandatoryDeckChoice.ActivatedEffectSourceSnapshot.EquippedWands.Num(), 2);
+		Stale.PendingMandatoryDeckChoice.ActivatedEffect.ActivatedEffectSourceSnapshot.EquippedWands.Num(), 2);
 	const TArray<FString> RemainingActions =
-		WBMandatoryDeckChoice::EnumerateLegalActionIds(Stale, Repository);
+		WBMandatoryDeckChoice::EnumerateLegalActionIds(Stale, Repository, 0);
 	TestEqual(TEXT("Remaining exact candidates stay selectable"),
 		RemainingActions.Num(), 2);
 	if (RemainingActions.IsEmpty()) return false;
@@ -587,7 +587,7 @@ bool FWBCSNPatchInheritanceTest::RunTest(const FString&)
 		ResolveContinuation(State, Repository);
 	TestTrue(TEXT("Choice pending"), Pending.bPendingChoice);
 	const TArray<FString> Actions =
-		WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository);
+		WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository, 0);
 	TestEqual(TEXT("Single candidate still explicit"), Actions.Num(), 1);
 	if (Actions.IsEmpty()) return false;
 	const FWBMandatoryDeckChoiceResult Resolved =
@@ -694,7 +694,7 @@ bool FWBCSNPatchCompositionTest::RunTest(const FString&)
 			ResolveContinuation(State, Repository);
 		Trace.Append(Pending.TraceEvents);
 		const TArray<FString> Actions =
-			WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository);
+			WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository, 0);
 		if (Actions.IsEmpty()) return nullptr;
 		const FWBMandatoryDeckChoiceResult Resolved =
 			WBMandatoryDeckChoice::Submit(State, Repository, Actions[0]);
@@ -890,7 +890,7 @@ bool FWBCSNPatchFailureAndHeroBoundaryTest::RunTest(const FString&)
 	Occupied.AddUnitForTest(MakeUnit(
 		31, 1, TEXT("id_contains_csn"), FWBTile(4, 4)));
 	const TArray<FString> OccupiedActions =
-		WBMandatoryDeckChoice::EnumerateLegalActionIds(Occupied, Repository);
+		WBMandatoryDeckChoice::EnumerateLegalActionIds(Occupied, Repository, 0);
 	const FWBMandatoryDeckChoiceResult OccupiedResult =
 		WBMandatoryDeckChoice::Submit(
 			Occupied, Repository, OccupiedActions[0]);
@@ -1021,7 +1021,7 @@ bool FWBCSNPatchDestructionBoundaryTest::RunTest(const FString&)
 		ResolveContinuation(Sacrifice, Repository);
 	TestTrue(TEXT("Sacrifice continuation opens"), Pending.bPendingChoice);
 	const TArray<FString> SacrificeActions =
-		WBMandatoryDeckChoice::EnumerateLegalActionIds(Sacrifice, Repository);
+		WBMandatoryDeckChoice::EnumerateLegalActionIds(Sacrifice, Repository, 0);
 	if (SacrificeActions.IsEmpty()) return false;
 	const FWBMandatoryDeckChoiceResult SacrificeResult =
 		WBMandatoryDeckChoice::Submit(
@@ -1097,7 +1097,7 @@ bool FWBCSNPatchUndertowEmptyDeckTest::RunTest(const FString&)
 			ResolveContinuation(State, Repository);
 		Trace.Append(Pending.TraceEvents);
 		const TArray<FString> Actions =
-			WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository);
+			WBMandatoryDeckChoice::EnumerateLegalActionIds(State, Repository, 0);
 		if (Actions.IsEmpty()) return false;
 		const FWBMandatoryDeckChoiceResult Resolved =
 			WBMandatoryDeckChoice::Submit(State, Repository, Actions[0]);

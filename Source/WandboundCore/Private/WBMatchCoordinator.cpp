@@ -16,6 +16,7 @@
 #include "WBNPCPhaseResolution.h"
 #include "WBPostDestructionTrigger.h"
 #include "WBPreDamageAttackTrigger.h"
+#include "WBPrivateCardChoice.h"
 #include "WBResonanceOverflow.h"
 #include "WBRules.h"
 
@@ -635,33 +636,32 @@ void AddActivationSource(
 			TArray<FWBEffectAuxiliaryCardSelection>& Selections =
 				Source.EffectIdToAuxiliaryCardSelections.FindOrAdd(
 					Effect.EffectId);
-			const FWBPlayerCardZoneState* PlayerZones =
-				WBCardZoneState::FindPlayerZones(
-					State.GetCardZoneState(), PlayerId);
-			if (PlayerZones != nullptr)
+			FWBPrivateCardChoiceDescriptor Descriptor;
+			Descriptor.ChoosingPlayerId = PlayerId;
+			Descriptor.SourceZone = EWBCardZone::Hand;
+			Descriptor.Timing =
+				EWBPrivateCardChoiceTiming::ActivationDeclaration;
+			Descriptor.Requirement =
+				EWBPrivateCardChoiceRequirement::Mandatory;
+			Descriptor.TargetDeclaration =
+				EWBDeclarationProvenance::PlayerDeclared;
+			Descriptor.Filter.RequiredKind = EWBCardDefinitionKind::Character;
+			Descriptor.Filter.RequiredFaction =
+				ReplacementPayload->RequiredReplacementFaction;
+			const FWBPrivateCardChoiceCandidateResult Candidates =
+				WBPrivateCardChoice::EnumerateCandidates(
+					State, Repository, Descriptor);
+			if (Candidates.bOk
+				&& ReplacementPayload->RequiredReplacementKind
+					== EWBEffectReplacementCardKind::Character)
 			{
-				TArray<FWBZoneCardEntry> Hand = PlayerZones->Hand;
-				Hand.Sort(ZoneEntryLess);
-				for (const FWBZoneCardEntry& Entry : Hand)
+				for (const FWBPrivateCardChoiceCandidate& Candidate :
+					Candidates.Candidates)
 				{
-					const FWBCardDefinitionRepositoryLookupResult Lookup =
-						WBCardDefinitionRepository::FindCardById(
-							Repository, Entry.Card.CardId);
-					if (!Lookup.bFound
-						|| ReplacementPayload->RequiredReplacementKind
-							!= EWBEffectReplacementCardKind::Character
-						|| Lookup.Definition.Kind
-							!= EWBCardDefinitionKind::Character
-						|| (!ReplacementPayload->RequiredReplacementFaction.IsEmpty()
-							&& !Lookup.Definition.PublicFactions.Contains(
-								ReplacementPayload->RequiredReplacementFaction)))
-					{
-						continue;
-					}
 					FWBEffectAuxiliaryCardSelection Selection;
 					Selection.Zone = EWBEffectAuxiliaryCardZone::Hand;
-					Selection.CardInstanceId = Entry.Card.InstanceId;
-					Selection.CardId = Entry.Card.CardId;
+					Selection.CardInstanceId = Candidate.CardInstanceId;
+					Selection.CardId = Candidate.CardId;
 					Selections.Add(MoveTemp(Selection));
 				}
 			}
@@ -1317,6 +1317,31 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActions() 
 		&PendingEffectActivations);
 }
 
+FWBMatchLegalActionGenerationResult
+WBMatchCoordinator::EnumerateLegalActionsForPlayer(
+	const int32 ViewerPlayerId) const
+{
+	if (!bInitialized)
+	{
+		return MakeMatchGenerationFailure(TEXT("match_not_initialized"));
+	}
+	if (!FWBGameStateData::IsValidPlayerId(ViewerPlayerId))
+	{
+		return MakeMatchGenerationFailure(TEXT("invalid_viewer_player"));
+	}
+	if (ViewerPlayerId != State.PriorityPlayer)
+	{
+		FWBMatchLegalActionGenerationResult Result;
+		Result.bOk = true;
+		return Result;
+	}
+	return EnumerateLegalActionsForState(
+		State,
+		MatchPhase,
+		&TurnStartSequence,
+		&PendingEffectActivations);
+}
+
 FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsForState(
 	const FWBGameStateData& InState,
 	const EWBMatchLoopPhase InPhase,
@@ -1342,13 +1367,13 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 	{
 		for (const FString& ActionId :
 			WBMandatoryDeckChoice::EnumerateLegalActionIds(
-				InState, Repository))
+				InState, Repository, InState.PriorityPlayer))
 		{
 			FWBMatchLegalAction Action;
 			Action.Family = EWBMatchActionFamily::MandatoryDeckChoice;
 			Action.ActionId = ActionId;
-			Action.PlayerId =
-				InState.PendingMandatoryDeckChoice.ControllerPlayerId;
+			Action.PlayerId = InState.PendingMandatoryDeckChoice.
+				Descriptor.ChoosingPlayerId;
 			const int32 InstanceAt = ActionId.Find(
 				TEXT(":i"),
 				ESearchCase::CaseSensitive,
@@ -1653,7 +1678,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			TEXT("turn_transition_pending_decision"));
 	}
 
-	const FWBMatchLegalActionGenerationResult LegalResult = EnumerateLegalActions();
+	const FWBMatchLegalActionGenerationResult LegalResult =
+		EnumerateLegalActionsForPlayer(PlayerId);
 	if (!LegalResult.bOk)
 	{
 		return MakeCurrentFailure(LegalResult.Reason);
@@ -1960,10 +1986,10 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 		case EWBMatchActionFamily::MandatoryDeckChoice:
 		{
-			const int32 ResumePriority =
-				WorkingState.PendingMandatoryDeckChoice.ResumePriorityPlayerId;
-			const int32 ResumePhase =
-				WorkingState.PendingMandatoryDeckChoice.ResumeMatchPhase;
+			const int32 ResumePriority = WorkingState.PendingMandatoryDeckChoice.
+				Descriptor.ResumePriorityPlayerId;
+			const int32 ResumePhase = WorkingState.PendingMandatoryDeckChoice.
+				Descriptor.ResumeMatchPhase;
 			const FWBMandatoryDeckChoiceResult ChoiceResult =
 				WBMandatoryDeckChoice::Submit(
 					WorkingState, Repository, ActionId);
@@ -1974,8 +2000,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			{
 				if (WorkingState.HasPendingMandatoryDeckChoice())
 				{
-					WorkingState.PriorityPlayer =
-						WorkingState.PendingMandatoryDeckChoice.ControllerPlayerId;
+					WorkingState.PriorityPlayer = WorkingState.
+						PendingMandatoryDeckChoice.Descriptor.ChoosingPlayerId;
 					WorkingPhase = EWBMatchLoopPhase::MandatoryChoice;
 				}
 				else
@@ -2048,10 +2074,10 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		const bool bAlreadyPendingChoice =
 			WorkingState.HasPendingMandatoryDeckChoice();
 		const int32 ResumePriority = bAlreadyPendingChoice
-			? WorkingState.PendingMandatoryDeckChoice.ResumePriorityPlayerId
+			? WorkingState.PendingMandatoryDeckChoice.Descriptor.ResumePriorityPlayerId
 			: WorkingState.PriorityPlayer;
 		const int32 ResumePhase = bAlreadyPendingChoice
-			? WorkingState.PendingMandatoryDeckChoice.ResumeMatchPhase
+			? WorkingState.PendingMandatoryDeckChoice.Descriptor.ResumeMatchPhase
 			: static_cast<int32>(WorkingPhase);
 		const FWBPostDestructionTriggerResult TriggerResult =
 			WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
@@ -2064,8 +2090,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		WorkingTraceEvents.Append(TriggerResult.TraceEvents);
 		if (bActionApplied && WorkingState.HasPendingMandatoryDeckChoice())
 		{
-			WorkingState.PriorityPlayer =
-				WorkingState.PendingMandatoryDeckChoice.ControllerPlayerId;
+			WorkingState.PriorityPlayer = WorkingState.PendingMandatoryDeckChoice.
+				Descriptor.ChoosingPlayerId;
 			WorkingPhase = EWBMatchLoopPhase::MandatoryChoice;
 		}
 	}
@@ -2827,8 +2853,8 @@ bool WBMatchCoordinator::ResolveTopPendingEffectActivation(
 	if (WorkingState.HasPendingMandatoryDeckChoice())
 	{
 		WorkingState.ClearReactionWindow();
-		WorkingState.PriorityPlayer =
-			WorkingState.PendingMandatoryDeckChoice.ControllerPlayerId;
+		WorkingState.PriorityPlayer = WorkingState.PendingMandatoryDeckChoice.
+			Descriptor.ChoosingPlayerId;
 		WorkingState.Phase = EWBGamePhase::NormalTurn;
 		WorkingPhase = EWBMatchLoopPhase::MandatoryChoice;
 		OutReason.Reset();
@@ -3709,13 +3735,11 @@ FWBMatchObservation WBMatchCoordinator::BuildObservation(const int32 ViewerPlaye
 	Observation.PublicTurn = WBPublicTurnSummary::Build(State);
 	Observation.PublicBoard = WBPublicBoardSummary::Build(State, Repository);
 	Observation.CardZones = WBCardZoneObservation::BuildObservationForPlayer(State, ViewerPlayerId);
-	if (ViewerPlayerId == State.PriorityPlayer)
+	const FWBMatchLegalActionGenerationResult LegalResult =
+		EnumerateLegalActionsForPlayer(ViewerPlayerId);
+	if (LegalResult.bOk)
 	{
-		const FWBMatchLegalActionGenerationResult LegalResult = EnumerateLegalActions();
-		if (LegalResult.bOk)
-		{
-			Observation.LegalActions = LegalResult.Actions;
-		}
+		Observation.LegalActions = LegalResult.Actions;
 	}
 	return Observation;
 }

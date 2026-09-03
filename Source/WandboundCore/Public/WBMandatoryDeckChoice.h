@@ -23,7 +23,8 @@ public:
 
 	static TArray<FString> EnumerateLegalActionIds(
 		const FWBGameStateData& State,
-		const FWBCardDefinitionRepository& Repository);
+		const FWBCardDefinitionRepository& Repository,
+		int32 ViewerPlayerId);
 
 	static FWBMandatoryDeckChoiceResult Submit(
 		FWBGameStateData& State,

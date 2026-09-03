@@ -25,11 +25,18 @@ public:
 
 	static TArray<FString> EnumerateLegalChoiceActionIds(
 		const FWBGameStateData& State,
-		const FWBCardDefinitionRepository& Repository);
+		const FWBCardDefinitionRepository& Repository,
+		int32 ViewerPlayerId);
 
 	static FWBPostDestructionTriggerResult SubmitChoice(
 		FWBGameStateData& State,
 		const FWBCardDefinitionRepository& Repository,
+		const FString& ActionId);
+
+	static FWBPostDestructionTriggerResult ResolveSelectedChoice(
+		FWBGameStateData& State,
+		const FWBCardDefinitionRepository& Repository,
+		const FString& SelectedCardInstanceId,
 		const FString& ActionId);
 
 	static FString BuildChoiceActionId(

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "WBCardZoneState.h"
 #include "WBEventSnapshot.h"
+#include "WBPrivateCardChoice.h"
 #include "WBStatusTypes.h"
 #include "WBTerminalOutcome.h"
 #include "WBTypes.h"
@@ -307,41 +308,37 @@ struct WANDBOUNDCORE_API FWBActivatedEffectSourceSnapshot
 	TArray<FWBEquippedCardEntry> EquippedWands;
 };
 
-enum class EWBMandatoryDeckChoiceOrigin : uint8
+struct WANDBOUNDCORE_API FWBPostDestructionPrivateChoiceContinuation
 {
-	Unknown,
-	PostDestructionTrigger,
-	ActivatedEffectContinuation
-};
-
-struct WANDBOUNDCORE_API FWBPendingMandatoryDeckChoiceState
-{
-	bool bActive = false;
-	EWBMandatoryDeckChoiceOrigin Origin =
-		EWBMandatoryDeckChoiceOrigin::Unknown;
-	FString ChoiceId;
-	// Populated only for the legacy post-destruction origin.
 	FString DestructionEventId;
 	FString TriggerId;
-	FString SourceActionId;
-	FString SourceEffectFrameId;
-	int32 ControllerPlayerId = INDEX_NONE;
-	FString RequiredFaction;
 	FWBTile DestinationTile = FWBTile(-1, -1);
-	// Populated only for the post-destruction origin.
 	FWBUnitDestructionSnapshot SourceSnapshot;
-	// Populated only for the activated-effect continuation origin.
+	bool bApplyCSNInheritance = false;
+};
+
+struct WANDBOUNDCORE_API FWBActivatedEffectPrivateChoiceContinuation
+{
+	FWBTile DestinationTile = FWBTile(-1, -1);
 	FWBActivatedEffectSourceSnapshot ActivatedEffectSourceSnapshot;
 	bool bApplyCSNInheritance = false;
-	TArray<FString> EligibleCardInstanceIds;
-	int32 ResumePriorityPlayerId = INDEX_NONE;
-	int32 ResumeMatchPhase = INDEX_NONE;
+};
+
+struct WANDBOUNDCORE_API FWBPendingPrivateCardChoiceState
+{
+	bool bActive = false;
+	FWBPrivateCardChoiceDescriptor Descriptor;
+	FWBPostDestructionPrivateChoiceContinuation PostDestruction;
+	FWBActivatedEffectPrivateChoiceContinuation ActivatedEffect;
 
 	void Reset()
 	{
-		*this = FWBPendingMandatoryDeckChoiceState();
+		*this = FWBPendingPrivateCardChoiceState();
 	}
 };
+
+using FWBPendingMandatoryDeckChoiceState = FWBPendingPrivateCardChoiceState;
+using EWBMandatoryDeckChoiceOrigin = EWBPrivateCardChoiceContinuationKind;
 
 struct WANDBOUNDCORE_API FWBGameStateData
 {
@@ -399,6 +396,9 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void ClearActivationUsageKeysForPlayer(int32 PlayerId);
 	bool HasPendingAttack() const;
 	void ClearPendingAttack();
+	bool HasPendingPrivateCardChoice() const;
+	void ClearPendingPrivateCardChoice();
+	// Compatibility names retained for existing replay/action family contracts.
 	bool HasPendingMandatoryDeckChoice() const;
 	void ClearPendingMandatoryDeckChoice();
 	void SetPendingAttackForTest(const FWBPendingAttackState& InPendingAttack);
