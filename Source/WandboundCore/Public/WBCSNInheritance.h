@@ -14,6 +14,7 @@ enum class EWBCSNInheritanceWandLocation : uint8
 
 struct WANDBOUNDCORE_API FWBCSNInheritanceSourceData
 {
+	FWBUnitParticipantSnapshot SourceSnapshot;
 	int32 SourceUnitId = INDEX_NONE;
 	int32 SourceCurrentRL = 0;
 	TArray<FWBEquippedCardEntry> EquippedWands;
@@ -21,6 +22,7 @@ struct WANDBOUNDCORE_API FWBCSNInheritanceSourceData
 
 struct WANDBOUNDCORE_API FWBCSNInheritanceMutationRequest
 {
+	FWBUnitParticipantSnapshot SourceSnapshot;
 	int32 ControllerPlayerId = INDEX_NONE;
 	int32 SourceUnitId = INDEX_NONE;
 	int32 TargetUnitId = INDEX_NONE;

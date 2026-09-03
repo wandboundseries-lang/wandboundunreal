@@ -202,6 +202,16 @@ WBActivatedDeckSummonContinuation::Resolve(
 	const FWBUnitState* WorkingSource = WorkingState.GetUnitById(
 		Command.Source.SourceUnitId);
 	FWBActivatedEffectSourceSnapshot Snapshot;
+	Snapshot.EventIdentity = WBEventSnapshot::MakeIdentity(
+		EWBEventKind::Activation,
+		PendingEffectFrameId,
+		WorkingState.TurnNumber,
+		ActivationActionId,
+		PendingEffectFrameId);
+	Snapshot.SourceSnapshot = WBEventSnapshot::CaptureUnitSource(
+		WorkingState,
+		*WorkingSource,
+		Command.Source.ActivationProvenance);
 	Snapshot.SourceUnitId = WorkingSource->UnitId;
 	Snapshot.SourceCardId = WorkingSource->CardId;
 	Snapshot.OwnerPlayerId = WorkingSource->GetOwnerPlayerIdForRules();

@@ -33,20 +33,23 @@ bool TriggerInstanceLess(
 	const int32 ActivePlayerId)
 {
 	const bool bAActiveControlled =
-		A.ControllerPlayerId == ActivePlayerId;
+		A.SourceSnapshot.ControllerPlayerId == ActivePlayerId;
 	const bool bBActiveControlled =
-		B.ControllerPlayerId == ActivePlayerId;
+		B.SourceSnapshot.ControllerPlayerId == ActivePlayerId;
 	if (bAActiveControlled != bBActiveControlled)
 	{
 		return bAActiveControlled;
 	}
-	if (A.ControllerPlayerId != B.ControllerPlayerId)
+	if (A.SourceSnapshot.ControllerPlayerId
+		!= B.SourceSnapshot.ControllerPlayerId)
 	{
-		return A.ControllerPlayerId < B.ControllerPlayerId;
+		return A.SourceSnapshot.ControllerPlayerId
+			< B.SourceSnapshot.ControllerPlayerId;
 	}
-	if (A.SourceUnitId != B.SourceUnitId)
+	if (A.SourceSnapshot.SourceUnitId != B.SourceSnapshot.SourceUnitId)
 	{
-		return A.SourceUnitId < B.SourceUnitId;
+		return A.SourceSnapshot.SourceUnitId
+			< B.SourceSnapshot.SourceUnitId;
 	}
 	return A.StableTriggerId < B.StableTriggerId;
 }
@@ -56,10 +59,10 @@ bool IsEligibleSource(
 	const FWBTurnStartTriggerInstance& Trigger)
 {
 	const FWBUnitState* Source =
-		State.GetUnitById(Trigger.SourceUnitId);
+		State.GetUnitById(Trigger.SourceSnapshot.SourceUnitId);
 	return Source != nullptr
 		&& WBCharacterPassiveEligibility::CanUseAutomaticCharacterPassive(*Source)
-		&& Source->CardId == Trigger.SourceCardId;
+		&& Source->CardId == Trigger.SourceSnapshot.SourceCardId;
 }
 
 FString ChoiceActionId(
@@ -68,8 +71,8 @@ FString ChoiceActionId(
 {
 	const FString Base = FString::Printf(
 		TEXT("turn_start_trigger:p%d:u%d:%s"),
-		Trigger.ControllerPlayerId,
-		Trigger.SourceUnitId,
+		Trigger.SourceSnapshot.ControllerPlayerId,
+		Trigger.SourceSnapshot.SourceUnitId,
 		*Trigger.Definition.TriggerId);
 	return TargetUnitId == -1
 		? Base
@@ -110,9 +113,11 @@ bool BuildEffectRequest(
 		return false;
 	}
 
-	OutRequest.Source.PlayerId = Trigger.ControllerPlayerId;
-	OutRequest.Source.SourceUnitId = Trigger.SourceUnitId;
-	OutRequest.Source.SourceCardId = Trigger.SourceCardId;
+	OutRequest.Source.PlayerId = Trigger.SourceSnapshot.ControllerPlayerId;
+	OutRequest.Source.SourceUnitId = Trigger.SourceSnapshot.SourceUnitId;
+	OutRequest.Source.SourceCardId = Trigger.SourceSnapshot.SourceCardId;
+	OutRequest.Source.ActivationProvenance =
+		EWBActivationProvenance::ResolutionOnly;
 	OutRequest.Source.SourceEffectId =
 		Trigger.Definition.TriggerId;
 	OutRequest.Target.TargetUnitId = TargetUnitId;
@@ -156,12 +161,23 @@ void CollectTriggers(
 			}
 
 			FWBTurnStartTriggerInstance Trigger;
+			Trigger.SourceSnapshot =
+				WBEventSnapshot::CaptureUnitSource(State, Unit);
+			Trigger.EligibilityPolicy =
+				EWBTriggerEligibilityPolicy::Hybrid;
 			Trigger.ControllerPlayerId =
-				Unit.GetControllerPlayerIdForRules();
+				Trigger.SourceSnapshot.ControllerPlayerId;
 			Trigger.SourceUnitId = Unit.UnitId;
 			Trigger.SourceCardId = Unit.CardId;
 			Trigger.Definition = Definition;
 			Trigger.StableTriggerId = ChoiceActionId(Trigger, -1);
+			Trigger.EventIdentity = WBEventSnapshot::MakeIdentity(
+				EWBEventKind::TurnStart,
+				FString::Printf(
+					TEXT("turn_start:%d:%s"),
+					Sequence.TurnNumber,
+					*Trigger.StableTriggerId),
+				Sequence.TurnNumber);
 			Sequence.PendingTriggers.Add(MoveTemp(Trigger));
 		}
 	}
@@ -257,7 +273,7 @@ bool ResolveChoice(
 		Sequence.ActivePlayerId,
 		Sequence.TurnNumber);
 	Selected.ActionId = Choice.ActionId;
-	Selected.SourceUnitId = Trigger.SourceUnitId;
+	Selected.SourceUnitId = Trigger.SourceSnapshot.SourceUnitId;
 	Selected.TargetUnitId = Choice.TargetUnitId;
 	OutTraceEvents.Add(Selected);
 
@@ -268,7 +284,7 @@ bool ResolveChoice(
 		const FWBCardLifecycleResult Draw =
 			WBCardLifecycle::DrawOneCard(
 				State,
-				Trigger.ControllerPlayerId);
+				Trigger.SourceSnapshot.ControllerPlayerId);
 		if (!Draw.bOk)
 		{
 			OutReason = Draw.Reason;
@@ -277,9 +293,9 @@ bool ResolveChoice(
 
 		FWBTraceEvent Drawn = MakeTurnStartTrace(
 			FName(TEXT("turn_start_trigger_card_drawn")),
-			Trigger.ControllerPlayerId,
+			Trigger.SourceSnapshot.ControllerPlayerId,
 			Sequence.TurnNumber);
-		Drawn.SourceUnitId = Trigger.SourceUnitId;
+		Drawn.SourceUnitId = Trigger.SourceSnapshot.SourceUnitId;
 		Drawn.CardCount = 1;
 		OutTraceEvents.Add(Drawn);
 	}
@@ -309,10 +325,10 @@ bool ResolveChoice(
 
 	FWBTraceEvent Resolved = MakeTurnStartTrace(
 		FName(TEXT("turn_start_trigger_resolved")),
-		Trigger.ControllerPlayerId,
+		Trigger.SourceSnapshot.ControllerPlayerId,
 		Sequence.TurnNumber);
 	Resolved.ActionId = Trigger.StableTriggerId;
-	Resolved.SourceUnitId = Trigger.SourceUnitId;
+	Resolved.SourceUnitId = Trigger.SourceSnapshot.SourceUnitId;
 	Resolved.TargetUnitId = Choice.TargetUnitId;
 	OutTraceEvents.Add(Resolved);
 	Sequence.PendingTriggers.RemoveAt(

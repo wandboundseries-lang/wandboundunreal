@@ -74,7 +74,7 @@ TArray<FResolvedObserverTrigger> BuildObserverTriggers(
 	{
 		const FWBCardDefinitionRepositoryLookupResult Lookup =
 			WBCardDefinitionRepository::FindCardById(
-				Repository, Source.SourceCardId);
+				Repository, Source.SourceSnapshot.SourceCardId);
 		if (!Lookup.bFound)
 		{
 			continue;
@@ -98,13 +98,17 @@ TArray<FResolvedObserverTrigger> BuildObserverTriggers(
 		const FResolvedObserverTrigger& A,
 		const FResolvedObserverTrigger& B)
 	{
-		if (A.Source.ControllerPlayerId != B.Source.ControllerPlayerId)
+		if (A.Source.SourceSnapshot.ControllerPlayerId
+			!= B.Source.SourceSnapshot.ControllerPlayerId)
 		{
-			return A.Source.ControllerPlayerId < B.Source.ControllerPlayerId;
+			return A.Source.SourceSnapshot.ControllerPlayerId
+				< B.Source.SourceSnapshot.ControllerPlayerId;
 		}
-		if (A.Source.SourceUnitId != B.Source.SourceUnitId)
+		if (A.Source.SourceSnapshot.SourceUnitId
+			!= B.Source.SourceSnapshot.SourceUnitId)
 		{
-			return A.Source.SourceUnitId < B.Source.SourceUnitId;
+			return A.Source.SourceSnapshot.SourceUnitId
+				< B.Source.SourceSnapshot.SourceUnitId;
 		}
 		return A.Trigger.TriggerId < B.Trigger.TriggerId;
 	});
@@ -122,11 +126,11 @@ FWBTraceEvent MakeObserverTrace(
 	Trace.ActionId = FString::Printf(
 		TEXT("%s:observer:u%d:%s"),
 		*Event.EventId,
-		Observer.Source.SourceUnitId,
+		Observer.Source.SourceSnapshot.SourceUnitId,
 		*Observer.Trigger.TriggerId);
-	Trace.PlayerId = Observer.Source.ControllerPlayerId;
-	Trace.SourceUnitId = Observer.Source.SourceUnitId;
-	Trace.TargetUnitId = Observer.Source.SourceUnitId;
+	Trace.PlayerId = Observer.Source.SourceSnapshot.ControllerPlayerId;
+	Trace.SourceUnitId = Observer.Source.SourceSnapshot.SourceUnitId;
+	Trace.TargetUnitId = Observer.Source.SourceSnapshot.SourceUnitId;
 	Trace.PreviousTargetUnitId = Event.DestroyedUnitId;
 	Trace.FromTile = Event.LastTile;
 	Trace.ResolutionOrder = Event.ResolutionOrder;
@@ -260,7 +264,7 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 			const FResolvedObserverTrigger Observer =
 				Observers[Event.NextObserverTriggerIndex++];
 			const FWBUnitDestructionSnapshot EventSnapshot = Event;
-			if (Observer.Source.ControllerPlayerId
+			if (Observer.Source.SourceSnapshot.ControllerPlayerId
 				!= EventSnapshot.ControllerPlayerId
 				|| Observer.Trigger.RequiredFaction.IsEmpty()
 				|| !Lookup.Definition.PublicFactions.Contains(
@@ -284,13 +288,14 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 				EventSnapshot,
 				Observer));
 			const FWBUnitState* LiveSource = State.GetUnitById(
-				Observer.Source.SourceUnitId);
+				Observer.Source.SourceSnapshot.SourceUnitId);
 			if (LiveSource == nullptr
 				|| !LiveSource->IsUnitOnBoard()
 				|| LiveSource->bDefeated
 				|| LiveSource->GetControllerPlayerIdForRules()
-					!= Observer.Source.ControllerPlayerId
-				|| LiveSource->CardId != Observer.Source.SourceCardId)
+					!= Observer.Source.SourceSnapshot.ControllerPlayerId
+				|| LiveSource->CardId
+					!= Observer.Source.SourceSnapshot.SourceCardId)
 			{
 				Result.TraceEvents.Add(MakeObserverTrace(
 					FName(TEXT("post_destruction_observer_skipped")),
@@ -301,8 +306,8 @@ WBPostDestructionTrigger::AdvanceToDecisionOrComplete(
 			}
 
 			FWBUnitStatDeltaRequest Delta;
-			Delta.SourceUnitId = Observer.Source.SourceUnitId;
-			Delta.TargetUnitId = Observer.Source.SourceUnitId;
+			Delta.SourceUnitId = Observer.Source.SourceSnapshot.SourceUnitId;
+			Delta.TargetUnitId = Observer.Source.SourceSnapshot.SourceUnitId;
 			Delta.ATKDelta = Observer.Trigger.StatDelta.ATKDelta;
 			Delta.MaxHPDelta = Observer.Trigger.StatDelta.MaxHPDelta;
 			Delta.CurrentHPDelta = Observer.Trigger.StatDelta.CurrentHPDelta;
@@ -487,6 +492,8 @@ FWBPostDestructionTriggerResult WBPostDestructionTrigger::SubmitChoice(
 	Request.SelectedCardInstanceId = *SelectedInstance;
 	Request.RequiredFaction = Trigger->RequiredFaction;
 	Request.TargetTile = Event.LastTile;
+	Request.InheritanceSource.SourceSnapshot =
+		Event.DestroyedUnitSnapshot;
 	Request.InheritanceSource.SourceUnitId = Event.DestroyedUnitId;
 	Request.InheritanceSource.SourceCurrentRL = Event.CurrentRLSnapshot;
 	Request.InheritanceSource.EquippedWands = Event.EquippedWands;

@@ -519,6 +519,17 @@ FWBMarkerResolutionResult WBMarkerResolution::ResolveMarkerAtUnitTile(
 		Pending.TriggeredByOwnerId =
 			EnteringUnit->GetControllerPlayerIdForRules();
 		Pending.CreatedTurnNumber = WorkingState.TurnNumber;
+		Pending.EventIdentity = WBEventSnapshot::MakeIdentity(
+			EWBEventKind::NPCSpawn,
+			FString::Printf(
+				TEXT("npc_spawn:t%d:s%d:m%d"),
+				WorkingState.TurnNumber,
+				PendingSpawnId,
+				Marker.MarkerId),
+			WorkingState.TurnNumber);
+		Pending.TriggeringUnitSnapshot =
+			WBEventSnapshot::CaptureUnitParticipant(
+				WorkingState, *EnteringUnit);
 		WorkingState.PendingNPCSpawns.Add(Pending);
 		TraceEvents.Add(MakePendingTrace(FName(TEXT("npc_spawn_scheduled")), Pending));
 		bNPCSpawnScheduled = true;

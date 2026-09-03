@@ -1,0 +1,89 @@
+{
+  "audit_id": "trigger_event_snapshot_foundation",
+  "public_safe": true,
+  "baseline_commit": "edaba62ff6430a7b9464a948630f72e1e8dd1d1a",
+  "architecture": {
+    "shared_types": [
+      "FWBEventIdentitySnapshot",
+      "FWBEventSourceSnapshot",
+      "FWBUnitParticipantSnapshot",
+      "EWBTriggerEligibilityPolicy"
+    ],
+    "universal_event_payload": false,
+    "unbounded_event_history": false,
+    "owner_controller_distinct": true,
+    "caster_requires_activation_provenance": true,
+    "replay_schema": 1,
+    "public_receipt_fields": 8,
+    "action_codec_changed": false
+  },
+  "event_families": [
+    {"event":"destruction_self","context":"FWBUnitDestructionSnapshot","eligibility":"snapshot_with_live_environment"},
+    {"event":"destruction_observer","context":"FWBPostDestructionObserverSourceSnapshot","eligibility":"hybrid"},
+    {"event":"after_damage","context":"FWBAfterDamageEventContext","eligibility":"snapshot_at_collection"},
+    {"event":"pre_damage","context":"FWBPendingAttackState","eligibility":"live_continuation_with_typed_identity"},
+    {"event":"turn_start","context":"FWBTurnStartTriggerInstance","eligibility":"hybrid"},
+    {"event":"setup_summon","context":"local_collected_trigger","eligibility":"snapshot_at_collection"},
+    {"event":"inheritance","context":"FWBCSNInheritanceEventContext","eligibility":"hybrid"},
+    {"event":"activated_continuation","context":"FWBActivatedEffectSourceSnapshot","eligibility":"snapshot_with_live_environment"},
+    {"event":"status","context":"FWBStatusSourceProvenance","eligibility":"existing_status_authority"},
+    {"event":"marker_npc_spawn","context":"FWBPendingNPCSpawnState","eligibility":"snapshot_with_live_environment"}
+  ],
+  "validation": {
+    "focused_snapshot": {"succeeded":8,"failed":0,"warnings":0},
+    "after_damage": {"succeeded":35,"failed":0,"warnings":0},
+    "full_automation": {"baseline":2448,"succeeded":2456,"delta":8,"failed":0,"warnings":0,"not_run":0},
+    "build_matrix": {
+      "editor_non_unity": "succeeded",
+      "game_non_unity": "succeeded",
+      "editor_default_unity": "succeeded",
+      "game_default_unity": "succeeded",
+      "editor_forced_unity": "succeeded",
+      "game_forced_unity": "succeeded"
+    },
+    "build_cook_run": "succeeded",
+    "packaged_validation": {
+      "smoke": "production_after_damage_trigger",
+      "runs": 2,
+      "exit_code_each": 0,
+      "byte_identical": true,
+      "archive_sha256": "0c4885788b98e938138b54a00b0ecc533eba13067c6ac068286cc5a72697e153",
+      "receipt_sha256": "040b15010129044d50bc6cac47bf8f6fc6457ef36cdaae123ae156679770ab61",
+      "startup_sha256": "d741233fc8d65646aa6862237dc197bae60164d926c61469ee716eb4b4f73616",
+      "replay_digest": "d352fdf71ff94f607f75f18dfb2203395e2f429efa24767a1e4d14b617ac2c6c",
+      "final_state_digest": "10c7cdc8cdd620d728ca6247471b0f83bfff304be491fd915fe07d76ce85ce79",
+      "final_trace_digest": "20ec88c84fc98e0716af3effb0554a1074f23c605728e4fb288015989dc7d083",
+      "replay_schema": 1,
+      "receipt_field_count": 8,
+      "privacy_scan_passed": true,
+      "processes_remaining": 0
+    }
+  },
+  "changed_files": [
+    "Docs/Trigger_Event_Snapshot_Foundation_Audit.json",
+    "Docs/Trigger_Event_Snapshot_Foundation_Audit.md",
+    "Source/WandboundCore/Private/WBActivatedDeckSummonContinuation.cpp",
+    "Source/WandboundCore/Private/WBAfterDamageTrigger.cpp",
+    "Source/WandboundCore/Private/WBCSNInheritance.cpp",
+    "Source/WandboundCore/Private/WBCSNInheritanceTrigger.cpp",
+    "Source/WandboundCore/Private/WBDeathResolution.cpp",
+    "Source/WandboundCore/Private/WBDeckSummon.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBEventSnapshot.cpp",
+    "Source/WandboundCore/Private/WBInitialHeroSetup.cpp",
+    "Source/WandboundCore/Private/WBMandatoryDeckChoice.cpp",
+    "Source/WandboundCore/Private/WBMarkerResolution.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBPostDestructionTrigger.cpp",
+    "Source/WandboundCore/Private/WBTurnStartSequence.cpp",
+    "Source/WandboundCore/Private/WBUnitReplacementEffect.cpp",
+    "Source/WandboundCore/Public/WBAfterDamageTrigger.h",
+    "Source/WandboundCore/Public/WBCSNInheritance.h",
+    "Source/WandboundCore/Public/WBCSNInheritanceTrigger.h",
+    "Source/WandboundCore/Public/WBEventSnapshot.h",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBTurnStartSequence.h",
+    "Source/WandboundRuntime/Private/WBProductionStatusAuthoritySmoke.cpp",
+    "Source/WandboundTests/Private/WBTriggerEventSnapshotFoundationTests.cpp"
+  ]
+}

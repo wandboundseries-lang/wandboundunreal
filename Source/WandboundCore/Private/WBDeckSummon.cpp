@@ -132,6 +132,7 @@ FWBDeckSummonResult WBDeckSummon::SummonExactCharacterToTile(
 	WorkingState.Units.Add(Unit);
 
 	FWBCSNInheritanceMutationRequest Inheritance;
+	Inheritance.SourceSnapshot = Request.InheritanceSource.SourceSnapshot;
 	Inheritance.ControllerPlayerId = Request.PlayerId;
 	Inheritance.SourceUnitId = Request.InheritanceSource.SourceUnitId;
 	Inheritance.TargetUnitId = NewUnitId;

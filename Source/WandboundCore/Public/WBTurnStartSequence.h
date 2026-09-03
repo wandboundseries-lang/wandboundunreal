@@ -20,6 +20,10 @@ enum class EWBTurnStartSequencePhase : uint8
 
 struct WANDBOUNDCORE_API FWBTurnStartTriggerInstance
 {
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBEventSourceSnapshot SourceSnapshot;
+	EWBTriggerEligibilityPolicy EligibilityPolicy =
+		EWBTriggerEligibilityPolicy::Hybrid;
 	FString StableTriggerId;
 	int32 ControllerPlayerId = -1;
 	int32 SourceUnitId = -1;

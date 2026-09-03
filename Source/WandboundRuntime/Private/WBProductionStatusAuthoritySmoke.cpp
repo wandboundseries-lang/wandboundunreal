@@ -13,7 +13,7 @@
 
 namespace
 {
-const FWBMatchLegalAction* FindCoreAction(
+const FWBMatchLegalAction* FindStatusSmokeCoreAction(
 	const TArray<FWBMatchLegalAction>& Actions,
 	const EWBActionType Type,
 	const int32 SourceUnitId = INDEX_NONE,
@@ -80,7 +80,7 @@ bool PassResponses(
 	{
 		const FWBMatchObservation Observation = Coordinator.BuildObservation(
 			Coordinator.GetState().PriorityPlayer);
-		const FWBMatchLegalAction* Pass = FindCoreAction(
+		const FWBMatchLegalAction* Pass = FindStatusSmokeCoreAction(
 			Observation.LegalActions, EWBActionType::PassResponse);
 		if (Pass == nullptr || !SubmitAndCapture(
 			Coordinator, Recorder, *Pass, OutReason))
@@ -157,7 +157,8 @@ FWBProductionStatusAuthoritySmokeResult WBProductionStatusAuthoritySmoke::Run(
 	const FWBMatchLegalActionGenerationResult FirstTurnLegal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* FirstEndTurn = FirstTurnLegal.bOk
-		? FindCoreAction(FirstTurnLegal.Actions, EWBActionType::EndTurn)
+		? FindStatusSmokeCoreAction(
+			FirstTurnLegal.Actions, EWBActionType::EndTurn)
 		: nullptr;
 	if (FirstEndTurn == nullptr || !SubmitAndCapture(
 		Coordinator, Recorder, *FirstEndTurn, Result.Reason))
@@ -204,7 +205,8 @@ FWBProductionStatusAuthoritySmokeResult WBProductionStatusAuthoritySmoke::Run(
 	const FWBMatchLegalActionGenerationResult SecondTurnLegal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* SecondEndTurn = SecondTurnLegal.bOk
-		? FindCoreAction(SecondTurnLegal.Actions, EWBActionType::EndTurn)
+		? FindStatusSmokeCoreAction(
+			SecondTurnLegal.Actions, EWBActionType::EndTurn)
 		: nullptr;
 	if (SecondEndTurn == nullptr || !SubmitAndCapture(
 		Coordinator, Recorder, *SecondEndTurn, Result.Reason))
@@ -228,7 +230,7 @@ FWBProductionStatusAuthoritySmokeResult WBProductionStatusAuthoritySmoke::Run(
 	const FWBMatchLegalActionGenerationResult AttackLegal =
 		Coordinator.EnumerateLegalActions();
 	const FWBMatchLegalAction* Attack = AttackLegal.bOk
-		? FindCoreAction(
+		? FindStatusSmokeCoreAction(
 			AttackLegal.Actions,
 			EWBActionType::Attack,
 			AttackerUnitId,

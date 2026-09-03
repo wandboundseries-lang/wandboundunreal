@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBCardZoneState.h"
+#include "WBEventSnapshot.h"
 #include "WBStatusTypes.h"
 #include "WBTerminalOutcome.h"
 #include "WBTypes.h"
@@ -179,6 +180,9 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	};
 
 	bool bActive = false;
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBUnitParticipantSnapshot DeclaredAttackerSnapshot;
+	FWBUnitParticipantSnapshot DeclaredDefenderSnapshot;
 	EWBAttackAuthorityKind AuthorityKind = EWBAttackAuthorityKind::Player;
 	EWBAttackContinuationStage Stage = EWBAttackContinuationStage::None;
 	int32 AttackerUnitId = -1;
@@ -228,6 +232,8 @@ struct WANDBOUNDCORE_API FWBNPCPhaseContinuationState
 
 struct WANDBOUNDCORE_API FWBPendingNPCSpawnState
 {
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBUnitParticipantSnapshot TriggeringUnitSnapshot;
 	int32 PendingSpawnId = -1;
 	int32 SourceMarkerId = -1;
 	int32 MarkerOwnerPlayerId = -1;
@@ -252,6 +258,9 @@ enum class EWBUnitDestructionCause : uint8
 
 struct WANDBOUNDCORE_API FWBPostDestructionObserverSourceSnapshot
 {
+	FWBEventSourceSnapshot SourceSnapshot;
+	EWBTriggerEligibilityPolicy EligibilityPolicy =
+		EWBTriggerEligibilityPolicy::Hybrid;
 	int32 SourceUnitId = INDEX_NONE;
 	FString SourceCardId;
 	int32 OwnerPlayerId = INDEX_NONE;
@@ -261,6 +270,8 @@ struct WANDBOUNDCORE_API FWBPostDestructionObserverSourceSnapshot
 
 struct WANDBOUNDCORE_API FWBUnitDestructionSnapshot
 {
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBUnitParticipantSnapshot DestroyedUnitSnapshot;
 	FString EventId;
 	int32 DestroyedUnitId = INDEX_NONE;
 	FString DestroyedCardId;
@@ -282,6 +293,8 @@ struct WANDBOUNDCORE_API FWBUnitDestructionSnapshot
 
 struct WANDBOUNDCORE_API FWBActivatedEffectSourceSnapshot
 {
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBEventSourceSnapshot SourceSnapshot;
 	int32 SourceUnitId = INDEX_NONE;
 	FString SourceCardId;
 	int32 OwnerPlayerId = INDEX_NONE;

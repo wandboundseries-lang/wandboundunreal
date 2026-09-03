@@ -5,6 +5,27 @@
 
 namespace
 {
+int32 InheritingUnitId(const FWBCSNInheritanceEventContext& Context)
+{
+	return Context.InheritingSnapshot.IsCaptured()
+		? Context.InheritingSnapshot.UnitId
+		: Context.InheritingUnitId;
+}
+
+int32 InheritingControllerId(const FWBCSNInheritanceEventContext& Context)
+{
+	return Context.InheritingSnapshot.IsCaptured()
+		? Context.InheritingSnapshot.ControllerPlayerId
+		: Context.InheritingPlayerId;
+}
+
+int32 SourceUnitId(const FWBCSNInheritanceEventContext& Context)
+{
+	return Context.SourceSnapshot.IsCaptured()
+		? Context.SourceSnapshot.UnitId
+		: Context.SourceUnitId;
+}
+
 FString BuildStableTriggerId(
 	const FWBAfterCSNInheritanceTriggerDefinition& Trigger,
 	const FWBCSNInheritanceEventContext& Context)
@@ -12,8 +33,8 @@ FString BuildStableTriggerId(
 	return FString::Printf(
 		TEXT("after_csn_inheritance:%s:p%d:u%d:%s"),
 		*Context.TransactionId,
-		Context.InheritingPlayerId,
-		Context.InheritingUnitId,
+		InheritingControllerId(Context),
+		InheritingUnitId(Context),
 		*Trigger.TriggerId);
 }
 
@@ -26,9 +47,9 @@ FWBTraceEvent MakeTrace(
 	FWBTraceEvent Event;
 	Event.Kind = Kind;
 	Event.ActionId = StableTriggerId;
-	Event.PlayerId = Context.InheritingPlayerId;
-	Event.SourceUnitId = Context.SourceUnitId;
-	Event.TargetUnitId = Context.InheritingUnitId;
+	Event.PlayerId = InheritingControllerId(Context);
+	Event.SourceUnitId = SourceUnitId(Context);
+	Event.TargetUnitId = InheritingUnitId(Context);
 	Event.CardCount = CardCount;
 	Event.InheritedRL = Context.SourceCurrentRL;
 	Event.AttackContinuationId = Context.TransactionId;
@@ -44,8 +65,10 @@ WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
 	const FWBCSNInheritanceEventContext& Context)
 {
 	FWBCSNInheritanceTriggerResult Result;
-	if (!FWBGameStateData::IsValidPlayerId(Context.InheritingPlayerId)
-		|| Context.InheritingUnitId < 0
+	const int32 EventControllerId = InheritingControllerId(Context);
+	const int32 EventInheritingUnitId = InheritingUnitId(Context);
+	if (!FWBGameStateData::IsValidPlayerId(EventControllerId)
+		|| EventInheritingUnitId < 0
 		|| Context.SourceCurrentRL < 0
 		|| Context.InheritedWandCount < 0
 		|| Context.TransactionId.IsEmpty())
@@ -54,11 +77,13 @@ WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
 		return Result;
 	}
 
-	const FWBUnitState* Unit = State.GetUnitById(Context.InheritingUnitId);
+	const FWBUnitState* Unit = State.GetUnitById(EventInheritingUnitId);
 	if (Unit == nullptr
-		|| Unit->GetControllerPlayerIdForRules() != Context.InheritingPlayerId
+		|| Unit->GetControllerPlayerIdForRules() != EventControllerId
 		|| !Unit->IsUnitOnBoard()
-		|| Unit->bDefeated)
+		|| Unit->bDefeated
+		|| (Context.InheritingSnapshot.IsCaptured()
+			&& Unit->CardId != Context.InheritingSnapshot.CardId))
 	{
 		Result.Reason = TEXT("csn_inheritance_trigger_source_invalid");
 		return Result;
@@ -111,7 +136,7 @@ WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
 			Trigger.DrawCount));
 
 		const FWBCardLifecycleResult Draw = WBCardLifecycle::DrawCards(
-			WorkingState, Context.InheritingPlayerId, Trigger.DrawCount);
+			WorkingState, EventControllerId, Trigger.DrawCount);
 		if (!Draw.bOk)
 		{
 			Result.Reason = Draw.Reason;

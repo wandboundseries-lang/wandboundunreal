@@ -715,6 +715,18 @@ FWBApplyActionResult WBEffectRunner::ApplyAttackDeclare(
 	PendingAttack.ContinuationId = FString::Printf(
 		TEXT("attack_continuation:%s"),
 		*PendingAttack.DeclarationActionId);
+	PendingAttack.EventIdentity = WBEventSnapshot::MakeIdentity(
+		EWBEventKind::Attack,
+		PendingAttack.ContinuationId,
+		State.TurnNumber,
+		PendingAttack.DeclarationActionId,
+		PendingAttack.ContinuationId,
+		PendingAttack.AttackDeclaration,
+		PendingAttack.TargetDeclaration);
+	PendingAttack.DeclaredAttackerSnapshot =
+		WBEventSnapshot::CaptureUnitParticipant(State, *Attacker);
+	PendingAttack.DeclaredDefenderSnapshot =
+		WBEventSnapshot::CaptureUnitParticipant(State, *Defender);
 	State.PendingAttack = PendingAttack;
 
 	Result.bOk = true;
@@ -784,6 +796,18 @@ FWBApplyActionResult WBEffectRunner::ApplyNPCAttackDeclare(
 	PendingAttack.ContinuationId = FString::Printf(
 		TEXT("attack_continuation:%s"),
 		*PendingAttack.DeclarationActionId);
+	PendingAttack.EventIdentity = WBEventSnapshot::MakeIdentity(
+		EWBEventKind::Attack,
+		PendingAttack.ContinuationId,
+		State.TurnNumber,
+		PendingAttack.DeclarationActionId,
+		PendingAttack.ContinuationId,
+		PendingAttack.AttackDeclaration,
+		PendingAttack.TargetDeclaration);
+	PendingAttack.DeclaredAttackerSnapshot =
+		WBEventSnapshot::CaptureUnitParticipant(State, *Attacker);
+	PendingAttack.DeclaredDefenderSnapshot =
+		WBEventSnapshot::CaptureUnitParticipant(State, *Defender);
 	State.PendingAttack = PendingAttack;
 
 	Result.bOk = true;

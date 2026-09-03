@@ -81,14 +81,16 @@ FString BuildStableTriggerId(
 	const TCHAR* SourceKind = Trigger.SourceKind
 		== EWBAfterDamageTriggerSourceKind::EquippedWand
 		? TEXT("wand") : TEXT("unit");
-	const FString SourceIdentity = Trigger.SourceCardInstanceId.IsEmpty()
-		? Trigger.SourceCardId : Trigger.SourceCardInstanceId;
+	const FString SourceIdentity =
+		Trigger.SourceSnapshot.SourceCardInstanceId.IsEmpty()
+		? Trigger.SourceSnapshot.SourceCardId
+		: Trigger.SourceSnapshot.SourceCardInstanceId;
 	return FString::Printf(
 		TEXT("after_damage:%s:%s:p%d:u%d:%s:%s"),
 		*Context.AttackContinuationId,
 		SourceKind,
-		Trigger.ControllerPlayerId,
-		Trigger.SourceUnitId,
+		Trigger.SourceSnapshot.ControllerPlayerId,
+		Trigger.SourceSnapshot.SourceUnitId,
 		*SourceIdentity,
 		*Trigger.Definition.TriggerId);
 }
@@ -98,19 +100,24 @@ bool AfterDamageTriggerLess(
 	const FWBAfterDamageTriggerInstance& B,
 	const int32 OriginatingPlayerId)
 {
-	const bool bAOriginControlled = A.ControllerPlayerId == OriginatingPlayerId;
-	const bool bBOriginControlled = B.ControllerPlayerId == OriginatingPlayerId;
+	const bool bAOriginControlled =
+		A.SourceSnapshot.ControllerPlayerId == OriginatingPlayerId;
+	const bool bBOriginControlled =
+		B.SourceSnapshot.ControllerPlayerId == OriginatingPlayerId;
 	if (bAOriginControlled != bBOriginControlled)
 	{
 		return bAOriginControlled;
 	}
-	if (A.ControllerPlayerId != B.ControllerPlayerId)
+	if (A.SourceSnapshot.ControllerPlayerId
+		!= B.SourceSnapshot.ControllerPlayerId)
 	{
-		return A.ControllerPlayerId < B.ControllerPlayerId;
+		return A.SourceSnapshot.ControllerPlayerId
+			< B.SourceSnapshot.ControllerPlayerId;
 	}
-	if (A.SourceUnitId != B.SourceUnitId)
+	if (A.SourceSnapshot.SourceUnitId != B.SourceSnapshot.SourceUnitId)
 	{
-		return A.SourceUnitId < B.SourceUnitId;
+		return A.SourceSnapshot.SourceUnitId
+			< B.SourceSnapshot.SourceUnitId;
 	}
 	if (A.SourceKind != B.SourceKind)
 	{
@@ -126,10 +133,8 @@ bool AfterDamageTriggerLess(
 
 void AddDefinitionsForSource(
 	const FWBCardDefinition& Card,
-	const int32 ControllerPlayerId,
-	const int32 SourceUnitId,
+	const FWBEventSourceSnapshot& SourceSnapshot,
 	const EWBAfterDamageTriggerSourceKind SourceKind,
-	const FString& SourceCardInstanceId,
 	const int32 EquipOrder,
 	FWBAfterDamageTriggerCollection& Collection)
 {
@@ -138,7 +143,7 @@ void AddDefinitionsForSource(
 	{
 		if (Definition.TriggerId.IsEmpty()
 			|| !MatchesSourceRole(
-				SourceUnitId,
+				SourceSnapshot.SourceUnitId,
 				Collection.Context,
 				Definition.SourceRole))
 		{
@@ -146,11 +151,15 @@ void AddDefinitionsForSource(
 		}
 
 		FWBAfterDamageTriggerInstance Trigger;
-		Trigger.ControllerPlayerId = ControllerPlayerId;
+		Trigger.SourceSnapshot = SourceSnapshot;
+		Trigger.EligibilityPolicy =
+			EWBTriggerEligibilityPolicy::SnapshotAtCollection;
+		Trigger.ControllerPlayerId = SourceSnapshot.ControllerPlayerId;
 		Trigger.SourceKind = SourceKind;
-		Trigger.SourceUnitId = SourceUnitId;
-		Trigger.SourceCardId = Card.CardId;
-		Trigger.SourceCardInstanceId = SourceCardInstanceId;
+		Trigger.SourceUnitId = SourceSnapshot.SourceUnitId;
+		Trigger.SourceCardId = SourceSnapshot.SourceCardId;
+		Trigger.SourceCardInstanceId =
+			SourceSnapshot.SourceCardInstanceId;
 		Trigger.EquipOrder = EquipOrder;
 		Trigger.Definition = Definition;
 		Trigger.StableTriggerId = BuildStableTriggerId(
@@ -190,6 +199,16 @@ FWBAfterDamageTriggerCollection WBAfterDamageTrigger::CaptureBeforeDamage(
 	Context.bCounterAttack = Attack.bCounter;
 	Context.DeclarationActionId = Attack.DeclarationActionId;
 	Context.AttackContinuationId = Attack.ContinuationId;
+	Context.AttackDeclaration = Attack.AttackDeclaration;
+	Context.TargetDeclaration = Attack.TargetDeclaration;
+	Context.EventIdentity = WBEventSnapshot::MakeIdentity(
+		EWBEventKind::AfterDamage,
+		FString::Printf(TEXT("after_damage:%s"), *Attack.ContinuationId),
+		State.TurnNumber,
+		Attack.DeclarationActionId,
+		Attack.ContinuationId,
+		Attack.AttackDeclaration,
+		Attack.TargetDeclaration);
 	Context.HitUnitPreviousHP = Calculation.PreviousHP;
 	Context.HitUnitResultingHP = Calculation.PreviousHP;
 
@@ -197,6 +216,21 @@ FWBAfterDamageTriggerCollection WBAfterDamageTrigger::CaptureBeforeDamage(
 	const FWBUnitState* HitUnit = State.GetUnitById(Context.HitUnitId);
 	const FWBUnitState* FinalRecipient =
 		State.GetUnitById(Context.FinalDamageRecipientUnitId);
+	if (Attacker != nullptr)
+	{
+		Context.AttackerSnapshot =
+			WBEventSnapshot::CaptureUnitParticipant(State, *Attacker);
+	}
+	if (HitUnit != nullptr)
+	{
+		Context.HitUnitSnapshot =
+			WBEventSnapshot::CaptureUnitParticipant(State, *HitUnit);
+	}
+	if (FinalRecipient != nullptr)
+	{
+		Context.FinalDamageRecipientSnapshot =
+			WBEventSnapshot::CaptureUnitParticipant(State, *FinalRecipient);
+	}
 	Context.AttackerControllerId = Attacker != nullptr
 		? Attacker->GetControllerPlayerIdForRules() : INDEX_NONE;
 	Context.HitUnitControllerId = HitUnit != nullptr
@@ -233,12 +267,12 @@ FWBAfterDamageTriggerCollection WBAfterDamageTrigger::CaptureBeforeDamage(
 			WBCardDefinitionRepository::FindCardById(Repository, Unit->CardId);
 		if (Lookup.bFound)
 		{
+			const FWBEventSourceSnapshot SourceSnapshot =
+				WBEventSnapshot::CaptureUnitSource(State, *Unit);
 			AddDefinitionsForSource(
 				Lookup.Definition,
-				Unit->GetControllerPlayerIdForRules(),
-				Unit->UnitId,
+				SourceSnapshot,
 				EWBAfterDamageTriggerSourceKind::Unit,
-				FString(),
 				INDEX_NONE,
 				Result);
 		}
@@ -275,12 +309,16 @@ FWBAfterDamageTriggerCollection WBAfterDamageTrigger::CaptureBeforeDamage(
 		{
 			continue;
 		}
+		FWBEventSourceSnapshot SourceSnapshot =
+			WBEventSnapshot::CaptureUnitSource(State, *Bearer);
+		SourceSnapshot.SourceCardId = Entry.Card.CardId;
+		SourceSnapshot.SourceCardInstanceId = Entry.Card.InstanceId;
+		SourceSnapshot.OwnerPlayerId = Entry.Card.OwnerPlayerId;
+		SourceSnapshot.ControllerPlayerId = Entry.Card.OwnerPlayerId;
 		AddDefinitionsForSource(
 			Lookup.Definition,
-			Entry.Card.OwnerPlayerId,
-			Entry.EquippedToUnitId,
+			SourceSnapshot,
 			EWBAfterDamageTriggerSourceKind::EquippedWand,
-			Entry.Card.InstanceId,
 			Entry.EquipOrder,
 			Result);
 	}
@@ -356,20 +394,23 @@ FString WBAfterDamageTrigger::BuildUsageKey(
 	const TCHAR* SourceKind = Trigger.SourceKind
 		== EWBAfterDamageTriggerSourceKind::EquippedWand
 		? TEXT("wand") : TEXT("unit");
-	const FString SourceIdentity = Trigger.SourceCardInstanceId.IsEmpty()
-		? Trigger.SourceCardId : Trigger.SourceCardInstanceId;
+	const FString SourceIdentity =
+		Trigger.SourceSnapshot.SourceCardInstanceId.IsEmpty()
+		? Trigger.SourceSnapshot.SourceCardId
+		: Trigger.SourceSnapshot.SourceCardInstanceId;
 	FString Key = FString::Printf(
 		TEXT("after_damage:%s:p%d:u%d:%s:%s"),
 		SourceKind,
-		Trigger.ControllerPlayerId,
-		Trigger.SourceUnitId,
+		Trigger.SourceSnapshot.ControllerPlayerId,
+		Trigger.SourceSnapshot.SourceUnitId,
 		*SourceIdentity,
 		*Trigger.Definition.TriggerId);
 	if (Trigger.Definition.bOncePerTurnPerOpposingUnit)
 	{
 		Key += FString::Printf(
 			TEXT(":opposing:u%d"),
-			ResolveOpposingBattleUnitId(Trigger.SourceUnitId, Context));
+			ResolveOpposingBattleUnitId(
+				Trigger.SourceSnapshot.SourceUnitId, Context));
 	}
 	return Key;
 }
@@ -444,13 +485,15 @@ FWBAfterDamageTriggerResolutionResult WBAfterDamageTrigger::Resolve(
 		Result.TraceEvents.Add(MoveTemp(Collected));
 
 		FWBEffectRequest Request;
-		Request.Source.PlayerId = Trigger.ControllerPlayerId;
-		const FWBUnitState* LiveSource = State.GetUnitById(Trigger.SourceUnitId);
+		Request.Source.PlayerId = Trigger.SourceSnapshot.ControllerPlayerId;
+		const FWBUnitState* LiveSource = State.GetUnitById(
+			Trigger.SourceSnapshot.SourceUnitId);
 		Request.Source.SourceUnitId = LiveSource != nullptr
 			&& LiveSource->IsUnitOnBoard() && !LiveSource->bDefeated
-			? Trigger.SourceUnitId : INDEX_NONE;
-		Request.Source.SourceCardId = Trigger.SourceCardId;
-		Request.Source.SourceCardInstanceId = Trigger.SourceCardInstanceId;
+			? Trigger.SourceSnapshot.SourceUnitId : INDEX_NONE;
+		Request.Source.SourceCardId = Trigger.SourceSnapshot.SourceCardId;
+		Request.Source.SourceCardInstanceId =
+			Trigger.SourceSnapshot.SourceCardInstanceId;
 		Request.Source.SourceEffectId = Trigger.Definition.TriggerId;
 		Request.Target.TargetUnitId = TargetUnitId;
 		Request.Payloads = Trigger.Definition.Payloads;

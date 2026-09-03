@@ -13,6 +13,10 @@ enum class EWBAfterDamageTriggerSourceKind : uint8
 
 struct WANDBOUNDCORE_API FWBAfterDamageEventContext
 {
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBUnitParticipantSnapshot AttackerSnapshot;
+	FWBUnitParticipantSnapshot HitUnitSnapshot;
+	FWBUnitParticipantSnapshot FinalDamageRecipientSnapshot;
 	int32 AttackerUnitId = INDEX_NONE;
 	int32 HitUnitId = INDEX_NONE;
 	int32 FinalDamageRecipientUnitId = INDEX_NONE;
@@ -27,6 +31,10 @@ struct WANDBOUNDCORE_API FWBAfterDamageEventContext
 	bool bPrevented = false;
 	bool bFrozenBreak = false;
 	bool bCounterAttack = false;
+	EWBDeclarationProvenance AttackDeclaration =
+		EWBDeclarationProvenance::Automatic;
+	EWBDeclarationProvenance TargetDeclaration =
+		EWBDeclarationProvenance::Automatic;
 	FString DeclarationActionId;
 	FString AttackContinuationId;
 	int32 HitUnitPreviousHP = 0;
@@ -37,6 +45,9 @@ struct WANDBOUNDCORE_API FWBAfterDamageEventContext
 
 struct WANDBOUNDCORE_API FWBAfterDamageTriggerInstance
 {
+	FWBEventSourceSnapshot SourceSnapshot;
+	EWBTriggerEligibilityPolicy EligibilityPolicy =
+		EWBTriggerEligibilityPolicy::SnapshotAtCollection;
 	FString StableTriggerId;
 	int32 ControllerPlayerId = INDEX_NONE;
 	EWBAfterDamageTriggerSourceKind SourceKind =

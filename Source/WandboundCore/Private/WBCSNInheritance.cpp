@@ -169,6 +169,16 @@ FWBCSNInheritanceMutationResult WBCSNInheritance::Apply(
 	}
 
 	FWBCSNInheritanceEventContext TriggerContext;
+	TriggerContext.EventIdentity = WBEventSnapshot::MakeIdentity(
+		EWBEventKind::Inheritance,
+		Request.TransactionId,
+		WorkingState.TurnNumber,
+		FString(),
+		Request.TransactionId);
+	TriggerContext.SourceSnapshot = Request.SourceSnapshot;
+	TriggerContext.InheritingSnapshot =
+		WBEventSnapshot::CaptureUnitParticipant(WorkingState, *MutableTarget);
+	TriggerContext.EligibilityPolicy = EWBTriggerEligibilityPolicy::Hybrid;
 	TriggerContext.InheritingUnitId = Request.TargetUnitId;
 	TriggerContext.InheritingPlayerId = Request.ControllerPlayerId;
 	TriggerContext.SourceUnitId = Request.SourceUnitId;

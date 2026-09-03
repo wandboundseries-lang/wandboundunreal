@@ -209,6 +209,8 @@ FWBMandatoryDeckChoiceResult WBMandatoryDeckChoice::Submit(
 	Request.SelectedCardInstanceId = *SelectedInstance;
 	Request.RequiredFaction = Choice.RequiredFaction;
 	Request.TargetTile = Choice.DestinationTile;
+	Request.InheritanceSource.SourceSnapshot =
+		Choice.ActivatedEffectSourceSnapshot.SourceSnapshot.AsParticipant();
 	Request.InheritanceSource.SourceUnitId =
 		Choice.ActivatedEffectSourceSnapshot.SourceUnitId;
 	Request.InheritanceSource.SourceCurrentRL =

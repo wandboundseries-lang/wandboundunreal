@@ -311,6 +311,8 @@ FWBApplyActionResult WBUnitReplacementEffect::ApplyPendingAttackDefenderReplacem
 	}
 
 	FWBCSNInheritanceMutationRequest InheritanceRequest;
+	InheritanceRequest.SourceSnapshot =
+		DestructionSnapshot.DestroyedUnitSnapshot;
 	InheritanceRequest.ControllerPlayerId = Request.Source.PlayerId;
 	InheritanceRequest.SourceUnitId = SourceUnit->UnitId;
 	InheritanceRequest.TargetUnitId = NewUnitId;

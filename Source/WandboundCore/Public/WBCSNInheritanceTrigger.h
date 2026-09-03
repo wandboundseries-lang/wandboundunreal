@@ -8,6 +8,11 @@
 
 struct WANDBOUNDCORE_API FWBCSNInheritanceEventContext
 {
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBUnitParticipantSnapshot SourceSnapshot;
+	FWBUnitParticipantSnapshot InheritingSnapshot;
+	EWBTriggerEligibilityPolicy EligibilityPolicy =
+		EWBTriggerEligibilityPolicy::Hybrid;
 	int32 InheritingUnitId = INDEX_NONE;
 	int32 InheritingPlayerId = INDEX_NONE;
 	int32 SourceUnitId = INDEX_NONE;

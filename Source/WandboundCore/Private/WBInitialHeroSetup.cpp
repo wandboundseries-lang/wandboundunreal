@@ -7,6 +7,11 @@ namespace
 {
 struct FCollectedSetupTrigger
 {
+	FWBEventIdentitySnapshot EventIdentity;
+	FWBEventSourceSnapshot SourceSnapshot;
+	FWBUnitParticipantSnapshot SummonedSnapshot;
+	EWBTriggerEligibilityPolicy EligibilityPolicy =
+		EWBTriggerEligibilityPolicy::SnapshotAtCollection;
 	FString InstanceId;
 	int32 ControllerPlayerId = -1;
 	int32 ListenerUnitId = -1;
@@ -200,10 +205,15 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 				}
 
 				FCollectedSetupTrigger Item;
+				Item.SourceSnapshot =
+					WBEventSnapshot::CaptureUnitSource(WorkingState, Listener);
+				Item.SummonedSnapshot =
+					WBEventSnapshot::CaptureUnitParticipant(
+						WorkingState, Summoned);
 				Item.ControllerPlayerId =
-					Listener.GetControllerPlayerIdForRules();
-				Item.ListenerUnitId = Listener.UnitId;
-				Item.SummonedUnitId = Summoned.UnitId;
+					Item.SourceSnapshot.ControllerPlayerId;
+				Item.ListenerUnitId = Item.SourceSnapshot.SourceUnitId;
+				Item.SummonedUnitId = Item.SummonedSnapshot.UnitId;
 				Item.Definition = Trigger;
 				Item.InstanceId = FString::Printf(
 					TEXT("setup_trigger:p%d:l%d:s%d:%s"),
@@ -211,6 +221,10 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 					Item.ListenerUnitId,
 					Item.SummonedUnitId,
 					*Trigger.TriggerId);
+				Item.EventIdentity = WBEventSnapshot::MakeIdentity(
+					EWBEventKind::Summon,
+					Item.InstanceId,
+					WorkingState.TurnNumber);
 				Collected.Add(MoveTemp(Item));
 			}
 		}
@@ -240,7 +254,8 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 			Collected.FilterByPredicate(
 				[Controller](const FCollectedSetupTrigger& Trigger)
 				{
-					return Trigger.ControllerPlayerId == Controller;
+					return Trigger.SourceSnapshot.ControllerPlayerId
+						== Controller;
 				});
 		if (Batch.Num() > 1)
 		{
@@ -291,14 +306,14 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 				const FWBCardLifecycleResult Draw =
 					WBCardLifecycle::DrawOneCard(
 						WorkingState,
-						Trigger.ControllerPlayerId);
+						Trigger.SourceSnapshot.ControllerPlayerId);
 				if (!Draw.bOk)
 				{
 					return MakeInitialHeroSetupFailure(Draw.Reason);
 				}
 				FWBTraceEvent DrawTrace = SetupTrace(
 					FName(TEXT("setup_trigger_draw")),
-					Trigger.ControllerPlayerId,
+					Trigger.SourceSnapshot.ControllerPlayerId,
 					WorkingState.TurnNumber);
 				DrawTrace.CardCount = 1;
 				Result.TraceEvents.Add(DrawTrace);
@@ -306,11 +321,11 @@ FWBInitialHeroSetupResult WBInitialHeroSetup::Apply(
 
 			FWBTraceEvent Resolved = SetupTrace(
 				FName(TEXT("setup_trigger_resolved")),
-				Trigger.ControllerPlayerId,
+				Trigger.SourceSnapshot.ControllerPlayerId,
 				WorkingState.TurnNumber);
 			Resolved.ActionId = Trigger.InstanceId;
-			Resolved.SourceUnitId = Trigger.ListenerUnitId;
-			Resolved.TargetUnitId = Trigger.SummonedUnitId;
+			Resolved.SourceUnitId = Trigger.SourceSnapshot.SourceUnitId;
+			Resolved.TargetUnitId = Trigger.SummonedSnapshot.UnitId;
 			Result.TraceEvents.Add(Resolved);
 		}
 	}

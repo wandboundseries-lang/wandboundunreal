@@ -3346,6 +3346,22 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 					EWBDeclarationProvenance::Automatic;
 				WorkingState.PendingAttack.TargetDeclaration =
 					EWBDeclarationProvenance::Automatic;
+				WorkingState.PendingAttack.EventIdentity =
+					WBEventSnapshot::MakeIdentity(
+						EWBEventKind::Attack,
+						WorkingState.PendingAttack.ContinuationId
+							+ TEXT(":counter"),
+						WorkingState.TurnNumber,
+						WorkingState.PendingAttack.DeclarationActionId,
+						WorkingState.PendingAttack.ContinuationId,
+						EWBDeclarationProvenance::Automatic,
+						EWBDeclarationProvenance::Automatic);
+				WorkingState.PendingAttack.DeclaredAttackerSnapshot =
+					WBEventSnapshot::CaptureUnitParticipant(
+						WorkingState, *CounterAttacker);
+				WorkingState.PendingAttack.DeclaredDefenderSnapshot =
+					WBEventSnapshot::CaptureUnitParticipant(
+						WorkingState, *CounterDefender);
 				WorkingState.PendingAttack.bDamageResolved = false;
 				WorkingState.PendingAttack.bPostHitCompleted = false;
 				WorkingState.PendingAttack.bFrozenBroken = false;

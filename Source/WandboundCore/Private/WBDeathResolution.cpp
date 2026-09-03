@@ -276,6 +276,12 @@ bool WBDeathResolution::BuildSuccessfulDestructionSnapshot(
 		State.PendingUnitDestructionEvents.Num(),
 		ResolutionOrder,
 		UnitId);
+	OutSnapshot.EventIdentity = WBEventSnapshot::MakeIdentity(
+		EWBEventKind::Destruction,
+		OutSnapshot.EventId,
+		State.TurnNumber);
+	OutSnapshot.DestroyedUnitSnapshot =
+		WBEventSnapshot::CaptureUnitParticipant(State, *Unit);
 	OutSnapshot.DestroyedUnitId = UnitId;
 	OutSnapshot.DestroyedCardId = Unit->CardId;
 	OutSnapshot.OwnerPlayerId = Unit->GetOwnerPlayerIdForRules();
@@ -298,6 +304,9 @@ bool WBDeathResolution::BuildSuccessfulDestructionSnapshot(
 			continue;
 		}
 		FWBPostDestructionObserverSourceSnapshot Observer;
+		Observer.SourceSnapshot =
+			WBEventSnapshot::CaptureUnitSource(State, Candidate);
+		Observer.EligibilityPolicy = EWBTriggerEligibilityPolicy::Hybrid;
 		Observer.SourceUnitId = Candidate.UnitId;
 		Observer.SourceCardId = Candidate.CardId;
 		Observer.OwnerPlayerId = Candidate.GetOwnerPlayerIdForRules();
@@ -309,15 +318,19 @@ bool WBDeathResolution::BuildSuccessfulDestructionSnapshot(
 		const FWBPostDestructionObserverSourceSnapshot& A,
 		const FWBPostDestructionObserverSourceSnapshot& B)
 	{
-		if (A.ControllerPlayerId != B.ControllerPlayerId)
+		if (A.SourceSnapshot.ControllerPlayerId
+			!= B.SourceSnapshot.ControllerPlayerId)
 		{
-			return A.ControllerPlayerId < B.ControllerPlayerId;
+			return A.SourceSnapshot.ControllerPlayerId
+				< B.SourceSnapshot.ControllerPlayerId;
 		}
-		if (A.SourceUnitId != B.SourceUnitId)
+		if (A.SourceSnapshot.SourceUnitId != B.SourceSnapshot.SourceUnitId)
 		{
-			return A.SourceUnitId < B.SourceUnitId;
+			return A.SourceSnapshot.SourceUnitId
+				< B.SourceSnapshot.SourceUnitId;
 		}
-		return A.SourceCardId < B.SourceCardId;
+		return A.SourceSnapshot.SourceCardId
+			< B.SourceSnapshot.SourceCardId;
 	});
 	for (int32 Index = 0; Index < OutSnapshot.ObserverSources.Num(); ++Index)
 	{
