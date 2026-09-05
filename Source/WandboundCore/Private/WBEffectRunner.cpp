@@ -14,6 +14,7 @@
 #include "WBStatusSemantics.h"
 #include "WBRules.h"
 #include "WBUnitReplacementEffect.h"
+#include "WBUnitStatMutation.h"
 
 namespace
 {
@@ -1835,10 +1836,20 @@ FWBApplyActionResult WBEffectRunner::ApplyStartOfTurnStatusTicks(FWBGameStateDat
 		const FWBStatusSourceProvenance PoisonSource = PoisonStatus != nullptr
 			? PoisonStatus->Source : FWBStatusSourceProvenance();
 		const int32 PreviousStatusTurns = Unit.GetStatusTurnsRemaining(PoisonStatusId);
-		const int32 NewMaxHP = FMath::Max(PreviousMaxHP - 1, 1);
-
-		Unit.MaxHP = NewMaxHP;
-		Unit.HP = FMath::Min(Unit.HP, Unit.MaxHP);
+		FWBUnitStatMutationRequest Mutation;
+		Mutation.TransactionId = FString::Printf(TEXT("poison_tick:turn%d:u%d"),
+			State.TurnNumber, UnitId);
+		Mutation.Source = WBEventSnapshot::FromStatusSource(PoisonSource);
+		Mutation.TargetUnitId = UnitId;
+		Mutation.Entries.Add({ EWBStoredUnitStat::MaxHP, EWBUnitStatMutationOp::Set,
+			PreviousMaxHP > 1 ? PreviousMaxHP - 1 : 1 });
+		const FWBApplyActionResult Applied = WBUnitStatMutation::Apply(State, Mutation);
+		if (!Applied.bOk)
+		{
+			Result.bOk = false;
+			Result.Reason = Applied.Reason;
+			return Result;
+		}
 
 		int32 NewStatusTurns = PreviousStatusTurns;
 		bool bExpired = false;

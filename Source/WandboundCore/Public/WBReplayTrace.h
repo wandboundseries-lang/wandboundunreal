@@ -10,6 +10,9 @@ class FJsonObject;
 struct WANDBOUNDCORE_API FWBTraceEvent
 {
 	FName Kind;
+	FName StatId;
+	int32 PreviousStatValue = 0;
+	int32 NewStatValue = 0;
 	FString ActionId;
 	int32 PlayerId = -1;
 	int32 SourceUnitId = -1;

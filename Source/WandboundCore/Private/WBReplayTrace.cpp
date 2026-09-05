@@ -29,6 +29,12 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	Object->SetStringField(TEXT("kind"), Event.Kind.ToString());
 	Object->SetBoolField(TEXT("ok"), Event.bOk);
 	Object->SetNumberField(TEXT("player_id"), Event.PlayerId);
+	if (!Event.StatId.IsNone())
+	{
+		Object->SetStringField(TEXT("stat_id"), Event.StatId.ToString());
+		Object->SetNumberField(TEXT("previous_stat_value"), Event.PreviousStatValue);
+		Object->SetNumberField(TEXT("new_stat_value"), Event.NewStatValue);
+	}
 
 	if (!Event.ActionId.IsEmpty())
 	{

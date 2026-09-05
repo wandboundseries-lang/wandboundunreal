@@ -1,6 +1,7 @@
 #include "WBStatusEffect.h"
 
 #include "WBStatusSemantics.h"
+#include "WBUnitStatMutation.h"
 
 namespace
 {
@@ -185,8 +186,18 @@ FWBStatusEffectResult WBStatusEffect::ApplyStatusEffect(
 			Result.bAppliedImmediatePoisonTick = true;
 			Result.PreviousHP = Target->HP;
 			Result.PreviousMaxHP = Target->MaxHP;
-			Target->MaxHP = FMath::Max(Target->MaxHP - 1, 1);
-			Target->HP = FMath::Min(Target->HP, Target->MaxHP);
+			FWBUnitStatMutationRequest Mutation;
+			Mutation.TransactionId = FString::Printf(TEXT("poison_reapply:turn%d:u%d:%s"),
+				State.TurnNumber, Request.TargetUnitId, *CanonicalRequest.Source.SourceEffectId);
+			Mutation.Source = WBEventSnapshot::FromStatusSource(CanonicalRequest.Source);
+			Mutation.TargetUnitId = Request.TargetUnitId;
+			Mutation.Entries.Add({ EWBStoredUnitStat::MaxHP, EWBUnitStatMutationOp::Set,
+				Target->MaxHP > 1 ? Target->MaxHP - 1 : 1 });
+			const FWBApplyActionResult Applied = WBUnitStatMutation::Apply(State, Mutation);
+			if (!Applied.bOk)
+			{
+				return MakeStatusEffectFailure(Request, Applied.Reason);
+			}
 			Result.NewHP = Target->HP;
 			Result.NewMaxHP = Target->MaxHP;
 		}

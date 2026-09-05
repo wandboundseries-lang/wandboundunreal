@@ -1,4 +1,5 @@
 #include "WBUnitStatDelta.h"
+#include "WBUnitStatMutation.h"
 
 namespace
 {
@@ -9,11 +10,6 @@ FWBUnitStatDeltaResult FailStatDelta(const FString& Reason)
 	return Result;
 }
 
-bool CanAddInt32(const int32 Value, const int32 Delta)
-{
-	const int64 Result = static_cast<int64>(Value) + static_cast<int64>(Delta);
-	return Result >= MIN_int32 && Result <= MAX_int32;
-}
 }
 
 FWBUnitStatDeltaResult WBUnitStatDelta::ApplyPersistentDelta(
@@ -30,55 +26,40 @@ FWBUnitStatDeltaResult WBUnitStatDelta::ApplyPersistentDelta(
 	{
 		return FailStatDelta(TEXT("unit_stat_delta_target_unavailable"));
 	}
-	if (!CanAddInt32(Target->ATK, Request.ATKDelta)
-		|| !CanAddInt32(Target->MaxHP, Request.MaxHPDelta)
-		|| !CanAddInt32(Target->HP, Request.CurrentHPDelta))
+	const int32 PreviousATK = Target->ATK;
+	const int32 PreviousMaxHP = Target->MaxHP;
+	const int32 PreviousHP = Target->HP;
+	FWBUnitStatMutationRequest Mutation;
+	Mutation.TransactionId = Request.TransactionId;
+	Mutation.Source.SourceUnitId = Request.SourceUnitId;
+	Mutation.TargetUnitId = Request.TargetUnitId;
+	Mutation.Entries = {
+		{ EWBStoredUnitStat::ATK, EWBUnitStatMutationOp::Add, Request.ATKDelta },
+		{ EWBStoredUnitStat::MaxHP, EWBUnitStatMutationOp::Add, Request.MaxHPDelta },
+		{ EWBStoredUnitStat::CurrentHP, EWBUnitStatMutationOp::Add, Request.CurrentHPDelta } };
+	const FWBApplyActionResult MutationResult = WBUnitStatMutation::Apply(State, Mutation);
+	if (!MutationResult.bOk)
 	{
-		return FailStatDelta(TEXT("unit_stat_delta_overflow"));
+		return FailStatDelta(MutationResult.Reason == TEXT("unit_stat_mutation_overflow")
+			? TEXT("unit_stat_delta_overflow") : TEXT("unit_stat_delta_result_invalid"));
 	}
-
-	const int32 NewATK = Target->ATK + Request.ATKDelta;
-	const int32 NewMaxHP = Target->MaxHP + Request.MaxHPDelta;
-	if (NewATK < 0 || NewMaxHP < 1)
-	{
-		return FailStatDelta(TEXT("unit_stat_delta_result_invalid"));
-	}
-	const int32 NewHP = FMath::Clamp(
-		Target->HP + Request.CurrentHPDelta,
-		0,
-		NewMaxHP);
-
-	FWBGameStateData WorkingState = State;
-	FWBUnitState* MutableTarget = WorkingState.GetMutableUnitById(
-		Request.TargetUnitId);
-	if (MutableTarget == nullptr)
-	{
-		return FailStatDelta(TEXT("unit_stat_delta_target_unavailable"));
-	}
-	const int32 PreviousATK = MutableTarget->ATK;
-	const int32 PreviousMaxHP = MutableTarget->MaxHP;
-	const int32 PreviousHP = MutableTarget->HP;
-	MutableTarget->MaxHP = NewMaxHP;
-	MutableTarget->ATK = NewATK;
-	MutableTarget->HP = NewHP;
 
 	FWBTraceEvent Applied;
 	Applied.Kind = FName(TEXT("unit_stat_delta_applied"));
 	Applied.ActionId = Request.TransactionId;
-	Applied.PlayerId = MutableTarget->GetControllerPlayerIdForRules();
+	Applied.PlayerId = Target->GetControllerPlayerIdForRules();
 	Applied.SourceUnitId = Request.SourceUnitId;
 	Applied.TargetUnitId = Request.TargetUnitId;
 	Applied.PreviousATK = PreviousATK;
-	Applied.NewATK = NewATK;
+	Applied.NewATK = Target->ATK;
 	Applied.PreviousMaxHP = PreviousMaxHP;
-	Applied.NewMaxHP = NewMaxHP;
+	Applied.NewMaxHP = Target->MaxHP;
 	Applied.PreviousHP = PreviousHP;
-	Applied.NewHP = NewHP;
+	Applied.NewHP = Target->HP;
 	Applied.bOk = true;
 
 	FWBUnitStatDeltaResult Result;
 	Result.bOk = true;
 	Result.TraceEvents.Add(MoveTemp(Applied));
-	State = MoveTemp(WorkingState);
 	return Result;
 }

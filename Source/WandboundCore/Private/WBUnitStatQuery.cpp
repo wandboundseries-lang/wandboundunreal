@@ -78,6 +78,7 @@ FWBEffectiveUnitStatResult WBUnitStatQuery::GetEffectiveAR(
 	});
 
 	int32 MinimumResult = 0;
+	int64 EffectiveValue = Result.EffectiveValue;
 	for (const FWBUnitState* Source : Sources)
 	{
 		const FWBCardDefinitionRepositoryLookupResult Lookup =
@@ -104,12 +105,13 @@ FWBEffectiveUnitStatResult WBUnitStatQuery::GetEffectiveAR(
 			{
 				continue;
 			}
-			Result.EffectiveValue += Aura.Amount;
+			EffectiveValue += static_cast<int64>(Aura.Amount);
 			MinimumResult = FMath::Max(MinimumResult, Aura.MinimumResult);
 			++Result.AppliedModifierCount;
 		}
 	}
-	Result.EffectiveValue = FMath::Max(MinimumResult, Result.EffectiveValue);
+	Result.EffectiveValue = static_cast<int32>(FMath::Clamp<int64>(
+		EffectiveValue, MinimumResult, MAX_int32));
 	Result.bOk = true;
 	return Result;
 }
@@ -130,8 +132,7 @@ int32 WBUnitStatQuery::GetIntrinsicAR(
 	{
 		return 0;
 	}
-	return FMath::Max(
-		0,
-		Unit->AR + WBTerrainRules::GetOccupantARModifier(
-			State.GetTerrainAt(FWBTile(Unit->X, Unit->Y))));
+	return static_cast<int32>(FMath::Clamp<int64>(
+		static_cast<int64>(Unit->AR) + WBTerrainRules::GetOccupantARModifier(
+			State.GetTerrainAt(FWBTile(Unit->X, Unit->Y))), 0, MAX_int32));
 }

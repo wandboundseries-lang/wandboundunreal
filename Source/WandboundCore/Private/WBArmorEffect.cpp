@@ -1,4 +1,5 @@
 #include "WBArmorEffect.h"
+#include "WBUnitStatMutation.h"
 
 namespace
 {
@@ -73,33 +74,36 @@ FWBArmorEffectResult WBArmorEffect::ApplyArmorEffect(
 		return Result;
 	}
 
+	FWBUnitStatMutationEntry Entry;
+	Entry.Value = Request.Amount;
 	switch (Request.Operation)
 	{
 	case EWBArmorEffectOp::AddCurrentArmor:
-		Result.NewCurrentArmor = Result.PreviousMaxArmor > 0
-			? FMath::Min(Result.PreviousMaxArmor, Result.PreviousCurrentArmor + Request.Amount)
-			: 0;
+		Entry.Stat = EWBStoredUnitStat::CurrentArmor;
 		break;
 	case EWBArmorEffectOp::ReduceCurrentArmor:
-		Result.NewCurrentArmor = FMath::Max(Result.PreviousCurrentArmor - Request.Amount, 0);
+		Entry.Stat = EWBStoredUnitStat::CurrentArmor;
+		Entry.Value = -Request.Amount;
 		break;
 	case EWBArmorEffectOp::SetCurrentArmor:
-		Result.NewCurrentArmor = FMath::Clamp(Request.Amount, 0, Result.PreviousMaxArmor);
+		Entry.Stat = EWBStoredUnitStat::CurrentArmor;
+		Entry.Operation = EWBUnitStatMutationOp::Set;
 		break;
 	case EWBArmorEffectOp::AddMaxArmor:
-		Result.NewMaxArmor = Result.PreviousMaxArmor + Request.Amount;
-		Result.NewCurrentArmor = FMath::Min(Result.PreviousCurrentArmor, Result.NewMaxArmor);
+		Entry.Stat = EWBStoredUnitStat::MaxArmor;
 		break;
 	case EWBArmorEffectOp::ReduceMaxArmor:
-		Result.NewMaxArmor = FMath::Max(Result.PreviousMaxArmor - Request.Amount, 0);
-		Result.NewCurrentArmor = FMath::Min(Result.PreviousCurrentArmor, Result.NewMaxArmor);
+		Entry.Stat = EWBStoredUnitStat::MaxArmor;
+		Entry.Value = -Request.Amount;
 		break;
 	case EWBArmorEffectOp::SetMaxArmor:
-		Result.NewMaxArmor = FMath::Max(Request.Amount, 0);
-		Result.NewCurrentArmor = FMath::Min(Result.PreviousCurrentArmor, Result.NewMaxArmor);
+		Entry.Stat = EWBStoredUnitStat::MaxArmor;
+		Entry.Operation = EWBUnitStatMutationOp::Set;
 		break;
 	case EWBArmorEffectOp::RestoreArmorToMax:
-		Result.NewCurrentArmor = Result.PreviousMaxArmor;
+		Entry.Stat = EWBStoredUnitStat::CurrentArmor;
+		Entry.Operation = EWBUnitStatMutationOp::Set;
+		Entry.Value = Result.PreviousMaxArmor;
 		break;
 	default:
 		Result.bOk = false;
@@ -107,7 +111,20 @@ FWBArmorEffectResult WBArmorEffect::ApplyArmorEffect(
 		return Result;
 	}
 
-	Target->SetArmorForTest(Result.NewCurrentArmor, Result.NewMaxArmor);
+	FWBUnitStatMutationRequest Mutation;
+	// Legacy Armor requests carry a semantic reason, not a declared source.
+	// The enclosing effect owns the accepted action/trace identity.
+	Mutation.TransactionId = FString::Printf(TEXT("armor:%s:u%d:%s"),
+		*GetOperationName(Request.Operation).ToString(), Request.TargetUnitId,
+		*Request.SourceReason.ToString());
+	Mutation.TargetUnitId = Request.TargetUnitId;
+	Mutation.Entries.Add(Entry);
+	const FWBApplyActionResult Applied = WBUnitStatMutation::Apply(State, Mutation);
+	if (!Applied.bOk)
+	{
+		Result.Reason = Applied.Reason;
+		return Result;
+	}
 	Result.NewCurrentArmor = Target->GetCurrentArmor();
 	Result.NewMaxArmor = Target->GetMaxArmor();
 	Result.bOk = true;
