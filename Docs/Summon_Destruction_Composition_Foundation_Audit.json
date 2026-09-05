@@ -1,0 +1,141 @@
+{
+  "audit": "summon_destruction_composition_foundation",
+  "public_baseline": "72cfc15f5b7c89970658f5c5aec6fbfa4e33d20d",
+  "baseline_automation": 2473,
+  "private_legacy_reference": {
+    "consulted_read_only": true,
+    "inventory_published": false
+  },
+  "authorities": {
+    "character_construction": "WBCharacterConstruction",
+    "exact_character_summon": "WBCharacterSummon",
+    "genuine_destruction": "WBDeathResolution",
+    "destroy_then_summon": "WBSummonDestructionComposition",
+    "inheritance": "WBCSNInheritance unchanged",
+    "attack_redirect": "WBEffectRunner/WBRules unchanged"
+  },
+  "summon": {
+    "source_zones": ["Deck", "Hand"],
+    "exact_instance_required": true,
+    "condition_policies": ["Normal", "IgnoreSummoningConditions"],
+    "owner_and_controller_explicit": true,
+    "remaining_order_preserved": true,
+    "shuffle": false
+  },
+  "destruction": {
+    "positive_hp_supported": true,
+    "fabricated_damage": false,
+    "prevention_hook_preserved": true,
+    "successful_events": 1,
+    "equipment_policies": ["Discard", "DetachForContinuation"],
+    "pending_attack_policies": ["ClearIfParticipant", "PreserveForRedirect"],
+    "terminal_policies": ["CommitImmediately", "DeferToComposition"]
+  },
+  "composition": {
+    "working_copy": true,
+    "final_state_unit_cap": true,
+    "vacated_target_tile": true,
+    "atomic_rollback": true,
+    "card_specific_ids": false
+  },
+  "compatibility": {
+    "rook": "shared exact Deck summon; choice and continuation unchanged",
+    "patch": "shared exact Deck summon; sacrifice remains non-destruction",
+    "crash_in": "shared atomic lifecycle; combat redirect and declaration semantics unchanged",
+    "sable": "same deterministic destruction event queue, exactly once",
+    "setup_hybrid_npc_marker": "not migrated"
+  },
+  "replay_schema": 1,
+  "receipt_fields": 8,
+  "validation": {
+    "status": "passed",
+    "ready": true,
+    "focused_tests": 8,
+    "focused_assertions": 135,
+    "focused_passed": 8,
+    "affected_passed": 459,
+    "full_passed": 2481,
+    "delta": 8,
+    "failed": 0,
+    "warnings": 0,
+    "not_run": 0,
+    "build_matrix": {
+      "status": "passed",
+      "editor_non_unity": { "actions": 132, "seconds": 217.31 },
+      "game_non_unity": { "actions": 146, "seconds": 294.80 },
+      "editor_default": { "actions": 5, "seconds": 13.64 },
+      "game_default": { "actions": 6, "seconds": 97.41 },
+      "editor_forced_unity": { "actions": 6, "seconds": 22.24 },
+      "game_forced_unity": { "actions": 4, "seconds": 43.91 },
+      "interim_issue": "anonymous-namespace helper collisions fixed by authority-specific helper names"
+    },
+    "build_cook_run": {
+      "status": "passed",
+      "exit_code": 0,
+      "compile_actions": 405,
+      "cooked_packages": 459,
+      "build_cook_run_seconds": 732.78,
+      "automation_tool_seconds": 734
+    },
+    "packaged_smoke": {
+      "status": "passed",
+      "runs_per_scenario": 2,
+      "fresh_replay_verified": true,
+      "byte_identical": true,
+      "privacy_scan": "passed",
+      "crash_in": {
+        "archive_sha256": "687aacb3c0faf57e0bce3e8bbdcb580b957d48d066ad1b71f7ef33ed6c2915f4",
+        "receipt_sha256": "76a8ff0025fa4137a35262f52f43a89d24e1579871cccb87fcd5b51ce3c28701",
+        "state_digest": "a274b44a9894faf29609a5945c747a27d3ef663ad59055a31926125819b52a0b",
+        "trace_digest": "a3ceda9dce70c0798d737f412ff3c1b08025e3fa3d36d09a12599a0f5992b8f4",
+        "replay_digest": "2c94f9e99b0ad17bde1463e1f4d6e62cccaad19081bd143abd31c51f7bb8671c"
+      },
+      "sable": {
+        "archive_sha256": "c85c0086cfc6902e5919d81bf45cbcc3b9a11fabbc5282f988555ef12cc2775b",
+        "receipt_sha256": "580e3c5577c002225c752b358986b0cfe4ef844bd5e8e6208bbbccd0d2c1b642",
+        "state_digest": "64e55c1bce7e969938bc4f3e64561604b7d54a38f4cad55bf810b2a8ca4d0b39",
+        "trace_digest": "1a86686d391a7fa20cc003671461478bf7a5e4357eae772e573d9f9b1b589f52",
+        "replay_digest": "d9ffbcdba36a5740b72873310159d9eb5fedf55a489d56913d894174f30e6661"
+      },
+      "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c"
+    }
+  },
+  "source_control": {
+    "staged_files": 0,
+    "commit_or_push_performed": false,
+    "baseline_dirty_task_paths": [],
+    "unrelated_overlap": false,
+    "codec_cpp_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "codec_header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0"
+  },
+  "changed_files": [
+    "Docs/Summon_Destruction_Composition_Foundation_Audit.md",
+    "Docs/Summon_Destruction_Composition_Foundation_Audit.json",
+    "Source/WandboundCore/Private/WBCardLifecycle.cpp",
+    "Source/WandboundCore/Private/WBCharacterConstruction.cpp",
+    "Source/WandboundCore/Private/WBCharacterSummon.cpp",
+    "Source/WandboundCore/Private/WBDeathResolution.cpp",
+    "Source/WandboundCore/Private/WBDeckSummon.cpp",
+    "Source/WandboundCore/Private/WBSummonDestructionComposition.cpp",
+    "Source/WandboundCore/Private/WBSummonExecution.cpp",
+    "Source/WandboundCore/Private/WBUnitReplacementEffect.cpp",
+    "Source/WandboundCore/Public/WBCardLifecycle.h",
+    "Source/WandboundCore/Public/WBCharacterConstruction.h",
+    "Source/WandboundCore/Public/WBCharacterSummon.h",
+    "Source/WandboundCore/Public/WBDeathResolution.h",
+    "Source/WandboundCore/Public/WBSummonDestructionComposition.h",
+    "Source/WandboundTests/Private/WBSummonDestructionCompositionTests.cpp"
+  ],
+  "deferred": [
+    "broad zone mutation",
+    "arbitrary source zones",
+    "inheritance generalization",
+    "RL transfer",
+    "continuous and temporary stats",
+    "choose-N and optional private-choice passing",
+    "status tick ownership changes",
+    "new production cards",
+    "AI",
+    "forensic telemetry"
+  ]
+}

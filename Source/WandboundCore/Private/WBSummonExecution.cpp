@@ -4,34 +4,10 @@
 #include "Dom/JsonValue.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
-#include "WBCardZoneState.h"
-#include "WBTurnOneRestrictions.h"
+#include "WBCharacterSummon.h"
 
 namespace
 {
-constexpr int32 SummonBoardSize = 9;
-constexpr int32 SummonMaxOwnedUnitsIncludingHero = 4;
-
-bool IsTileInBounds(const FWBTile& Tile)
-{
-	return Tile.X >= 0 && Tile.X < SummonBoardSize && Tile.Y >= 0 && Tile.Y < SummonBoardSize;
-}
-
-bool AreOrthogonallyAdjacent(const FWBTile& A, const FWBTile& B)
-{
-	const int32 DeltaX = FMath::Abs(A.X - B.X);
-	const int32 DeltaY = FMath::Abs(A.Y - B.Y);
-	return DeltaX + DeltaY == 1;
-}
-
-bool AreCharacterStatsValid(const FWBCardCharacterStatsDefinition& Stats)
-{
-	return Stats.HP > 0
-		&& Stats.ATK >= 0
-		&& Stats.AR >= 0
-		&& Stats.RL >= 0;
-}
-
 FWBSummonExecutionResult MakeResult(
 	const EWBSummonExecutionResultCode Code,
 	const FWBSummonExecutionRequest& Request,
@@ -49,65 +25,40 @@ FWBSummonExecutionResult MakeResult(
 	Result.TargetTile = Request.TargetTile;
 	return Result;
 }
-
-const FWBUnitState* FindHeroUnit(
-	const FWBGameStateData& State,
-	const int32 PlayerId)
+EWBSummonExecutionResultCode ResultCodeFromGenericReason(
+	const FString& Reason)
 {
-	const FWBPlayerStateData* Player = State.GetPlayerById(PlayerId);
-	if (Player == nullptr || Player->HeroUnitId < 0)
-	{
-		return nullptr;
-	}
-
-	const FWBUnitState* Hero = State.GetUnitById(Player->HeroUnitId);
-	if (Hero == nullptr
-		|| Hero->GetControllerPlayerIdForRules() != PlayerId
-		|| !Hero->IsUnitOnBoard())
-	{
-		return nullptr;
-	}
-
-	return Hero;
-}
-
-int32 AllocateNextSummonedUnitId(const FWBGameStateData& State)
-{
-	int32 MaxUnitId = -1;
-	for (const FWBUnitState& Unit : State.Units)
-	{
-		if (Unit.UnitId == MAX_int32)
-		{
-			return INDEX_NONE;
-		}
-
-		MaxUnitId = FMath::Max(MaxUnitId, Unit.UnitId);
-	}
-
-	return MaxUnitId + 1;
-}
-
-void SortSummonHandAndNormalizeIndexes(FWBPlayerCardZoneState& PlayerZones)
-{
-	PlayerZones.Hand.Sort([](const FWBZoneCardEntry& A, const FWBZoneCardEntry& B)
-	{
-		if (A.ZoneIndex != B.ZoneIndex)
-		{
-			return A.ZoneIndex < B.ZoneIndex;
-		}
-		if (A.Card.InstanceId != B.Card.InstanceId)
-		{
-			return A.Card.InstanceId < B.Card.InstanceId;
-		}
-		return A.Card.CardId < B.Card.CardId;
-	});
-
-	for (int32 Index = 0; Index < PlayerZones.Hand.Num(); ++Index)
-	{
-		PlayerZones.Hand[Index].Zone = EWBCardZone::Hand;
-		PlayerZones.Hand[Index].ZoneIndex = Index;
-		PlayerZones.Hand[Index].Card.OwnerPlayerId = PlayerZones.PlayerId;
-	}
+	if (Reason == TEXT("invalid_player"))
+		return EWBSummonExecutionResultCode::InvalidPlayer;
+	if (Reason == TEXT("player_zones_missing"))
+		return EWBSummonExecutionResultCode::PlayerZonesMissing;
+	if (Reason == TEXT("source_card_missing"))
+		return EWBSummonExecutionResultCode::SourceCardMissing;
+	if (Reason == TEXT("source_card_not_in_hand"))
+		return EWBSummonExecutionResultCode::SourceCardNotInHand;
+	if (Reason == TEXT("source_card_id_mismatch"))
+		return EWBSummonExecutionResultCode::SourceCardIdMismatch;
+	if (Reason == TEXT("card_definition_not_found"))
+		return EWBSummonExecutionResultCode::CardDefinitionNotFound;
+	if (Reason == TEXT("source_card_not_character"))
+		return EWBSummonExecutionResultCode::SourceCardNotCharacter;
+	if (Reason == TEXT("invalid_character_stats"))
+		return EWBSummonExecutionResultCode::InvalidCharacterStats;
+	if (Reason == TEXT("hero_not_found"))
+		return EWBSummonExecutionResultCode::HeroNotFound;
+	if (Reason == TEXT("unit_cap_reached"))
+		return EWBSummonExecutionResultCode::UnitCapReached;
+	if (Reason == TEXT("target_tile_out_of_bounds"))
+		return EWBSummonExecutionResultCode::TargetTileOutOfBounds;
+	if (Reason == TEXT("target_tile_not_adjacent_to_hero"))
+		return EWBSummonExecutionResultCode::TargetTileNotAdjacentToHero;
+	if (Reason == TEXT("target_tile_occupied"))
+		return EWBSummonExecutionResultCode::TargetTileOccupied;
+	if (Reason == TEXT("unit_id_allocation_failed"))
+		return EWBSummonExecutionResultCode::UnitIdAllocationFailed;
+	if (Reason.Contains(TEXT("zone")) || Reason.Contains(TEXT("duplicate")))
+		return EWBSummonExecutionResultCode::ZoneStateInvalid;
+	return EWBSummonExecutionResultCode::TargetTileNotAllowed;
 }
 
 TSharedRef<FJsonObject> SummonTileToJsonObject(const FWBTile& Tile)
@@ -136,168 +87,36 @@ FWBSummonExecutionResult WBSummonExecution::ExecuteCharacterSummonFromHand(
 	const FWBCardDefinitionRepository& Repository,
 	const FWBSummonExecutionRequest& Request)
 {
-	if (!FWBGameStateData::IsValidPlayerId(Request.PlayerId)
-		|| State.GetPlayerById(Request.PlayerId) == nullptr)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::InvalidPlayer, Request);
-	}
-
-	FString ZoneStateReason;
-	if (!WBCardZoneState::ValidateZoneStateForTest(State.GetCardZoneState(), ZoneStateReason))
-	{
-		return MakeResult(EWBSummonExecutionResultCode::ZoneStateInvalid, Request, ZoneStateReason);
-	}
-
-	const FWBPlayerCardZoneState* PlayerZones =
-		WBCardZoneState::FindPlayerZones(State.GetCardZoneState(), Request.PlayerId);
-	if (PlayerZones == nullptr)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::PlayerZonesMissing, Request);
-	}
-
-	if (Request.SourceInstanceId.IsEmpty())
-	{
-		return MakeResult(EWBSummonExecutionResultCode::SourceCardMissing, Request);
-	}
-
-	int32 SourceHandIndex = INDEX_NONE;
-	for (int32 Index = 0; Index < PlayerZones->Hand.Num(); ++Index)
-	{
-		if (PlayerZones->Hand[Index].Card.InstanceId == Request.SourceInstanceId)
-		{
-			SourceHandIndex = Index;
-			break;
-		}
-	}
-
-	if (SourceHandIndex == INDEX_NONE)
-	{
-		FWBZoneCardEntry ExistingEntry;
-		const bool bKnownCardInstance = WBCardZoneState::FindCardByInstanceId(
-			State.GetCardZoneState(),
-			Request.SourceInstanceId,
-			ExistingEntry);
-		return MakeResult(
-			bKnownCardInstance
-				? EWBSummonExecutionResultCode::SourceCardNotInHand
-				: EWBSummonExecutionResultCode::SourceCardMissing,
-			Request);
-	}
-
-	const FWBZoneCardEntry SourceEntry = PlayerZones->Hand[SourceHandIndex];
-	if (SourceEntry.Card.CardId != Request.SourceCardId)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::SourceCardIdMismatch, Request);
-	}
-
-	const FWBCardDefinitionRepositoryLookupResult Lookup =
-		WBCardDefinitionRepository::FindCardById(Repository, Request.SourceCardId);
-	if (!Lookup.bFound)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::CardDefinitionNotFound, Request);
-	}
-
-	if (Lookup.Definition.Kind != EWBCardDefinitionKind::Character)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::SourceCardNotCharacter, Request);
-	}
-
-	if (!AreCharacterStatsValid(Lookup.Definition.CharacterStats))
-	{
-		return MakeResult(EWBSummonExecutionResultCode::InvalidCharacterStats, Request);
-	}
-
-	const FWBUnitState* Hero = FindHeroUnit(State, Request.PlayerId);
-	if (Hero == nullptr)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::HeroNotFound, Request);
-	}
-
-	const FWBTile HeroTile(Hero->X, Hero->Y);
-	if (!IsTileInBounds(HeroTile))
-	{
-		return MakeResult(EWBSummonExecutionResultCode::HeroNotFound, Request);
-	}
-
-	if (State.GetUnitsForPlayer(Request.PlayerId).Num() >= SummonMaxOwnedUnitsIncludingHero)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::UnitCapReached, Request);
-	}
-
-	if (!IsTileInBounds(Request.TargetTile))
-	{
-		return MakeResult(EWBSummonExecutionResultCode::TargetTileOutOfBounds, Request);
-	}
-
-	if (!AreOrthogonallyAdjacent(HeroTile, Request.TargetTile))
-	{
-		return MakeResult(EWBSummonExecutionResultCode::TargetTileNotAdjacentToHero, Request);
-	}
-
-	if (State.IsTileOccupied(Request.TargetTile))
-	{
-		return MakeResult(EWBSummonExecutionResultCode::TargetTileOccupied, Request);
-	}
-
-	const FWBTurnOneRestrictionQuery TurnOneQuery =
-		WBTurnOneRestrictions::QuerySummonPlacement(
-			State,
-			Request.PlayerId,
-			Request.TargetTile);
-	if (!TurnOneQuery.bOk)
+	FWBCharacterSummonRequest GenericRequest;
+	GenericRequest.OwnerPlayerId = Request.PlayerId;
+	GenericRequest.ControllerPlayerId = Request.PlayerId;
+	GenericRequest.SourceZone = EWBCardZone::Hand;
+	GenericRequest.CardInstanceId = Request.SourceInstanceId;
+	GenericRequest.ExpectedCardId = Request.SourceCardId;
+	GenericRequest.TargetTile = Request.TargetTile;
+	GenericRequest.ConditionPolicy = EWBCharacterSummonConditionPolicy::Normal;
+	GenericRequest.TraceKind = FName(TEXT("summon_unit"));
+	const FWBCharacterSummonResult Generic =
+		WBCharacterSummon::SummonExactCharacter(
+			State, Repository, GenericRequest);
+	if (!Generic.bOk)
 	{
 		return MakeResult(
-			EWBSummonExecutionResultCode::TargetTileNotAllowed,
+			ResultCodeFromGenericReason(Generic.Reason),
 			Request,
-			TurnOneQuery.Reason);
+			Generic.Reason);
 	}
-
-	const int32 NewUnitId = AllocateNextSummonedUnitId(State);
-	if (NewUnitId < 0 || State.GetUnitById(NewUnitId) != nullptr)
-	{
-		return MakeResult(EWBSummonExecutionResultCode::UnitIdAllocationFailed, Request);
-	}
-
-	FWBUnitState NewUnit;
-	NewUnit.UnitId = NewUnitId;
-	NewUnit.SetOwnerAndControllerForRules(Request.PlayerId, Request.PlayerId);
-	NewUnit.CardId = Request.SourceCardId;
-	NewUnit.X = Request.TargetTile.X;
-	NewUnit.Y = Request.TargetTile.Y;
-	NewUnit.HP = Lookup.Definition.CharacterStats.HP;
-	NewUnit.MaxHP = Lookup.Definition.CharacterStats.HP;
-	NewUnit.ATK = Lookup.Definition.CharacterStats.ATK;
-	NewUnit.AR = Lookup.Definition.CharacterStats.AR;
-	NewUnit.BaseRL = Lookup.Definition.CharacterStats.RL;
-	NewUnit.CurrentRL = Lookup.Definition.CharacterStats.RL;
-	NewUnit.RLTotal = Lookup.Definition.CharacterStats.RL;
-	NewUnit.RLUsed = 0;
-	NewUnit.AttacksLeft = 0;
-	NewUnit.MaxAttacksPerTurn = 1;
-	NewUnit.MPRemaining = 0;
-
-	FWBPlayerCardZoneState* MutablePlayerZones =
-		WBCardZoneState::FindMutablePlayerZones(State.GetMutableCardZoneStateForTest(), Request.PlayerId);
-	if (MutablePlayerZones == nullptr || SourceHandIndex < 0 || SourceHandIndex >= MutablePlayerZones->Hand.Num())
-	{
-		return MakeResult(EWBSummonExecutionResultCode::PlayerZonesMissing, Request);
-	}
-
-	State.Units.Add(NewUnit);
-	MutablePlayerZones->Hand.RemoveAt(SourceHandIndex, 1, EAllowShrinking::No);
-	SortSummonHandAndNormalizeIndexes(*MutablePlayerZones);
-	WBCardZoneState::SortOrderedZonesDeterministically(State.GetMutableCardZoneStateForTest());
 
 	FWBSummonExecutionTraceEvent TraceEvent;
 	TraceEvent.EventType = TEXT("summon_unit");
 	TraceEvent.PlayerId = Request.PlayerId;
 	TraceEvent.SourceInstanceId = Request.SourceInstanceId;
 	TraceEvent.SourceCardId = Request.SourceCardId;
-	TraceEvent.CreatedUnitId = NewUnitId;
+	TraceEvent.CreatedUnitId = Generic.CreatedUnitId;
 	TraceEvent.TargetTile = Request.TargetTile;
 
 	FWBSummonExecutionResult Result = MakeResult(EWBSummonExecutionResultCode::Success, Request);
-	Result.CreatedUnitId = NewUnitId;
+	Result.CreatedUnitId = Generic.CreatedUnitId;
 	Result.TraceEvents.Add(TraceEvent);
 	return Result;
 }

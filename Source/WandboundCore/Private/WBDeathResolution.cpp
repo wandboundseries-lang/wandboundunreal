@@ -362,6 +362,193 @@ void WBDeathResolution::QueueSuccessfulDestructionEvent(
 	});
 }
 
+FWBUnitDestructionResult WBDeathResolution::ApplyGenuineUnitDestruction(
+	FWBGameStateData& State,
+	const FWBUnitDestructionRequest& Request)
+{
+	FWBUnitDestructionResult Result;
+	FString ValidationReason;
+	if (!ValidateDeathCleanupZoneState(State, ValidationReason))
+	{
+		Result.Reason = ValidationReason;
+		return Result;
+	}
+	const FWBUnitState* Target = State.GetUnitById(Request.TargetUnitId);
+	if (Target == nullptr || !Target->IsUnitOnBoard() || Target->bDefeated)
+	{
+		Result.Reason = TEXT("destroy_target_unavailable");
+		return Result;
+	}
+	const FWBDeathPreventionResult Prevention = EvaluateDeathPrevention(
+		State, MakeDeathResolutionCandidate(State, *Target));
+	if (Prevention.bPrevented)
+	{
+		Result.bOk = true;
+		Result.bPrevented = true;
+		Result.Reason = Prevention.PreventionReason.IsNone()
+			? FString(TEXT("destruction_prevented"))
+			: Prevention.PreventionReason.ToString();
+		return Result;
+	}
+
+	FWBUnitDestructionSnapshot Snapshot;
+	if (!BuildSuccessfulDestructionSnapshot(
+		State,
+		Request.TargetUnitId,
+		Request.Cause,
+		Request.ResolutionOrder,
+		Snapshot,
+		ValidationReason))
+	{
+		Result.Reason = ValidationReason;
+		return Result;
+	}
+
+	FWBGameStateData WorkingState = State;
+	FWBUnitState* MutableTarget = WorkingState.GetMutableUnitById(
+		Request.TargetUnitId);
+	if (MutableTarget == nullptr)
+	{
+		Result.Reason = TEXT("destroy_target_unavailable");
+		return Result;
+	}
+	const int32 PreviousHP = MutableTarget->HP;
+	const FWBTile PreviousTile(MutableTarget->X, MutableTarget->Y);
+	const bool bHeroUnit = Snapshot.bWasHero;
+
+	for (const FWBEquippedCardEntry& Entry : Snapshot.EquippedWands)
+	{
+		if (Request.EquipmentDisposition
+			== EWBDestructionEquipmentDisposition::Discard)
+		{
+			const FWBCardLifecycleResult MoveResult =
+				WBCardLifecycle::MoveEquippedCardToDiscard(
+					WorkingState,
+					Entry.Card.OwnerPlayerId,
+					Entry.Card.InstanceId);
+			if (!MoveResult.bOk)
+			{
+				Result.Reason = WBCardLifecycle::ResultCodeToString(
+					MoveResult.Code);
+				return Result;
+			}
+			const int32 DiscardIndex = FindDiscardIndexForCard(
+				WorkingState,
+				Entry.Card.OwnerPlayerId,
+				Entry.Card.InstanceId);
+			if (DiscardIndex == INDEX_NONE)
+			{
+				Result.Reason = TEXT("discarded_card_not_found");
+				return Result;
+			}
+			Result.TraceEvents.Add(MakeEquippedCardDiscardedOnDeathTrace(
+				Entry,
+				DiscardIndex,
+				Request.TargetUnitId,
+				bHeroUnit,
+				Request.ResolutionOrder));
+		}
+		else
+		{
+			FWBCardZoneState& Zones =
+				WorkingState.GetMutableCardZoneStateForTest();
+			const int32 Removed = Zones.EquippedCards.RemoveAll(
+				[&Entry](const FWBEquippedCardEntry& Candidate)
+				{
+					return Candidate.Card.InstanceId == Entry.Card.InstanceId
+						&& Candidate.EquippedToUnitId == Entry.EquippedToUnitId;
+				});
+			if (Removed != 1)
+			{
+				Result.Reason = TEXT("detached_equipment_unavailable");
+				return Result;
+			}
+		}
+	}
+
+	MutableTarget = WorkingState.GetMutableUnitById(Request.TargetUnitId);
+	MutableTarget->HP = 0;
+	MutableTarget->ResonanceModifiers.Reset();
+	MutableTarget->SetCanonicalRL(
+		MutableTarget->GetBaseRLForRules(),
+		MutableTarget->GetBaseRLForRules(),
+		0);
+	MutableTarget->MarkUnitDefeated();
+	MutableTarget->RemoveUnitFromBoard();
+	if (Request.PendingAttackPolicy
+		== EWBDestructionPendingAttackPolicy::ClearIfParticipant)
+	{
+		ClearPendingAttackIfUnitRemoved(WorkingState, Request.TargetUnitId);
+	}
+
+	Result.TraceEvents.Add(MakeUnitDefeatedTrace(
+		*MutableTarget, PreviousHP, bHeroUnit, Request.ResolutionOrder));
+	Result.TraceEvents.Add(MakeUnitRemovedFromBoardTrace(
+		*MutableTarget, PreviousTile, bHeroUnit, Request.ResolutionOrder));
+	QueueSuccessfulDestructionEvent(WorkingState, Snapshot);
+
+	if (bHeroUnit
+		&& Request.TerminalPolicy
+			== EWBDestructionTerminalPolicy::CommitImmediately)
+	{
+		const FWBApplyActionResult Terminal = CommitDeferredHeroDestruction(
+			WorkingState, Snapshot, Request.TerminalSource);
+		if (!Terminal.bOk)
+		{
+			Result.Reason = Terminal.Reason;
+			return Result;
+		}
+		Result.TraceEvents.Append(Terminal.TraceEvents);
+	}
+	if (!ValidateDeathCleanupZoneState(WorkingState, ValidationReason))
+	{
+		Result.Reason = ValidationReason;
+		return Result;
+	}
+
+	Result.bOk = true;
+	Result.bDestroyed = true;
+	Result.Snapshot = Snapshot;
+	State = MoveTemp(WorkingState);
+	return Result;
+}
+
+FWBApplyActionResult WBDeathResolution::CommitDeferredHeroDestruction(
+	FWBGameStateData& State,
+	const FWBUnitDestructionSnapshot& Snapshot,
+	const EWBTerminalSource TerminalSource)
+{
+	if (!Snapshot.bWasHero)
+	{
+		return MakeDeathResolutionFailure(TEXT("deferred_hero_snapshot_required"));
+	}
+	FWBUnitState* Unit = State.GetMutableUnitById(Snapshot.DestroyedUnitId);
+	if (Unit == nullptr || Unit->IsUnitOnBoard() || !Unit->bDefeated)
+	{
+		return MakeDeathResolutionFailure(TEXT("deferred_hero_state_invalid"));
+	}
+	const int32 WinningPlayerId = OpposingPlayerId(Snapshot.OwnerPlayerId);
+	if (!FWBGameStateData::IsValidPlayerId(WinningPlayerId))
+	{
+		return MakeDeathResolutionFailure(TEXT("deferred_hero_owner_invalid"));
+	}
+	State.bGameOver = true;
+	State.WinnerPlayerId = WinningPlayerId;
+	State.TerminalOutcome.bTerminal = true;
+	State.TerminalOutcome.WinnerPlayerId = WinningPlayerId;
+	State.TerminalOutcome.LoserPlayerId = Snapshot.OwnerPlayerId;
+	State.TerminalOutcome.Reason =
+		EWBTerminalReason::HeroDefeatedWithoutReplacement;
+	State.TerminalOutcome.Source = TerminalSource;
+	State.TerminalOutcome.TurnNumber = State.TurnNumber;
+
+	FWBApplyActionResult Result;
+	Result.bOk = true;
+	Result.TraceEvents.Add(MakeHeroDefeatedTrace(
+		*Unit, WinningPlayerId, Snapshot.ResolutionOrder));
+	return Result;
+}
+
 FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(
 	FWBGameStateData& State,
 	const EWBUnitDestructionCause Cause)
@@ -418,93 +605,21 @@ FWBApplyActionResult WBDeathResolution::ApplyZeroHPDeathResolution(
 			return MakeDeathResolutionFailure(TEXT("death_candidate_missing"));
 		}
 
-		const bool bHeroUnit = IsHeroUnitForOwner(WorkingState, *Unit);
-		const int32 PreviousHP = Unit->HP;
-		const FWBTile PreviousTile(Unit->X, Unit->Y);
-		FWBUnitDestructionSnapshot DestructionSnapshot;
-		if (!BuildSuccessfulDestructionSnapshot(
-			WorkingState,
-			Plan.UnitId,
-			Cause,
-			ResolutionOrder,
-			DestructionSnapshot,
-			ValidationReason))
+		FWBUnitDestructionRequest Request;
+		Request.TargetUnitId = Plan.UnitId;
+		Request.Cause = Cause;
+		Request.ResolutionOrder = ResolutionOrder;
+		const FWBUnitDestructionResult Destroyed =
+			ApplyGenuineUnitDestruction(WorkingState, Request);
+		if (!Destroyed.bOk)
 		{
-			return MakeDeathResolutionFailure(ValidationReason);
+			return MakeDeathResolutionFailure(Destroyed.Reason);
 		}
-		const FWBDeathPreventionResult DeathPrevention = EvaluateDeathPrevention(
-			WorkingState,
-			MakeDeathResolutionCandidate(WorkingState, *Unit));
-		if (DeathPrevention.bPrevented)
+		if (Destroyed.bDestroyed)
 		{
-			continue;
+			TraceEvents.Append(Destroyed.TraceEvents);
+			++ResolutionOrder;
 		}
-
-		const TArray<FWBEquippedCardEntry> EquippedCards = CollectEquippedCardsForUnit(WorkingState, Plan.UnitId);
-		for (const FWBEquippedCardEntry& Entry : EquippedCards)
-		{
-			const FWBCardLifecycleResult MoveResult =
-				WBCardLifecycle::MoveEquippedCardToDiscard(
-					WorkingState,
-					Entry.Card.OwnerPlayerId,
-					Entry.Card.InstanceId);
-			if (!MoveResult.bOk)
-			{
-				return MakeDeathResolutionFailure(WBCardLifecycle::ResultCodeToString(MoveResult.Code));
-			}
-
-			const int32 DiscardIndex = FindDiscardIndexForCard(
-				WorkingState,
-				Entry.Card.OwnerPlayerId,
-				Entry.Card.InstanceId);
-			if (DiscardIndex == INDEX_NONE)
-			{
-				return MakeDeathResolutionFailure(TEXT("discarded_card_not_found"));
-			}
-
-			TraceEvents.Add(MakeEquippedCardDiscardedOnDeathTrace(
-				Entry,
-				DiscardIndex,
-				Plan.UnitId,
-				bHeroUnit,
-				ResolutionOrder));
-		}
-
-		Unit = WorkingState.GetMutableUnitById(Plan.UnitId);
-		if (Unit == nullptr)
-		{
-			return MakeDeathResolutionFailure(TEXT("death_candidate_missing"));
-		}
-
-		Unit->ResonanceModifiers.Reset();
-		Unit->SetCanonicalRL(Unit->GetBaseRLForRules(), Unit->GetBaseRLForRules(), 0);
-		Unit->MarkUnitDefeated();
-		Unit->RemoveUnitFromBoard();
-		ClearPendingAttackIfUnitRemoved(WorkingState, Plan.UnitId);
-
-		TraceEvents.Add(MakeUnitDefeatedTrace(*Unit, PreviousHP, bHeroUnit, ResolutionOrder));
-		TraceEvents.Add(MakeUnitRemovedFromBoardTrace(*Unit, PreviousTile, bHeroUnit, ResolutionOrder));
-		QueueSuccessfulDestructionEvent(
-			WorkingState,
-			MoveTemp(DestructionSnapshot));
-
-		if (bHeroUnit)
-		{
-			const int32 LosingPlayerId = Unit->GetOwnerPlayerIdForRules();
-			const int32 WinningPlayerId = OpposingPlayerId(LosingPlayerId);
-			WorkingState.bGameOver = true;
-			WorkingState.WinnerPlayerId = WinningPlayerId;
-			WorkingState.TerminalOutcome.bTerminal = true;
-			WorkingState.TerminalOutcome.WinnerPlayerId = WinningPlayerId;
-			WorkingState.TerminalOutcome.LoserPlayerId = LosingPlayerId;
-			WorkingState.TerminalOutcome.Reason =
-				EWBTerminalReason::HeroDefeatedWithoutReplacement;
-			WorkingState.TerminalOutcome.Source = EWBTerminalSource::Unknown;
-			WorkingState.TerminalOutcome.TurnNumber = WorkingState.TurnNumber;
-			TraceEvents.Add(MakeHeroDefeatedTrace(*Unit, WinningPlayerId, ResolutionOrder));
-		}
-
-		++ResolutionOrder;
 	}
 
 	if (!ValidateDeathCleanupZoneState(WorkingState, ValidationReason))
@@ -524,19 +639,15 @@ FWBApplyActionResult WBDeathResolution::ApplyExplicitUnitDestruction(
 	FWBGameStateData& State,
 	const int32 UnitId)
 {
-	FWBGameStateData WorkingState = State;
-	FWBUnitState* Unit = WorkingState.GetMutableUnitById(UnitId);
-	if (Unit == nullptr || !Unit->IsUnitOnBoard() || Unit->bDefeated)
-	{
-		return MakeDeathResolutionFailure(TEXT("destroy_target_unavailable"));
-	}
-	Unit->HP = 0;
-	FWBApplyActionResult Result = ApplyZeroHPDeathResolution(
-		WorkingState,
-		EWBUnitDestructionCause::ExplicitDestroy);
-	if (Result.bOk)
-	{
-		State = MoveTemp(WorkingState);
-	}
+	FWBUnitDestructionRequest Request;
+	Request.TargetUnitId = UnitId;
+	Request.Cause = EWBUnitDestructionCause::ExplicitDestroy;
+	Request.TerminalSource = EWBTerminalSource::Effect;
+	const FWBUnitDestructionResult Destroyed =
+		ApplyGenuineUnitDestruction(State, Request);
+	FWBApplyActionResult Result;
+	Result.bOk = Destroyed.bOk;
+	Result.Reason = Destroyed.Reason;
+	Result.TraceEvents = Destroyed.TraceEvents;
 	return Result;
 }
