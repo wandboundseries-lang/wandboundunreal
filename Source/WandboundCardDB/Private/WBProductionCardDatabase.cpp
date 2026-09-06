@@ -3719,6 +3719,16 @@ private:
 					PayloadPath);
 				Payload.Operation = EWBGenericEffectOp::NegatePendingEffect;
 			}
+			else if (Type == TEXT("negate_pending_summon"))
+			{
+				ValidateKnownFields(
+					PayloadObject,
+					{ TEXT("type") },
+					Record.SourceManifestPath,
+					Record.CoreDefinition.CardId,
+					PayloadPath);
+				Payload.Operation = EWBGenericEffectOp::NegatePendingSummon;
+			}
 			else if (Type == TEXT("prevent_pending_attack"))
 			{
 				ValidateKnownFields(
@@ -4202,6 +4212,8 @@ private:
 					{
 						return Payload.Operation
 							!= EWBGenericEffectOp::NegatePendingEffect
+							&& Payload.Operation
+								!= EWBGenericEffectOp::NegatePendingSummon
 							&& Payload.Operation
 								!= EWBGenericEffectOp::PreventPendingAttack
 							&& Payload.Operation != EWBGenericEffectOp::

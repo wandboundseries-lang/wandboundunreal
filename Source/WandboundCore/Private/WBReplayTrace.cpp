@@ -486,6 +486,18 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetBoolField(TEXT("pending_effect_negated"), true);
 	}
+	if (!Event.PendingSummonId.IsEmpty())
+	{
+		Object->SetStringField(TEXT("pending_summon_id"), Event.PendingSummonId);
+	}
+	if (Event.bSummonNegated)
+	{
+		Object->SetBoolField(TEXT("summon_negated"), true);
+	}
+	if (Event.bDeclaredSummon)
+	{
+		Object->SetBoolField(TEXT("declared_summon"), true);
+	}
 	if (!Event.AttackContinuationId.IsEmpty())
 	{
 		Object->SetStringField(

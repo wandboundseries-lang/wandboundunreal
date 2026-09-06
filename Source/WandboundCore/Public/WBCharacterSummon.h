@@ -5,12 +5,6 @@
 #include "WBGameStateData.h"
 #include "WBReplayTrace.h"
 
-enum class EWBCharacterSummonConditionPolicy : uint8
-{
-	Normal,
-	IgnoreSummoningConditions
-};
-
 struct WANDBOUNDCORE_API FWBCharacterSummonRequest
 {
 	int32 OwnerPlayerId = INDEX_NONE;

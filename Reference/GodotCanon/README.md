@@ -17,5 +17,11 @@ Explicit repository authority overrides are indexed in
 `../../Docs/Repository_Canon_Reconciliation_Audit.md`. In particular,
 `../../Docs/Wandbound_Game_Start_and_Turn_One_Addendum_v1.md` supersedes the
 older sequential Hero setup and blanket first-player Turn 1 attack ban.
+
+Owner-approved declared-summon timing is recorded in
+`../../Docs/Wandbound_Rules_Bible_Summon_Negation_Addendum_v1.md` and
+`../../Docs/Wandbound_Canonical_Glossary_Summon_Negation_Addendum_v1.md`.
+These addenda introduce Pre-Summon and Negate a Summon for player-declared
+normal Character summons only.
 3. `GodotSourceIndex.md`
 4. `GoldenScenarios/`

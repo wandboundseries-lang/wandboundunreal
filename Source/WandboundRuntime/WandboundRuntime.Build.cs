@@ -182,6 +182,21 @@ public class WandboundRuntime : ModuleRules
 			"$(ProjectDir)/Data/Replay/StatusAuthorityFixture/match_spec.json",
 			StagedFileType.NonUFS);
 		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SummonNegationFixture/root_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SummonNegationFixture/bundle_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SummonNegationFixture/units.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SummonNegationFixture/markers.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/SummonNegationFixture/match_spec.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/CardDB/Production/CSNCrashIn/root_manifest.json",
 			StagedFileType.NonUFS);
 		RuntimeDependencies.Add(

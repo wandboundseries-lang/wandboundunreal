@@ -781,6 +781,16 @@ void FWBGameStateData::ClearPendingAttack()
 	PendingAttack = FWBPendingAttackState();
 }
 
+bool FWBGameStateData::HasPendingSummon() const
+{
+	return PendingSummon.bActive;
+}
+
+void FWBGameStateData::ClearPendingSummon()
+{
+	PendingSummon.Reset();
+}
+
 bool FWBGameStateData::HasPendingMandatoryDeckChoice() const
 {
 	return HasPendingPrivateCardChoice();

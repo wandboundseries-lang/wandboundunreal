@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "match_id": "summon_negation_smoke_match",
+  "seed": 24681357,
+  "first_player": 0,
+  "initial_draw_count": 6,
+  "definition_bundle_digest": "1749cdaa6ffc916c32ae48c97592e88249567e8a058876f70aa73b14855c4ab2",
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "sn_fixture_hero_a",
+      "ordered_deck": [
+        "sn_fixture_student",
+        "sn_fixture_filler", "sn_fixture_filler", "sn_fixture_filler",
+        "sn_fixture_filler", "sn_fixture_filler", "sn_fixture_filler",
+        "sn_fixture_filler", "sn_fixture_filler", "sn_fixture_filler"
+      ]
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "sn_fixture_hero_b",
+      "ordered_deck": [
+        "sn_fixture_filler", "sn_fixture_filler", "sn_fixture_filler",
+        "sn_fixture_filler", "sn_fixture_filler", "sn_fixture_filler",
+        "sn_fixture_filler", "sn_fixture_filler", "sn_fixture_filler",
+        "sn_fixture_filler"
+      ]
+    }
+  ],
+  "markers": [
+    { "player_id": 0, "type": "trap", "tile": { "x": 0, "y": 8 }, "definition_id": "sn_fixture_trap", "placement_order": 0 },
+    { "player_id": 0, "type": "trap", "tile": { "x": 1, "y": 8 }, "definition_id": "sn_fixture_trap", "placement_order": 1 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 0, "y": 7 }, "definition_id": "sn_fixture_npc", "placement_order": 2 },
+    { "player_id": 0, "type": "npc", "tile": { "x": 1, "y": 7 }, "definition_id": "sn_fixture_npc", "placement_order": 3 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 0, "y": 0 }, "definition_id": "sn_fixture_trap", "placement_order": 4 },
+    { "player_id": 1, "type": "trap", "tile": { "x": 1, "y": 0 }, "definition_id": "sn_fixture_trap", "placement_order": 5 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 0, "y": 1 }, "definition_id": "sn_fixture_npc", "placement_order": 6 },
+    { "player_id": 1, "type": "npc", "tile": { "x": 1, "y": 1 }, "definition_id": "sn_fixture_npc", "placement_order": 7 }
+  ]
+}

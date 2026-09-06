@@ -105,6 +105,9 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	FString ParentPendingEffectFrameId;
 	int32 PendingEffectStackDepth = -1;
 	bool bPendingEffectNegated = false;
+	FString PendingSummonId;
+	bool bSummonNegated = false;
+	bool bDeclaredSummon = false;
 	FString AttackContinuationId;
 	FName AttackContinuationStage;
 	bool bAttackPrevented = false;

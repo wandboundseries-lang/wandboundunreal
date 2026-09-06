@@ -31,6 +31,7 @@ FWBPublicTurnSummary WBPublicTurnSummary::Build(const FWBGameStateData& State)
 		case EWBReactionWindowKind::PostMove: Summary.ReactionWindowKind = FName(TEXT("post_move")); break;
 		case EWBReactionWindowKind::PostSummon: Summary.ReactionWindowKind = FName(TEXT("post_summon")); break;
 		case EWBReactionWindowKind::PostEffect: Summary.ReactionWindowKind = FName(TEXT("post_effect")); break;
+		case EWBReactionWindowKind::PreSummon: Summary.ReactionWindowKind = FName(TEXT("pre_summon")); break;
 		case EWBReactionWindowKind::None:
 		default: break;
 		}

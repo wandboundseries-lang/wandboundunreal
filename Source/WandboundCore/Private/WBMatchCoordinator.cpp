@@ -9,6 +9,7 @@
 #include "WBDeathResolution.h"
 #include "WBDeterministicRandom.h"
 #include "WBEffectRunner.h"
+#include "WBEventSnapshot.h"
 #include "WBHybridSummon.h"
 #include "WBMarkerResolution.h"
 #include "WBActivatedDeckSummonContinuation.h"
@@ -128,6 +129,10 @@ FString BuildPendingEffectCanonicalState(
 			if (!Payload.PendingAttackContinuationId.IsEmpty())
 			{
 				AppendString(TEXT("target_attack"), Payload.PendingAttackContinuationId);
+			}
+			if (!Payload.PendingSummonId.IsEmpty())
+			{
+				AppendString(TEXT("target_summon"), Payload.PendingSummonId);
 			}
 			AppendString(TEXT("armor_reason"), Payload.ArmorEffect.SourceReason.ToString());
 			AppendString(TEXT("status_id"), Payload.StatusEffect.StatusId.ToString());
@@ -273,6 +278,19 @@ void CommitTerminalOutcome(
 		Cleared.TargetUnitId = State.ReactionWindow.TargetUnitId;
 		Events.Add(Cleared);
 		State.ClearReactionWindow();
+	}
+	if (State.HasPendingSummon())
+	{
+		FWBTraceEvent Cleared = MakeMatchTrace(
+			FName(TEXT("pending_summon_cleared_terminal")),
+			State.PendingSummon.SummoningPlayerId,
+			State.TurnNumber,
+			FName(TEXT("game_over")));
+		Cleared.PendingSummonId = State.PendingSummon.PendingSummonId;
+		Cleared.CardId = State.PendingSummon.CardId;
+		Cleared.ToTile = State.PendingSummon.DestinationTile;
+		Events.Add(MoveTemp(Cleared));
+		State.ClearPendingSummon();
 	}
 	State.NPCPhaseContinuation.Reset();
 	FWBTerminalOutcome& Outcome = State.TerminalOutcome;
@@ -678,7 +696,8 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 	const int32 PlayerId,
 	const bool bResponseOnly,
 	const FString& PendingEffectFrameId = FString(),
-	const FString& PendingAttackContinuationId = FString())
+	const FString& PendingAttackContinuationId = FString(),
+	const FString& PendingSummonId = FString())
 {
 	FWBMatchLegalActionGenerationResult Result;
 	const FWBCardActivationFixtureZoneContext ZoneContext =
@@ -843,6 +862,25 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 		{
 			continue;
 		}
+		const bool bControlsPendingSummon =
+			ActivationAction.Command.EffectRequest.Payloads.ContainsByPredicate(
+				[](const FWBGenericEffectPayload& Payload)
+				{
+					return Payload.Operation
+						== EWBGenericEffectOp::NegatePendingSummon;
+				});
+		if (bControlsPendingSummon
+			&& (PendingSummonId.IsEmpty()
+				|| !State.HasPendingSummon()
+				|| !State.PendingSummon.bAcceptingNegation
+				|| State.PendingSummon.bNegated
+				|| !State.HasOpenReactionWindow()
+				|| State.ReactionWindow.Kind
+					!= EWBReactionWindowKind::PreSummon
+				|| PlayerId == State.PendingSummon.SummoningPlayerId))
+		{
+			continue;
+		}
 		FWBMatchLegalAction Action;
 		Action.Family = EWBMatchActionFamily::Activation;
 		Action.ActionId = ActivationAction.ActivationActionId;
@@ -875,6 +913,18 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 				}
 			}
 		}
+		if (!PendingSummonId.IsEmpty())
+		{
+			for (FWBGenericEffectPayload& Payload :
+				Action.ActivationCommand.EffectRequest.Payloads)
+			{
+				if (Payload.Operation
+					== EWBGenericEffectOp::NegatePendingSummon)
+				{
+					Payload.PendingSummonId = PendingSummonId;
+				}
+			}
+		}
 		const FWBActionQueryResult Query =
 			WBRules::CanApplyCardActivationCommand(
 				State, Repository, Action.ActivationCommand);
@@ -897,6 +947,7 @@ FName ReactionWindowKindToName(const EWBReactionWindowKind Kind)
 	case EWBReactionWindowKind::PostMove: return FName(TEXT("post_move"));
 	case EWBReactionWindowKind::PostSummon: return FName(TEXT("post_summon"));
 	case EWBReactionWindowKind::PostEffect: return FName(TEXT("post_effect"));
+	case EWBReactionWindowKind::PreSummon: return FName(TEXT("pre_summon"));
 	case EWBReactionWindowKind::None:
 	default: return NAME_None;
 	}
@@ -1595,7 +1646,10 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 		const FWBMatchLegalActionGenerationResult ActivationResult =
 			GetActivationActions(
 				InState, Repository, PlayerId, true, PendingEffectFrameId,
-				PendingAttackContinuationId);
+				PendingAttackContinuationId,
+				InState.HasPendingSummon()
+					? InState.PendingSummon.PendingSummonId
+					: FString());
 		if (!ActivationResult.bOk)
 		{
 			return ActivationResult;
@@ -1886,7 +1940,6 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 		case EWBMatchActionFamily::Summon:
 		{
-			int32 CreatedUnitId = -1;
 			if (SelectedAction->bHybridSummon)
 			{
 				const FWBHybridSummonResult ApplyResult =
@@ -1899,40 +1952,46 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				bActionApplied = ApplyResult.bOk;
 				FailureReason = ApplyResult.Reason;
 				WorkingTraceEvents.Append(ApplyResult.TraceEvents);
-				CreatedUnitId = ApplyResult.NewHybridUnitId;
+				if (bActionApplied)
+				{
+					const int32 CreatedUnitId = ApplyResult.NewHybridUnitId;
+					const FWBMarkerResolutionResult MarkerResult =
+						WBMarkerResolution::ResolveMarkerAtUnitTile(
+							WorkingState,
+							Repository,
+							CreatedUnitId);
+					bActionApplied = MarkerResult.bOk;
+					FailureReason = MarkerResult.Reason;
+					WorkingTraceEvents.Append(MarkerResult.TraceEvents);
+					if (bActionApplied)
+					{
+						PendingReactionKind =
+							EWBReactionWindowKind::PostSummon;
+						PendingReactionTargetUnitId = CreatedUnitId;
+						const FWBPlayerStateData* PlayerState =
+							WorkingState.GetPlayerById(PlayerId);
+						PendingReactionSourceUnitId = PlayerState != nullptr
+							? PlayerState->HeroUnitId
+							: -1;
+					}
+				}
 			}
 			else
 			{
-				const FWBSummonExecutionResult ApplyResult =
-					WBSummonExecution::ExecuteCharacterSummonFromHand(
-						WorkingState,
-						Repository,
-						SelectedAction->SummonRequest);
-				bActionApplied = ApplyResult.bOk;
-				FailureReason = ApplyResult.Reason;
-				AppendSummonTraceEvents(ApplyResult, WorkingTraceEvents);
-				CreatedUnitId = ApplyResult.CreatedUnitId;
-			}
-			if (bActionApplied)
-			{
-				const FWBMarkerResolutionResult MarkerResult =
-					WBMarkerResolution::ResolveMarkerAtUnitTile(
-						WorkingState,
-						Repository,
-						CreatedUnitId);
-				bActionApplied = MarkerResult.bOk;
-				FailureReason = MarkerResult.Reason;
-				WorkingTraceEvents.Append(MarkerResult.TraceEvents);
+				bActionApplied = BeginPendingSummon(
+					WorkingState,
+					WorkingPhase,
+					*SelectedAction,
+					WorkingTraceEvents,
+					FailureReason);
 				if (bActionApplied)
 				{
-					PendingReactionKind =
-						EWBReactionWindowKind::PostSummon;
-					PendingReactionTargetUnitId = CreatedUnitId;
+					PendingReactionKind = EWBReactionWindowKind::PreSummon;
 					const FWBPlayerStateData* PlayerState =
 						WorkingState.GetPlayerById(PlayerId);
 					PendingReactionSourceUnitId = PlayerState != nullptr
 						? PlayerState->HeroUnitId
-						: -1;
+						: INDEX_NONE;
 				}
 			}
 			break;
@@ -2018,7 +2077,8 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 
 		if (bActionApplied
-			&& SelectedAction->Family != EWBMatchActionFamily::Activation)
+			&& SelectedAction->Family != EWBMatchActionFamily::Activation
+			&& !WorkingState.HasPendingSummon())
 		{
 			bActionApplied = ApplyAutomaticResolution(
 				WorkingState,
@@ -2065,11 +2125,24 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 						WorkingTraceEvents,
 						FailureReason);
 				}
+				else if (bActionApplied
+					&& PendingReactionKind == EWBReactionWindowKind::PreSummon
+					&& WorkingState.HasPendingSummon()
+					&& !WorkingState.HasOpenReactionWindow())
+				{
+					bActionApplied = ResolvePendingSummon(
+						WorkingState,
+						WorkingPhase,
+						WorkingPendingEffects,
+						WorkingRandomState,
+						WorkingTraceEvents,
+						FailureReason);
+				}
 			}
 		}
 	}
 
-	if (bActionApplied)
+	if (bActionApplied && !WorkingState.HasPendingSummon())
 	{
 		const bool bAlreadyPendingChoice =
 			WorkingState.HasPendingMandatoryDeckChoice();
@@ -2099,6 +2172,7 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 	if (bActionApplied
 		&& WorkingState.NPCPhaseContinuation.bActive
 		&& !WorkingState.HasPendingAttack()
+		&& !WorkingState.HasPendingSummon()
 		&& !WorkingState.HasOpenReactionWindow()
 		&& !WorkingState.HasPendingMandatoryDeckChoice()
 		&& !WorkingState.bGameOver)
@@ -2329,6 +2403,9 @@ bool WBMatchCoordinator::HasLegalReactForPriority(
 				: InPendingEffects.Last().FrameId,
 			InState.HasPendingAttack()
 				? InState.PendingAttack.ContinuationId
+				: FString(),
+			InState.HasPendingSummon()
+				? InState.PendingSummon.PendingSummonId
 				: FString());
 	if (!Result.bOk)
 	{
@@ -2404,7 +2481,9 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 		OutReason = ProbeReason;
 		return false;
 	}
-	if (!bFirstPlayerHasReact && !bOtherPlayerHasReact)
+	if (!bFirstPlayerHasReact
+		&& !bOtherPlayerHasReact
+		&& Kind != EWBReactionWindowKind::PreSummon)
 	{
 		OutReason.Reset();
 		return true;
@@ -2426,6 +2505,11 @@ bool WBMatchCoordinator::OpenReactionWindowIfApplicable(
 	Opened.TargetUnitId = TargetUnitId;
 	Opened.ReactionWindowKind = ReactionWindowKindToName(Kind);
 	Opened.ReactionPassCount = 0;
+	if (Kind == EWBReactionWindowKind::PreSummon
+		&& WorkingState.HasPendingSummon())
+	{
+		Opened.PendingSummonId = WorkingState.PendingSummon.PendingSummonId;
+	}
 	OutTraceEvents.Add(MoveTemp(Opened));
 	return ApplyForcedReactionPasses(
 		WorkingState,
@@ -2474,6 +2558,11 @@ bool WBMatchCoordinator::ApplyReactionPass(
 	Passed.ReactionWindowKind = ReactionWindowKindToName(Kind);
 	Passed.ReactionPassCount =
 		WorkingState.ReactionWindow.ConsecutivePassCount;
+	if (Kind == EWBReactionWindowKind::PreSummon
+		&& WorkingState.HasPendingSummon())
+	{
+		Passed.PendingSummonId = WorkingState.PendingSummon.PendingSummonId;
+	}
 	OutTraceEvents.Add(MoveTemp(Passed));
 
 	if (WorkingState.ReactionWindow.ConsecutivePassCount >= 2)
@@ -2492,6 +2581,221 @@ bool WBMatchCoordinator::ApplyReactionPass(
 	}
 	OutReason.Reset();
 	return true;
+}
+
+bool WBMatchCoordinator::BeginPendingSummon(
+	FWBGameStateData& WorkingState,
+	const EWBMatchLoopPhase WorkingPhase,
+	const FWBMatchLegalAction& Action,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	if (Action.Family != EWBMatchActionFamily::Summon
+		|| Action.bHybridSummon)
+	{
+		OutReason = TEXT("pending_summon_requires_normal_summon");
+		return false;
+	}
+	if (WorkingState.HasPendingSummon())
+	{
+		OutReason = TEXT("pending_summon_already_active");
+		return false;
+	}
+	if (WorkingState.bGameOver)
+	{
+		OutReason = TEXT("game_over");
+		return false;
+	}
+
+	FWBGameStateData ProbeState = WorkingState;
+	const FWBSummonExecutionResult Probe =
+		WBSummonExecution::ExecuteCharacterSummonFromHand(
+			ProbeState, Repository, Action.SummonRequest);
+	if (!Probe.bOk)
+	{
+		OutReason = Probe.Reason;
+		return false;
+	}
+
+	FWBPendingSummonState Pending;
+	Pending.bActive = true;
+	Pending.bAcceptingNegation = true;
+	Pending.PendingSummonId = FString::Printf(
+		TEXT("pending_summon:g%d:r%d:p%d:x%d:y%d"),
+		CoordinatorGeneration,
+		CoordinatorRevision + 1,
+		Action.PlayerId,
+		Action.SummonRequest.TargetTile.X,
+		Action.SummonRequest.TargetTile.Y);
+	Pending.SummoningPlayerId = Action.PlayerId;
+	Pending.OwnerPlayerId = Action.PlayerId;
+	Pending.ControllerPlayerId = Action.PlayerId;
+	Pending.CardInstanceId = Action.SummonRequest.SourceInstanceId;
+	Pending.CardId = Action.SummonRequest.SourceCardId;
+	Pending.SourceZone = EWBCardZone::Hand;
+	Pending.DestinationTile = Action.SummonRequest.TargetTile;
+	Pending.Origin = EWBSummonOrigin::DeclaredNormalCharacter;
+	Pending.DeclarationProvenance =
+		EWBDeclarationProvenance::PlayerDeclared;
+	Pending.ConditionPolicy = EWBCharacterSummonConditionPolicy::Normal;
+	Pending.SourceActionId = Action.ActionId;
+	Pending.ResumePriorityPlayerId = WorkingState.PriorityPlayer;
+	Pending.ResumeGamePhase = WorkingState.Phase;
+	Pending.ResumeMatchPhase = static_cast<int32>(WorkingPhase);
+	Pending.EventIdentity = WBEventSnapshot::MakeIdentity(
+		EWBEventKind::Summon,
+		Pending.PendingSummonId,
+		WorkingState.TurnNumber,
+		Action.ActionId,
+		Pending.PendingSummonId,
+		EWBDeclarationProvenance::PlayerDeclared,
+		EWBDeclarationProvenance::PlayerDeclared);
+	WorkingState.PendingSummon = Pending;
+
+	FWBTraceEvent Declared = MakeMatchTrace(
+		FName(TEXT("summon_declared")),
+		Action.PlayerId,
+		WorkingState.TurnNumber,
+		PhaseToName(WorkingPhase));
+	Declared.ActionId = Action.ActionId;
+	Declared.PendingSummonId = Pending.PendingSummonId;
+	Declared.CardId = Pending.CardId;
+	Declared.ToTile = Pending.DestinationTile;
+	Declared.bDeclaredSummon = true;
+	OutTraceEvents.Add(MoveTemp(Declared));
+
+	FWBTraceEvent PendingTrace = MakeMatchTrace(
+		FName(TEXT("summon_pending")),
+		Action.PlayerId,
+		WorkingState.TurnNumber,
+		PhaseToName(EWBMatchLoopPhase::Response));
+	PendingTrace.ActionId = Action.ActionId;
+	PendingTrace.PendingSummonId = Pending.PendingSummonId;
+	PendingTrace.CardId = Pending.CardId;
+	PendingTrace.ToTile = Pending.DestinationTile;
+	PendingTrace.bDeclaredSummon = true;
+	OutTraceEvents.Add(MoveTemp(PendingTrace));
+	OutReason.Reset();
+	return true;
+}
+
+bool WBMatchCoordinator::ResolvePendingSummon(
+	FWBGameStateData& WorkingState,
+	EWBMatchLoopPhase& WorkingPhase,
+	TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+	uint32& WorkingRandomState,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason) const
+{
+	if (!WorkingState.HasPendingSummon())
+	{
+		OutReason = TEXT("pending_summon_not_active");
+		return false;
+	}
+
+	const FWBPendingSummonState Pending = WorkingState.PendingSummon;
+	WorkingState.PendingSummon.bAcceptingNegation = false;
+	const auto RestoreResumeContext = [&]()
+	{
+		WorkingState.PriorityPlayer = Pending.ResumePriorityPlayerId;
+		WorkingState.Phase = Pending.ResumeGamePhase;
+		WorkingPhase = static_cast<EWBMatchLoopPhase>(Pending.ResumeMatchPhase);
+	};
+
+	if (WorkingState.bGameOver)
+	{
+		WorkingState.ClearPendingSummon();
+		WorkingState.ClearReactionWindow();
+		WorkingPhase = EWBMatchLoopPhase::GameOver;
+		OutReason.Reset();
+		return true;
+	}
+
+	if (Pending.bNegated)
+	{
+		WorkingState.ClearPendingSummon();
+		RestoreResumeContext();
+		FWBTraceEvent Cancelled = MakeMatchTrace(
+			FName(TEXT("pending_summon_cancelled")),
+			Pending.SummoningPlayerId,
+			WorkingState.TurnNumber,
+			PhaseToName(WorkingPhase));
+		Cancelled.ActionId = Pending.SourceActionId;
+		Cancelled.PendingSummonId = Pending.PendingSummonId;
+		Cancelled.CardId = Pending.CardId;
+		Cancelled.ToTile = Pending.DestinationTile;
+		Cancelled.bSummonNegated = true;
+		OutTraceEvents.Add(MoveTemp(Cancelled));
+		OutReason.Reset();
+		return true;
+	}
+
+	FWBSummonExecutionRequest Request;
+	Request.PlayerId = Pending.SummoningPlayerId;
+	Request.SourceInstanceId = Pending.CardInstanceId;
+	Request.SourceCardId = Pending.CardId;
+	Request.TargetTile = Pending.DestinationTile;
+	const FWBSummonExecutionResult SummonResult =
+		WBSummonExecution::ExecuteCharacterSummonFromHand(
+			WorkingState, Repository, Request);
+	if (!SummonResult.bOk)
+	{
+		WorkingState.ClearPendingSummon();
+		RestoreResumeContext();
+		FWBTraceEvent Failed = MakeMatchTrace(
+			FName(TEXT("pending_summon_revalidation_failed")),
+			Pending.SummoningPlayerId,
+			WorkingState.TurnNumber,
+			PhaseToName(WorkingPhase));
+		Failed.ActionId = Pending.SourceActionId;
+		Failed.PendingSummonId = Pending.PendingSummonId;
+		Failed.CardId = Pending.CardId;
+		Failed.ToTile = Pending.DestinationTile;
+		Failed.Reason = SummonResult.Reason;
+		OutTraceEvents.Add(MoveTemp(Failed));
+		OutReason.Reset();
+		return true;
+	}
+
+	WorkingState.ClearPendingSummon();
+	AppendSummonTraceEvents(SummonResult, OutTraceEvents);
+	const int32 CreatedUnitId = SummonResult.CreatedUnitId;
+	const FWBMarkerResolutionResult MarkerResult =
+		WBMarkerResolution::ResolveMarkerAtUnitTile(
+			WorkingState, Repository, CreatedUnitId);
+	if (!MarkerResult.bOk)
+	{
+		OutReason = MarkerResult.Reason;
+		return false;
+	}
+	OutTraceEvents.Append(MarkerResult.TraceEvents);
+	if (!ApplyAutomaticResolution(WorkingState, OutTraceEvents, OutReason))
+	{
+		return false;
+	}
+	if (WorkingState.bGameOver)
+	{
+		WorkingState.ClearReactionWindow();
+		WorkingPhase = EWBMatchLoopPhase::GameOver;
+		OutReason.Reset();
+		return true;
+	}
+
+	RestoreResumeContext();
+	const FWBPlayerStateData* PlayerState = WorkingState.GetPlayerById(
+		Pending.SummoningPlayerId);
+	return OpenReactionWindowIfApplicable(
+		WorkingState,
+		WorkingPhase,
+		WorkingPendingEffects,
+		WorkingRandomState,
+		EWBReactionWindowKind::PostSummon,
+		Pending.SummoningPlayerId,
+		Pending.SourceActionId,
+		PlayerState != nullptr ? PlayerState->HeroUnitId : INDEX_NONE,
+		CreatedUnitId,
+		OutTraceEvents,
+		OutReason);
 }
 
 bool WBMatchCoordinator::BeginPendingEffectActivation(
@@ -3010,6 +3314,11 @@ bool WBMatchCoordinator::CloseReactionWindow(
 		WorkingState.ReactionWindow.Kind);
 	Closed.ReactionPassCount =
 		WorkingState.ReactionWindow.ConsecutivePassCount;
+	if (WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PreSummon
+		&& WorkingState.HasPendingSummon())
+	{
+		Closed.PendingSummonId = WorkingState.PendingSummon.PendingSummonId;
+	}
 	OutTraceEvents.Add(MoveTemp(Closed));
 	const bool bClosesPendingEffect =
 		WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PostEffect
@@ -3017,6 +3326,9 @@ bool WBMatchCoordinator::CloseReactionWindow(
 	const bool bClosesAttackWindow =
 		WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PreHit
 		|| WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PostHit;
+	const bool bClosesPendingSummon =
+		WorkingState.ReactionWindow.Kind == EWBReactionWindowKind::PreSummon
+		&& WorkingState.HasPendingSummon();
 	WorkingState.ClearReactionWindow();
 	if (bClosesPendingEffect)
 	{
@@ -3031,6 +3343,16 @@ bool WBMatchCoordinator::CloseReactionWindow(
 	if (bClosesAttackWindow && WorkingState.HasPendingAttack())
 	{
 		return AdvanceAttackContinuation(
+			WorkingState,
+			WorkingPhase,
+			WorkingPendingEffects,
+			WorkingRandomState,
+			OutTraceEvents,
+			OutReason);
+	}
+	if (bClosesPendingSummon)
+	{
+		return ResolvePendingSummon(
 			WorkingState,
 			WorkingPhase,
 			WorkingPendingEffects,

@@ -1527,6 +1527,22 @@ FWBEffectRequestResult WBEffectRunner::ApplyEffectRequest(
 				Payload.PendingEffectFrameId);
 			break;
 		}
+		case EWBGenericEffectOp::NegatePendingSummon:
+		{
+			WorkingState.PendingSummon.bNegated = true;
+			PayloadResult.bOk = true;
+			FWBTraceEvent Negated;
+			Negated.Kind = FName(TEXT("summon_negated"));
+			Negated.ActionId = Request.Source.SourceEffectId;
+			Negated.PlayerId = Request.Source.PlayerId;
+			Negated.PendingSummonId = Payload.PendingSummonId;
+			Negated.CardId = WorkingState.PendingSummon.CardId;
+			Negated.ToTile = WorkingState.PendingSummon.DestinationTile;
+			Negated.bSummonNegated = true;
+			Negated.bOk = true;
+			PayloadResult.TraceEvents.Add(MoveTemp(Negated));
+			break;
+		}
 		case EWBGenericEffectOp::PreventPendingAttack:
 		{
 			PayloadResult.bOk = true;

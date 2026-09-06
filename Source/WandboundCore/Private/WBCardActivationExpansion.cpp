@@ -19,6 +19,7 @@ bool IsKnownPayloadOperation(const EWBGenericEffectOp Operation)
 		|| Operation == EWBGenericEffectOp::DamageEffect
 		|| Operation == EWBGenericEffectOp::HealEffect
 		|| Operation == EWBGenericEffectOp::NegatePendingEffect
+		|| Operation == EWBGenericEffectOp::NegatePendingSummon
 		|| Operation == EWBGenericEffectOp::PreventPendingAttack
 		|| Operation == EWBGenericEffectOp::RedirectPendingAttack
 		|| Operation == EWBGenericEffectOp::RegisterPendingAttackHPDamageSubstitution

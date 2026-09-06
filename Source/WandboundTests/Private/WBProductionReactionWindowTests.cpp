@@ -221,6 +221,17 @@ int32 TraceIndex(const TArray<FWBTraceEvent>& Events, const TCHAR* Kind)
 	});
 }
 
+int32 ReactionWindowTraceIndex(
+	const TArray<FWBTraceEvent>& Events,
+	const TCHAR* WindowKind)
+{
+	return Events.IndexOfByPredicate([WindowKind](const FWBTraceEvent& Event)
+	{
+		return Event.Kind == FName(TEXT("reaction_window_opened"))
+			&& Event.ReactionWindowKind == FName(WindowKind);
+	});
+}
+
 struct FOpenedReaction
 {
 	bool bOk = false;
@@ -273,6 +284,40 @@ FOpenedReaction OpenCharacterReaction(
 	if (!Result.SummonResult.bOk)
 	{
 		Result.Reason = Result.SummonResult.Reason;
+		return Result;
+	}
+	int32 PreSummonGuard = 0;
+	while (Result.Coordinator.GetState().HasOpenReactionWindow()
+		&& Result.Coordinator.GetState().ReactionWindow.Kind
+			== EWBReactionWindowKind::PreSummon
+		&& ++PreSummonGuard <= 2)
+	{
+		const FWBMatchLegalActionGenerationResult Legal =
+			Result.Coordinator.EnumerateLegalActions();
+		const FWBMatchLegalAction* Pass = Legal.bOk
+			? FindCore(Legal.Actions, EWBActionType::PassResponse)
+			: nullptr;
+		if (Pass == nullptr)
+		{
+			Result.Reason = Legal.bOk
+				? FString(TEXT("pre_summon_pass_missing"))
+				: Legal.Reason;
+			return Result;
+		}
+		const FWBMatchOperationResult PassResult =
+			Result.Coordinator.SubmitActionId(Pass->PlayerId, Pass->ActionId);
+		Result.SummonResult.TraceEvents.Append(PassResult.TraceEvents);
+		if (!PassResult.bOk)
+		{
+			Result.Reason = PassResult.Reason;
+			return Result;
+		}
+	}
+	if (Result.Coordinator.GetState().HasOpenReactionWindow()
+		&& Result.Coordinator.GetState().ReactionWindow.Kind
+			== EWBReactionWindowKind::PreSummon)
+	{
+		Result.Reason = TEXT("pre_summon_close_guard_exceeded");
 		return Result;
 	}
 	for (const FWBUnitState& Unit : Result.Coordinator.GetState().Units)
@@ -742,7 +787,8 @@ bool FWBReactionMarkerOrder::RunTest(const FString& Parameters)
 	const FOpenedReaction Scenario = OpenCharacterReaction(false, true, true, 1);
 	TestTrue(TEXT("Marker scenario succeeds"), Scenario.bOk);
 	const int32 Damage = TraceIndex(Scenario.SummonResult.TraceEvents, TEXT("trap_damage_resolved"));
-	const int32 Open = TraceIndex(Scenario.SummonResult.TraceEvents, TEXT("reaction_window_opened"));
+	const int32 Open = ReactionWindowTraceIndex(
+		Scenario.SummonResult.TraceEvents, TEXT("post_summon"));
 	TestTrue(TEXT("Trap resolves before window"), Damage >= 0 && Open > Damage);
 	return true;
 }

@@ -260,6 +260,19 @@ private:
 		uint32& WorkingRandomState,
 		TArray<FWBTraceEvent>& OutTraceEvents,
 		FString& OutReason) const;
+	bool BeginPendingSummon(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase WorkingPhase,
+		const FWBMatchLegalAction& Action,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
+	bool ResolvePendingSummon(
+		FWBGameStateData& WorkingState,
+		EWBMatchLoopPhase& WorkingPhase,
+		TArray<FWBPendingEffectActivationFrame>& WorkingPendingEffects,
+		uint32& WorkingRandomState,
+		TArray<FWBTraceEvent>& OutTraceEvents,
+		FString& OutReason) const;
 	bool AdvanceAttackContinuation(
 		FWBGameStateData& WorkingState,
 		EWBMatchLoopPhase& WorkingPhase,

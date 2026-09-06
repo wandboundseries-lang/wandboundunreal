@@ -106,7 +106,8 @@ enum class EWBReactionWindowKind : uint8
 	PostHit,
 	PostMove,
 	PostSummon,
-	PostEffect
+	PostEffect,
+	PreSummon
 };
 
 struct WANDBOUNDCORE_API FWBReactionWindowState
@@ -120,6 +121,53 @@ struct WANDBOUNDCORE_API FWBReactionWindowState
 
 	bool IsOpen() const;
 	void Reset();
+};
+
+enum class EWBSummonOrigin : uint8
+{
+	Unknown,
+	DeclaredNormalCharacter,
+	EffectGenerated,
+	HybridProcedure,
+	Setup,
+	NPC,
+	Marker
+};
+
+enum class EWBCharacterSummonConditionPolicy : uint8
+{
+	Normal,
+	IgnoreSummoningConditions
+};
+
+struct WANDBOUNDCORE_API FWBPendingSummonState
+{
+	bool bActive = false;
+	bool bAcceptingNegation = false;
+	bool bNegated = false;
+	FString PendingSummonId;
+	int32 SummoningPlayerId = INDEX_NONE;
+	int32 OwnerPlayerId = INDEX_NONE;
+	int32 ControllerPlayerId = INDEX_NONE;
+	FString CardInstanceId;
+	FString CardId;
+	EWBCardZone SourceZone = EWBCardZone::Unknown;
+	FWBTile DestinationTile = FWBTile(-1, -1);
+	EWBSummonOrigin Origin = EWBSummonOrigin::Unknown;
+	EWBDeclarationProvenance DeclarationProvenance =
+		EWBDeclarationProvenance::Automatic;
+	EWBCharacterSummonConditionPolicy ConditionPolicy =
+		EWBCharacterSummonConditionPolicy::Normal;
+	FString SourceActionId;
+	int32 ResumePriorityPlayerId = INDEX_NONE;
+	EWBGamePhase ResumeGamePhase = EWBGamePhase::NormalTurn;
+	int32 ResumeMatchPhase = INDEX_NONE;
+	FWBEventIdentitySnapshot EventIdentity;
+
+	void Reset()
+	{
+		*this = FWBPendingSummonState();
+	}
 };
 
 struct WANDBOUNDCORE_API FWBPlayerStateData
@@ -358,6 +406,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	TMap<int32, FName> TerrainByTileIndex;
 	TArray<FWBPlayerStateData> Players;
 	FWBReactionWindowState ReactionWindow;
+	FWBPendingSummonState PendingSummon;
 	FWBPendingAttackState PendingAttack;
 	FWBNPCPhaseContinuationState NPCPhaseContinuation;
 	TArray<FWBPendingNPCSpawnState> PendingNPCSpawns;
@@ -396,6 +445,8 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void ClearActivationUsageKeysForPlayer(int32 PlayerId);
 	bool HasPendingAttack() const;
 	void ClearPendingAttack();
+	bool HasPendingSummon() const;
+	void ClearPendingSummon();
 	bool HasPendingPrivateCardChoice() const;
 	void ClearPendingPrivateCardChoice();
 	// Compatibility names retained for existing replay/action family contracts.

@@ -79,6 +79,38 @@ FString CanonicalGameState(const FWBGameStateData& State)
 		AppendInt(Out, TEXT("reaction.source_unit"), State.ReactionWindow.SourceUnitId);
 		AppendInt(Out, TEXT("reaction.target_unit"), State.ReactionWindow.TargetUnitId);
 	}
+	AppendBool(Out, TEXT("summon.active"), State.PendingSummon.bActive);
+	if (State.HasPendingSummon())
+	{
+		AppendBool(Out, TEXT("summon.accepting_negation"),
+			State.PendingSummon.bAcceptingNegation);
+		AppendBool(Out, TEXT("summon.negated"), State.PendingSummon.bNegated);
+		AppendString(Out, TEXT("summon.id"), State.PendingSummon.PendingSummonId);
+		AppendInt(Out, TEXT("summon.player"), State.PendingSummon.SummoningPlayerId);
+		AppendInt(Out, TEXT("summon.owner"), State.PendingSummon.OwnerPlayerId);
+		AppendInt(Out, TEXT("summon.controller"), State.PendingSummon.ControllerPlayerId);
+		AppendString(Out, TEXT("summon.instance"), State.PendingSummon.CardInstanceId);
+		AppendString(Out, TEXT("summon.card"), State.PendingSummon.CardId);
+		AppendInt(Out, TEXT("summon.source_zone"),
+			static_cast<int32>(State.PendingSummon.SourceZone));
+		AppendTile(Out, TEXT("summon.destination"), State.PendingSummon.DestinationTile);
+		AppendInt(Out, TEXT("summon.origin"),
+			static_cast<int32>(State.PendingSummon.Origin));
+		AppendInt(Out, TEXT("summon.declaration"),
+			static_cast<int32>(State.PendingSummon.DeclarationProvenance));
+		AppendInt(Out, TEXT("summon.condition_policy"),
+			static_cast<int32>(State.PendingSummon.ConditionPolicy));
+		AppendString(Out, TEXT("summon.source_action"),
+			State.PendingSummon.SourceActionId);
+		AppendInt(Out, TEXT("summon.resume_priority"),
+			State.PendingSummon.ResumePriorityPlayerId);
+		AppendInt(Out, TEXT("summon.resume_game_phase"),
+			static_cast<int32>(State.PendingSummon.ResumeGamePhase));
+		AppendInt(Out, TEXT("summon.resume_match_phase"),
+			State.PendingSummon.ResumeMatchPhase);
+		AppendString(Out, TEXT("summon.event_id"),
+			State.PendingSummon.EventIdentity.EventId);
+	}
 	if (State.HasPendingAttack()
 		&& State.PendingAttack.DamageSubstitution.bActive)
 	{

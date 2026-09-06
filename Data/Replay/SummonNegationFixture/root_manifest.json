@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "summon_negation_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "summon_negation",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic production declared-summon negation fixture only."
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "audit_id": "summon_negation_foundation",
+  "result": "ready",
+  "baseline": "4f353c7948ea2576a6ba8b17ca040e0012c4de83",
+  "canonical_rule": {
+    "term": "Negate a Summon",
+    "meaning": "Cancel a pending summon before the unit is successfully summoned.",
+    "successful_summon_required_for_summoned_triggers": true,
+    "implicit_zone_movement": false,
+    "destruction": false,
+    "sacrifice": false,
+    "damage": false,
+    "effect_negation": false
+  },
+  "timing": {
+    "window": "PreSummon",
+    "enabled_origin": "DeclaredNormalCharacter",
+    "first_priority": "opponent",
+    "close_condition": "two consecutive passes",
+    "react_resets_pass_count": true,
+    "nested_resolution": "existing LIFO pending-effect stack",
+    "post_close": "exact revalidation before established summon execution"
+  },
+  "pending_summon": {
+    "typed": true,
+    "exact_instance": true,
+    "source_zone_retained_while_pending": true,
+    "deterministic_id": true,
+    "rng_consumed_for_id": false,
+    "cleared_after_resolution": true,
+    "cleared_on_terminal_commit": true
+  },
+  "operation": {
+    "name": "NegatePendingSummon",
+    "typed_target": "PendingSummonId",
+    "resolves_on_effect_resolution": true,
+    "universal_player_action": false,
+    "effect_negation_remains_separate": true
+  },
+  "unaffected_origins": [
+    "Rook",
+    "Patch",
+    "CrashIn",
+    "Hybrid",
+    "Setup",
+    "NPC",
+    "Marker",
+    "EffectGenerated"
+  ],
+  "privacy": {
+    "exact_card_instance_public": false,
+    "unrelated_hand_cards_public": false,
+    "hand_order_public": false,
+    "private_zone_index_public": false,
+    "protected_digests_public": false,
+    "receipt_field_count": 8,
+    "scan_passed": true
+  },
+  "validation": {
+    "focused_summon_negation": {
+      "succeeded": 9,
+      "failed": 0,
+      "minimum_assertions": 82
+    },
+    "reaction_regression": {
+      "succeeded": 37,
+      "failed": 0
+    },
+    "full_automation": {
+      "baseline": 2489,
+      "succeeded": 2498,
+      "delta": 9,
+      "failed": 0,
+      "warnings": 0,
+      "not_run": 0
+    },
+    "build_matrix": {
+      "editor_non_unity": "succeeded",
+      "game_non_unity": "succeeded",
+      "editor_default": "succeeded",
+      "game_default": "succeeded",
+      "editor_forced_unity": "succeeded",
+      "game_forced_unity": "succeeded"
+    },
+    "build_cook_run": {
+      "succeeded": true,
+      "exit_code": 0,
+      "seconds": 934.18,
+      "build_actions": 417,
+      "cooked_packages": 532,
+      "package_store_packages": 459,
+      "fixture_files_staged": 5
+    },
+    "packaged_smoke": {
+      "runs": 2,
+      "exit_codes": [0, 0],
+      "scenarios": [
+        "successful_pass_through",
+        "resolved_summon_negation",
+        "summon_negation_effect_negated"
+      ],
+      "fresh_replay_verified": true,
+      "byte_identical": true,
+      "archive_sha256": "5df7faac15f1da0b1124efb80150b33a95de45afeaafbde96407ef549c22f83d",
+      "receipt_sha256": "511587e612c2a087e0c7b6813ec9817d3ab2ad4add1a342fd88521b7651335e9",
+      "startup_sha256": "210da863cb6587a48e8dd31e502e04a8f5b57b5cf765e5495353ca3b0daac360",
+      "replay_digest": "a95c134c2ffd99dfb40c3659f099f4c4e66695fa01b44307ac833271a788b69d",
+      "state_digest": "f5cc3958d96315972872176c9a89736c339c5f52813e90a6b707680772454b90",
+      "trace_digest": "7fe7097b50d0b2c50f81646a846445a9d5c8f9756e992658d144c932960d20b2",
+      "schema_version": 1,
+      "records": 3,
+      "generation": 1,
+      "revision": 4,
+      "bundle_digest": "1749cdaa6ffc916c32ae48c97592e88249567e8a058876f70aa73b14855c4ab2"
+    },
+    "packaged_rook_regression": {
+      "succeeded": true,
+      "exit_code": 0
+    },
+    "action_codec": {
+      "changed": false,
+      "cpp_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+      "header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0"
+    },
+    "replay_schema": 1,
+    "receipt_fields": 8
+  },
+  "changed_paths": [
+    "Data/Replay/SummonNegationFixture/bundle_manifest.json",
+    "Data/Replay/SummonNegationFixture/markers.json",
+    "Data/Replay/SummonNegationFixture/match_spec.json",
+    "Data/Replay/SummonNegationFixture/root_manifest.json",
+    "Data/Replay/SummonNegationFixture/units.json",
+    "Docs/Summon_Negation_Foundation_Audit.json",
+    "Docs/Summon_Negation_Foundation_Audit.md",
+    "Docs/Wandbound_Canonical_Glossary_Summon_Negation_Addendum_v1.md",
+    "Docs/Wandbound_Rules_Bible_Summon_Negation_Addendum_v1.md",
+    "Reference/GodotCanon/README.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCardActivationExpansion.cpp",
+    "Source/WandboundCore/Private/WBEffectRunner.cpp",
+    "Source/WandboundCore/Private/WBGameStateData.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Private/WBPublicTurnSummary.cpp",
+    "Source/WandboundCore/Private/WBReplayTrace.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundCore/Public/WBCharacterSummon.h",
+    "Source/WandboundCore/Public/WBEffectRequest.h",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBMatchCoordinator.h",
+    "Source/WandboundCore/Public/WBReplayTrace.h",
+    "Source/WandboundRuntime/Private/WBProductionSummonNegationSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionSummonNegationSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBProductionReactionWindowTests.cpp",
+    "Source/WandboundTests/Private/WBSummonNegationTests.cpp"
+  ],
+  "manifest_count": 30,
+  "manifest_matches_markdown": true,
+  "staged_files": 0,
+  "deferred": [
+    "summon negation for Rook",
+    "summon negation for Patch",
+    "summon negation for Crash-In",
+    "summon negation for Hybrid",
+    "summon negation for setup, NPC, marker, and arbitrary effect summons",
+    "implicit discard or destruction of a negated card",
+    "new production summon-negation card",
+    "choice-system expansion",
+    "inheritance and RL transfer",
+    "temporary modifiers, AI, and telemetry"
+  ]
+}

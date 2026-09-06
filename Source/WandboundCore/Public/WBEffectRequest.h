@@ -21,7 +21,8 @@ enum class EWBGenericEffectOp : uint8
 	RegisterPendingAttackHPDamageSubstitution,
 	ReplacePendingAttackDefenderFromHand,
 	SacrificeSourceThenSummonCharacterFromDeckToSourceTile,
-	SetTerrain
+	SetTerrain,
+	NegatePendingSummon
 };
 
 enum class EWBEffectTileRangeMetric : uint8
@@ -106,6 +107,7 @@ struct WANDBOUNDCORE_API FWBGenericEffectPayload
 	FWBHealEffectRequest HealEffect;
 	FWBSetTerrainEffectRequest SetTerrainEffect;
 	FString PendingEffectFrameId;
+	FString PendingSummonId;
 	FString PendingAttackContinuationId;
 	FString RequiredSourceFaction;
 	FString RequiredReplacementFaction;

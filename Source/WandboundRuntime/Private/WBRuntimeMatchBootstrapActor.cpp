@@ -28,6 +28,7 @@
 #include "WBProductionReactionWindowSmoke.h"
 #include "WBProductionSuspendedAttackSmoke.h"
 #include "WBProductionStatusAuthoritySmoke.h"
+#include "WBProductionSummonNegationSmoke.h"
 #include "WBProductionTerminalReplaySmoke.h"
 #include "WBProductionStartupResult.h"
 
@@ -393,6 +394,15 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 				false,
 				PendingEffectSmoke.bOk ? 0 : 26,
 				TEXT("WandboundProductionPendingEffectSmoke"));
+		}
+		else if (WBProductionSummonNegationSmoke::IsRequested())
+		{
+			const FWBProductionSummonNegationSmokeResult SummonNegationSmoke =
+				WBProductionSummonNegationSmoke::Run(PendingBootstrapRequest);
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				SummonNegationSmoke.bOk ? 0 : 42,
+				TEXT("WandboundProductionSummonNegationSmoke"));
 		}
 		else if (WBProductionReactionWindowSmoke::IsRequested())
 		{

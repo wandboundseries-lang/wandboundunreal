@@ -1238,6 +1238,34 @@ FWBActionQueryResult WBRules::CanApplyEffectRequest(
 			}
 			break;
 		}
+		case EWBGenericEffectOp::NegatePendingSummon:
+		{
+			if (!State.HasPendingSummon()
+				|| !State.PendingSummon.bAcceptingNegation)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("pending_summon_not_active"));
+			}
+			if (Payload.PendingSummonId.IsEmpty()
+				|| Payload.PendingSummonId
+					!= State.PendingSummon.PendingSummonId)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("pending_summon_target_mismatch"));
+			}
+			if (State.PendingSummon.bNegated)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("pending_summon_already_negated"));
+			}
+			if (Request.Source.PlayerId
+				!= 1 - State.PendingSummon.SummoningPlayerId)
+			{
+				return FWBActionQueryResult::Deny(
+					TEXT("pending_summon_negation_player_mismatch"));
+			}
+			break;
+		}
 		case EWBGenericEffectOp::PreventPendingAttack:
 			if (!State.HasPendingAttack()
 				|| State.PendingAttack.Stage != EWBAttackContinuationStage::PreHit)
