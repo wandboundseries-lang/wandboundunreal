@@ -400,7 +400,7 @@ bool FWBCardLifecycleZoneIndexesDeterministicAfterDrawTest::RunTest(const FStrin
 	TestEqual(TEXT("Second remaining normalized"), PlayerZones != nullptr ? PlayerZones->Deck[1].ZoneIndex : -1, 1);
 	TestEqual(TEXT("Existing hand remains first"), PlayerZones != nullptr ? PlayerZones->Hand[0].Card.InstanceId : FString(), FString(TEXT("hand_existing")));
 	TestEqual(TEXT("Drawn hand appended"), PlayerZones != nullptr ? PlayerZones->Hand[1].Card.InstanceId : FString(), FString(TEXT("drawn")));
-	TestEqual(TEXT("Drawn hand append index"), PlayerZones != nullptr ? PlayerZones->Hand[1].ZoneIndex : -1, 4);
+	TestEqual(TEXT("Drawn hand contiguous append index"), PlayerZones != nullptr ? PlayerZones->Hand[1].ZoneIndex : -1, 1);
 	return true;
 }
 

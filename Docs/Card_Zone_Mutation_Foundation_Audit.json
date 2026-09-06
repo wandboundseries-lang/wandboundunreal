@@ -1,0 +1,158 @@
+{
+  "audit": "Card Zone Mutation Foundation",
+  "scope": "Deterministic exact-instance structural mutation for ordered private card zones",
+  "legacy_reference": "A private legacy inventory was consulted read-only for capability coverage.",
+  "supported_ordered_zones": [
+    "Deck",
+    "Hand",
+    "Discard"
+  ],
+  "privacy_classification": {
+    "Deck": "private",
+    "Hand": "private",
+    "Discard": "private"
+  },
+  "exact_instance_authority": "CardInstanceId",
+  "operations": {
+    "TransferExact": {
+      "same_player_only": true,
+      "destination_placement_policies": [
+        "Append"
+      ],
+      "working_copy_atomic": true,
+      "normalizes_ordered_private_zone_indexes": true
+    },
+    "ExtractExact": {
+      "same_player_only": true,
+      "returns_authoritative_card_reference": true,
+      "working_copy_atomic": true,
+      "normalizes_ordered_private_zone_indexes": true
+    }
+  },
+  "lifecycle_adapters": [
+    "DrawOneCard",
+    "MoveHandCardToDiscard",
+    "RemoveExactCardFromDeck",
+    "RemoveExactCardFromHand"
+  ],
+  "draw_behavior": {
+    "top_selection_remains_semantic": true,
+    "destination": "Hand append",
+    "multi_draw_remains_sequential": true,
+    "uses_rng": false
+  },
+  "summon_consumption": {
+    "character_summon_uses_lifecycle_extraction_adapter": true,
+    "rook_behavior_changed": false,
+    "patch_behavior_changed": false,
+    "crash_in_behavior_changed": false
+  },
+  "discard_support": "Structural exact transfer and extraction only; no new production card behavior",
+  "specialized_exclusions": [
+    "Equipped",
+    "Board",
+    "Marker",
+    "same-zone reorder",
+    "cross-player transfer",
+    "shuffle",
+    "search or tutor",
+    "choice enumeration"
+  ],
+  "privacy": {
+    "raw_public_trace_emitted": false,
+    "public_observation_schema_changed": false,
+    "private_zone_identity_exposed": false
+  },
+  "replay_determinism": {
+    "rng_consumed": false,
+    "action_codec_changed": false,
+    "replay_schema": 1,
+    "public_receipt_fields": 8
+  },
+  "validation": {
+    "focused_assertions": 93,
+    "card_zone_mutation": {
+      "succeeded": 8,
+      "failed": 0,
+      "not_run": 0
+    },
+    "card_lifecycle": {
+      "succeeded": 25,
+      "failed": 0,
+      "not_run": 0
+    },
+    "affected_production": {
+      "succeeded": 260,
+      "failed": 0,
+      "not_run": 0
+    },
+    "full_automation": {
+      "baseline": 2481,
+      "succeeded": 2489,
+      "delta": 8,
+      "failed": 0,
+      "not_run": 0
+    },
+    "build_matrix": {
+      "editor_non_unity_seconds": 178.60,
+      "game_non_unity_seconds": 179.86,
+      "editor_default_seconds": 33.77,
+      "game_default_seconds": 38.73,
+      "editor_forced_unity_seconds": 22.95,
+      "game_forced_unity_seconds": 39.67,
+      "all_succeeded": true
+    },
+    "build_cook_run": {
+      "clean": true,
+      "build": "succeeded",
+      "cook": "succeeded",
+      "stage": "succeeded",
+      "package": "succeeded",
+      "archive": "succeeded",
+      "seconds": 621.83
+    },
+    "packaged_smoke": {
+      "runs_per_scenario": 2,
+      "byte_identical": true,
+      "fresh_replay_verified": true,
+      "receipt_fields": 8,
+      "privacy_scan": "clean",
+      "startup_sha256": "c1589b0b9f442008164c71854ffc1ded9dbf77f74160daef9a4ff550f194d99c",
+      "scenarios": {
+        "undertow": {
+          "coverage": "Deck to Hand draw",
+          "records": 8,
+          "archive_sha256": "1e829831e19b257c610f98c00625db37cc8bddaa2194d64e02ef03fb7dc7e97a",
+          "receipt_sha256": "a204b26695a3d28c284acd4c263df7bfd485e7fae7785d20e5535a11cc2276fa",
+          "final_state_digest": "1ca20348b9ae042fca0e6339736db5f3278e6d60576e0cdad6bb495ce7c37599",
+          "final_trace_digest": "eb760437e0320e38ea6a1add143a60c94275b64436cda121bbbccb3d710df8c6"
+        },
+        "rook": {
+          "coverage": "exact Deck consumption",
+          "records": 15,
+          "archive_sha256": "0cb6ec323be965be6b7be1ad9d1841535a001c70fcaf67e5762e9083a42d79fc",
+          "receipt_sha256": "f12343b4c95e340383d12782cfc521640c32cd21a11812e0676b76d22e3c483c",
+          "final_state_digest": "f0c029604f5a656b4a58c1effdb03023167bc3366caebb26a09b93d668210c97",
+          "final_trace_digest": "caa6501547b22978039ff7a6c0c88ee0b75f13d8f8841294210fec87f8aad1d4"
+        },
+        "crash_in": {
+          "coverage": "exact Hand consumption and discard",
+          "records": 8,
+          "archive_sha256": "687aacb3c0faf57e0bce3e8bbdcb580b957d48d066ad1b71f7ef33ed6c2915f4",
+          "receipt_sha256": "76a8ff0025fa4137a35262f52f43a89d24e1579871cccb87fcd5b51ce3c28701",
+          "final_state_digest": "a274b44a9894faf29609a5945c747a27d3ef663ad59055a31926125819b52a0b",
+          "final_trace_digest": "a3ceda9dce70c0798d737f412ff3c1b08025e3fa3d36d09a12599a0f5992b8f4"
+        }
+      }
+    }
+  },
+  "changed_file_manifest": [
+    "Docs/Card_Zone_Mutation_Foundation_Audit.json",
+    "Docs/Card_Zone_Mutation_Foundation_Audit.md",
+    "Source/WandboundCore/Private/WBCardLifecycle.cpp",
+    "Source/WandboundCore/Private/WBCardZoneMutation.cpp",
+    "Source/WandboundCore/Public/WBCardZoneMutation.h",
+    "Source/WandboundTests/Private/WBCardLifecycleTests.cpp",
+    "Source/WandboundTests/Private/WBCardZoneMutationTests.cpp"
+  ]
+}

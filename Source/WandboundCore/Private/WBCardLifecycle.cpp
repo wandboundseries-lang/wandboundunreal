@@ -1,5 +1,6 @@
 #include "WBCardLifecycle.h"
 
+#include "WBCardZoneMutation.h"
 #include "WBCardZoneState.h"
 
 namespace
@@ -28,14 +29,6 @@ FWBCardLifecycleResult MakeResult(
 void SortOrderedZones(FWBCardZoneState& ZoneState)
 {
 	WBCardZoneState::SortOrderedZonesDeterministically(ZoneState);
-}
-
-void NormalizeZoneIndexes(TArray<FWBZoneCardEntry>& Entries)
-{
-	for (int32 Index = 0; Index < Entries.Num(); ++Index)
-	{
-		Entries[Index].ZoneIndex = Index;
-	}
 }
 
 int32 MaxZoneIndex(const TArray<FWBZoneCardEntry>& Entries)
@@ -107,15 +100,62 @@ FWBCardLifecycleResult MakeSuccessfulMoveResult(
 	Result.DestinationZoneCountAfter = DestinationCountAfter;
 	return Result;
 }
+
+EWBCardLifecycleResultCode ToLifecycleResultCode(
+	const EWBCardZoneMutationResultCode Code)
+{
+	switch (Code)
+	{
+	case EWBCardZoneMutationResultCode::Success:
+		return EWBCardLifecycleResultCode::Success;
+	case EWBCardZoneMutationResultCode::InvalidPlayer:
+		return EWBCardLifecycleResultCode::InvalidPlayer;
+	case EWBCardZoneMutationResultCode::PlayerZonesMissing:
+		return EWBCardLifecycleResultCode::PlayerZonesMissing;
+	case EWBCardZoneMutationResultCode::CardInstanceMissing:
+		return EWBCardLifecycleResultCode::CardInstanceMissing;
+	case EWBCardZoneMutationResultCode::CardNotInExpectedZone:
+	case EWBCardZoneMutationResultCode::OwnerMismatch:
+	case EWBCardZoneMutationResultCode::CardIdentityMismatch:
+		return EWBCardLifecycleResultCode::CardNotInExpectedZone;
+	case EWBCardZoneMutationResultCode::DuplicateInstanceId:
+		return EWBCardLifecycleResultCode::DuplicateInstanceId;
+	case EWBCardZoneMutationResultCode::InvalidZoneState:
+		return EWBCardLifecycleResultCode::InvalidZoneState;
+	case EWBCardZoneMutationResultCode::UnsupportedSourceZone:
+	case EWBCardZoneMutationResultCode::UnsupportedDestinationZone:
+	case EWBCardZoneMutationResultCode::SameZoneTransferUnsupported:
+	case EWBCardZoneMutationResultCode::InvalidDestinationPlacement:
+	default:
+		return EWBCardLifecycleResultCode::UnsupportedLifecycleOperation;
+	}
+}
+
+FWBCardLifecycleResult FromZoneMutation(
+	const FWBCardZoneMutationResult& Mutation)
+{
+	FWBCardLifecycleResult Result = MakeResult(
+		ToLifecycleResultCode(Mutation.Code),
+		Mutation.PlayerId,
+		Mutation.Reason);
+	Result.CardInstanceId = Mutation.Card.InstanceId;
+	Result.CardId = Mutation.Card.CardId;
+	Result.SourceZoneCountAfter = Mutation.SourceZoneCountAfter;
+	Result.DestinationZoneCountAfter =
+		Mutation.DestinationZoneCountAfter;
+	return Result;
+}
 }
 
 FWBCardLifecycleResult WBCardLifecycle::DrawOneCard(
 	FWBGameStateData& State,
 	const int32 PlayerId)
 {
+	FWBGameStateData OrderedState = State;
 	FWBCardZoneState* ZoneState = nullptr;
 	FWBPlayerCardZoneState* PlayerZones = nullptr;
-	FWBCardLifecycleResult ValidationResult = ValidatePlayerAndZones(State, PlayerId, ZoneState, PlayerZones);
+	FWBCardLifecycleResult ValidationResult = ValidatePlayerAndZones(
+		OrderedState, PlayerId, ZoneState, PlayerZones);
 	if (!ValidationResult.bOk)
 	{
 		return ValidationResult;
@@ -129,23 +169,15 @@ FWBCardLifecycleResult WBCardLifecycle::DrawOneCard(
 		return Result;
 	}
 
-	FWBZoneCardEntry DrawnCard = PlayerZones->Deck[0];
-	PlayerZones->Deck.RemoveAt(0, 1, EAllowShrinking::No);
-	NormalizeZoneIndexes(PlayerZones->Deck);
-
-	DrawnCard.Zone = EWBCardZone::Hand;
-	DrawnCard.Card.OwnerPlayerId = PlayerId;
-	DrawnCard.ZoneIndex = MaxZoneIndex(PlayerZones->Hand) + 1;
-	PlayerZones->Hand.Add(DrawnCard);
-
-	const int32 SourceCountAfter = PlayerZones->Deck.Num();
-	const int32 DestinationCountAfter = PlayerZones->Hand.Num();
-	SortOrderedZones(*ZoneState);
-	return MakeSuccessfulMoveResult(
-		PlayerId,
-		DrawnCard,
-		SourceCountAfter,
-		DestinationCountAfter);
+	FWBCardZoneTransferRequest Request;
+	Request.PlayerId = PlayerId;
+	Request.SourceZone = EWBCardZone::Deck;
+	Request.DestinationZone = EWBCardZone::Hand;
+	Request.CardInstanceId = PlayerZones->Deck[0].Card.InstanceId;
+	Request.ExpectedCardId = PlayerZones->Deck[0].Card.CardId;
+	Request.DestinationPlacement = EWBOrderedZonePlacement::Append;
+	return FromZoneMutation(
+		WBCardZoneMutation::TransferExact(State, Request));
 }
 
 FWBCardLifecycleResult WBCardLifecycle::DrawCards(
@@ -186,68 +218,14 @@ FWBCardLifecycleResult WBCardLifecycle::MoveHandCardToDiscard(
 	const int32 PlayerId,
 	const FString& CardInstanceId)
 {
-	FWBCardZoneState* ZoneState = nullptr;
-	FWBPlayerCardZoneState* PlayerZones = nullptr;
-	FWBCardLifecycleResult ValidationResult = ValidatePlayerAndZones(State, PlayerId, ZoneState, PlayerZones);
-	if (!ValidationResult.bOk)
-	{
-		return ValidationResult;
-	}
-
-	if (CardInstanceId.IsEmpty())
-	{
-		return MakeResult(EWBCardLifecycleResultCode::CardInstanceMissing, PlayerId);
-	}
-
-	int32 HandIndex = INDEX_NONE;
-	for (int32 Index = 0; Index < PlayerZones->Hand.Num(); ++Index)
-	{
-		if (PlayerZones->Hand[Index].Card.InstanceId == CardInstanceId)
-		{
-			HandIndex = Index;
-			break;
-		}
-	}
-
-	if (HandIndex == INDEX_NONE)
-	{
-		FWBZoneCardEntry ExistingEntry;
-		if (WBCardZoneState::FindCardByInstanceId(*ZoneState, CardInstanceId, ExistingEntry))
-		{
-			FWBCardLifecycleResult Result = MakeResult(
-				EWBCardLifecycleResultCode::CardNotInExpectedZone,
-				PlayerId);
-			Result.CardInstanceId = CardInstanceId;
-			Result.CardId = ExistingEntry.Card.CardId;
-			Result.SourceZoneCountAfter = PlayerZones->Hand.Num();
-			Result.DestinationZoneCountAfter = PlayerZones->Discard.Num();
-			return Result;
-		}
-
-		FWBCardLifecycleResult Result = MakeResult(EWBCardLifecycleResultCode::CardInstanceMissing, PlayerId);
-		Result.CardInstanceId = CardInstanceId;
-		Result.SourceZoneCountAfter = PlayerZones->Hand.Num();
-		Result.DestinationZoneCountAfter = PlayerZones->Discard.Num();
-		return Result;
-	}
-
-	FWBZoneCardEntry DiscardedCard = PlayerZones->Hand[HandIndex];
-	PlayerZones->Hand.RemoveAt(HandIndex, 1, EAllowShrinking::No);
-	NormalizeZoneIndexes(PlayerZones->Hand);
-
-	DiscardedCard.Zone = EWBCardZone::Discard;
-	DiscardedCard.Card.OwnerPlayerId = PlayerId;
-	DiscardedCard.ZoneIndex = MaxZoneIndex(PlayerZones->Discard) + 1;
-	PlayerZones->Discard.Add(DiscardedCard);
-
-	const int32 SourceCountAfter = PlayerZones->Hand.Num();
-	const int32 DestinationCountAfter = PlayerZones->Discard.Num();
-	SortOrderedZones(*ZoneState);
-	return MakeSuccessfulMoveResult(
-		PlayerId,
-		DiscardedCard,
-		SourceCountAfter,
-		DestinationCountAfter);
+	FWBCardZoneTransferRequest Request;
+	Request.PlayerId = PlayerId;
+	Request.SourceZone = EWBCardZone::Hand;
+	Request.DestinationZone = EWBCardZone::Discard;
+	Request.CardInstanceId = CardInstanceId;
+	Request.DestinationPlacement = EWBOrderedZonePlacement::Append;
+	return FromZoneMutation(
+		WBCardZoneMutation::TransferExact(State, Request));
 }
 
 FWBCardLifecycleResult WBCardLifecycle::MoveEquippedCardToDiscard(
@@ -338,51 +316,12 @@ FWBCardLifecycleResult WBCardLifecycle::RemoveExactCardFromDeck(
 	const int32 PlayerId,
 	const FString& CardInstanceId)
 {
-	FWBCardZoneState* ZoneState = nullptr;
-	FWBPlayerCardZoneState* PlayerZones = nullptr;
-	FWBCardLifecycleResult ValidationResult = ValidatePlayerAndZones(
-		State, PlayerId, ZoneState, PlayerZones);
-	if (!ValidationResult.bOk)
-	{
-		return ValidationResult;
-	}
-	if (CardInstanceId.IsEmpty())
-	{
-		return MakeResult(EWBCardLifecycleResultCode::CardInstanceMissing, PlayerId);
-	}
-
-	const int32 DeckIndex = PlayerZones->Deck.IndexOfByPredicate(
-		[&CardInstanceId](const FWBZoneCardEntry& Entry)
-		{
-			return Entry.Card.InstanceId == CardInstanceId;
-		});
-	if (DeckIndex == INDEX_NONE)
-	{
-		FWBZoneCardEntry ExistingEntry;
-		const bool bKnown = WBCardZoneState::FindCardByInstanceId(
-			*ZoneState, CardInstanceId, ExistingEntry);
-		FWBCardLifecycleResult Result = MakeResult(
-			bKnown
-				? EWBCardLifecycleResultCode::CardNotInExpectedZone
-				: EWBCardLifecycleResultCode::CardInstanceMissing,
-			PlayerId);
-		Result.CardInstanceId = CardInstanceId;
-		Result.CardId = bKnown ? ExistingEntry.Card.CardId : FString();
-		Result.SourceZoneCountAfter = PlayerZones->Deck.Num();
-		return Result;
-	}
-
-	const FWBZoneCardEntry Removed = PlayerZones->Deck[DeckIndex];
-	PlayerZones->Deck.RemoveAt(DeckIndex, 1, EAllowShrinking::No);
-	NormalizeZoneIndexes(PlayerZones->Deck);
-	SortOrderedZones(*ZoneState);
-
-	FWBCardLifecycleResult Result = MakeResult(
-		EWBCardLifecycleResultCode::Success, PlayerId);
-	Result.CardInstanceId = Removed.Card.InstanceId;
-	Result.CardId = Removed.Card.CardId;
-	Result.SourceZoneCountAfter = PlayerZones->Deck.Num();
-	return Result;
+	FWBCardZoneExtractRequest Request;
+	Request.PlayerId = PlayerId;
+	Request.SourceZone = EWBCardZone::Deck;
+	Request.CardInstanceId = CardInstanceId;
+	return FromZoneMutation(
+		WBCardZoneMutation::ExtractExact(State, Request));
 }
 
 FWBCardLifecycleResult WBCardLifecycle::RemoveExactCardFromHand(
@@ -390,51 +329,12 @@ FWBCardLifecycleResult WBCardLifecycle::RemoveExactCardFromHand(
 	const int32 PlayerId,
 	const FString& CardInstanceId)
 {
-	FWBCardZoneState* ZoneState = nullptr;
-	FWBPlayerCardZoneState* PlayerZones = nullptr;
-	FWBCardLifecycleResult ValidationResult = ValidatePlayerAndZones(
-		State, PlayerId, ZoneState, PlayerZones);
-	if (!ValidationResult.bOk)
-	{
-		return ValidationResult;
-	}
-	if (CardInstanceId.IsEmpty())
-	{
-		return MakeResult(EWBCardLifecycleResultCode::CardInstanceMissing, PlayerId);
-	}
-
-	const int32 HandIndex = PlayerZones->Hand.IndexOfByPredicate(
-		[&CardInstanceId](const FWBZoneCardEntry& Entry)
-		{
-			return Entry.Card.InstanceId == CardInstanceId;
-		});
-	if (HandIndex == INDEX_NONE)
-	{
-		FWBZoneCardEntry ExistingEntry;
-		const bool bKnown = WBCardZoneState::FindCardByInstanceId(
-			*ZoneState, CardInstanceId, ExistingEntry);
-		FWBCardLifecycleResult Result = MakeResult(
-			bKnown
-				? EWBCardLifecycleResultCode::CardNotInExpectedZone
-				: EWBCardLifecycleResultCode::CardInstanceMissing,
-			PlayerId);
-		Result.CardInstanceId = CardInstanceId;
-		Result.CardId = bKnown ? ExistingEntry.Card.CardId : FString();
-		Result.SourceZoneCountAfter = PlayerZones->Hand.Num();
-		return Result;
-	}
-
-	const FWBZoneCardEntry Removed = PlayerZones->Hand[HandIndex];
-	PlayerZones->Hand.RemoveAt(HandIndex, 1, EAllowShrinking::No);
-	NormalizeZoneIndexes(PlayerZones->Hand);
-	SortOrderedZones(*ZoneState);
-
-	FWBCardLifecycleResult Result = MakeResult(
-		EWBCardLifecycleResultCode::Success, PlayerId);
-	Result.CardInstanceId = Removed.Card.InstanceId;
-	Result.CardId = Removed.Card.CardId;
-	Result.SourceZoneCountAfter = PlayerZones->Hand.Num();
-	return Result;
+	FWBCardZoneExtractRequest Request;
+	Request.PlayerId = PlayerId;
+	Request.SourceZone = EWBCardZone::Hand;
+	Request.CardInstanceId = CardInstanceId;
+	return FromZoneMutation(
+		WBCardZoneMutation::ExtractExact(State, Request));
 }
 
 FWBCardLifecycleResult WBCardLifecycle::ApplySetupDraw(
