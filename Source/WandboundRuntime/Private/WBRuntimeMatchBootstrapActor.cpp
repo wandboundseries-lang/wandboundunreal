@@ -26,6 +26,7 @@
 #include "WBProductionCSNBodyDoubleSmoke.h"
 #include "WBProductionDiscardActivationSmoke.h"
 #include "WBProductionPendingEffectSmoke.h"
+#include "WBProductionCardZoneTransitionSmoke.h"
 #include "WBProductionReactionWindowSmoke.h"
 #include "WBProductionSuspendedAttackSmoke.h"
 #include "WBProductionStatusAuthoritySmoke.h"
@@ -403,6 +404,24 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 				false,
 				DiscardSmoke.bOk ? 0 : 43,
 				TEXT("WandboundProductionDiscardActivationSmoke"));
+		}
+		else if (WBProductionCardZoneTransitionSmoke::IsRequested())
+		{
+			const FWBProductionCardZoneTransitionSmokeResult TransitionSmoke =
+				WBProductionCardZoneTransitionSmoke::Run(
+					PendingBootstrapRequest);
+			if (!TransitionSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound card zone transition smoke failed: %s"),
+					*TransitionSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				TransitionSmoke.bOk ? 0 : 44,
+				TEXT("WandboundProductionCardZoneTransitionSmoke"));
 		}
 		else if (WBProductionPendingEffectSmoke::IsRequested())
 		{

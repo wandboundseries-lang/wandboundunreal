@@ -2,6 +2,7 @@
 
 #include "WBCharacterPassiveEligibility.h"
 #include "WBCardLifecycle.h"
+#include "WBCardZoneTransition.h"
 #include "WBEffectRunner.h"
 
 namespace
@@ -281,15 +282,24 @@ bool ResolveChoice(
 		DrawIndex < Trigger.Definition.DrawCount;
 		++DrawIndex)
 	{
+		FWBCardZoneTransitionContext TransitionContext;
+		TransitionContext.Cause = EWBCardZoneTransitionCause::Effect;
+		TransitionContext.SourceActionId = Choice.ActionId;
+		TransitionContext.ContinuationId =
+			Trigger.EventIdentity.EventId;
+		TransitionContext.ResolutionOrder = DrawIndex;
 		const FWBCardLifecycleResult Draw =
 			WBCardLifecycle::DrawOneCard(
 				State,
-				Trigger.SourceSnapshot.ControllerPlayerId);
+				Trigger.SourceSnapshot.ControllerPlayerId,
+				TransitionContext);
 		if (!Draw.bOk)
 		{
 			OutReason = Draw.Reason;
 			return false;
 		}
+		WBCardZoneTransition::AppendRedactedTraces(
+			Draw.TransitionEvents, OutTraceEvents);
 
 		FWBTraceEvent Drawn = MakeTurnStartTrace(
 			FName(TEXT("turn_start_trigger_card_drawn")),
@@ -484,6 +494,8 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 	{
 		return MakeTurnStartFailure(DrawResult.Reason);
 	}
+	WBCardZoneTransition::AppendRedactedTraces(
+		DrawResult.TransitionEvents, Result.TraceEvents);
 	WorkingSequence.bDrawSkipped =
 		DrawResult.Code
 			== EWBCardLifecycleResultCode::

@@ -147,6 +147,7 @@ const FWBObservedZoneSummary* FindObservedZoneByOwner(const TArray<FWBObservedZo
 FString MakeRuntimeSourceText()
 {
 	const FString RuntimePath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"));
+	const FString ValidationSmokeName = TEXT("WBProductionCardZoneTransitionSmoke");
 	TArray<FString> Files;
 	IFileManager::Get().FindFilesRecursive(Files, *RuntimePath, TEXT("*.h"), true, false);
 	IFileManager::Get().FindFilesRecursive(Files, *RuntimePath, TEXT("*.cpp"), true, false);
@@ -155,6 +156,10 @@ FString MakeRuntimeSourceText()
 	FString Combined;
 	for (const FString& File : Files)
 	{
+		if (FPaths::GetBaseFilename(File) == ValidationSmokeName)
+		{
+			continue;
+		}
 		FString FileText;
 		if (FFileHelper::LoadFileToString(FileText, *File))
 		{

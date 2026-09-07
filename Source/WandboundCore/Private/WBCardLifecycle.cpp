@@ -145,11 +145,46 @@ FWBCardLifecycleResult FromZoneMutation(
 		Mutation.DestinationZoneCountAfter;
 	return Result;
 }
+
+FWBCardLifecycleResult ApplyTransferWithSnapshot(
+	FWBGameStateData& State,
+	const FWBCardZoneTransferRequest& Request,
+	const FWBCardZoneTransitionContext& Context)
+{
+	FWBGameStateData WorkingState = State;
+	const FWBCardZoneMutationResult Mutation =
+		WBCardZoneMutation::TransferExact(WorkingState, Request);
+	FWBCardLifecycleResult Result = FromZoneMutation(Mutation);
+	if (!Result.bOk)
+	{
+		return Result;
+	}
+
+	FWBCardZoneTransitionSnapshot Snapshot;
+	FString SnapshotReason;
+	if (!WBCardZoneTransition::BuildCommittedSnapshot(
+		WorkingState,
+		Mutation,
+		Context,
+		Snapshot,
+		SnapshotReason))
+	{
+		return MakeResult(
+			EWBCardLifecycleResultCode::TransitionSnapshotInvalid,
+			Request.PlayerId,
+			SnapshotReason);
+	}
+
+	Result.TransitionEvents.Add(MoveTemp(Snapshot));
+	State = MoveTemp(WorkingState);
+	return Result;
+}
 }
 
 FWBCardLifecycleResult WBCardLifecycle::DrawOneCard(
 	FWBGameStateData& State,
-	const int32 PlayerId)
+	const int32 PlayerId,
+	FWBCardZoneTransitionContext Context)
 {
 	FWBGameStateData OrderedState = State;
 	FWBCardZoneState* ZoneState = nullptr;
@@ -176,14 +211,23 @@ FWBCardLifecycleResult WBCardLifecycle::DrawOneCard(
 	Request.CardInstanceId = PlayerZones->Deck[0].Card.InstanceId;
 	Request.ExpectedCardId = PlayerZones->Deck[0].Card.CardId;
 	Request.DestinationPlacement = EWBOrderedZonePlacement::Append;
-	return FromZoneMutation(
-		WBCardZoneMutation::TransferExact(State, Request));
+	if (Context.Cause == EWBCardZoneTransitionCause::Unknown)
+	{
+		Context.Cause = EWBCardZoneTransitionCause::Draw;
+	}
+	if (Context.SourceActionId.IsEmpty())
+	{
+		Context.SourceActionId = FString::Printf(
+			TEXT("draw:p%d:t%d"), PlayerId, State.TurnNumber);
+	}
+	return ApplyTransferWithSnapshot(State, Request, Context);
 }
 
 FWBCardLifecycleResult WBCardLifecycle::DrawCards(
 	FWBGameStateData& State,
 	const int32 PlayerId,
-	const int32 Count)
+	const int32 Count,
+	FWBCardZoneTransitionContext Context)
 {
 	if (Count <= 0)
 	{
@@ -201,22 +245,29 @@ FWBCardLifecycleResult WBCardLifecycle::DrawCards(
 	}
 
 	FWBCardLifecycleResult LastResult = MakeResult(EWBCardLifecycleResultCode::Success, PlayerId);
+	TArray<FWBCardZoneTransitionSnapshot> SuccessfulTransitions;
 	for (int32 DrawIndex = 0; DrawIndex < Count; ++DrawIndex)
 	{
-		LastResult = DrawOneCard(State, PlayerId);
+		FWBCardZoneTransitionContext DrawContext = Context;
+		DrawContext.ResolutionOrder = Context.ResolutionOrder + DrawIndex;
+		LastResult = DrawOneCard(State, PlayerId, DrawContext);
 		if (!LastResult.bOk)
 		{
+			LastResult.TransitionEvents = MoveTemp(SuccessfulTransitions);
 			return LastResult;
 		}
+		SuccessfulTransitions.Append(LastResult.TransitionEvents);
 	}
 
+	LastResult.TransitionEvents = MoveTemp(SuccessfulTransitions);
 	return LastResult;
 }
 
 FWBCardLifecycleResult WBCardLifecycle::MoveHandCardToDiscard(
 	FWBGameStateData& State,
 	const int32 PlayerId,
-	const FString& CardInstanceId)
+	const FString& CardInstanceId,
+	FWBCardZoneTransitionContext Context)
 {
 	FWBCardZoneTransferRequest Request;
 	Request.PlayerId = PlayerId;
@@ -224,8 +275,15 @@ FWBCardLifecycleResult WBCardLifecycle::MoveHandCardToDiscard(
 	Request.DestinationZone = EWBCardZone::Discard;
 	Request.CardInstanceId = CardInstanceId;
 	Request.DestinationPlacement = EWBOrderedZonePlacement::Append;
-	return FromZoneMutation(
-		WBCardZoneMutation::TransferExact(State, Request));
+	return ApplyTransferWithSnapshot(State, Request, Context);
+}
+
+FWBCardLifecycleResult WBCardLifecycle::TransferExactCard(
+	FWBGameStateData& State,
+	const FWBCardZoneTransferRequest& Request,
+	FWBCardZoneTransitionContext Context)
+{
+	return ApplyTransferWithSnapshot(State, Request, Context);
 }
 
 FWBCardLifecycleResult WBCardLifecycle::MoveEquippedCardToDiscard(
@@ -342,14 +400,22 @@ FWBCardLifecycleResult WBCardLifecycle::ApplySetupDraw(
 	const int32 PlayerId,
 	const int32 Count)
 {
-	return DrawCards(State, PlayerId, Count);
+	FWBCardZoneTransitionContext Context;
+	Context.Cause = EWBCardZoneTransitionCause::Setup;
+	Context.SourceActionId = FString::Printf(
+		TEXT("setup_draw:p%d:t%d"), PlayerId, State.TurnNumber);
+	FWBCardLifecycleResult Result =
+		DrawCards(State, PlayerId, Count, Context);
+	Result.TransitionEvents.Reset();
+	return Result;
 }
 
 FWBCardLifecycleResult WBCardLifecycle::ApplyTurnStartDraw(
 	FWBGameStateData& State,
 	const int32 ActivePlayerId,
 	const int32 TurnNumber,
-	const int32 FirstPlayerId)
+	const int32 FirstPlayerId,
+	FWBCardZoneTransitionContext Context)
 {
 	if (!FWBGameStateData::IsValidPlayerId(ActivePlayerId)
 		|| State.GetPlayerById(ActivePlayerId) == nullptr)
@@ -364,7 +430,18 @@ FWBCardLifecycleResult WBCardLifecycle::ApplyTurnStartDraw(
 			ActivePlayerId);
 	}
 
-	return DrawOneCard(State, ActivePlayerId);
+	if (Context.Cause == EWBCardZoneTransitionCause::Unknown)
+	{
+		Context.Cause = EWBCardZoneTransitionCause::Draw;
+	}
+	if (Context.SourceActionId.IsEmpty())
+	{
+		Context.SourceActionId = FString::Printf(
+			TEXT("turn_start_draw:p%d:t%d"),
+			ActivePlayerId,
+			TurnNumber);
+	}
+	return DrawOneCard(State, ActivePlayerId, Context);
 }
 
 FString WBCardLifecycle::ResultCodeToString(const EWBCardLifecycleResultCode Code)
@@ -393,6 +470,8 @@ FString WBCardLifecycle::ResultCodeToString(const EWBCardLifecycleResultCode Cod
 		return TEXT("unsupported_lifecycle_operation");
 	case EWBCardLifecycleResultCode::FirstPlayerFirstTurnDrawSkipped:
 		return TEXT("first_player_first_turn_draw_skipped");
+	case EWBCardLifecycleResultCode::TransitionSnapshotInvalid:
+		return TEXT("transition_snapshot_invalid");
 	default:
 		return TEXT("unsupported_lifecycle_operation");
 	}

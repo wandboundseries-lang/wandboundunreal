@@ -1,0 +1,168 @@
+{
+  "audit": "card_zone_transition_event_foundation",
+  "baseline": "c944e62fd9f21844cfcb49dc8fa8ee727f18504c",
+  "scope": {
+    "structural_authority": "WBCardZoneMutation",
+    "semantic_authority": "WBCardLifecycle and established production callers",
+    "event_kind": "CardZoneTransition",
+    "supported_transfers": [
+      "DeckToHand",
+      "DeckToDiscard",
+      "HandToDeck",
+      "HandToDiscard",
+      "DiscardToDeck",
+      "DiscardToHand"
+    ],
+    "excluded": [
+      "ExtractExact",
+      "Setup",
+      "Equipped",
+      "Board",
+      "Marker",
+      "NPC",
+      "SummonExtraction",
+      "HybridPayment",
+      "DestructionCleanup"
+    ]
+  },
+  "snapshot": {
+    "historical": true,
+    "exact_instance_internal": true,
+    "zone_indexes_included": false,
+    "deterministic_identity": true,
+    "permanent_history_in_game_state": false
+  },
+  "publication": [
+    {
+      "caller": "turn_start_draw",
+      "source": "Deck",
+      "destination": "Hand",
+      "publish": true,
+      "cause": "Draw",
+      "atomic_parent": "turn_start_working_state"
+    },
+    {
+      "caller": "turn_start_trigger_draw",
+      "source": "Deck",
+      "destination": "Hand",
+      "publish": true,
+      "cause": "Effect",
+      "atomic_parent": "turn_start_working_state"
+    },
+    {
+      "caller": "csn_inheritance_draw",
+      "source": "Deck",
+      "destination": "Hand",
+      "publish": true,
+      "cause": "Effect",
+      "atomic_parent": "trigger_working_state"
+    },
+    {
+      "caller": "explicit_discard",
+      "source": "Hand",
+      "destination": "Discard",
+      "publish": true,
+      "cause": "Rule",
+      "atomic_parent": "coordinator_working_state"
+    },
+    {
+      "caller": "hand_activation_cost",
+      "source": "Hand",
+      "destination": "Discard",
+      "publish": true,
+      "cause": "Cost",
+      "atomic_parent": "coordinator_working_state"
+    },
+    {
+      "caller": "setup_draw",
+      "source": "Deck",
+      "destination": "Hand",
+      "publish": false,
+      "cause": "Setup",
+      "atomic_parent": "setup_working_state"
+    }
+  ],
+  "privacy": {
+    "public_trace_redacted": true,
+    "card_instance_id_public": false,
+    "card_id_public": false,
+    "zone_index_public": false,
+    "ordered_zone_contents_public": false,
+    "receipt_fields": 8
+  },
+  "protocol": {
+    "replay_schema": 1,
+    "action_codec_changed": false,
+    "action_codec_cpp_blob": "8c86faf74e07aea1a72a6cc27aba4fbc7dd09783",
+    "action_codec_header_blob": "44ef87156beb5799066c2a5ecbc98f04928d98c0"
+  },
+  "validation": {
+    "focused_tests": {
+      "succeeded": 6,
+      "failed": 0,
+      "explicit_assertions": 144
+    },
+    "affected_tests": {
+      "succeeded": 95,
+      "failed": 0
+    },
+    "full_automation": {
+      "baseline": 2503,
+      "succeeded": 2509,
+      "failed": 0,
+      "not_run": 0,
+      "delta": 6
+    },
+    "build_matrix": {
+      "editor_non_unity": "succeeded",
+      "game_non_unity": "succeeded",
+      "editor_default_unity": "succeeded",
+      "game_default_unity": "succeeded",
+      "editor_forced_unity": "succeeded",
+      "game_forced_unity": "succeeded"
+    },
+    "clean_build_cook_run": "succeeded",
+    "packaged_transition_smoke": {
+      "runs": 2,
+      "succeeded": 2,
+      "transitions": 6,
+      "byte_identical": true,
+      "receipt_sha256": "fd5bf90940652eb1801c59ff30d6de0d68723fe621175e2966dc98aa27c1b674",
+      "final_replay_digest": "656b970057939cf7055f14b1101b49fce6d135ef84db756594a622d526d0a0b6"
+    },
+    "packaged_discard_activation_regression": {
+      "runs": 2,
+      "succeeded": 2,
+      "byte_identical": true,
+      "archive_sha256": "4da54005ac0291c51d505893fc0ae60eae06524440c56ce817f23d4d0c9f3abb",
+      "receipt_sha256": "a3149eea66a733adaab235e817c4a1b1098a24112b27b4ccc6125dc61ec5c4bb"
+    },
+    "packaged_summon_regression": {
+      "runs": 2,
+      "succeeded": 2,
+      "byte_identical": true,
+      "archive_sha256": "5df7faac15f1da0b1124efb80150b33a95de45afeaafbde96407ef549c22f83d",
+      "receipt_sha256": "511587e612c2a087e0c7b6813ec9817d3ab2ad4add1a342fd88521b7651335e9"
+    }
+  },
+  "changed_files": [
+    "Docs/Card_Zone_Transition_Event_Foundation_Audit.json",
+    "Docs/Card_Zone_Transition_Event_Foundation_Audit.md",
+    "Source/WandboundCore/Private/WBCSNInheritanceTrigger.cpp",
+    "Source/WandboundCore/Private/WBCardLifecycle.cpp",
+    "Source/WandboundCore/Private/WBCardZoneTransition.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBReplayTrace.cpp",
+    "Source/WandboundCore/Private/WBTurnStartSequence.cpp",
+    "Source/WandboundCore/Public/WBCardLifecycle.h",
+    "Source/WandboundCore/Public/WBCardZoneTransition.h",
+    "Source/WandboundCore/Public/WBEventSnapshot.h",
+    "Source/WandboundCore/Public/WBReplayTrace.h",
+    "Source/WandboundRuntime/Private/WBProductionCardZoneTransitionSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionCardZoneTransitionSmoke.h",
+    "Source/WandboundTests/Private/WBCardZoneObservationTests.cpp",
+    "Source/WandboundTests/Private/WBCardZoneStateTests.cpp",
+    "Source/WandboundTests/Private/WBCardZoneTransitionEventTests.cpp"
+  ]
+}

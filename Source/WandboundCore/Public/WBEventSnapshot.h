@@ -19,7 +19,8 @@ enum class EWBEventKind : uint8
 	Status,
 	Marker,
 	NPCSpawn,
-	Activation
+	Activation,
+	CardZoneTransition
 };
 
 enum class EWBTriggerEligibilityPolicy : uint8

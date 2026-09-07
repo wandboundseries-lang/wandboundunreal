@@ -370,6 +370,23 @@ TSharedRef<FJsonObject> MakeTraceEventJsonObject(const FWBTraceEvent& Event)
 	{
 		Object->SetStringField(TEXT("card_id"), Event.CardId);
 	}
+	if (!Event.SourceCardZone.IsNone())
+	{
+		Object->SetStringField(
+			TEXT("source_card_zone"), Event.SourceCardZone.ToString());
+	}
+	if (!Event.DestinationCardZone.IsNone())
+	{
+		Object->SetStringField(
+			TEXT("destination_card_zone"),
+			Event.DestinationCardZone.ToString());
+	}
+	if (!Event.CardZoneTransitionCause.IsNone())
+	{
+		Object->SetStringField(
+			TEXT("card_zone_transition_cause"),
+			Event.CardZoneTransitionCause.ToString());
+	}
 
 	if (!Event.SlotId.IsEmpty())
 	{

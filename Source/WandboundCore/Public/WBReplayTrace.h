@@ -81,6 +81,9 @@ struct WANDBOUNDCORE_API FWBTraceEvent
 	bool bAtOrBelowZeroHP = false;
 	FString CardInstanceId;
 	FString CardId;
+	FName SourceCardZone;
+	FName DestinationCardZone;
+	FName CardZoneTransitionCause;
 	FString SlotId;
 	int32 EquipOrder = -1;
 	int32 DiscardIndex = -1;

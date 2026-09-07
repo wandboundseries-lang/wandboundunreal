@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WBCardZoneTransition.h"
 #include "WBGameStateData.h"
 
 enum class EWBCardLifecycleResultCode : uint8
@@ -15,7 +16,8 @@ enum class EWBCardLifecycleResultCode : uint8
 	DuplicateInstanceId,
 	InvalidZoneState,
 	UnsupportedLifecycleOperation,
-	FirstPlayerFirstTurnDrawSkipped
+	FirstPlayerFirstTurnDrawSkipped,
+	TransitionSnapshotInvalid
 };
 
 struct WANDBOUNDCORE_API FWBCardLifecycleResult
@@ -30,19 +32,37 @@ struct WANDBOUNDCORE_API FWBCardLifecycleResult
 
 	int32 SourceZoneCountAfter = 0;
 	int32 DestinationZoneCountAfter = 0;
+	TArray<FWBCardZoneTransitionSnapshot> TransitionEvents;
 };
 
 class WANDBOUNDCORE_API WBCardLifecycle
 {
 public:
-	static FWBCardLifecycleResult DrawOneCard(FWBGameStateData& State, int32 PlayerId);
+	static FWBCardLifecycleResult DrawOneCard(
+		FWBGameStateData& State,
+		int32 PlayerId,
+		FWBCardZoneTransitionContext Context =
+			FWBCardZoneTransitionContext());
 
-	static FWBCardLifecycleResult DrawCards(FWBGameStateData& State, int32 PlayerId, int32 Count);
+	static FWBCardLifecycleResult DrawCards(
+		FWBGameStateData& State,
+		int32 PlayerId,
+		int32 Count,
+		FWBCardZoneTransitionContext Context =
+			FWBCardZoneTransitionContext());
 
 	static FWBCardLifecycleResult MoveHandCardToDiscard(
 		FWBGameStateData& State,
 		int32 PlayerId,
-		const FString& CardInstanceId);
+		const FString& CardInstanceId,
+		FWBCardZoneTransitionContext Context =
+			FWBCardZoneTransitionContext());
+
+	static FWBCardLifecycleResult TransferExactCard(
+		FWBGameStateData& State,
+		const FWBCardZoneTransferRequest& Request,
+		FWBCardZoneTransitionContext Context =
+			FWBCardZoneTransitionContext());
 
 	static FWBCardLifecycleResult MoveEquippedCardToDiscard(
 		FWBGameStateData& State,
@@ -65,7 +85,9 @@ public:
 		FWBGameStateData& State,
 		int32 ActivePlayerId,
 		int32 TurnNumber,
-		int32 FirstPlayerId);
+		int32 FirstPlayerId,
+		FWBCardZoneTransitionContext Context =
+			FWBCardZoneTransitionContext());
 
 	static FString ResultCodeToString(EWBCardLifecycleResultCode Code);
 };

@@ -5,6 +5,7 @@
 #include "WBCardActivationCandidateGenerator.h"
 #include "WBCardActivationLegalActionGenerator.h"
 #include "WBCardLifecycle.h"
+#include "WBCardZoneTransition.h"
 #include "WBCardZoneState.h"
 #include "WBDeathResolution.h"
 #include "WBDeterministicRandom.h"
@@ -2055,15 +2056,24 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 		}
 		case EWBMatchActionFamily::Discard:
 		{
+			FWBCardZoneTransitionContext TransitionContext;
+			TransitionContext.Cause = EWBCardZoneTransitionCause::Rule;
+			TransitionContext.SourceActionId = SelectedAction->ActionId;
+			TransitionContext.ActionDeclaration =
+				EWBDeclarationProvenance::PlayerDeclared;
 			const FWBCardLifecycleResult ApplyResult =
 				WBCardLifecycle::MoveHandCardToDiscard(
 					WorkingState,
 					PlayerId,
-					SelectedAction->DiscardCardInstanceId);
+					SelectedAction->DiscardCardInstanceId,
+					TransitionContext);
 			bActionApplied = ApplyResult.bOk;
 			FailureReason = ApplyResult.Reason;
 			if (ApplyResult.bOk)
 			{
+				WBCardZoneTransition::AppendRedactedTraces(
+					ApplyResult.TransitionEvents,
+					WorkingTraceEvents);
 				FWBTraceEvent Discarded = MakeMatchTrace(
 					FName(TEXT("card_discarded")),
 					PlayerId,
@@ -2892,16 +2902,26 @@ bool WBMatchCoordinator::BeginPendingEffectActivation(
 
 	if (Frame.Command.Source.SourceZone == EWBCardZone::Hand)
 	{
+		FWBCardZoneTransitionContext TransitionContext;
+		TransitionContext.Cause = EWBCardZoneTransitionCause::Cost;
+		TransitionContext.SourceActionId = Action.ActionId;
+		TransitionContext.ContinuationId = Frame.FrameId;
+		TransitionContext.ActionDeclaration =
+			EWBDeclarationProvenance::PlayerDeclared;
 		const FWBCardLifecycleResult DiscardResult =
 			WBCardLifecycle::MoveHandCardToDiscard(
 				WorkingState,
 				Action.PlayerId,
-				Frame.Command.Source.SourceCardInstanceId);
+				Frame.Command.Source.SourceCardInstanceId,
+				TransitionContext);
 		if (!DiscardResult.bOk)
 		{
 			OutReason = TEXT("pending_effect_hand_source_unavailable");
 			return false;
 		}
+		WBCardZoneTransition::AppendRedactedTraces(
+			DiscardResult.TransitionEvents,
+			OutTraceEvents);
 		FWBTraceEvent Discarded = MakeMatchTrace(
 			FName(TEXT("card_discarded_for_pending_effect")),
 			Action.PlayerId,
