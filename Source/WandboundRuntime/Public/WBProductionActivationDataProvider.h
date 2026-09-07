@@ -16,7 +16,7 @@ struct WANDBOUNDRUNTIME_API FWBProductionActivationDataProviderConfig
 {
 	bool bIncludeBoardSources = true;
 	bool bIncludeOwnHandSources = true;
-	bool bIncludeDiscardSources = false;
+	bool bIncludeDiscardSources = true;
 	bool bIncludeEquippedSources = false;
 };
 

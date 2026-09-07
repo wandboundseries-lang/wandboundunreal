@@ -585,7 +585,15 @@ FWBCardActivationSourceGateContext BuildActivationGateContext(
 		: 0;
 	Context.CostContext.bExternallyAffordable =
 		Effect.SourceGate.CostGate.RequiredRR <= Context.CostContext.SuppliedAvailableRL;
-	Context.ActivationUsageKey = Effect.SourceGate.OncePerTurnKey;
+	Context.ActivationUsageKey = !Effect.SourceGate.OncePerTurnKey.IsEmpty()
+		? Effect.SourceGate.OncePerTurnKey
+		: WBCardActivationSourceGate::BuildDefaultUsageKeyForSource(
+			PlayerId,
+			SourceUnitId,
+			Definition.CardId,
+			Effect.EffectId,
+			SourceZone,
+			SourceCardInstanceId);
 	return Context;
 }
 
@@ -625,6 +633,7 @@ void AddActivationSource(
 	case EWBCardActivationSourceZone::Hand: Source.SourceZone = EWBCardZone::Hand; break;
 	case EWBCardActivationSourceZone::Board: Source.SourceZone = EWBCardZone::Board; break;
 	case EWBCardActivationSourceZone::Equipped: Source.SourceZone = EWBCardZone::Equipped; break;
+	case EWBCardActivationSourceZone::Discard: Source.SourceZone = EWBCardZone::Discard; break;
 	default: Source.SourceZone = EWBCardZone::Unknown; break;
 	}
 	Source.CardDefinition = EligibleDefinition;
@@ -725,6 +734,29 @@ FWBMatchLegalActionGenerationResult GetActivationActions(
 					-1,
 					Entry.Card.InstanceId,
 					EWBCardActivationSourceZone::Hand,
+					bResponseOnly);
+			}
+		}
+
+		TArray<FWBZoneCardEntry> Discard = PlayerZones->Discard;
+		Discard.Sort(ZoneEntryLess);
+		for (const FWBZoneCardEntry& Entry : Discard)
+		{
+			const FWBCardDefinitionRepositoryLookupResult Lookup =
+				WBCardDefinitionRepository::FindCardById(
+					Repository, Entry.Card.CardId);
+			if (Lookup.bFound)
+			{
+				AddActivationSource(
+					ActivationSources,
+					State,
+					Repository,
+					ZoneContext,
+					Lookup.Definition,
+					PlayerId,
+					INDEX_NONE,
+					Entry.Card.InstanceId,
+					EWBCardActivationSourceZone::Discard,
 					bResponseOnly);
 			}
 		}

@@ -68,18 +68,19 @@ bool MatchesRequestedSourceInstance(
 	return Action.ActivationActionId.Contains(HandInstancePart, ESearchCase::CaseSensitive);
 }
 
-FString ExtractHandSourceInstanceId(const FWBCardActivationLegalAction& Action)
+FString ExtractSourceInstanceId(
+	const FWBCardActivationLegalAction& Action,
+	const FString& ZonePrefix)
 {
-	const FString HandPrefix = TEXT(":zhand:i");
 	const int32 PrefixIndex = Action.ActivationActionId.Find(
-		*HandPrefix,
+		*ZonePrefix,
 		ESearchCase::CaseSensitive);
 	if (PrefixIndex == INDEX_NONE)
 	{
 		return FString();
 	}
 
-	const int32 InstanceStart = PrefixIndex + HandPrefix.Len();
+	const int32 InstanceStart = PrefixIndex + ZonePrefix.Len();
 	const int32 InstanceEnd = Action.ActivationActionId.Find(
 		TEXT(":c"),
 		ESearchCase::CaseSensitive,
@@ -163,6 +164,14 @@ EWBProductionActivationExecutionHandoffResultCode MapSelectionFailureCode(
 
 EWBCardActivationSourceZone InferSourceZone(const FWBCardActivationLegalAction& Action)
 {
+	if (Action.Candidate.SourceZone == EWBCardZone::Discard
+		|| Action.Command.Source.SourceZone == EWBCardZone::Discard
+		|| Action.ActivationActionId.Contains(
+			TEXT(":zdiscard:"), ESearchCase::CaseSensitive))
+	{
+		return EWBCardActivationSourceZone::Discard;
+	}
+
 	if (Action.ActivationActionId.Contains(TEXT(":zhand:"), ESearchCase::CaseSensitive))
 	{
 		return EWBCardActivationSourceZone::Hand;
@@ -186,6 +195,17 @@ FWBCardActivationSourceGateContext MakeSourceGateContextForAction(
 	Context.SourceUnitId = Action.SourceUnitId;
 	Context.SourceCardId = SourceCardIdFromAction(Action);
 	Context.SourceZone = InferSourceZone(Action);
+	Context.SourceCardInstanceId = !Action.Candidate.SourceCardInstanceId.IsEmpty()
+		? Action.Candidate.SourceCardInstanceId
+		: Action.Command.Source.SourceCardInstanceId;
+	if (Context.SourceCardInstanceId.IsEmpty())
+	{
+		const FString ZonePrefix = Context.SourceZone
+			== EWBCardActivationSourceZone::Discard
+				? FString(TEXT(":zdiscard:i"))
+				: FString(TEXT(":zhand:i"));
+		Context.SourceCardInstanceId = ExtractSourceInstanceId(Action, ZonePrefix);
+	}
 	Context.bCostsSatisfiedExternally = true;
 	Context.bHasExplicitSourceGateContext = true;
 
@@ -375,7 +395,8 @@ FWBProductionActivationExecutionHandoff::ExecuteSelectedActivation(
 
 	if (InferSourceZone(*ProviderAction) == EWBCardActivationSourceZone::Hand)
 	{
-		const FString SourceInstanceId = ExtractHandSourceInstanceId(*ProviderAction);
+		const FString SourceInstanceId = ExtractSourceInstanceId(
+			*ProviderAction, TEXT(":zhand:i"));
 		if (SourceInstanceId.IsEmpty())
 		{
 			Result.bOk = false;

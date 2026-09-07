@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "discard_activation_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "discard_activation",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic exact-instance Discard activation fixture only."
+  }
+}

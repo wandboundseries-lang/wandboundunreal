@@ -94,11 +94,14 @@ FWBCardActivationSourceGateContext BuildGateContext(
 		&& Context.ActivationUsageKey.IsEmpty()
 		&& Effect.SourceGate.OncePerTurnKey.IsEmpty())
 	{
-		Context.ActivationUsageKey = WBCardActivationSourceGate::BuildDefaultUsageKey(
+		Context.ActivationUsageKey =
+			WBCardActivationSourceGate::BuildDefaultUsageKeyForSource(
 			Context.PlayerId,
 			Context.SourceUnitId,
 			Source.CardDefinition.CardId,
-			Effect.EffectId);
+			Effect.EffectId,
+			Context.SourceZone,
+			Context.SourceCardInstanceId);
 	}
 
 	return Context;
@@ -339,7 +342,7 @@ FWBCardActivationCandidateGenerationResult WBCardActivationCandidateGenerator::G
 
 FString WBCardActivationCandidateGenerator::MakeActivationCandidateId(const FWBCardActivationCandidate& Candidate)
 {
-	return FString::Printf(
+	const FString BaseId = FString::Printf(
 		TEXT("activate:p%d:u%d:c%s:e%s:%s%s"),
 		Candidate.PlayerId,
 		Candidate.SourceUnitId,
@@ -348,4 +351,13 @@ FString WBCardActivationCandidateGenerator::MakeActivationCandidateId(const FWBC
 		*FormatTargetPart(Candidate.Target),
 		*FormatAuxiliarySelectionPart(
 			Candidate.Command.EffectRequest.AuxiliaryCardSelection));
+	if (Candidate.SourceZone == EWBCardZone::Discard
+		&& !Candidate.SourceCardInstanceId.IsEmpty())
+	{
+		return FString::Printf(
+			TEXT("%s:zdiscard:i%s"),
+			*BaseId,
+			*Candidate.SourceCardInstanceId);
+	}
+	return BaseId;
 }

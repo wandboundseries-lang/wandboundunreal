@@ -95,11 +95,13 @@ FString BuildUsageCommitKey(
 		return Effect.SourceGate.OncePerTurnKey;
 	}
 
-	return WBCardActivationSourceGate::BuildDefaultUsageKey(
+	return WBCardActivationSourceGate::BuildDefaultUsageKeyForSource(
 		Request.PlayerId,
 		Request.SourceUnitId,
 		Request.CardDefinition.CardId,
-		Effect.EffectId);
+		Effect.EffectId,
+		Request.SourceGateContext.SourceZone,
+		Request.SourceGateContext.SourceCardInstanceId);
 }
 }
 
@@ -179,6 +181,9 @@ FWBCardActivationExpansionResult WBCardActivationExpansion::BuildActivationComma
 		break;
 	case EWBCardActivationSourceZone::Equipped:
 		Result.Command.Source.SourceZone = EWBCardZone::Equipped;
+		break;
+	case EWBCardActivationSourceZone::Discard:
+		Result.Command.Source.SourceZone = EWBCardZone::Discard;
 		break;
 	default:
 		Result.Command.Source.SourceZone = EWBCardZone::Unknown;

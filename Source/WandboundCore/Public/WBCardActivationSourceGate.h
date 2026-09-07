@@ -122,11 +122,24 @@ public:
 		const FWBCardActivationSourceGateDefinition& Gate,
 		const FWBCardActivationSourceGateContext& Context);
 
+	static FWBCardActivationSourceGateResult EvaluateDiscardSourceParity(
+		const FWBGameStateData& State,
+		const FWBCardActivationSourceGateDefinition& Gate,
+		const FWBCardActivationSourceGateContext& Context);
+
 	static FString BuildDefaultUsageKey(
 		int32 PlayerId,
 		int32 SourceUnitId,
 		const FString& CardId,
 		const FString& EffectId);
+
+	static FString BuildDefaultUsageKeyForSource(
+		int32 PlayerId,
+		int32 SourceUnitId,
+		const FString& CardId,
+		const FString& EffectId,
+		EWBCardActivationSourceZone SourceZone,
+		const FString& SourceCardInstanceId);
 
 	static bool MarkUsageIfAllowedForTest(
 		FWBGameStateData& State,

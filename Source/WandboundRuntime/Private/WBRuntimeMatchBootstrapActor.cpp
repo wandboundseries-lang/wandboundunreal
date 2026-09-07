@@ -24,6 +24,7 @@
 #include "WBProductionNPCReactionCombatSmoke.h"
 #include "WBProductionPendingAttackRedirectSmoke.h"
 #include "WBProductionCSNBodyDoubleSmoke.h"
+#include "WBProductionDiscardActivationSmoke.h"
 #include "WBProductionPendingEffectSmoke.h"
 #include "WBProductionReactionWindowSmoke.h"
 #include "WBProductionSuspendedAttackSmoke.h"
@@ -385,6 +386,23 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 				false,
 				SuspendedAttackSmoke.bOk ? 0 : 27,
 				TEXT("WandboundProductionSuspendedAttackSmoke"));
+		}
+		else if (WBProductionDiscardActivationSmoke::IsRequested())
+		{
+			const FWBProductionDiscardActivationSmokeResult DiscardSmoke =
+				WBProductionDiscardActivationSmoke::Run(PendingBootstrapRequest);
+			if (!DiscardSmoke.bOk)
+			{
+				UE_LOG(
+					LogWBRuntimeLocalPlay,
+					Error,
+					TEXT("Wandbound Discard activation smoke failed: %s"),
+					*DiscardSmoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(
+				false,
+				DiscardSmoke.bOk ? 0 : 43,
+				TEXT("WandboundProductionDiscardActivationSmoke"));
 		}
 		else if (WBProductionPendingEffectSmoke::IsRequested())
 		{

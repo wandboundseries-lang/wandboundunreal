@@ -6,6 +6,7 @@
 
 #include "WBCardActivationCommand.h"
 #include "WBCardActivationCostPayment.h"
+#include "WBCardActivationSourceGate.h"
 #include "WBEffectRequest.h"
 #include "WBStatusEffect.h"
 #include "WBStatusSemantics.h"
@@ -954,6 +955,55 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 		return FWBActionQueryResult::Deny(TEXT("missing_card_activation_source_player"));
 	}
 
+	if (Command.Source.SourceZone == EWBCardZone::Discard)
+	{
+		FWBCardActivationSourceGateDefinition DiscardGate;
+		DiscardGate.RequiredZone = EWBCardActivationSourceZone::Discard;
+		FWBCardActivationSourceGateContext DiscardContext;
+		DiscardContext.PlayerId = Command.Source.PlayerId;
+		DiscardContext.SourceUnitId = Command.Source.SourceUnitId;
+		DiscardContext.SourceCardId = Command.Source.SourceCardId;
+		DiscardContext.SourceCardInstanceId = Command.Source.SourceCardInstanceId;
+		DiscardContext.SourceZone = EWBCardActivationSourceZone::Discard;
+		const FWBCardActivationSourceGateResult SourceResult =
+			WBCardActivationSourceGate::EvaluateDiscardSourceParity(
+				State, DiscardGate, DiscardContext);
+		if (!SourceResult.bOk)
+		{
+			return FWBActionQueryResult::Deny(*SourceResult.Reason);
+		}
+
+		if (Repository.RepositoryId.IsEmpty())
+		{
+			return FWBActionQueryResult::Deny(
+				TEXT("discard_source_definition_repository_missing"));
+		}
+		const FWBCardDefinitionRepositoryLookupResult Definition =
+			WBCardDefinitionRepository::FindCardById(
+				Repository, Command.Source.SourceCardId);
+		if (!Definition.bFound)
+		{
+			return FWBActionQueryResult::Deny(
+				TEXT("discard_source_definition_missing"));
+		}
+		int32 MatchingEffects = 0;
+		for (const FWBCardEffectDefinition& Effect :
+			Definition.Definition.ActivatedEffects)
+		{
+			if (Effect.EffectId == Command.Source.SourceEffectId
+				&& Effect.SourceGate.RequiredZone
+					== EWBCardActivationSourceZone::Discard)
+			{
+				++MatchingEffects;
+			}
+		}
+		if (MatchingEffects != 1)
+		{
+			return FWBActionQueryResult::Deny(
+				TEXT("discard_source_effect_not_supported"));
+		}
+	}
+
 	if (Command.Source.SourceUnitId != -1)
 	{
 		const FWBUnitState* SourceUnit = State.GetUnitById(Command.Source.SourceUnitId);
@@ -984,6 +1034,13 @@ FWBActionQueryResult WBRules::CanApplyCardActivationCommand(
 		&& Command.EffectRequest.Source.SourceUnitId != Command.Source.SourceUnitId)
 	{
 		return FWBActionQueryResult::Deny(TEXT("card_activation_effect_source_unit_mismatch"));
+	}
+	if (!Command.EffectRequest.Source.SourceCardInstanceId.IsEmpty()
+		&& Command.EffectRequest.Source.SourceCardInstanceId
+			!= Command.Source.SourceCardInstanceId)
+	{
+		return FWBActionQueryResult::Deny(
+			TEXT("card_activation_effect_source_instance_mismatch"));
 	}
 
 	if (Command.EffectRequest.Payloads.Num() == 0)

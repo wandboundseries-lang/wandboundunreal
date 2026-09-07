@@ -22,8 +22,7 @@ FWBCardActivationSourceGateResult MakeSourceGateSuccess()
 bool IsUnsupportedSourceZone(const EWBCardActivationSourceZone SourceZone)
 {
 	return SourceZone == EWBCardActivationSourceZone::Unknown
-		|| SourceZone == EWBCardActivationSourceZone::Deck
-		|| SourceZone == EWBCardActivationSourceZone::Discard;
+		|| SourceZone == EWBCardActivationSourceZone::Deck;
 }
 
 FWBCardActivationSourceGateResult EvaluateCostGate(
@@ -138,8 +137,7 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 	const bool bUnsupportedSourceZone = IsUnsupportedSourceZone(Context.SourceZone);
 	if (bUnsupportedSourceZone
 		&& !(Gate.bRequiresFixtureZoneOwnership
-			&& (Context.SourceZone == EWBCardActivationSourceZone::Discard
-				|| Context.SourceZone == EWBCardActivationSourceZone::Deck)))
+			&& Context.SourceZone == EWBCardActivationSourceZone::Deck))
 	{
 		return MakeSourceGateFailure(TEXT("source_zone_mismatch"));
 	}
@@ -150,7 +148,17 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 		return MakeSourceGateFailure(TEXT("source_zone_mismatch"));
 	}
 
-	if (Gate.bRequiresFixtureZoneOwnership)
+	if (Gate.RequiredZone == EWBCardActivationSourceZone::Discard
+		&& !Context.SourceCardInstanceId.IsEmpty())
+	{
+		const FWBCardActivationSourceGateResult SourceZoneResult =
+			EvaluateDiscardSourceParity(State, Gate, Context);
+		if (!SourceZoneResult.bOk)
+		{
+			return SourceZoneResult;
+		}
+	}
+	else if (Gate.bRequiresFixtureZoneOwnership)
 	{
 		const FWBCardActivationSourceGateResult SourceZoneResult =
 			Gate.RequiredZone == EWBCardActivationSourceZone::Board
@@ -348,6 +356,69 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::EvaluateBoardSourc
 	return MakeSourceGateSuccess();
 }
 
+FWBCardActivationSourceGateResult WBCardActivationSourceGate::EvaluateDiscardSourceParity(
+	const FWBGameStateData& State,
+	const FWBCardActivationSourceGateDefinition& Gate,
+	const FWBCardActivationSourceGateContext& Context)
+{
+	if (Gate.RequiredZone != EWBCardActivationSourceZone::Discard)
+	{
+		return MakeSourceGateSuccess();
+	}
+	if (Context.SourceUnitId != INDEX_NONE)
+	{
+		return MakeSourceGateFailure(TEXT("discard_source_unit_not_allowed"));
+	}
+	if (Context.SourceCardInstanceId.IsEmpty())
+	{
+		return MakeSourceGateFailure(TEXT("source_card_instance_id_missing"));
+	}
+	if (Context.SourceCardId.IsEmpty())
+	{
+		return MakeSourceGateFailure(TEXT("source_card_id_missing"));
+	}
+
+	FString DuplicateInstanceId;
+	if (WBCardZoneState::HasDuplicateCardInstanceIds(
+		State.GetCardZoneState(), DuplicateInstanceId))
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_card_ambiguous"));
+	}
+
+	FWBZoneCardEntry Entry;
+	if (!WBCardZoneState::FindCardByInstanceId(
+		State.GetCardZoneState(), Context.SourceCardInstanceId, Entry))
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_card_not_found"));
+	}
+	if (Entry.Card.OwnerPlayerId != Context.PlayerId)
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_owner_mismatch"));
+	}
+	if (Entry.Zone != EWBCardZone::Discard)
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_card_not_in_discard"));
+	}
+	if (Entry.Card.CardId != Context.SourceCardId)
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_card_id_mismatch"));
+	}
+
+	const FWBPlayerCardZoneState* PlayerZones = WBCardZoneState::FindPlayerZones(
+		State.GetCardZoneState(), Context.PlayerId);
+	if (PlayerZones == nullptr
+		|| !PlayerZones->Discard.ContainsByPredicate(
+			[&Context](const FWBZoneCardEntry& Candidate)
+			{
+				return Candidate.Card.InstanceId == Context.SourceCardInstanceId;
+			}))
+	{
+		return MakeSourceGateFailure(TEXT("source_zone_owner_mismatch"));
+	}
+
+	return MakeSourceGateSuccess();
+}
+
 FString WBCardActivationSourceGate::BuildDefaultUsageKey(
 	const int32 PlayerId,
 	const int32 SourceUnitId,
@@ -360,6 +431,28 @@ FString WBCardActivationSourceGate::BuildDefaultUsageKey(
 		SourceUnitId,
 		*CardId,
 		*EffectId);
+}
+
+FString WBCardActivationSourceGate::BuildDefaultUsageKeyForSource(
+	const int32 PlayerId,
+	const int32 SourceUnitId,
+	const FString& CardId,
+	const FString& EffectId,
+	const EWBCardActivationSourceZone SourceZone,
+	const FString& SourceCardInstanceId)
+{
+	if (SourceZone == EWBCardActivationSourceZone::Discard
+		&& !SourceCardInstanceId.IsEmpty())
+	{
+		return FString::Printf(
+			TEXT("activate_usage:p%d:i%s:c%s:e%s"),
+			PlayerId,
+			*SourceCardInstanceId,
+			*CardId,
+			*EffectId);
+	}
+
+	return BuildDefaultUsageKey(PlayerId, SourceUnitId, CardId, EffectId);
 }
 
 bool WBCardActivationSourceGate::MarkUsageIfAllowedForTest(

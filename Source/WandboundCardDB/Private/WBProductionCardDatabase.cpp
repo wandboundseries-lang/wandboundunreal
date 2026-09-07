@@ -495,6 +495,10 @@ EWBCardActivationSourceZone ParseSourceZone(const FString& Value)
 	{
 		return EWBCardActivationSourceZone::Hand;
 	}
+	if (Value == TEXT("discard"))
+	{
+		return EWBCardActivationSourceZone::Discard;
+	}
 	return EWBCardActivationSourceZone::Unknown;
 }
 
@@ -3451,14 +3455,15 @@ private:
 				: EWBCardActivationSourceZone::Unknown;
 		if (Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Board
 			&& Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Equipped
-			&& Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Hand)
+			&& Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Hand
+			&& Effect.SourceGate.RequiredZone != EWBCardActivationSourceZone::Discard)
 		{
 			AddError(
 				TEXT("unsupported_source_zone"),
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				EffectPath + TEXT(".source_gate.required_zone"),
-				TEXT("Production match activation supports Board, Equipped, and Hand sources."));
+				TEXT("Production match activation supports Board, Equipped, Hand, and Discard sources."));
 		}
 
 		FString Timing;
@@ -3495,7 +3500,8 @@ private:
 
 		bool BoolValue = false;
 		if (!TryReadBool(GateObject, TEXT("requires_source_unit"), BoolValue)
-			|| (Effect.SourceGate.RequiredZone == EWBCardActivationSourceZone::Hand
+			|| ((Effect.SourceGate.RequiredZone == EWBCardActivationSourceZone::Hand
+				|| Effect.SourceGate.RequiredZone == EWBCardActivationSourceZone::Discard)
 				? BoolValue
 				: !BoolValue))
 		{
@@ -3504,7 +3510,7 @@ private:
 				Record.SourceManifestPath,
 				Record.CoreDefinition.CardId,
 				EffectPath + TEXT(".source_gate.requires_source_unit"),
-				TEXT("Board and Equipped activations require a source unit; Hand activations must not."));
+				TEXT("Board and Equipped activations require a source unit; Hand and Discard activations must not."));
 		}
 		Effect.SourceGate.bRequiresSourceUnit = BoolValue;
 
@@ -4167,6 +4173,11 @@ private:
 		const FWBProductionCardRecord& Record,
 		const FWBCardEffectDefinition& Effect)
 	{
+		if (Effect.SourceGate.RequiredZone == EWBCardActivationSourceZone::Discard)
+		{
+			return;
+		}
+
 		const bool bUnit = Record.Type == EWBProductionCardType::Character
 			|| Record.Type == EWBProductionCardType::Hero
 			|| Record.Type == EWBProductionCardType::Hybrid

@@ -9,7 +9,8 @@ namespace
 enum class EWBProductionActivationSourceSortZone : uint8
 {
 	Board,
-	Hand
+	Hand,
+	Discard
 };
 
 struct FWBProductionActivationActionBuildEntry
@@ -111,6 +112,15 @@ FString MakeActivationActionId(
 			*CardId,
 			*EffectId);
 	}
+	if (Zone == EWBProductionActivationSourceSortZone::Discard)
+	{
+		return FString::Printf(
+			TEXT("activate_source:p%d:zdiscard:i%s:c%s:e%s"),
+			PlayerId,
+			*InstanceId,
+			*CardId,
+			*EffectId);
+	}
 
 	return FString::Printf(
 		TEXT("activate_source:p%d:zhand:i%s:c%s:e%s"),
@@ -124,6 +134,7 @@ FWBCardActivationSourceGateContext MakeSourceGateContext(
 	const int32 PlayerId,
 	const int32 SourceUnitId,
 	const FString& SourceCardId,
+	const FString& SourceCardInstanceId,
 	const EWBCardActivationSourceZone SourceZone,
 	const FWBCardActivationFixtureZoneContext& FixtureZoneContext)
 {
@@ -131,6 +142,7 @@ FWBCardActivationSourceGateContext MakeSourceGateContext(
 	Context.PlayerId = PlayerId;
 	Context.SourceUnitId = SourceUnitId;
 	Context.SourceCardId = SourceCardId;
+	Context.SourceCardInstanceId = SourceCardInstanceId;
 	Context.SourceZone = SourceZone;
 	Context.FixtureZoneContext = FixtureZoneContext;
 	Context.bCostsSatisfiedExternally = true;
@@ -146,6 +158,7 @@ FWBCardActivationFixtureZoneContext MakeOwnHandFixtureZoneContext(
 	{
 		FWBCardActivationFixtureZoneEntry Entry;
 		Entry.CardId = Card.CardId;
+		Entry.CardInstanceId = Card.InstanceId;
 		Entry.OwnerPlayerId = Observation.ViewerPlayerId;
 		Entry.Zone = EWBCardActivationSourceZone::Hand;
 		Context.Entries.Add(Entry);
@@ -344,16 +357,32 @@ FWBCardActivationLegalAction MakeTargetDeferredAction(
 	Action.Candidate.ActivationCandidateId = Action.ActivationActionId;
 	Action.Candidate.PlayerId = PlayerId;
 	Action.Candidate.SourceUnitId = SourceUnitId;
+	Action.Candidate.SourceCardInstanceId = InstanceId;
+	switch (SortZone)
+	{
+	case EWBProductionActivationSourceSortZone::Board:
+		Action.Candidate.SourceZone = EWBCardZone::Board;
+		break;
+	case EWBProductionActivationSourceSortZone::Hand:
+		Action.Candidate.SourceZone = EWBCardZone::Hand;
+		break;
+	case EWBProductionActivationSourceSortZone::Discard:
+		Action.Candidate.SourceZone = EWBCardZone::Discard;
+		break;
+	}
 	Action.Candidate.SourceCardId = Definition.CardId;
 	Action.Candidate.SourceEffectId = Effect.EffectId;
 	Action.Candidate.PublicLabel = Action.PublicLabel;
 
 	Action.Command.Source.PlayerId = PlayerId;
 	Action.Command.Source.SourceUnitId = SourceUnitId;
+	Action.Command.Source.SourceCardInstanceId = InstanceId;
+	Action.Command.Source.SourceZone = Action.Candidate.SourceZone;
 	Action.Command.Source.SourceCardId = Definition.CardId;
 	Action.Command.Source.SourceEffectId = Effect.EffectId;
 	Action.Command.EffectRequest.Source.PlayerId = PlayerId;
 	Action.Command.EffectRequest.Source.SourceUnitId = SourceUnitId;
+	Action.Command.EffectRequest.Source.SourceCardInstanceId = InstanceId;
 	Action.Command.EffectRequest.Source.SourceCardId = Definition.CardId;
 	Action.Command.EffectRequest.Source.SourceEffectId = Effect.EffectId;
 	return Action;
@@ -393,6 +422,7 @@ void AppendActionForEffectIfAllowed(
 		PlayerId,
 		SourceUnitId,
 		Definition.CardId,
+		InstanceId,
 		RequiredZone,
 		FixtureZoneContext);
 	if (Effect.SourceGate.bOncePerTurn)
@@ -400,8 +430,13 @@ void AppendActionForEffectIfAllowed(
 		SourceGateContext.ActivationUsageKey =
 			!Effect.SourceGate.OncePerTurnKey.IsEmpty()
 				? Effect.SourceGate.OncePerTurnKey
-				: WBCardActivationSourceGate::BuildDefaultUsageKey(
-					PlayerId, SourceUnitId, Definition.CardId, Effect.EffectId);
+				: WBCardActivationSourceGate::BuildDefaultUsageKeyForSource(
+					PlayerId,
+					SourceUnitId,
+					Definition.CardId,
+					Effect.EffectId,
+					RequiredZone,
+					InstanceId);
 	}
 	const FWBCardActivationSourceGateResult SourceGateResult =
 		WBCardActivationSourceGate::Evaluate(State, Effect.SourceGate, SourceGateContext);
@@ -569,6 +604,56 @@ void AppendOwnHandSourceActions(
 	}
 }
 
+void AppendOwnDiscardSourceActions(
+	const FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
+	const int32 ViewerPlayerId,
+	const FWBProductionActivationDataProviderConfig& Config,
+	const FWBPublicBoardSummary& PublicBoardSummary,
+	TArray<FWBProductionActivationActionBuildEntry>& OutEntries,
+	TArray<FWBProductionActivationDataProviderDiagnostic>& Diagnostics)
+{
+	if (!Config.bIncludeDiscardSources)
+	{
+		return;
+	}
+
+	const FWBCardZonePlayerObservation Observation =
+		WBCardZoneObservation::BuildObservationForPlayer(State, ViewerPlayerId);
+	for (int32 DiscardIndex = 0;
+		DiscardIndex < Observation.OwnDiscard.Cards.Num();
+		++DiscardIndex)
+	{
+		const FWBObservedCardRef& Card = Observation.OwnDiscard.Cards[DiscardIndex];
+		const FWBCardDefinitionRepositoryLookupResult Lookup =
+			WBCardDefinitionRepository::FindCardById(Repository, Card.CardId);
+		if (!Lookup.bFound)
+		{
+			AddDiagnostic(
+				Diagnostics,
+				TEXT("card_definition_not_found"),
+				Card.CardId,
+				Card.InstanceId);
+			continue;
+		}
+
+		AppendActionsForDefinition(
+			State,
+			Lookup.Definition,
+			EWBProductionActivationSourceSortZone::Discard,
+			EWBCardActivationSourceZone::Discard,
+			ViewerPlayerId,
+			INDEX_NONE,
+			DiscardIndex,
+			Card.InstanceId,
+			FWBCardActivationFixtureZoneContext(),
+			Config,
+			PublicBoardSummary,
+			OutEntries,
+			Diagnostics);
+	}
+}
+
 void SortActionEntries(TArray<FWBProductionActivationActionBuildEntry>& Entries)
 {
 	Entries.Sort([](const FWBProductionActivationActionBuildEntry& A, const FWBProductionActivationActionBuildEntry& B)
@@ -674,6 +759,14 @@ FWBRuntimeActivationDataProviderResult FWBProductionActivationDataProvider::GetA
 		ActionEntries,
 		LastDiagnostics);
 	AppendOwnHandSourceActions(
+		*Input.GameState,
+		*Input.Repository,
+		Input.ViewerPlayerId,
+		Config,
+		Result.RefreshInput.PublicBoardSummary,
+		ActionEntries,
+		LastDiagnostics);
+	AppendOwnDiscardSourceActions(
 		*Input.GameState,
 		*Input.Repository,
 		Input.ViewerPlayerId,

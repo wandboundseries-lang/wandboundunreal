@@ -1,0 +1,125 @@
+{
+  "audit_id": "discard_activation_source_foundation",
+  "scope": "player-declared exact-instance activated effects from the declaring player's private Discard",
+  "production_card_added": false,
+  "architecture": {
+    "source_gate": "existing WBCardActivationSourceGate",
+    "candidate_generation": "existing activation candidate pipeline",
+    "pending_effects": "existing coordinator-owned pending-effect stack",
+    "effect_resolution": "existing generic effect runner",
+    "source_unit": -1,
+    "caster_fabricated": false,
+    "activation_provenance": "PlayerDeclared"
+  },
+  "discard_behavior": {
+    "authoritative_state": "FWBCardZoneState",
+    "exact_instance_required": true,
+    "duplicate_card_ids_distinct": true,
+    "source_remains_pending": true,
+    "source_remains_resolved": true,
+    "source_remains_negated": true,
+    "resolution_revalidates_exact_source": true,
+    "zone_index_in_action_id": false
+  },
+  "timing": {
+    "normal_turn": "definition-driven",
+    "response_window": "definition-driven",
+    "new_window_added": false,
+    "existing_negate_pending_effect_reused": true
+  },
+  "usage": {
+    "discard_default_key_uses_exact_instance": true,
+    "explicit_shared_key_preserved": true,
+    "mature_source_keys_changed": false
+  },
+  "cost": {
+    "costless_supported": true,
+    "rr_without_established_payer": "fail_closed",
+    "hero_payer_invented": false,
+    "global_player_payer_invented": false
+  },
+  "privacy": {
+    "discard_private": true,
+    "owner_scoped_actions": true,
+    "opponent_candidate_enumeration": false,
+    "public_receipt_fields": 8,
+    "protected_digests_public": false
+  },
+  "protocol": {
+    "wb_action_codec_changed": false,
+    "replay_schema": 1
+  },
+  "focused_validation": {
+    "tests_succeeded": 5,
+    "tests_failed": 0,
+    "warnings": 0,
+    "assertions": 156,
+    "production_smoke": true,
+    "fresh_replay": true
+  },
+  "completed_validation": {
+    "mature_provider_tests_succeeded": 50,
+    "full_automation": {
+      "baseline": 2498,
+      "succeeded": 2503,
+      "failed": 0,
+      "warnings": 0,
+      "not_run": 0
+    },
+    "build_matrix": {
+      "editor_non_unity": "passed",
+      "game_non_unity": "passed",
+      "editor_default_unity": "passed",
+      "game_default_unity": "passed",
+      "editor_forced_unity": "passed",
+      "game_forced_unity": "passed"
+    },
+    "clean_build_cook_run": "passed",
+    "packaged_discard_smoke_runs": 2,
+    "packaged_discard_smoke_exit_code": 0,
+    "packaged_receipt_sha256": "f0366395769ce0fd966b8f29d9debe8468dd393c38c44f5b93a7142024a2bcfd",
+    "packaged_replay_sha256": "2e2b2751add9662750ba35d2c34fe1425051bdf68df0fbda71c116580975730d",
+    "packaged_startup_sha256": "864ebdb8b12ed36c95287838916976017cb26034d4fda4459aa7fd51d12295e0",
+    "packaged_generation": 1,
+    "packaged_revision": 9,
+    "packaged_state_digest": "4811b2beb5f4a3fc8763d46a40244d308897cae62d1596dd90f9af53c1702fb7",
+    "packaged_trace_digest": "6bf3b239afbaaf4cbd4dc9c529380d762d7113974d41849ab1fa44ee5f5777e0",
+    "mature_packaged_pending_effect_smoke": "passed",
+    "public_receipt_fields": 8
+  },
+  "deferrals": [
+    "production cards",
+    "summon from Discard",
+    "Discard residence or transition triggers",
+    "zone movement prevention or replacement",
+    "Deck activation",
+    "cross-player zone movement",
+    "RR payer invention",
+    "new effect operations",
+    "UI, networking, and AI"
+  ],
+  "changed_paths": [
+    "Data/Replay/DiscardActivationFixture/bundle_manifest.json",
+    "Data/Replay/DiscardActivationFixture/markers.json",
+    "Data/Replay/DiscardActivationFixture/match_spec.json",
+    "Data/Replay/DiscardActivationFixture/root_manifest.json",
+    "Data/Replay/DiscardActivationFixture/units.json",
+    "Docs/Discard_Activation_Source_Foundation_Audit.json",
+    "Docs/Discard_Activation_Source_Foundation_Audit.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBCardActivationCandidateGenerator.cpp",
+    "Source/WandboundCore/Private/WBCardActivationExpansion.cpp",
+    "Source/WandboundCore/Private/WBCardActivationSourceGate.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBRules.cpp",
+    "Source/WandboundCore/Public/WBCardActivationSourceGate.h",
+    "Source/WandboundRuntime/Private/WBProductionActivationDataProvider.cpp",
+    "Source/WandboundRuntime/Private/WBProductionActivationExecutionHandoff.cpp",
+    "Source/WandboundRuntime/Private/WBProductionDiscardActivationSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionActivationDataProvider.h",
+    "Source/WandboundRuntime/Public/WBProductionDiscardActivationSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBDiscardActivationSourceTests.cpp"
+  ]
+}
