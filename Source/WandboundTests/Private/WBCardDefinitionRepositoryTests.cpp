@@ -502,6 +502,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	const FString EquipExecutionHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionEquipExecutionHandoff.cpp"));
 	const FString OverflowHandoffHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionResonanceOverflowHandoff.h"));
 	const FString OverflowHandoffSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionResonanceOverflowHandoff.cpp"));
+	const FString TransitionTriggerSmokeHeader = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Public/WBProductionCardZoneTransitionTriggerSmoke.h"));
+	const FString TransitionTriggerSmokeSource = LoadRepositorySourceText(TEXT("Source/WandboundRuntime/Private/WBProductionCardZoneTransitionTriggerSmoke.cpp"));
 	FString RuntimeSourceWithoutProductionProvider = RuntimeSource;
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*ProviderSource, TEXT(""));
@@ -517,6 +519,8 @@ bool FWBCardDefinitionRepositoryRuntimeSourceUnchangedTest::RunTest(const FStrin
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*EquipExecutionHandoffSource, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*OverflowHandoffHeader, TEXT(""));
 	RuntimeSourceWithoutProductionProvider.ReplaceInline(*OverflowHandoffSource, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*TransitionTriggerSmokeHeader, TEXT(""));
+	RuntimeSourceWithoutProductionProvider.ReplaceInline(*TransitionTriggerSmokeSource, TEXT(""));
 
 	TestTrue(TEXT("Production provider accepts repository input"), ProviderHeader.Contains(TEXT("FWBCardDefinitionRepository")));
 	TestTrue(TEXT("Production provider consumes repository helper"), ProviderSource.Contains(TEXT("WBCardDefinitionRepository")));

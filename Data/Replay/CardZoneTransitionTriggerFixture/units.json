@@ -1,0 +1,99 @@
+{
+  "bundle_schema_version": 1,
+  "carddb_version": "card_zone_transition_trigger_fixture_v1",
+  "source_version": "synthetic_fixture_v1",
+  "bundle_kind": "test",
+  "metadata": {
+    "notes": "Synthetic exact-instance transition trigger definitions.",
+    "test_only": true
+  },
+  "cards": [
+    {
+      "schema_version": 1,
+      "card_id": "zone_trigger_self_enter",
+      "public_name": "Zone Trigger Self Enter",
+      "kind": "action",
+      "public_text": "Synthetic self-enter fixture.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "card_zone_transition_triggers": [
+        {
+          "trigger_id": "self_enter_discard",
+          "source_scope": "moved_card_self",
+          "filter": { "destination_zone": "discard" },
+          "draw_count": 1,
+          "mandatory": true
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "zone_trigger_self_leave",
+      "public_name": "Zone Trigger Self Leave",
+      "kind": "action",
+      "public_text": "Synthetic self-leave fixture.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "card_zone_transition_triggers": [
+        {
+          "trigger_id": "self_leave_discard",
+          "source_scope": "moved_card_self",
+          "filter": { "source_zone": "discard" },
+          "draw_count": 1,
+          "mandatory": true
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "zone_trigger_observer",
+      "public_name": "Zone Trigger Observer",
+      "kind": "action",
+      "public_text": "Synthetic resident Discard observer fixture.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {},
+      "card_zone_transition_triggers": [
+        {
+          "trigger_id": "observe_owned_discard",
+          "source_scope": "resident_discard_observer",
+          "filter": { "destination_zone": "discard" },
+          "draw_count": 1,
+          "mandatory": true
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "card_id": "zone_trigger_subject",
+      "public_name": "Zone Trigger Subject",
+      "kind": "action",
+      "public_text": "Synthetic transition subject.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {}
+    },
+    {
+      "schema_version": 1,
+      "card_id": "zone_trigger_filler",
+      "public_name": "Zone Trigger Filler",
+      "kind": "action",
+      "public_text": "Synthetic draw outcome.",
+      "public_category": "Action",
+      "factions": [],
+      "tags": ["fixture"],
+      "source_manifest": "bundle_manifest.json",
+      "stats": {}
+    }
+  ]
+}

@@ -1484,6 +1484,37 @@ bool ParsePostDestructionTarget(
 	return false;
 }
 
+bool ParseCardZoneTransitionSourceScope(
+	const FString& Value,
+	EWBCardZoneTransitionTriggerSourceScope& OutScope)
+{
+	if (Value == TEXT("moved_card_self"))
+	{
+		OutScope = EWBCardZoneTransitionTriggerSourceScope::MovedCardSelf;
+		return true;
+	}
+	if (Value == TEXT("resident_discard_observer"))
+	{
+		OutScope = EWBCardZoneTransitionTriggerSourceScope::
+			ResidentDiscardObserver;
+		return true;
+	}
+	return false;
+}
+
+bool ParseCardZoneTransitionCause(
+	const FString& Value,
+	EWBCardZoneTransitionCause& OutCause)
+{
+	if (Value == TEXT("draw")) OutCause = EWBCardZoneTransitionCause::Draw;
+	else if (Value == TEXT("effect")) OutCause = EWBCardZoneTransitionCause::Effect;
+	else if (Value == TEXT("cost")) OutCause = EWBCardZoneTransitionCause::Cost;
+	else if (Value == TEXT("rule")) OutCause = EWBCardZoneTransitionCause::Rule;
+	else if (Value == TEXT("setup")) OutCause = EWBCardZoneTransitionCause::Setup;
+	else return false;
+	return true;
+}
+
 void ParseAfterDamageTrigger(
 	const TSharedPtr<FJsonObject>& Object,
 	FWBAfterDamageTriggerDefinition& OutTrigger,
@@ -1666,6 +1697,153 @@ void ParseAfterCSNInheritanceTrigger(
 	}
 }
 
+void ParseCardZoneTransitionTrigger(
+	const TSharedPtr<FJsonObject>& Object,
+	FWBCardZoneTransitionTriggerDefinition& OutTrigger,
+	FWBCardDefinitionFixtureLoadResult& Result,
+	const FString& CardId,
+	const FString& Path)
+{
+	if (!Object.IsValid())
+	{
+		AddDiagnostic(Result, TEXT("card_zone_transition_trigger_malformed"),
+			CardId, TEXT(""), Path);
+		return;
+	}
+	ValidateKnownFields(Object,
+		{ TEXT("trigger_id"), TEXT("source_scope"), TEXT("filter"),
+			TEXT("draw_count"), TEXT("mandatory") },
+		Result, CardId, TEXT(""), Path);
+
+	TryReadRequiredString(Object, TEXT("trigger_id"), Result,
+		TEXT("card_zone_transition_trigger_id_invalid"), CardId,
+		TEXT(""), Path, OutTrigger.TriggerId);
+	FString Value;
+	if (TryReadRequiredString(Object, TEXT("source_scope"), Result,
+		TEXT("card_zone_transition_trigger_source_scope_unsupported"),
+		CardId, OutTrigger.TriggerId, Path, Value)
+		&& !ParseCardZoneTransitionSourceScope(Value, OutTrigger.SourceScope))
+	{
+		AddDiagnostic(Result,
+			TEXT("card_zone_transition_trigger_source_scope_unsupported"),
+			CardId, OutTrigger.TriggerId,
+			JoinPath(Path, TEXT("source_scope")));
+	}
+
+	const TSharedPtr<FJsonValue>* FilterValue =
+		Object->Values.Find(TEXT("filter"));
+	const TSharedPtr<FJsonObject> Filter = FilterValue != nullptr
+		&& FilterValue->IsValid() && (*FilterValue)->Type == EJson::Object
+		? (*FilterValue)->AsObject() : nullptr;
+	if (!Filter.IsValid())
+	{
+		AddDiagnostic(Result,
+			TEXT("card_zone_transition_trigger_filter_malformed"), CardId,
+			OutTrigger.TriggerId, JoinPath(Path, TEXT("filter")));
+	}
+	else
+	{
+		const FString FilterPath = JoinPath(Path, TEXT("filter"));
+		ValidateKnownFields(Filter,
+			{ TEXT("source_zone"), TEXT("destination_zone"), TEXT("cause") },
+			Result, CardId, OutTrigger.TriggerId, FilterPath);
+		if (Filter->Values.Contains(TEXT("source_zone")))
+		{
+			if (!TryReadOptionalString(Filter, TEXT("source_zone"), Result,
+				TEXT("card_zone_transition_trigger_filter_invalid"), CardId,
+				OutTrigger.TriggerId, FilterPath, Value))
+			{
+				AddDiagnostic(Result,
+					TEXT("card_zone_transition_trigger_filter_invalid"), CardId,
+					OutTrigger.TriggerId,
+					JoinPath(FilterPath, TEXT("source_zone")));
+			}
+			else
+			{
+				OutTrigger.Filter.RequiredSourceZone =
+					WBCardZoneState::ZoneFromString(Value);
+				OutTrigger.Filter.bRequireSourceZone =
+					WBCardZoneState::IsOrderedZone(
+						OutTrigger.Filter.RequiredSourceZone);
+				if (!OutTrigger.Filter.bRequireSourceZone)
+				{
+					AddDiagnostic(Result,
+						TEXT("card_zone_transition_trigger_filter_invalid"),
+						CardId, OutTrigger.TriggerId,
+						JoinPath(FilterPath, TEXT("source_zone")));
+				}
+			}
+		}
+		if (Filter->Values.Contains(TEXT("destination_zone")))
+		{
+			if (TryReadOptionalString(Filter, TEXT("destination_zone"), Result,
+				TEXT("card_zone_transition_trigger_filter_invalid"), CardId,
+				OutTrigger.TriggerId, FilterPath, Value))
+			{
+				OutTrigger.Filter.RequiredDestinationZone =
+					WBCardZoneState::ZoneFromString(Value);
+				OutTrigger.Filter.bRequireDestinationZone =
+					WBCardZoneState::IsOrderedZone(
+						OutTrigger.Filter.RequiredDestinationZone);
+				if (!OutTrigger.Filter.bRequireDestinationZone)
+				{
+					AddDiagnostic(Result,
+						TEXT("card_zone_transition_trigger_filter_invalid"),
+						CardId, OutTrigger.TriggerId,
+						JoinPath(FilterPath, TEXT("destination_zone")));
+				}
+			}
+		}
+		if (Filter->Values.Contains(TEXT("cause")))
+		{
+			if (TryReadOptionalString(Filter, TEXT("cause"), Result,
+				TEXT("card_zone_transition_trigger_filter_invalid"), CardId,
+				OutTrigger.TriggerId, FilterPath, Value)
+				&& ParseCardZoneTransitionCause(
+					Value, OutTrigger.Filter.RequiredCause))
+			{
+				OutTrigger.Filter.bRequireCause = true;
+			}
+			else
+			{
+				AddDiagnostic(Result,
+					TEXT("card_zone_transition_trigger_filter_invalid"), CardId,
+					OutTrigger.TriggerId,
+					JoinPath(FilterPath, TEXT("cause")));
+			}
+		}
+	}
+
+	if (!TryReadRequiredInteger(Object, TEXT("draw_count"), Result,
+		TEXT("card_zone_transition_trigger_draw_count_invalid"), CardId,
+		OutTrigger.TriggerId, Path, OutTrigger.DrawCount)
+		|| OutTrigger.DrawCount < 0)
+	{
+		AddDiagnostic(Result,
+			TEXT("card_zone_transition_trigger_draw_count_invalid"), CardId,
+			OutTrigger.TriggerId, JoinPath(Path, TEXT("draw_count")));
+	}
+	if (!Object->Values.Contains(TEXT("mandatory")))
+	{
+		AddDiagnostic(Result,
+			TEXT("card_zone_transition_trigger_mandatory_missing"), CardId,
+			OutTrigger.TriggerId, JoinPath(Path, TEXT("mandatory")));
+	}
+	else
+	{
+		TryReadOptionalBool(Object, TEXT("mandatory"), Result,
+			TEXT("card_zone_transition_trigger_mandatory_malformed"), CardId,
+			OutTrigger.TriggerId, Path, OutTrigger.bMandatory);
+		if (!OutTrigger.bMandatory)
+		{
+			AddDiagnostic(Result,
+				TEXT("optional_card_zone_transition_trigger_unsupported"),
+				CardId, OutTrigger.TriggerId,
+				JoinPath(Path, TEXT("mandatory")));
+		}
+	}
+}
+
 void ParseAfterUnitDestroyedTrigger(
 	const TSharedPtr<FJsonObject>& Object,
 	FWBAfterUnitDestroyedTriggerDefinition& OutTrigger,
@@ -1806,6 +1984,7 @@ void ParseCard(
 			TEXT("after_damage_triggers"),
 			TEXT("pre_damage_attack_triggers"),
 			TEXT("after_csn_inheritance_triggers"),
+			TEXT("card_zone_transition_triggers"),
 			TEXT("after_unit_destroyed_triggers")
 		},
 		Result,
@@ -1975,6 +2154,37 @@ void ParseCard(
 					CardId,
 					TriggerPath);
 				OutDefinition.AfterCSNInheritanceTriggers.Add(
+					MoveTemp(Trigger));
+			}
+		}
+	}
+
+	const TSharedPtr<FJsonValue>* ZoneTransitionTriggerValue =
+		Object->Values.Find(TEXT("card_zone_transition_triggers"));
+	if (ZoneTransitionTriggerValue != nullptr)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* TriggerValues = nullptr;
+		if (!TryGetArrayField(
+			Object, TEXT("card_zone_transition_triggers"), TriggerValues))
+		{
+			AddDiagnostic(Result,
+				TEXT("card_zone_transition_triggers_malformed"), CardId,
+				TEXT(""), JoinPath(Path, TEXT("card_zone_transition_triggers")));
+		}
+		else
+		{
+			for (int32 TriggerIndex = 0;
+				TriggerIndex < TriggerValues->Num(); ++TriggerIndex)
+			{
+				const FString TriggerPath = JoinPath(
+					JoinPath(Path, TEXT("card_zone_transition_triggers")),
+					FString::Printf(TEXT("[%d]"), TriggerIndex));
+				FWBCardZoneTransitionTriggerDefinition Trigger;
+				ParseCardZoneTransitionTrigger(
+					(*TriggerValues)[TriggerIndex].IsValid()
+						? (*TriggerValues)[TriggerIndex]->AsObject() : nullptr,
+					Trigger, Result, CardId, TriggerPath);
+				OutDefinition.CardZoneTransitionTriggers.Add(
 					MoveTemp(Trigger));
 			}
 		}

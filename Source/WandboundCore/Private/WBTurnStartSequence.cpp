@@ -3,6 +3,7 @@
 #include "WBCharacterPassiveEligibility.h"
 #include "WBCardLifecycle.h"
 #include "WBCardZoneTransition.h"
+#include "WBCardZoneTransitionTrigger.h"
 #include "WBEffectRunner.h"
 
 namespace
@@ -249,6 +250,7 @@ TArray<FResolvedChoice> EnumerateChoices(
 
 bool ResolveChoice(
 	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	const FResolvedChoice& Choice,
 	FWBTurnStartSequenceState& Sequence,
 	TArray<FWBTraceEvent>& OutTraceEvents,
@@ -300,6 +302,15 @@ bool ResolveChoice(
 		}
 		WBCardZoneTransition::AppendRedactedTraces(
 			Draw.TransitionEvents, OutTraceEvents);
+		const FWBCardZoneTransitionTriggerResult ZoneTriggerResult =
+			WBCardZoneTransitionTrigger::ResolveCommittedTransitions(
+				State, Repository, Draw.TransitionEvents);
+		if (!ZoneTriggerResult.bOk)
+		{
+			OutReason = ZoneTriggerResult.Reason;
+			return false;
+		}
+		OutTraceEvents.Append(ZoneTriggerResult.TraceEvents);
 
 		FWBTraceEvent Drawn = MakeTurnStartTrace(
 			FName(TEXT("turn_start_trigger_card_drawn")),
@@ -351,6 +362,7 @@ bool ResolveChoice(
 
 FWBTurnStartSequenceResult ContinueAutomaticResolution(
 	FWBGameStateData& State,
+	const FWBCardDefinitionRepository& Repository,
 	FWBTurnStartSequenceState& Sequence)
 {
 	FWBTurnStartSequenceResult Result;
@@ -409,6 +421,7 @@ FWBTurnStartSequenceResult ContinueAutomaticResolution(
 		FString Reason;
 		if (!ResolveChoice(
 			State,
+			Repository,
 			Choices[0],
 			Sequence,
 			Result.TraceEvents,
@@ -496,6 +509,14 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 	}
 	WBCardZoneTransition::AppendRedactedTraces(
 		DrawResult.TransitionEvents, Result.TraceEvents);
+	const FWBCardZoneTransitionTriggerResult ZoneTriggerResult =
+		WBCardZoneTransitionTrigger::ResolveCommittedTransitions(
+			WorkingState, Repository, DrawResult.TransitionEvents);
+	if (!ZoneTriggerResult.bOk)
+	{
+		return MakeTurnStartFailure(ZoneTriggerResult.Reason);
+	}
+	Result.TraceEvents.Append(ZoneTriggerResult.TraceEvents);
 	WorkingSequence.bDrawSkipped =
 		DrawResult.Code
 			== EWBCardLifecycleResultCode::
@@ -611,6 +632,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::Begin(
 	FWBTurnStartSequenceResult Resolution =
 		ContinueAutomaticResolution(
 			WorkingState,
+			Repository,
 			WorkingSequence);
 	if (!Resolution.bOk)
 	{
@@ -664,6 +686,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::SubmitChoice(
 	FString Reason;
 	if (!ResolveChoice(
 		WorkingState,
+		Repository,
 		*Selected,
 		WorkingSequence,
 		Result.TraceEvents,
@@ -675,6 +698,7 @@ FWBTurnStartSequenceResult WBTurnStartSequence::SubmitChoice(
 	FWBTurnStartSequenceResult Resolution =
 		ContinueAutomaticResolution(
 			WorkingState,
+			Repository,
 			WorkingSequence);
 	if (!Resolution.bOk)
 	{

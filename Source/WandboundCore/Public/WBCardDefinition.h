@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBCardActivationSourceGate.h"
+#include "WBCardZoneTransition.h"
 #include "WBEffectRequest.h"
 
 enum class EWBCardDefinitionKind : uint8
@@ -198,6 +199,34 @@ struct WANDBOUNDCORE_API FWBAfterCSNInheritanceTriggerDefinition
 	bool bMandatory = true;
 };
 
+enum class EWBCardZoneTransitionTriggerSourceScope : uint8
+{
+	Unknown,
+	MovedCardSelf,
+	ResidentDiscardObserver
+};
+
+struct WANDBOUNDCORE_API FWBCardZoneTransitionTriggerFilter
+{
+	bool bRequireSourceZone = false;
+	EWBCardZone RequiredSourceZone = EWBCardZone::Unknown;
+	bool bRequireDestinationZone = false;
+	EWBCardZone RequiredDestinationZone = EWBCardZone::Unknown;
+	bool bRequireCause = false;
+	EWBCardZoneTransitionCause RequiredCause =
+		EWBCardZoneTransitionCause::Unknown;
+};
+
+struct WANDBOUNDCORE_API FWBCardZoneTransitionTriggerDefinition
+{
+	FString TriggerId;
+	EWBCardZoneTransitionTriggerSourceScope SourceScope =
+		EWBCardZoneTransitionTriggerSourceScope::Unknown;
+	FWBCardZoneTransitionTriggerFilter Filter;
+	int32 DrawCount = 0;
+	bool bMandatory = true;
+};
+
 enum class EWBAfterUnitDestroyedSourceScope : uint8
 {
 	Unknown,
@@ -335,6 +364,8 @@ struct WANDBOUNDCORE_API FWBCardDefinition
 	TArray<FWBPreDamageAttackTriggerDefinition> PreDamageAttackTriggers;
 	TArray<FWBAfterCSNInheritanceTriggerDefinition>
 		AfterCSNInheritanceTriggers;
+	TArray<FWBCardZoneTransitionTriggerDefinition>
+		CardZoneTransitionTriggers;
 	TArray<FWBAfterUnitDestroyedTriggerDefinition>
 		AfterUnitDestroyedTriggers;
 	TArray<FWBContinuousStatAuraDefinition> ContinuousStatAuras;

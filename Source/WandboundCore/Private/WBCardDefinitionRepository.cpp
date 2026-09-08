@@ -161,6 +161,23 @@ bool HasDuplicateAfterCSNInheritanceTriggerIds(
 	return false;
 }
 
+bool HasDuplicateCardZoneTransitionTriggerIds(
+	const FWBCardDefinition& Definition)
+{
+	TSet<FString> SeenTriggerIds;
+	for (const FWBCardZoneTransitionTriggerDefinition& Trigger :
+		Definition.CardZoneTransitionTriggers)
+	{
+		if (!Trigger.TriggerId.IsEmpty()
+			&& SeenTriggerIds.Contains(Trigger.TriggerId))
+		{
+			return true;
+		}
+		SeenTriggerIds.Add(Trigger.TriggerId);
+	}
+	return false;
+}
+
 bool HasDuplicateAfterUnitDestroyedTriggerIds(
 	const FWBCardDefinition& Definition)
 {
@@ -538,6 +555,59 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 			return MakeValidationFailure(
 				Repository,
 				TEXT("duplicate_csn_inheritance_trigger_id"));
+		}
+
+		for (const FWBCardZoneTransitionTriggerDefinition& Trigger :
+			Definition.CardZoneTransitionTriggers)
+		{
+			if (Trigger.TriggerId.IsEmpty())
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("card_zone_transition_trigger_id_missing"));
+			}
+			if (Trigger.SourceScope
+					!= EWBCardZoneTransitionTriggerSourceScope::MovedCardSelf
+				&& Trigger.SourceScope
+					!= EWBCardZoneTransitionTriggerSourceScope::
+						ResidentDiscardObserver)
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("card_zone_transition_trigger_source_scope_unsupported"));
+			}
+			if (!Trigger.bMandatory)
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("optional_card_zone_transition_trigger_unsupported"));
+			}
+			if (Trigger.DrawCount < 0)
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("card_zone_transition_trigger_draw_count_invalid"));
+			}
+			if ((Trigger.Filter.bRequireSourceZone
+					&& !WBCardZoneState::IsOrderedZone(
+						Trigger.Filter.RequiredSourceZone))
+				|| (Trigger.Filter.bRequireDestinationZone
+					&& !WBCardZoneState::IsOrderedZone(
+						Trigger.Filter.RequiredDestinationZone))
+				|| (Trigger.Filter.bRequireCause
+					&& Trigger.Filter.RequiredCause
+						== EWBCardZoneTransitionCause::Unknown))
+			{
+				return MakeValidationFailure(
+					Repository,
+					TEXT("card_zone_transition_trigger_filter_invalid"));
+			}
+		}
+		if (HasDuplicateCardZoneTransitionTriggerIds(Definition))
+		{
+			return MakeValidationFailure(
+				Repository,
+				TEXT("duplicate_card_zone_transition_trigger_id"));
 		}
 
 		for (const FWBAfterUnitDestroyedTriggerDefinition& Trigger :

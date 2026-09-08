@@ -2,6 +2,7 @@
 
 #include "WBCardLifecycle.h"
 #include "WBCardZoneTransition.h"
+#include "WBCardZoneTransitionTrigger.h"
 #include "WBCharacterPassiveEligibility.h"
 
 namespace
@@ -152,6 +153,15 @@ WBCSNInheritanceTrigger::ResolveAfterSuccessfulInheritance(
 		}
 		WBCardZoneTransition::AppendRedactedTraces(
 			Draw.TransitionEvents, Result.TraceEvents);
+		const FWBCardZoneTransitionTriggerResult ZoneTriggerResult =
+			WBCardZoneTransitionTrigger::ResolveCommittedTransitions(
+				WorkingState, Repository, Draw.TransitionEvents);
+		if (!ZoneTriggerResult.bOk)
+		{
+			Result.Reason = ZoneTriggerResult.Reason;
+			return Result;
+		}
+		Result.TraceEvents.Append(ZoneTriggerResult.TraceEvents);
 
 		Result.TraceEvents.Add(MakeTrace(
 			FName(TEXT("csn_inheritance_card_drawn")),

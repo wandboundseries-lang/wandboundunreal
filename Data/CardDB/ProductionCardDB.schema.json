@@ -205,6 +205,12 @@
             "$ref": "#/$defs/after_csn_inheritance_trigger"
           }
         },
+        "card_zone_transition_triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/card_zone_transition_trigger"
+          }
+        },
         "after_unit_destroyed_triggers": {
           "type": "array",
           "items": {
@@ -340,6 +346,49 @@
         "draw_count": {
           "type": "integer",
           "minimum": 1,
+          "maximum": 99
+        },
+        "mandatory": {
+          "const": true
+        }
+      }
+    },
+    "card_zone_transition_trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trigger_id",
+        "source_scope",
+        "filter",
+        "draw_count",
+        "mandatory"
+      ],
+      "properties": {
+        "trigger_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "source_scope": {
+          "enum": ["moved_card_self", "resident_discard_observer"]
+        },
+        "filter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source_zone": {
+              "enum": ["deck", "hand", "discard"]
+            },
+            "destination_zone": {
+              "enum": ["deck", "hand", "discard"]
+            },
+            "cause": {
+              "enum": ["draw", "effect", "cost", "rule", "setup"]
+            }
+          }
+        },
+        "draw_count": {
+          "type": "integer",
+          "minimum": 0,
           "maximum": 99
         },
         "mandatory": {

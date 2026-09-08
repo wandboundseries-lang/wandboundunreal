@@ -6,6 +6,7 @@
 #include "WBCardActivationLegalActionGenerator.h"
 #include "WBCardLifecycle.h"
 #include "WBCardZoneTransition.h"
+#include "WBCardZoneTransitionTrigger.h"
 #include "WBCardZoneState.h"
 #include "WBDeathResolution.h"
 #include "WBDeterministicRandom.h"
@@ -25,6 +26,25 @@
 namespace
 {
 constexpr int32 OpeningHandSize = 6;
+
+bool ResolveCardZoneTransitionTriggers(
+	FWBGameStateData& WorkingState,
+	const FWBCardDefinitionRepository& Repository,
+	const TArray<FWBCardZoneTransitionSnapshot>& Transitions,
+	TArray<FWBTraceEvent>& OutTraceEvents,
+	FString& OutReason)
+{
+	const FWBCardZoneTransitionTriggerResult TriggerResult =
+		WBCardZoneTransitionTrigger::ResolveCommittedTransitions(
+			WorkingState, Repository, Transitions);
+	if (!TriggerResult.bOk)
+	{
+		OutReason = TriggerResult.Reason;
+		return false;
+	}
+	OutTraceEvents.Append(TriggerResult.TraceEvents);
+	return true;
+}
 
 FName ReactionWindowKindToName(EWBReactionWindowKind Kind);
 
@@ -2082,6 +2102,12 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				Discarded.CardInstanceId = ApplyResult.CardInstanceId;
 				Discarded.CardId = ApplyResult.CardId;
 				WorkingTraceEvents.Add(Discarded);
+				bActionApplied = ResolveCardZoneTransitionTriggers(
+					WorkingState,
+					Repository,
+					ApplyResult.TransitionEvents,
+					WorkingTraceEvents,
+					FailureReason);
 			}
 			break;
 		}
@@ -2932,6 +2958,15 @@ bool WBMatchCoordinator::BeginPendingEffectActivation(
 		Discarded.CardId = DiscardResult.CardId;
 		Discarded.PendingEffectFrameId = Frame.FrameId;
 		OutTraceEvents.Add(MoveTemp(Discarded));
+		if (!ResolveCardZoneTransitionTriggers(
+			WorkingState,
+			Repository,
+			DiscardResult.TransitionEvents,
+			OutTraceEvents,
+			OutReason))
+		{
+			return false;
+		}
 	}
 
 	if (WorkingState.HasOpenReactionWindow())

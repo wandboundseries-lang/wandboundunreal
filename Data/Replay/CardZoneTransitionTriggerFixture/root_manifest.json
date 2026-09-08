@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "card_zone_transition_trigger_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "card_zone_transition_trigger",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Synthetic card-zone transition trigger fixture only."
+  }
+}

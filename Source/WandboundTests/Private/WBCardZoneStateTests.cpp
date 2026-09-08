@@ -127,6 +127,7 @@ FString MakeRuntimeSourceText()
 {
 	const FString RuntimePath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source"), TEXT("WandboundRuntime"));
 	const FString ValidationSmokeName = TEXT("WBProductionCardZoneTransitionSmoke");
+	const FString TriggerSmokeName = TEXT("WBProductionCardZoneTransitionTriggerSmoke");
 	TArray<FString> Files;
 	IFileManager::Get().FindFilesRecursive(Files, *RuntimePath, TEXT("*.h"), true, false);
 	IFileManager::Get().FindFilesRecursive(Files, *RuntimePath, TEXT("*.cpp"), true, false);
@@ -135,7 +136,8 @@ FString MakeRuntimeSourceText()
 	FString Combined;
 	for (const FString& File : Files)
 	{
-		if (FPaths::GetBaseFilename(File) == ValidationSmokeName)
+		if (FPaths::GetBaseFilename(File) == ValidationSmokeName
+			|| FPaths::GetBaseFilename(File) == TriggerSmokeName)
 		{
 			continue;
 		}

@@ -212,6 +212,18 @@ public class WandboundRuntime : ModuleRules
 			"$(ProjectDir)/Data/Replay/DiscardActivationFixture/match_spec.json",
 			StagedFileType.NonUFS);
 		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CardZoneTransitionTriggerFixture/root_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CardZoneTransitionTriggerFixture/bundle_manifest.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CardZoneTransitionTriggerFixture/units.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
+			"$(ProjectDir)/Data/Replay/CardZoneTransitionTriggerFixture/markers.json",
+			StagedFileType.NonUFS);
+		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/CardDB/Production/CSNCrashIn/root_manifest.json",
 			StagedFileType.NonUFS);
 		RuntimeDependencies.Add(
