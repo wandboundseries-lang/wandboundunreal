@@ -328,6 +328,11 @@ FWBCardDefinitionRepositoryValidationResult WBCardDefinitionRepository::Validate
 
 		for (const FWBCardEffectDefinition& Effect : Definition.ActivatedEffects)
 		{
+			if (!Effect.ActivationCondition.MatchesBattle(false)
+				&& !Effect.ActivationCondition.MatchesBattle(true))
+			{
+				return MakeValidationFailure(Repository, TEXT("invalid_battle_requirement"));
+			}
 			if (Effect.EffectId.IsEmpty())
 			{
 				return MakeValidationFailure(Repository, TEXT("effect_id_missing"));

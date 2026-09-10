@@ -182,6 +182,7 @@ FWBCardActivationSourceGateResult WBCardActivationSourceGate::Evaluate(
 	}
 	else if (Gate.Timing == EWBCardActivationTimingRequirement::NormalTurnPriority
 		&& (!State.IsNormalTurnPhase()
+			|| State.IsBattlePhaseActive()
 			|| State.CurrentPlayer != Context.PlayerId
 			|| State.PriorityPlayer != Context.PlayerId))
 	{

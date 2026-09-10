@@ -185,7 +185,21 @@
           "type": "object"
         },
         "activated_effects": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "activation_condition": {
+                "type": "object",
+                "properties": {
+                  "battle_requirement": {
+                    "enum": ["any", "during_battle", "outside_battle"],
+                    "default": "any"
+                  }
+                }
+              }
+            }
+          }
         },
         "after_damage_triggers": {
           "type": "array",

@@ -1,0 +1,14 @@
+{
+  "suite_schema_version": 1,
+  "suite_id": "battle_phase_fixture",
+  "bundle_kind": "test",
+  "manifests": [
+    {
+      "name": "suspended_attack",
+      "path": "bundle_manifest.json"
+    }
+  ],
+  "metadata": {
+    "notes": "Isolated Battle Phase regression fixture."
+  }
+}

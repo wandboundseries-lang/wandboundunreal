@@ -236,7 +236,12 @@ void ClearPendingAttackIfUnitRemoved(FWBGameStateData& State, const int32 UnitId
 
 	if (State.PendingAttack.AttackerUnitId == UnitId || State.PendingAttack.DefenderUnitId == UnitId)
 	{
-		State.ClearPendingAttack();
+		// Player Battle cancellation is consumed by the existing coordinator
+		// continuation after pending reactions and mandatory consequences resolve.
+		if (!State.IsBattlePhaseActive())
+		{
+			State.ClearPendingAttack();
+		}
 	}
 }
 }

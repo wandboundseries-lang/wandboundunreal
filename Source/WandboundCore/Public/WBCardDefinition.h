@@ -47,8 +47,34 @@ enum class EWBCardEffectTargetRelationRequirement : uint8
 	OtherThanOwnHero
 };
 
+enum class EWBCardEffectBattleRequirement : uint8
+{
+	Any,
+	DuringBattle,
+	OutsideBattle
+};
+
 struct WANDBOUNDCORE_API FWBCardEffectActivationCondition
 {
+	EWBCardEffectBattleRequirement BattleRequirement = EWBCardEffectBattleRequirement::Any;
+	bool MatchesBattle(const bool bActive) const
+	{
+		switch (BattleRequirement)
+		{
+		case EWBCardEffectBattleRequirement::Any: return true;
+		case EWBCardEffectBattleRequirement::DuringBattle: return bActive;
+		case EWBCardEffectBattleRequirement::OutsideBattle: return !bActive;
+		default: return false;
+		}
+	}
+	bool ReadBattleRequirement(const FString& Value)
+	{
+		if (Value == TEXT("any")) BattleRequirement = EWBCardEffectBattleRequirement::Any;
+		else if (Value == TEXT("during_battle")) BattleRequirement = EWBCardEffectBattleRequirement::DuringBattle;
+		else if (Value == TEXT("outside_battle")) BattleRequirement = EWBCardEffectBattleRequirement::OutsideBattle;
+		else return false;
+		return true;
+	}
 	EWBCardEffectAttackDefenderRequirement AttackDefender =
 		EWBCardEffectAttackDefenderRequirement::Any;
 	EWBCardEffectTargetControllerRequirement TargetController =

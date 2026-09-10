@@ -28,6 +28,7 @@
 #include "WBProductionPendingEffectSmoke.h"
 #include "WBProductionCardZoneTransitionSmoke.h"
 #include "WBProductionCardZoneTransitionTriggerSmoke.h"
+#include "WBProductionBattlePhaseSmoke.h"
 #include "WBProductionReactionWindowSmoke.h"
 #include "WBProductionSuspendedAttackSmoke.h"
 #include "WBProductionStatusAuthoritySmoke.h"
@@ -423,6 +424,18 @@ FWBRuntimeLocalPlayResult AWBRuntimeMatchBootstrapActor::InitializeLocalPlay(
 				false,
 				TransitionSmoke.bOk ? 0 : 44,
 				TEXT("WandboundProductionCardZoneTransitionSmoke"));
+		}
+		else if (WBProductionBattlePhaseSmoke::IsRequested())
+		{
+			FString Scenario = TEXT("normal");
+			FParse::Value(FCommandLine::Get(), TEXT("WandboundBattleScenario="), Scenario);
+			const auto Smoke = WBProductionBattlePhaseSmoke::Run(PendingBootstrapRequest, Scenario);
+			if (!Smoke.bOk)
+			{
+				UE_LOG(LogWBRuntimeLocalPlay, Error, TEXT("Battle smoke failed: %s"), *Smoke.Reason);
+			}
+			FPlatformMisc::RequestExitWithStatus(false, Smoke.bOk ? 0 : 46,
+				TEXT("WandboundProductionBattlePhaseSmoke"));
 		}
 		else if (WBProductionCardZoneTransitionTriggerSmoke::IsRequested())
 		{

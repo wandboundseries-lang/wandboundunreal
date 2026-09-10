@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "match_id": "battle_prevented_smoke",
+  "seed": 99173,
+  "first_player": 0,
+  "initial_draw_count": 6,
+  "definition_bundle_digest": "ed79706efb4dc9ad8032eaaf3944f9ff4ea3f4ac89f5060125e267dc5aac25fe",
+  "players": [
+    {
+      "player_id": 0,
+      "hero_definition_id": "battle_prevented_hero_a",
+      "ordered_deck": [
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler"
+      ]
+    },
+    {
+      "player_id": 1,
+      "hero_definition_id": "battle_prevented_hero_b",
+      "ordered_deck": [
+        "suspended_attack_effect_c_card",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler",
+        "suspended_attack_filler"
+      ]
+    }
+  ],
+  "markers": [
+    {
+      "player_id": 0,
+      "type": "trap",
+      "tile": {
+        "x": 0,
+        "y": 8
+      },
+      "definition_id": "suspended_attack_trap",
+      "placement_order": 0
+    },
+    {
+      "player_id": 0,
+      "type": "trap",
+      "tile": {
+        "x": 1,
+        "y": 8
+      },
+      "definition_id": "suspended_attack_trap",
+      "placement_order": 1
+    },
+    {
+      "player_id": 0,
+      "type": "npc",
+      "tile": {
+        "x": 0,
+        "y": 7
+      },
+      "definition_id": "suspended_attack_npc",
+      "placement_order": 2
+    },
+    {
+      "player_id": 0,
+      "type": "npc",
+      "tile": {
+        "x": 1,
+        "y": 7
+      },
+      "definition_id": "suspended_attack_npc",
+      "placement_order": 3
+    },
+    {
+      "player_id": 1,
+      "type": "trap",
+      "tile": {
+        "x": 0,
+        "y": 0
+      },
+      "definition_id": "suspended_attack_trap",
+      "placement_order": 4
+    },
+    {
+      "player_id": 1,
+      "type": "trap",
+      "tile": {
+        "x": 1,
+        "y": 0
+      },
+      "definition_id": "suspended_attack_trap",
+      "placement_order": 5
+    },
+    {
+      "player_id": 1,
+      "type": "npc",
+      "tile": {
+        "x": 0,
+        "y": 1
+      },
+      "definition_id": "suspended_attack_npc",
+      "placement_order": 6
+    },
+    {
+      "player_id": 1,
+      "type": "npc",
+      "tile": {
+        "x": 1,
+        "y": 1
+      },
+      "definition_id": "suspended_attack_npc",
+      "placement_order": 7
+    }
+  ]
+}

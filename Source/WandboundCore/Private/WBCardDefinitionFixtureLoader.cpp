@@ -1122,6 +1122,7 @@ void ParseEffect(
 			ActivationConditionObject,
 			{
 				TEXT("attack_defender"),
+				TEXT("battle_requirement"),
 				TEXT("target_controller"),
 				TEXT("target_faction"),
 				TEXT("target_relation")
@@ -1132,6 +1133,16 @@ void ParseEffect(
 			JoinPath(Path, TEXT("activation_condition")));
 
 		FString Value;
+		if (ActivationConditionObject->HasField(TEXT("battle_requirement"))
+			&& TryReadRequiredString(
+			ActivationConditionObject,
+			TEXT("battle_requirement"), Result, TEXT("activation_condition_malformed"),
+			CardId, EffectId, JoinPath(Path, TEXT("activation_condition")), Value)
+			&& !OutEffect.ActivationCondition.ReadBattleRequirement(Value))
+		{
+			AddDiagnostic(Result, TEXT("activation_condition_malformed"), CardId, EffectId,
+				JoinPath(Path, TEXT("activation_condition.battle_requirement")));
+		}
 		if (TryReadRequiredString(
 			ActivationConditionObject,
 			TEXT("attack_defender"),

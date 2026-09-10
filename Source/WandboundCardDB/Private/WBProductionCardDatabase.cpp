@@ -585,6 +585,11 @@ FString EffectDigest(const FWBCardEffectDefinition& Effect)
 		*Effect.SourceGate.OncePerTurnKey,
 		Effect.SourceGate.CostGate.RequiredRR,
 		*Effect.SourceGate.CostGate.CostKind.ToString());
+	if (Effect.ActivationCondition.BattleRequirement != EWBCardEffectBattleRequirement::Any)
+	{
+		Digest += FString::Printf(TEXT("|battle_requirement=%d"),
+			static_cast<int32>(Effect.ActivationCondition.BattleRequirement));
+	}
 	if (Effect.ActivationCondition.AttackDefender
 			!= EWBCardEffectAttackDefenderRequirement::Any
 		|| Effect.ActivationCondition.TargetController
@@ -3577,6 +3582,7 @@ private:
 			Condition,
 			{
 				TEXT("attack_defender"),
+				TEXT("battle_requirement"),
 				TEXT("target_controller"),
 				TEXT("target_faction"),
 				TEXT("target_relation")
@@ -3586,6 +3592,14 @@ private:
 			EffectPath + TEXT(".activation_condition"));
 
 		FString Value;
+		if (HasField(Condition, TEXT("battle_requirement"))
+			&& (!TryReadString(Condition, TEXT("battle_requirement"), Value)
+				|| !Effect.ActivationCondition.ReadBattleRequirement(Value)))
+		{
+			AddError(TEXT("activation_condition_malformed"), Record.SourceManifestPath,
+				Record.CoreDefinition.CardId, EffectPath + TEXT(".activation_condition.battle_requirement"),
+				TEXT("battle_requirement must be any, during_battle, or outside_battle."));
+		}
 		if (HasField(Condition, TEXT("attack_defender")))
 		{
 			if (!TryReadString(Condition, TEXT("attack_defender"), Value)

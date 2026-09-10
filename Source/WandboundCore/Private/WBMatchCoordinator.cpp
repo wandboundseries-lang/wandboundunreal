@@ -474,6 +474,10 @@ bool DoesActivationConditionMatch(
 {
 	const FWBCardEffectActivationCondition& Condition =
 		Effect.ActivationCondition;
+	if (!Condition.MatchesBattle(State.IsBattlePhaseActive()))
+	{
+		return false;
+	}
 	if (Condition.AttackDefender
 		== EWBCardEffectAttackDefenderRequirement::OwnHeroCurrentDefender)
 	{
@@ -1461,6 +1465,16 @@ FWBMatchLegalActionGenerationResult WBMatchCoordinator::EnumerateLegalActionsFor
 		? InState.PendingAttack.ContinuationId
 		: FString();
 	FWBMatchLegalActionGenerationResult Result;
+	FString BattleReason;
+	if (!WBBattlePhase::Validate(InState, BattleReason))
+	{
+		return MakeMatchGenerationFailure(BattleReason);
+	}
+	if (InState.IsBattlePhaseActive() && InPhase == EWBMatchLoopPhase::Action)
+	{
+		Result.bOk = true;
+		return Result;
+	}
 	if (InState.bGameOver || InPhase == EWBMatchLoopPhase::GameOver)
 	{
 		Result.bOk = true;
@@ -1969,6 +1983,12 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 				&& SelectedAction->CoreAction.Type == EWBActionType::Attack
 				&& WorkingState.HasPendingAttack())
 			{
+				if (!WBBattlePhase::Begin(WorkingState, CoordinatorGeneration,
+					CoordinatorRevision + 1, WorkingTraceEvents, FailureReason))
+				{
+					bActionApplied = false;
+					break;
+				}
 				FWBTraceEvent Started = MakeMatchTrace(
 					FName(TEXT("attack_continuation_started")),
 					PlayerId,
@@ -2262,6 +2282,24 @@ FWBMatchOperationResult WBMatchCoordinator::SubmitActionId(
 			: FailureReason);
 	}
 
+	if (WorkingState.IsBattlePhaseActive()
+		&& (WorkingState.bGameOver || ((!WorkingState.HasPendingAttack()
+			|| WorkingState.PendingAttack.Stage == EWBAttackContinuationStage::Complete)
+			&& !WorkingState.HasPendingPrivateCardChoice()
+			&& WorkingState.PendingUnitDestructionEvents.IsEmpty()
+			&& WorkingPendingEffects.IsEmpty())))
+	{
+		WBBattlePhase::End(WorkingState, WorkingTraceEvents);
+		WorkingState.ClearPendingAttack();
+		WorkingState.ClearReactionWindow();
+		WorkingState.Phase = EWBGamePhase::NormalTurn;
+		WorkingState.PriorityPlayer = WorkingState.CurrentPlayer;
+	}
+	if (WorkingState.bGameOver)
+	{
+		WorkingPendingEffects.Reset();
+		WorkingState.ClearPendingAttack();
+	}
 	CommitTerminalOutcome(
 		WorkingState,
 		*SelectedAction,
@@ -3501,7 +3539,16 @@ bool WBMatchCoordinator::AdvanceAttackContinuation(
 		AddStageTrace(
 			FName(TEXT("attack_continuation_completed")),
 			FName(TEXT("complete")));
-		WorkingState.ClearPendingAttack();
+		// Keep the completed root until the containing transaction has drained
+		// mandatory destruction consequences and any private choice continuation.
+		if (WorkingState.IsBattlePhaseActive())
+		{
+			WorkingState.PendingAttack.Stage = EWBAttackContinuationStage::Complete;
+		}
+		else
+		{
+			WorkingState.ClearPendingAttack();
+		}
 		WorkingState.ClearReactionWindow();
 		WorkingState.PriorityPlayer = WorkingState.CurrentPlayer;
 		WorkingState.Phase = EWBGamePhase::NormalTurn;
@@ -3865,6 +3912,11 @@ bool WBMatchCoordinator::ApplyTurnTransition(
 	TArray<FWBTraceEvent>& OutTraceEvents,
 	FString& OutReason) const
 {
+	if (WorkingState.IsBattlePhaseActive())
+	{
+		OutReason = TEXT("battle_phase_unresolved");
+		return false;
+	}
 	const int32 EndingPlayerId = WorkingState.CurrentPlayer;
 	const int32 EndingTurnNumber = WorkingState.TurnNumber;
 	const FWBApplyActionResult EndStatusResult =
@@ -4142,6 +4194,7 @@ FWBMatchObservation WBMatchCoordinator::BuildObservation(const int32 ViewerPlaye
 	}
 
 	Observation.PublicTurn = WBPublicTurnSummary::Build(State);
+	Observation.PublicBattle = WBBattlePhase::BuildPublicSummary(State);
 	Observation.PublicBoard = WBPublicBoardSummary::Build(State, Repository);
 	Observation.CardZones = WBCardZoneObservation::BuildObservationForPlayer(State, ViewerPlayerId);
 	const FWBMatchLegalActionGenerationResult LegalResult =
@@ -4344,6 +4397,11 @@ FWBApplyActionResult WBMatchCoordinator::ApplyLegacyCompatibilityTurnTransition(
 	const int32 NextPlayerExplicitMPRoll)
 {
 	FWBApplyActionResult Result;
+	if (InOutState.IsBattlePhaseActive())
+	{
+		Result.Reason = TEXT("battle_phase_unresolved");
+		return Result;
+	}
 
 	FString Reason;
 	if (!WBRules::CanApplyDeterministicTurnTransition(

@@ -321,6 +321,17 @@ FString CanonicalGameState(const FWBGameStateData& State)
 	}
 
 	AppendBool(Out, TEXT("attack.active"), State.PendingAttack.bActive);
+	if (State.IsBattlePhaseActive())
+	{
+		AppendBool(Out, TEXT("battle.active"), true);
+		AppendString(Out, TEXT("battle.id"), State.BattlePhase.BattleId);
+		AppendString(Out, TEXT("battle.action"), State.BattlePhase.RootActionId);
+		AppendString(Out, TEXT("battle.continuation"), State.BattlePhase.RootContinuationId);
+		AppendInt(Out, TEXT("battle.player"), State.BattlePhase.DeclaringPlayerId);
+		AppendInt(Out, TEXT("battle.attacker"), State.BattlePhase.OriginalAttackerUnitId);
+		AppendInt(Out, TEXT("battle.defender"), State.BattlePhase.OriginalDefenderUnitId);
+		AppendInt(Out, TEXT("battle.turn"), State.BattlePhase.TurnNumber);
+	}
 	if (State.PendingAttack.bActive
 		&& State.PendingAttack.AuthorityKind == EWBAttackAuthorityKind::NeutralNPC)
 	{

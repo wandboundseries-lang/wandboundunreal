@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "WBAction.h"
+#include "WBBattlePhase.h"
 #include "WBCardActivationCommand.h"
 #include "WBCardDefinitionRepository.h"
 #include "WBCardZoneObservation.h"
@@ -133,6 +134,7 @@ struct WANDBOUNDCORE_API FWBMatchObservation
 	int32 ViewerPlayerId = -1;
 	EWBMatchLoopPhase MatchPhase = EWBMatchLoopPhase::Uninitialized;
 	FWBPublicTurnSummary PublicTurn;
+	FWBPublicBattleSummary PublicBattle;
 	FWBPublicBoardSummary PublicBoard;
 	FWBCardZonePlayerObservation CardZones;
 	TArray<FWBMatchLegalAction> LegalActions;

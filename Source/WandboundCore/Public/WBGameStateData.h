@@ -260,6 +260,18 @@ struct WANDBOUNDCORE_API FWBPendingAttackState
 	int32 RawDamageModifier = 0;
 };
 
+struct WANDBOUNDCORE_API FWBBattlePhaseState
+{
+	bool bActive = false;
+	FString BattleId;
+	FString RootActionId;
+	FString RootContinuationId;
+	int32 DeclaringPlayerId = INDEX_NONE;
+	int32 OriginalAttackerUnitId = INDEX_NONE;
+	int32 OriginalDefenderUnitId = INDEX_NONE;
+	int32 TurnNumber = INDEX_NONE;
+};
+
 struct WANDBOUNDCORE_API FWBNPCPhaseContinuationState
 {
 	bool bActive = false;
@@ -408,6 +420,7 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	FWBReactionWindowState ReactionWindow;
 	FWBPendingSummonState PendingSummon;
 	FWBPendingAttackState PendingAttack;
+	FWBBattlePhaseState BattlePhase;
 	FWBNPCPhaseContinuationState NPCPhaseContinuation;
 	TArray<FWBPendingNPCSpawnState> PendingNPCSpawns;
 	TArray<FWBUnitDestructionSnapshot> PendingUnitDestructionEvents;
@@ -444,6 +457,8 @@ struct WANDBOUNDCORE_API FWBGameStateData
 	void MarkActivationUsageKeyForTest(int32 PlayerId, const FString& Key);
 	void ClearActivationUsageKeysForPlayer(int32 PlayerId);
 	bool HasPendingAttack() const;
+	bool IsBattlePhaseActive() const;
+	void ClearBattlePhase();
 	void ClearPendingAttack();
 	bool HasPendingSummon() const;
 	void ClearPendingSummon();

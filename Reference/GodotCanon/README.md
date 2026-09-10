@@ -25,3 +25,9 @@ These addenda introduce Pre-Summon and Negate a Summon for player-declared
 normal Character summons only.
 3. `GodotSourceIndex.md`
 4. `GoldenScenarios/`
+
+Owner-approved nested Battle terminology is recorded in
+`../../Docs/Wandbound_Rules_Bible_Battle_Phase_Addendum_v1.md` and
+`../../Docs/Wandbound_Canonical_Glossary_Battle_Phase_Addendum_v1.md`.
+These define one temporary Battle per legal player Declared Attack, through
+reactions and Counter, without replacing top-level Action/Response phases.

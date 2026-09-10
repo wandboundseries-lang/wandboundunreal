@@ -259,5 +259,15 @@ public class WandboundRuntime : ModuleRules
 		RuntimeDependencies.Add(
 			"$(ProjectDir)/Data/Replay/TerrainCartographerFixture/match_spec.json",
 			StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/match_normal.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/match_counter.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/match_nested.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/match_prevented.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/match_terminal.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/match_terminal_counter.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/units.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/markers.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/root_manifest.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Data/Replay/BattlePhaseFixture/bundle_manifest.json", StagedFileType.NonUFS);
 	}
 }

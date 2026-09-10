@@ -1,0 +1,497 @@
+{
+  "baseline": "a7d95c6020bd7fcd284c3637a594bf95018bca1a",
+  "status": "ready",
+  "canonical_rule": "One nested Battle per accepted player Declared Attack, through reactions, damage, mandatory consequences, and Counter. Nonterminal completion resumes Action; terminal completion clears Battle.",
+  "architecture": {
+    "owner": "WBMatchCoordinator",
+    "state": "FWBGameStateData.BattlePhase",
+    "identity": "Generation, accepted-decision revision, turn, and root continuation; no RNG or time",
+    "mutable_combat_owner": "FWBPendingAttackState",
+    "counter_compatibility": "PendingAttack authority describes the current combatant and may change for a neutral Counter. Root Battle ownership remains the original player declaration.",
+    "entry": "After legal ApplyAction and before PreHit processing",
+    "end": "Containing transaction drains combat and mandatory destruction/private-choice consequences before clearing the envelope",
+    "conditions": "Any/during_battle/outside_battle filter existing activation timing; no permission grant",
+    "public_summary": "Active flag, declaring player, original public attacker and defender only",
+    "privacy": "No BattleId, continuation identity, private cards, or protected digests in public boundary traces or summary",
+    "state_digest": "Non-default active Battle fields included; closed Battle preserves existing noncombat digest input",
+    "carddb_digest": "Non-default Battle requirement included; Any retains existing content digest input",
+    "exclusions": [
+      "NPC and automatic roots",
+      "standalone damage",
+      "new reaction windows",
+      "battle-end triggers",
+      "presentation",
+      "production cards"
+    ],
+    "transition_trigger_regression": "Existing authority and source eligibility unchanged; full automation passed, including a Battle-envelope preservation test"
+  },
+  "compatibility": {
+    "replay_schema": 1,
+    "receipt_fields": 8,
+    "enum_changes": false,
+    "action_codec_changes": false
+  },
+  "validation": {
+    "editor_initial_build": "Succeeded; not final source",
+    "focused": "18 succeeded, 0 failed, 0 warnings, 0 not run; Saved/AutomationReports/BattleFinalFocusedRetry/index.json",
+    "initial_focused_failures": "9 passed, 2 failed expectations: automatic nested completion and incorrectly oriented fixture wall. Corrected and rerun successfully.",
+    "game_initial_build": "Succeeded; 670.33 seconds",
+    "six_build_matrix": "All passed: Editor non-unity 6.18s; Game non-unity 106.28s; Editor default 71.23s; Game default 90.09s; Editor forced-unity 1.43s; Game forced-unity 1.25s. Forced-unity invocations were up-to-date with the equivalent default unity outputs.",
+    "direct_assertion_sites": 252,
+    "focused_retry_startup_error": "Earlier rerun overlapped clean module removal and exited 1 before tests. Final post-package rerun passed all 18.",
+    "full_automation": "2533 succeeded, 0 failed, 0 warnings, 0 not run; baseline 2515; delta 18; Saved/AutomationReports/BattleFull/index.json",
+    "clean_build_cook_run": {
+      "result": "Succeeded",
+      "seconds": 1735.67,
+      "actions": 423,
+      "exit_code": 0,
+      "build_cook_error_lines": 0,
+      "build_cook_warning_lines": 0,
+      "archive_directory": "Saved/PackagedBuilds/BattlePhaseFoundation"
+    },
+    "packaged_smokes": "Six Battle scenarios each passed twice with exact byte-equal archive, receipt, and startup JSON; fresh replay verified in every run. NPC and zone-trigger regression pairs passed.",
+    "fixture_bundle_hashes": "All six match specifications use loader-verified ed79706efb4dc9ad8032eaaf3944f9ff4ea3f4ac89f5060125e267dc5aac25fe",
+    "whitespace": "Initial check clean",
+    "staged_files": 0,
+    "manifest_equal": true,
+    "actual_task_path_count": 34,
+    "protected_identifier_matches": 0,
+    "protected_history_isolated": true,
+    "packaged_launch_correction": "Initial launch omitted the explicit cooked map and remained on the default map without executing the smoke. Corrected runs use the inner executable, WandboundUE bootstrap argument, explicit local-play map, and package-relative fixture paths.",
+    "artifact_check_correction": "An initial PowerShell property-count expression rejected a valid eight-field receipt; corrected array counting confirmed eight fields and zero runtime errors.",
+    "staged_fixture_hash_mismatches": 0,
+    "runtime_warning_count_per_run": 21,
+    "runtime_warning_categories": [
+      "Existing missing Datasmith material references",
+      "Existing SpawnActor without specified class"
+    ],
+    "new_runtime_warning_categories": 0,
+    "remaining_packaged_processes": 0,
+    "cleanup_status": "Verified packaged PID 19384 was terminated after immediate name, full executable path, and smoke command-line revalidation. Only PID 19384 was terminated; no WandboundUE process remains.",
+    "cleanup_only": true,
+    "validation_rerun_for_cleanup": false,
+    "implementation_test_runtime_drift_detected": false,
+    "source_files_newer_than_validated_packaged_build": 0,
+    "final_fixture_hash_mismatches": 0,
+    "final_task_paths": 34,
+    "final_tracked_task_paths": 15,
+    "final_untracked_task_paths": 19,
+    "final_unexpected_task_paths": 0,
+    "final_audit_manifest_equal": true,
+    "final_baseline_matches_head_and_origin_main": true,
+    "final_staged_files": 0,
+    "final_diff_check": "Passed; line-ending notices only",
+    "unrelated_files_preserved": true,
+    "cleanup_documentation_paths": [
+      "Docs/Battle_Phase_Foundation_Audit.md",
+      "Docs/Battle_Phase_Foundation_Audit.json"
+    ]
+  },
+  "packaged_battle_results": [
+    {
+      "scenario": "normal",
+      "exit_code": 0,
+      "archive_sha256": "3344e5229ff331b35a48da8641970fc7c0d2c670fd737517b01c341de74eb027",
+      "receipt_sha256": "e167e63906f535abe022fa73361db03557fa7d99511ff4d2bf25d24d2b4f79a2",
+      "startup_sha256": "1dc38ca0dbba0a07fdbcd02d903259253ea2581a82705587bca565b865f275c5",
+      "replay_digest": "2dfabe600359fb8150d84fd49e02212b1ba8f133ee5c263b82abd223f307e9ff",
+      "state_digest": "c84b04e8edaec19717f69eb799e572e9cd4b3e80e9c39a10e1014656349b466f",
+      "trace_digest": "3a95797a5d0d99096b54ba91a879a03239e3a90af8d5b1e774f86fcbd1bc7dd0",
+      "generation": 1,
+      "revision": 4,
+      "records": 3,
+      "schema": 1,
+      "receipt_fields": 8,
+      "privacy_passed": true,
+      "errors": 0,
+      "warnings": 21,
+      "fresh_replay_verified": true,
+      "runs": 2,
+      "archive_receipt_startup_byte_equal": true
+    },
+    {
+      "scenario": "counter",
+      "exit_code": 0,
+      "archive_sha256": "a5de02bd557d9d02cb8e8322a80a3be8f9323c38ee9a201950ae26c9738fd598",
+      "receipt_sha256": "4567bd2141b3bd5415454639c166402c9f0832fe49c021e03c5e4d825f1713e1",
+      "startup_sha256": "1dc38ca0dbba0a07fdbcd02d903259253ea2581a82705587bca565b865f275c5",
+      "replay_digest": "032210c3ed3858df28e58a25b15891d3cfa1529b09bf5727c404ff843d68a7ac",
+      "state_digest": "22a2d2ce659178111fb02d8db0974234958b38197c95eb8968d1220b492043f8",
+      "trace_digest": "79288ddbb0a315062823523aeb7bc6d3b8e05e4cd580a75f95e03affe0cfa3c0",
+      "generation": 1,
+      "revision": 4,
+      "records": 3,
+      "schema": 1,
+      "receipt_fields": 8,
+      "privacy_passed": true,
+      "errors": 0,
+      "warnings": 21,
+      "fresh_replay_verified": true,
+      "runs": 2,
+      "archive_receipt_startup_byte_equal": true
+    },
+    {
+      "scenario": "nested",
+      "exit_code": 0,
+      "archive_sha256": "233b7e48a82523dfc088972df223a663695d68b2915c46f800fe8edab6c5cc03",
+      "receipt_sha256": "4e7a6e3ac36d30039ff653753b2a0a726b550bf322e2015e7ae7ff8b1bf4c613",
+      "startup_sha256": "1dc38ca0dbba0a07fdbcd02d903259253ea2581a82705587bca565b865f275c5",
+      "replay_digest": "06e52d661c9ec2fcebac65152739d8af03760affdc8116b3aca96ca2dae02e81",
+      "state_digest": "3d7b186516a110824523ce6bc41ea79f5ed4ce3ac215c1b6fe79c61d2ca21462",
+      "trace_digest": "f3dee02a964d2dd1fd861df3c96db0aeb153a1f3b1f2d21e34ce92ff7ea427ce",
+      "generation": 1,
+      "revision": 7,
+      "records": 6,
+      "schema": 1,
+      "receipt_fields": 8,
+      "privacy_passed": true,
+      "errors": 0,
+      "warnings": 21,
+      "fresh_replay_verified": true,
+      "runs": 2,
+      "archive_receipt_startup_byte_equal": true
+    },
+    {
+      "scenario": "prevented",
+      "exit_code": 0,
+      "archive_sha256": "fb2eed0da6c259afeebf1d4cd2f7c03ef8bbe41d0c57882c843ce0529d7650ee",
+      "receipt_sha256": "286fdafd74b6467e09f371283e8ab82062f31288b22eaa065f34b9d8576c0559",
+      "startup_sha256": "1dc38ca0dbba0a07fdbcd02d903259253ea2581a82705587bca565b865f275c5",
+      "replay_digest": "e4dc5764660843b4df70414e9c4fe09d8823a13f7b72106f35788d8bd53a0266",
+      "state_digest": "9d217d9780e321994f27c68bf93f369a04e78057c2c8cf99a83559294bcf6cc6",
+      "trace_digest": "759f9b3717827e7bada0d53cef035ccb7be509174a52c4159c2e7384a4aaa4ae",
+      "generation": 1,
+      "revision": 7,
+      "records": 6,
+      "schema": 1,
+      "receipt_fields": 8,
+      "privacy_passed": true,
+      "errors": 0,
+      "warnings": 21,
+      "fresh_replay_verified": true,
+      "runs": 2,
+      "archive_receipt_startup_byte_equal": true
+    },
+    {
+      "scenario": "terminal",
+      "exit_code": 0,
+      "archive_sha256": "f9920c96b173118c81c2b444447330140104154d2976b4b46d33c9acd9c4d6cb",
+      "receipt_sha256": "59a49ebe9b48486baddcc0ccc9277e36438323e5c1587953af33c68c55bb42c7",
+      "startup_sha256": "1dc38ca0dbba0a07fdbcd02d903259253ea2581a82705587bca565b865f275c5",
+      "replay_digest": "a4ec15ee7f1c7b60c8274bcc5cb085e387357da5f98af88a0aedc2867a0a7f79",
+      "state_digest": "db12ed1554c344f3614f0d9497ab5eadb399164d28aa13c9eda4153b29fe732b",
+      "trace_digest": "b52a24a0d471cb55887bfe8966fc2a2311759002f78ed2f2116043bcfe27cd02",
+      "generation": 1,
+      "revision": 4,
+      "records": 3,
+      "schema": 1,
+      "receipt_fields": 8,
+      "privacy_passed": true,
+      "errors": 0,
+      "warnings": 21,
+      "fresh_replay_verified": true,
+      "runs": 2,
+      "archive_receipt_startup_byte_equal": true
+    },
+    {
+      "scenario": "terminal_counter",
+      "exit_code": 0,
+      "archive_sha256": "8c06ada9db9f7f21728fadc786174e565f56ca1c0cb03235d2c4d237cd5c6714",
+      "receipt_sha256": "3d17106b9b61e0f26afcb2b3e94e9a0c8b05bad8d3261e5aa4c7c78bcd6ad4d5",
+      "startup_sha256": "1dc38ca0dbba0a07fdbcd02d903259253ea2581a82705587bca565b865f275c5",
+      "replay_digest": "9e699a0d560ef9cc6ccc577187bb3f52f5a9ab0270e538c33efc6345d6aa44ff",
+      "state_digest": "734740d37ee6383f9b6efa7291c5f01a8a09ad80b81ea3e54d4414a1f224ae33",
+      "trace_digest": "10f1664cc1380f3d6416481c5e18140d861cedeaba15053a2fbb4c6b9c83951a",
+      "generation": 1,
+      "revision": 4,
+      "records": 3,
+      "schema": 1,
+      "receipt_fields": 8,
+      "privacy_passed": true,
+      "errors": 0,
+      "warnings": 21,
+      "fresh_replay_verified": true,
+      "runs": 2,
+      "archive_receipt_startup_byte_equal": true
+    }
+  ],
+  "packaged_regressions": [
+    {
+      "scenario": "npc",
+      "exit_code": 0,
+      "receipt_sha256": "263c454e4d4c439ff218921c8925c2b0561e164001bc588aff5360076ef9f280",
+      "startup_sha256": "e0e644bb08e702c0bbdb04af24c7c4d230ad03c5bffbfd0ca4fb9c5db4d898cc",
+      "replay_digest": "6f7015c2f24631a7261aec420fc37dacf762df2f74b17bcfa16f45edc7fee05a",
+      "receipt_fields": 8,
+      "errors": 0,
+      "warnings": 21,
+      "archive_sha256": "f3a6e6ca7a1037f603ab799605dadd9435b41f7fcb333ad1b7d6f94ce4a4d9f2",
+      "state_digest": "b9c7c49302f76884a432c7f50de625b372c05122204581cd5297c86f672f4aed",
+      "trace_digest": "9a988d7230b19ab094d53268c1a0e18bdb0e9f6121b0ea6ac99a72abeebf96d2",
+      "runs": 2,
+      "paired_artifacts_byte_equal": true
+    },
+    {
+      "scenario": "zone_trigger",
+      "exit_code": 0,
+      "receipt_sha256": "fb4aa23f69e398dd18f40b6599c269c6f89eb87836043f3796670687d6adfd60",
+      "startup_sha256": "e0e644bb08e702c0bbdb04af24c7c4d230ad03c5bffbfd0ca4fb9c5db4d898cc",
+      "replay_digest": "38f9666077185443af6f668877e171d781ac804d4026f1a0296405fb6c0d5022",
+      "receipt_fields": 8,
+      "errors": 0,
+      "warnings": 21,
+      "runs": 2,
+      "paired_artifacts_byte_equal": true
+    }
+  ],
+  "zone_trigger_baseline": {
+    "bootstrap": "Data/Replay/DiscardActivationFixture/root_manifest.json and match_spec.json (same as baseline)",
+    "runs": 2,
+    "receipt_sha256": "9b4a8c016857a0b1134f460654dfe20129e94c48b2cf8997b4b311de56ddd856",
+    "replay_digest": "ed89ba26461b91dd7574b10582eccf925b52786e3134c411c1e23893a63d414e",
+    "baseline_receipt_unchanged": true,
+    "alternate_context": "The earlier NPC bootstrap produced a different stable standalone zone-trigger digest. It is retained as separate evidence, not substituted for the baseline-equivalent invocation."
+  },
+  "changed_paths": [
+    "Data/CardDB/ProductionCardDB.schema.json",
+    "Data/Replay/BattlePhaseFixture/bundle_manifest.json",
+    "Data/Replay/BattlePhaseFixture/markers.json",
+    "Data/Replay/BattlePhaseFixture/match_counter.json",
+    "Data/Replay/BattlePhaseFixture/match_nested.json",
+    "Data/Replay/BattlePhaseFixture/match_normal.json",
+    "Data/Replay/BattlePhaseFixture/match_prevented.json",
+    "Data/Replay/BattlePhaseFixture/match_terminal.json",
+    "Data/Replay/BattlePhaseFixture/match_terminal_counter.json",
+    "Data/Replay/BattlePhaseFixture/root_manifest.json",
+    "Data/Replay/BattlePhaseFixture/units.json",
+    "Docs/Battle_Phase_Foundation_Audit.json",
+    "Docs/Battle_Phase_Foundation_Audit.md",
+    "Docs/Wandbound_Canonical_Glossary_Battle_Phase_Addendum_v1.md",
+    "Docs/Wandbound_Rules_Bible_Battle_Phase_Addendum_v1.md",
+    "Reference/GodotCanon/README.md",
+    "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+    "Source/WandboundCore/Private/WBBattlePhase.cpp",
+    "Source/WandboundCore/Private/WBCardActivationSourceGate.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+    "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+    "Source/WandboundCore/Private/WBDeathResolution.cpp",
+    "Source/WandboundCore/Private/WBGameStateData.cpp",
+    "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+    "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+    "Source/WandboundCore/Public/WBBattlePhase.h",
+    "Source/WandboundCore/Public/WBCardDefinition.h",
+    "Source/WandboundCore/Public/WBGameStateData.h",
+    "Source/WandboundCore/Public/WBMatchCoordinator.h",
+    "Source/WandboundRuntime/Private/WBProductionBattlePhaseSmoke.cpp",
+    "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+    "Source/WandboundRuntime/Public/WBProductionBattlePhaseSmoke.h",
+    "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+    "Source/WandboundTests/Private/WBBattlePhaseTests.cpp"
+  ],
+  "files": [
+    {
+      "path": "Data/CardDB/ProductionCardDB.schema.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/bundle_manifest.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/markers.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/match_counter.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/match_nested.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/match_normal.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/match_prevented.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/match_terminal.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/match_terminal_counter.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/root_manifest.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Data/Replay/BattlePhaseFixture/units.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Docs/Battle_Phase_Foundation_Audit.json",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Public progress and exact manifest"
+    },
+    {
+      "path": "Docs/Battle_Phase_Foundation_Audit.md",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Public progress and exact manifest"
+    },
+    {
+      "path": "Docs/Wandbound_Canonical_Glossary_Battle_Phase_Addendum_v1.md",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Owner-approved Battle terminology"
+    },
+    {
+      "path": "Docs/Wandbound_Rules_Bible_Battle_Phase_Addendum_v1.md",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Owner-approved Battle terminology"
+    },
+    {
+      "path": "Reference/GodotCanon/README.md",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Owner-approved Battle terminology"
+    },
+    {
+      "path": "Source/WandboundCardDB/Private/WBProductionCardDatabase.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBBattlePhase.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBCardActivationSourceGate.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBCardDefinitionFixtureLoader.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Isolated synthetic production Battle scenarios"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBCardDefinitionRepository.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBDeathResolution.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBGameStateData.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBMatchCoordinator.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Private/WBProductionMatchReplay.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Public/WBBattlePhase.h",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Public/WBCardDefinition.h",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Public/WBGameStateData.h",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundCore/Public/WBMatchCoordinator.h",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundRuntime/Private/WBProductionBattlePhaseSmoke.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundRuntime/Private/WBRuntimeMatchBootstrapActor.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundRuntime/Public/WBProductionBattlePhaseSmoke.h",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundRuntime/WandboundRuntime.Build.cs",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Scoped Battle state, lifecycle, condition, digest, or smoke integration"
+    },
+    {
+      "path": "Source/WandboundTests/Private/WBBattlePhaseTests.cpp",
+      "baseline_dirty": false,
+      "overlap": "none",
+      "purpose": "Focused Battle invariants, timing, privacy, and replay assertions"
+    }
+  ]
+}

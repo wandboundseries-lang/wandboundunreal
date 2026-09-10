@@ -636,6 +636,10 @@ void FWBGameStateData::ClearReactionWindow()
 
 void FWBGameStateData::AdvanceTurnBasic()
 {
+	if (IsBattlePhaseActive())
+	{
+		return;
+	}
 	const int32 PreviousPlayer = CurrentPlayer;
 	CurrentPlayer = PreviousPlayer == 0 ? 1 : 0;
 	PriorityPlayer = CurrentPlayer;
@@ -774,6 +778,16 @@ void FWBGameStateData::ClearActivationUsageKeysForPlayer(const int32 PlayerId)
 bool FWBGameStateData::HasPendingAttack() const
 {
 	return PendingAttack.bActive;
+}
+
+bool FWBGameStateData::IsBattlePhaseActive() const
+{
+	return BattlePhase.bActive;
+}
+
+void FWBGameStateData::ClearBattlePhase()
+{
+	BattlePhase = FWBBattlePhaseState();
 }
 
 void FWBGameStateData::ClearPendingAttack()
